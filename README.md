@@ -139,6 +139,8 @@ A single-page Gradio demo (`app.py`) shows the compression happening on one
 uploaded document — built for the Stage-I presentation, not as a production RAG
 service.
 
+Double-click `run_demo.bat`, or:
+
 ```bash
 pip install -e ".[vlm,app]" && pip install gradio
 python app.py                       # http://127.0.0.1:7860
@@ -146,8 +148,11 @@ python app.py                       # http://127.0.0.1:7860
 
 Upload a PDF or scan, press **Compress Document**, and it reports the real token
 counts, the real byte sizes, and renders the pipeline's actual keep-mask over the
-page. Every figure is read back off the arrays the pipeline produced — see
-[docs/DEPLOY.md](docs/DEPLOY.md) for the Hugging Face Space setup.
+page. Every figure is read back off the arrays the pipeline produced.
+
+It runs **locally**: Hugging Face now requires a PRO subscription to host any live
+Gradio Space, free CPU hardware included. `app.py` and `scripts/deploy_space.py`
+are Space-ready for whenever that changes — see [docs/DEPLOY.md](docs/DEPLOY.md).
 
 The demo refuses to run on the `synthetic` backend: showing a regression harness's
 output as a demonstration result would misrepresent the project.
