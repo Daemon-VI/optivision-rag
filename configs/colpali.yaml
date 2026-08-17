@@ -1,0 +1,23 @@
+# Reference configuration from the paper. Needs a GPU (~6 GB VRAM).
+encoder:
+  backend: colpali
+  model_name: vidore/colpali-v1.3
+  device: cuda
+  dtype: bfloat16
+  max_pages_in_flight: 8
+pruning:
+  enabled: true
+  spatial: true
+  blank_threshold: 0.02
+  min_keep: 16
+  redundancy: true
+  redundancy_threshold: 0.92
+compression:
+  enabled: true
+  method: binary
+index:
+  backend: qdrant
+  path: data/index/colpali
+  collection: optivision_colpali
+search:
+  top_k: 5

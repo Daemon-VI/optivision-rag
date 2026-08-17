@@ -1,0 +1,24 @@
+# Hugging Face Space runtime.
+#
+# Deliberately mirrors what the project already uses (see pyproject.toml) — no
+# library is swapped for a convenience alternative. PDF rendering is pypdfium2,
+# which is what src/optivision/ingest.py already imports; PyMuPDF is not needed.
+#
+# torch is left unpinned to the default PyPI (CUDA) build so ZeroGPU can use the
+# GPU. Locally the project uses the CPU wheel; both satisfy this requirement.
+
+torch>=2.2
+transformers>=4.46
+colpali-engine>=0.3.10
+
+numpy>=1.26,<3
+pillow>=10
+pypdfium2>=4
+pyyaml>=6
+qdrant-client>=1.10
+
+gradio>=6.0
+
+# ZeroGPU scheduler. Import is optional in app.py, so the app still runs on a
+# plain CPU Space or locally without it.
+spaces>=0.30
