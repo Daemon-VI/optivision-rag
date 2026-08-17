@@ -1,18 +1,26 @@
-"""Create (if needed) and upload this project to a Hugging Face Space.
+"""Create (if needed) and upload this project to a Hugging Face repo.
 
-Uses the HF API rather than `git push` on purpose: git would block on an
-interactive credential prompt, which is unusable from a non-interactive shell.
+Handles both targets:
+
+    --repo-type space   a live Gradio demo (requires a PRO account)
+    --repo-type model   a plain code repo, free for everyone (the default)
+
+Uses the HF API rather than `git push` on purpose, for two reasons: git blocks on
+an interactive credential prompt, and the Hub's pre-receive hook rejects plain
+binary files in git history (the report figures) while the API routes them
+through Xet storage automatically.
 
 Auth, in order of preference:
     1. --token / HF_TOKEN environment variable
-    2. a stored login from `huggingface-cli login`
+    2. a stored login from `hf auth login`
 
 Usage:
-    python scripts/deploy_space.py                     # <your-user>/optivision-rag
+    python scripts/deploy_space.py                          # model repo (free)
+    python scripts/deploy_space.py --repo-type space        # needs PRO
     python scripts/deploy_space.py --name my-demo
     python scripts/deploy_space.py --repo someuser/optivision-rag
     python scripts/deploy_space.py --private
-    python scripts/deploy_space.py --dry-run           # list what would upload
+    python scripts/deploy_space.py --dry-run                # list what would upload
 """
 
 from __future__ import annotations
@@ -54,7 +62,13 @@ def main() -> int:
     ap.add_argument("--repo", help="full repo id, e.g. user/optivision-rag")
     ap.add_argument("--name", default="optivision-rag", help="space name under your account")
     ap.add_argument("--token", default=os.environ.get("HF_TOKEN"), help="HF write token")
-    ap.add_argument("--private", action="store_true", help="create a private Space")
+    ap.add_argument("--private", action="store_true", help="create a private repo")
+    ap.add_argument(
+        "--repo-type",
+        default="model",
+        choices=["model", "space", "dataset"],
+        help="model/dataset are free; space needs a PRO account",
+    )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -85,31 +99,42 @@ def main() -> int:
 
     user = me["name"]
     repo_id = args.repo or f"{user}/{args.name}"
-    print(f"authenticated as {user} -> space {repo_id}")
+    print(f"authenticated as {user} -> {args.repo_type} {repo_id}")
 
     try:
+        extra = {"space_sdk": "gradio"} if args.repo_type == "space" else {}
         url = api.create_repo(
             repo_id=repo_id,
-            repo_type="space",
-            space_sdk="gradio",
+            repo_type=args.repo_type,
             private=args.private,
             exist_ok=True,
+            **extra,
         )
-        print(f"space ready: {url}")
+        print(f"{args.repo_type} ready: {url}")
     except HfHubHTTPError as exc:
-        print(f"could not create the space: {exc}", file=sys.stderr)
+        if "402" in str(exc):
+            print(
+                f"could not create the {args.repo_type}: Hugging Face requires a PRO "
+                "subscription to host a live Gradio Space. Use --repo-type model to "
+                "publish the code instead (free).",
+                file=sys.stderr,
+            )
+        else:
+            print(f"could not create the {args.repo_type}: {exc}", file=sys.stderr)
         return 3
 
     print("uploading...")
     api.upload_folder(
         folder_path=str(ROOT),
         repo_id=repo_id,
-        repo_type="space",
+        repo_type=args.repo_type,
         ignore_patterns=IGNORE,
         commit_message="OptiVision RAG: Stage-I pipeline and single-page demo",
     )
-    print(f"\ndone -> https://huggingface.co/spaces/{repo_id}")
-    print("The Space will build, then download the ColSmol checkpoint on the first compression.")
+    prefix = "spaces/" if args.repo_type == "space" else ""
+    print(f"\ndone -> https://huggingface.co/{prefix}{repo_id}")
+    if args.repo_type == "space":
+        print("The Space builds, then downloads the ColSmol checkpoint on first use.")
     return 0
 
 
