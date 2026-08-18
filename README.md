@@ -119,6 +119,13 @@ So the pipeline has two defensible operating points:
 448 KB/page becomes 3.95 KB/page: a million-page archive drops from ~448 GB to ~4 GB.
 At the quality-first setting it is ~32 GB.
 
+**And it stays small at query time.** A compressed index is worth nothing if
+searching it expands the vectors back to float32, which costs 32x the index and
+is what the obvious implementation does. Scoring here runs in blocks bounded by
+a memory budget, so peak RAM is set by that budget rather than by the size of
+the corpus — 239 MB at the 256 MB default, whether the index holds sixty pages
+or a million. See [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).
+
 The columns that matter:
 
 | column | what it means |
@@ -252,6 +259,14 @@ The suite covers saliency behaviour on blank/grey/inked pages, keep-mask budgets
 redundancy clustering invariants, bit-packing round-trips, MaxSim segment maths on
 variable-length pages, index save/load, Qdrant multivector round-trips, and a full
 index→search→evaluate loop.
+
+## Improvements
+
+[docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md) records five changes made after the
+pipeline was working — bounded query-time memory, an int8 quantizer that uses
+the range it pays for, a single-allocation decode path, a Qdrant stats fix, and
+one quadratic loop — each with the measurement behind it, plus what was
+reviewed and deliberately left alone.
 
 ## Honest limitations
 

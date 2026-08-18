@@ -95,3 +95,60 @@ class TestNumpyIndex:
         assert s["token_reduction"] == pytest.approx(10.0)
         # 100 tokens x 32 dims x 4 bytes raw, vs 10 vectors x 4 bytes packed
         assert s["compression_ratio"] == pytest.approx((100 * 32 * 4) / (10 * 4))
+
+
+class TestBoundedMemoryScoring:
+    """The search path must not re-expand the index it just compressed.
+
+    Decoding every packed code to float32 at once costs 32x the binary index,
+    which is the entire saving the pipeline exists to produce. These tests pin
+    that the streaming path stays bounded *and* returns identical scores.
+    """
+
+    def test_streaming_matches_cached_scores(self, rng, tmp_path):
+        pages = [_page(rng, f"d{i}", n=n)[0] for i, n in enumerate([7, 3, 11, 5, 9, 2])]
+        cached = NumpyIndex(tmp_path / "a", dim=32)
+        cached.add(pages)
+        streamed = NumpyIndex(tmp_path / "b", dim=32, max_decoded_bytes=256)
+        streamed.add(pages)
+        q = _unit(rng, 4, 32)
+        assert np.array_equal(streamed.score_all(q), cached.score_all(q))
+
+    def test_streaming_never_materialises_the_full_matrix(self, rng, tmp_path):
+        idx = NumpyIndex(tmp_path / "idx", dim=32, max_decoded_bytes=256)
+        idx.add([_page(rng, f"d{i}")[0] for i in range(8)])
+        assert idx.decoded_nbytes > idx.max_decoded_bytes  # streaming regime
+        idx.score_all(_unit(rng, 3, 32))
+        assert idx._decoded is None
+
+    def test_block_boundaries_do_not_split_a_page(self, rng, tmp_path):
+        """A page wider than one block must still be scored as one segment."""
+        pages = [_page(rng, f"d{i}", n=n)[0] for i, n in enumerate([1, 40, 2, 33, 1])]
+        cached = NumpyIndex(tmp_path / "a", dim=32)
+        cached.add(pages)
+        q = _unit(rng, 3, 32)
+        expected = cached.score_all(q)
+        for budget in (128, 256, 512, 4096):
+            idx = NumpyIndex(tmp_path / f"b{budget}", dim=32, max_decoded_bytes=budget)
+            idx.add(pages)
+            assert np.allclose(idx.score_all(q), expected, atol=1e-5)
+
+    def test_search_agrees_across_both_regimes(self, rng, tmp_path):
+        pages = [_page(rng, f"d{i}")[0] for i in range(12)]
+        cached = NumpyIndex(tmp_path / "a", dim=32)
+        cached.add(pages)
+        streamed = NumpyIndex(tmp_path / "b", dim=32, max_decoded_bytes=256)
+        streamed.add(pages)
+        q = _unit(rng, 4, 32)
+        assert [h.ref.page_id for h in streamed.search(q, top_k=5)] == [
+            h.ref.page_id for h in cached.search(q, top_k=5)
+        ]
+
+    def test_budget_survives_save_load(self, rng, tmp_path):
+        idx = NumpyIndex(tmp_path / "idx", dim=32)
+        idx.add([_page(rng, f"d{i}")[0] for i in range(5)])
+        idx.save()
+        q = _unit(rng, 3, 32)
+        reloaded = NumpyIndex.load(tmp_path / "idx", max_decoded_bytes=256)
+        assert reloaded.max_decoded_bytes == 256
+        assert np.allclose(reloaded.score_all(q), idx.score_all(q))

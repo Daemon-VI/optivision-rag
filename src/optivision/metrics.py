@@ -44,7 +44,8 @@ def rank_correlation(a: Sequence[str], b: Sequence[str]) -> float:
     compressed index *orders* pages the way the float baseline did, independent
     of whether either ordering is correct.
     """
-    common = [x for x in a if x in set(b)]
+    b_set = set(b)  # hoisted: rebuilding it per element made this quadratic
+    common = [x for x in a if x in b_set]
     if len(common) < 2:
         return 1.0
     pos_a = {x: i for i, x in enumerate(a)}

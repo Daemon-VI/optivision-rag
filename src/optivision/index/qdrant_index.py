@@ -72,6 +72,7 @@ class QdrantIndex(BaseIndex):
 
         self._page_stats: list[dict] = []
         self._ensure_collection(on_disk=on_disk, recreate=recreate)
+        self._hydrate_page_stats()
 
     # ------------------------------------------------------------ collection
 
@@ -103,6 +104,49 @@ class QdrantIndex(BaseIndex):
                 quantization_config=quantization,
             ),
         )
+
+    def _hydrate_page_stats(self) -> None:
+        """Recover per-page byte accounting from the collection's own payloads.
+
+        :meth:`add` fills ``_page_stats`` as it writes, but a process that only
+        *opens* an existing collection has never seen those pages, so every
+        storage figure — index bytes, compression ratio, token reduction —
+        would report zero for a perfectly good index. The numbers are already
+        stored on each point, so read them back rather than keeping a second
+        copy on disk that could drift out of sync with the collection.
+        """
+        if self._page_stats:
+            return
+        try:
+            if self.n_pages == 0:
+                return
+        except Exception:  # noqa: BLE001 - a fresh collection may not be queryable yet
+            return
+
+        recovered: list[dict] = []
+        offset = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection,
+                limit=256,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            for point in points:
+                payload = point.payload or {}
+                recovered.append(
+                    {
+                        "page_id": payload.get("page_id", "?"),
+                        "n_tokens_before": int(payload.get("n_tokens_before", 0)),
+                        "n_tokens_after": int(payload.get("n_tokens_after", 0)),
+                        "nbytes": int(payload.get("nbytes", 0)),
+                        "raw_nbytes": int(payload.get("raw_nbytes", 0)),
+                    }
+                )
+            if offset is None:
+                break
+        self._page_stats = recovered
 
     # ----------------------------------------------------------------- write
 
