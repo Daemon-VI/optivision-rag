@@ -27,10 +27,20 @@ from ..types import PageEncoding, PageRef, PatchGrid
 from .base import BaseEncoder, l2_normalise
 
 # backend -> (default checkpoint, model class name, processor class name)
+#
+# ColPali is the one checkpoint here published *adapter-only*: `vidore/colpali-v1.3`
+# holds `adapter_model.safetensors` and no `config.json`, so loading it makes
+# transformers inject a LoRA adapter over the PaliGemma base. The ColSmol and
+# ColQwen2 repos ship full weights alongside their adapter files, which is why only
+# this backend ever hit the problem. Adapter injection is brittle across
+# transformers/peft releases — when the checkpoint's key prefixes do not match what
+# the installed build expects, the LoRA weights are silently left uninitialised
+# rather than loaded. We use the pre-merged weights instead: same model, no
+# injection step, nothing to get wrong.
 BACKENDS: dict[str, tuple[str, str, str]] = {
     "colsmol": ("vidore/colSmol-256M", "ColIdefics3", "ColIdefics3Processor"),
     "colsmol-500m": ("vidore/colSmol-500M", "ColIdefics3", "ColIdefics3Processor"),
-    "colpali": ("vidore/colpali-v1.3", "ColPali", "ColPaliProcessor"),
+    "colpali": ("vidore/colpali-v1.3-merged", "ColPali", "ColPaliProcessor"),
     "colqwen2": ("vidore/colqwen2-v1.0", "ColQwen2", "ColQwen2Processor"),
 }
 
@@ -88,6 +98,20 @@ class ColVLMEncoder(BaseEncoder):
             model = model_cls.from_pretrained(checkpoint, dtype=self.torch_dtype)
         except TypeError:
             model = model_cls.from_pretrained(checkpoint, torch_dtype=self.torch_dtype)
+        # A parameter still on the meta device never received weights. That happens
+        # when an adapter checkpoint's keys do not match the installed
+        # transformers/peft build: the layers are created, the load silently skips
+        # them, and the model would encode with randomly initialised projections —
+        # producing a complete, plausible, meaningless benchmark table. `.to()`
+        # would raise "Cannot copy out of meta tensor" here anyway; say why.
+        unloaded = [n for n, p in model.named_parameters() if p.device.type == "meta"]
+        if unloaded:
+            raise RuntimeError(
+                f"{checkpoint}: {len(unloaded)} parameters were never loaded "
+                f"(e.g. {unloaded[0]}). The checkpoint's weights did not map onto this "
+                "model, so encoding would return meaningless vectors. If this is an "
+                "adapter-only repo, point --model at the merged checkpoint instead."
+            )
         self.model = model.to(self.device).eval()
         self.processor = proc_cls.from_pretrained(checkpoint)
         self._dim: int | None = None

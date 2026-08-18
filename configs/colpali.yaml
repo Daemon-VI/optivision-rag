@@ -1,7 +1,11 @@
 # Reference configuration from the paper. Needs a GPU (~6 GB VRAM).
 encoder:
   backend: colpali
-  model_name: vidore/colpali-v1.3
+  # The merged weights, not the adapter-only `vidore/colpali-v1.3`. Same model;
+  # loading the adapter repo makes transformers inject LoRA over the PaliGemma
+  # base, which silently fails to load the projection head on current
+  # transformers/peft builds. See encoders/colvlm.py.
+  model_name: vidore/colpali-v1.3-merged
   device: cuda
   dtype: bfloat16
   max_pages_in_flight: 8
