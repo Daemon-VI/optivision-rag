@@ -4,7 +4,9 @@ import numpy as np
 import pytest
 
 from optivision.compression import (
+    INT8_SCALE,
     Compressor,
+    _int8_codes,
     code_nbytes,
     decode,
     maxsim_asymmetric,
@@ -152,3 +154,50 @@ class TestCompressor:
         out = Compressor(CompressionConfig(method="binary", keep_norm=True)).compress(page)
         assert out.scale is not None and out.scale.shape == (40,)
         assert out.nbytes == 40 * 16 + 40 * 4
+
+
+class TestInt8Scale:
+    """int8 must spend the range it paid for.
+
+    These vectors are L2-normalised, so components concentrate near
+    1/sqrt(dim) and never approach 1.0. Quantizing as if they spanned
+    [-1, 1] wastes most of the 255 available levels.
+    """
+
+    def _unit_vectors(self, rng, n=200, d=128):
+        v = rng.standard_normal((n, d)).astype(np.float32)
+        return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+    def test_uses_most_of_the_int8_range(self, rng):
+        v = self._unit_vectors(rng)
+        codes = _int8_codes(v).view(np.int8)
+        # Naive round(v * 127) peaks near level 46 on unit-norm 128-d vectors.
+        assert np.abs(codes).max() > 80
+
+    def test_round_trip_beats_the_unscaled_quantizer(self, rng):
+        v = self._unit_vectors(rng)
+        scaled = decode(_int8_codes(v).view(np.uint8), 128, "int8")
+        naive = np.clip(np.round(v * 127.0), -127, 127).astype(np.int8).astype(np.float32) / 127.0
+
+        # Halving the full-scale value halves the quantization step, so the
+        # mean absolute error halves and the squared error — what actually
+        # moves a cosine — falls ~4x.
+        assert np.abs(scaled - v).mean() < np.abs(naive - v).mean() / 1.9
+
+        def one_minus_cos(x):
+            return 1.0 - float(
+                np.mean(np.sum(x * v, 1) / (np.linalg.norm(x, axis=1) * np.linalg.norm(v, axis=1)))
+            )
+
+        assert one_minus_cos(scaled) < one_minus_cos(naive) / 3.5
+
+    def test_does_not_clip_the_tail(self, rng):
+        """A scale below the data's range would put a hard error on the
+        largest — most informative — components."""
+        v = self._unit_vectors(rng, n=2000)
+        assert np.abs(v).max() < INT8_SCALE
+        assert np.abs(decode(_int8_codes(v).view(np.uint8), 128, "int8") - v).max() < 0.01
+
+    def test_storage_is_still_exactly_4x(self, rng):
+        v = self._unit_vectors(rng, n=40)
+        assert _int8_codes(v).view(np.uint8).nbytes == 40 * 128 == v.nbytes // 4

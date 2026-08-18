@@ -36,10 +36,22 @@ def pack_bits(vectors: np.ndarray) -> np.ndarray:
     return np.packbits(v > 0, axis=1)
 
 
+# Two-entry lookup: bit 0 -> -1.0, bit 1 -> +1.0.
+_SIGN_LUT = np.array([-1.0, 1.0], dtype=np.float32)
+
+
 def unpack_signs(codes: np.ndarray, dim: int) -> np.ndarray:
-    """uint8 [n, nbytes] -> float32 [n, dim] with entries in {-1, +1}."""
+    """uint8 [n, nbytes] -> float32 [n, dim] with entries in {-1, +1}.
+
+    Written as a lookup rather than the obvious ``bits * 2 - 1`` because this is
+    the one place the index is at its largest. That expression allocates the
+    full float32 result three times over — once for the cast and once for each
+    arithmetic step — so on a block sized to a memory budget the true peak came
+    out at roughly three times the budget. Indexing a 2-element table produces
+    the result in a single allocation.
+    """
     bits = np.unpackbits(np.asarray(codes, dtype=np.uint8), axis=1)[:, :dim]
-    return bits.astype(np.float32) * 2.0 - 1.0
+    return _SIGN_LUT[bits]
 
 
 def code_nbytes(dim: int) -> int:
