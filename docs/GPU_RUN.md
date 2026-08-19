@@ -37,11 +37,16 @@ Budget one hour end to end including setup and downloads.
 
    ```bash
    cd /workspace
-   git clone --depth 1 https://github.com/Daemon-VI/optivision-rag.git optivision
-   tmux new -s bench 'bash optivision/scripts/run_bench_gpu.sh 2>&1 | tee /workspace/run.log'
+   git clone --depth 1 https://github.com/Daemon-VI/optivision-rag.git optivision-rag
+   tmux new -s bench 'bash optivision-rag/scripts/run_bench_gpu.sh 2>&1 | tee /workspace/run.log'
    ```
 
    Detach with `Ctrl-b d`, reattach with `tmux attach -t bench`.
+
+   The checkout must not be named `optivision`. If the directory above it is on
+   `sys.path` — which is the default for a notebook kernel, and permanent on
+   Kaggle — a directory of that name shadows the installed package as an empty
+   namespace package, and imports fail with `No module named 'optivision.config'`.
 4. **Copy the results off before terminating the pod.** `runpodctl` avoids
    setting up SSH keys — on the pod:
 
