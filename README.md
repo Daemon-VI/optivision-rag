@@ -203,6 +203,13 @@ streamlit run app/streamlit_app.py -- --config configs/colsmol.yaml
 
 Point step 2 at your own folder of PDFs or scans to index real documents.
 
+For the reference numbers — ColPali-v1.3 over ViDoRe splits — you need a GPU.
+Two paths, same config and same code:
+`notebooks/vidore_colpali_bench.ipynb` (Colab or Kaggle, interactive) and
+`scripts/run_bench_gpu.sh` (any Ubuntu + CUDA box, unattended, all four splits).
+See [docs/GPU_RUN.md](docs/GPU_RUN.md) — a rented GPU costs about $0.25 for the
+whole benchmark, which is less trouble than the free tiers' quotas.
+
 ## Configurations
 
 | config | encoder | needs | use for |
@@ -246,6 +253,7 @@ src/optivision/
   viz.py              keep-mask and saliency figures
 app/streamlit_app.py  demo UI
 docs/                 architecture, results, viva notes
+notebooks/            Colab / Kaggle runner for the ColPali benchmark
 ```
 
 ## Testing
