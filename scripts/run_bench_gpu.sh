@@ -20,7 +20,7 @@ set -euo pipefail
 
 WORKDIR="${WORKDIR:-/workspace}"
 REPO="${REPO:-https://github.com/Daemon-VI/optivision-rag.git}"
-CHECKOUT="$WORKDIR/optivision"
+CHECKOUT="$WORKDIR/optivision-rag"
 LIMIT="${LIMIT:-500}"
 SPLITS="${SPLITS:-vidore/docvqa_test_subsampled vidore/syntheticDocQA_energy_test vidore/infovqa_test_subsampled vidore/tabfquad_test_subsampled}"
 
