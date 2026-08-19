@@ -18,7 +18,14 @@
 # preempted pod should not cost you the splits that already finished.
 set -euo pipefail
 
-WORKDIR="${WORKDIR:-/workspace}"
+# Rented boxes mount a volume at /workspace; Kaggle gives /kaggle/working and
+# Colab /content. Detect rather than make the caller pass it in.
+if [ -z "${WORKDIR:-}" ]; then
+    if [ -d /kaggle/working ]; then WORKDIR=/kaggle/working
+    elif [ -d /content ]; then WORKDIR=/content
+    else WORKDIR=/workspace
+    fi
+fi
 REPO="${REPO:-https://github.com/Daemon-VI/optivision-rag.git}"
 CHECKOUT="$WORKDIR/optivision-rag"
 LIMIT="${LIMIT:-500}"
@@ -108,13 +115,16 @@ print(yaml.safe_dump(cfg, sort_keys=False))
 PYEOF
 
 # ---------------------------------------------------------------- run
+# The CLI is invoked as `python -m optivision.cli`, not via the `optivision`
+# console script: pip can install that script somewhere off PATH, and the
+# failure then reads as a missing program rather than a missing PATH entry.
 mkdir -p data/cache reports
 for split in $SPLITS; do
     tag="${split##*/}"
     say "$split"
 
-    optivision fetch-vidore --dataset "$split" --out "data/vidore_$tag" --limit "$LIMIT"
-    optivision bench \
+    python -m optivision.cli fetch-vidore --dataset "$split" --out "data/vidore_$tag" --limit "$LIMIT"
+    python -m optivision.cli bench \
         "data/vidore_$tag/images" "data/vidore_$tag/queries.json" \
         -c configs/colpali_bench.yaml \
         --out "reports/colpali_$tag" \
