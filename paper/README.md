@@ -64,9 +64,12 @@ python paper/make_figs.py        # from the repo root
       `bash ../scripts/run_bench_gpu.sh` to reproduce.
 - [ ] **Recompile the PDF.** The committed one predates the ColPali results.
 - [ ] **Check the venue's page limit.** The ColPali section adds two tables and a
-      figure, so recount pages after recompiling. To cut: the E1 sweep figure is the most
-      expendable now that Table III carries the sweep across all four splits, and
+      figure; the E1 sweep figure was dropped to compensate, since Table III now carries
+      the sweep across all four splits. Recount after recompiling. To cut further,
       Section VI-A can lose its first paragraph without losing the argument.
+- [ ] **Compile in Normal mode, not Fast [draft].** In draft mode every figure renders
+      as a box containing its filename. Use the arrow beside Overleaf's Recompile button
+      to check.
 - [ ] **Use the venue's own template** if it supplies one. Most IEEE conferences use
       stock `IEEEtran` and this file will drop straight in; some add a copyright notice
       block or a specific `\documentclass` option.
