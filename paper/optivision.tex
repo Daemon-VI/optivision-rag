@@ -542,7 +542,7 @@ survives; the number behind it does not.
 
 \subsection{Finding 2: the token budget is free only when the corpus is sparse}
 \label{sec:sweep}
-Under E1 the token-budget sweep (Fig.~\ref{fig:sweep}) is almost flat. Keeping the
+Under E1 the token-budget sweep is almost flat. Keeping the
 top $10\%$ of patches --- $163$ vectors per page --- retains $85.6\%$ of nDCG@5,
 while keeping the top $50\%$ --- $288$ vectors, a $1.8\times$ larger index ---
 retains $85.7\%$. The $0.1$ point separating them is well inside the noise of $72$
@@ -555,16 +555,6 @@ on \texttt{docvqa}, $81.6\%$ on \texttt{tabfquad} and $85.4\%$ on
 (Table~\ref{tab:splits}). The flat sweep was an artifact of a corpus whose salient
 content fits comfortably inside the top $10\%$ of patches; on pages where it does
 not, the aggressive setting is a genuine trade rather than a free $1.8\times$.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figs/sweep.pdf}
-\caption{\textbf{E1.} The token-budget sweep, all rows using one-bit codes.
-Varying the retained fraction from $10\%$ to $50\%$ moves nDCG@5 retention by
-$0.6$ points, while the gap to the unquantized pruned index (dashed) is over $10$
-points. Under E2 the same sweep spans $25.8$ points on \texttt{docvqa}.}
-\label{fig:sweep}
-\end{figure}
 
 \subsection{Finding 3: the binary penalty belongs to the encoder, not the codec}
 Under E1, \texttt{binary-only} loses $12.1\%$ of nDCG@5 \emph{without discarding a
