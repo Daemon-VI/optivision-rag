@@ -49,20 +49,27 @@ We build OptiVision RAG, a model-agnostic compression layer that applies
 pixel-space saliency pruning, embedding-space redundancy collapsing and
 one-bit quantization to any ColBERT-style visual retriever, and we run a
 controlled ablation in which the corpus is encoded once and every configuration
-replays over identical cached vectors. On a 60-page corpus with 72 queries under
-exact brute-force MaxSim scoring, the two stages are found to be sharply
-asymmetric. Both pruning stages together give a $3.5\times$ token reduction for
-$3.9\%$ of nDCG@5 and leave the baseline ranking largely intact (Kendall
-$\tau=0.87$); one-bit quantization alone costs $12.1\%$ of nDCG@5
-\emph{without discarding a single token} and drives $\tau$ down to $0.585$.
-Every configuration that includes binary codes lands in a narrow $85$--$88\%$
-retention band regardless of how aggressively tokens are pruned, so the token
-budget is not the operative variable once the codec is fixed. Replacing the
-one-bit codec with int8 yields $14.2\times$ compression at $97.1\%$ retention
-and adds no measurable ranking distortion on top of pruning. We conclude that
-for multi-vector visual retrieval the quantizer, not the token count, is the
-binding constraint, and that reported compression ratios should be accompanied
-by a per-stage attribution.
+replays over identical cached vectors.
+We run that ablation twice: on a $60$-page generated corpus with a
+$256$M-parameter encoder, and on four ViDoRe test splits ($1{,}780$ pages,
+$1{,}325$ queries) with the reference ColPali-v1.3 encoder. The attribution does
+not transfer between them. Under the small encoder the two stages are sharply
+asymmetric: both pruning stages together give a $3.5\times$ token reduction for
+$3.9\%$ of nDCG@5, while one-bit quantization alone costs $12.1\%$
+\emph{without discarding a single token} and drives Kendall $\tau$ to $0.585$.
+Under the reference encoder on real benchmark pages that asymmetry disappears:
+one-bit quantization costs between nothing and $3.7\%$, and the full pipeline
+reaches $53$--$60\times$ compression at $94.6$--$103.4\%$ retention. What fails
+instead is the pruning premise. Real pages are dense, so both pruning stages
+together yield only $1.7$--$1.9\times$ rather than $3.5\times$, and a
+token-budget sweep that was flat under the small encoder falls to $66.7\%$
+retention at a $10\%$ budget. Kendall $\tau$ drops under one-bit codes in both
+settings ($0.53$--$0.74$), so the reordering is equally real in both; only the
+larger encoder has enough margin for nDCG@5 to absorb it. We conclude that
+per-stage attribution is necessary, and that it is a property of the encoder and
+corpus rather than of the compression layer --- so a compression ratio for
+multi-vector retrieval should be published together with its attribution and the
+setting the attribution was measured in.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -127,13 +134,16 @@ compression setting. Alongside absolute retrieval metrics we report Kendall
 $\tau$ against the uncompressed baseline's own ranking, which isolates whether
 compression changed the retriever's mind independently of whether the retriever
 was right.
-\item \textbf{The finding that the two stages are sharply asymmetric.} Pruning
-is close to free and pruning harder is nearly free on top of that; one-bit
-quantization costs $12.1\%$ of nDCG@5 while discarding no tokens at all, and
-every binary configuration lands in the same narrow retention band. We
-identify two defensible operating points that follow from this and argue that
-compression ratios for multi-vector retrieval should be published with a
-per-stage attribution.
+\item \textbf{The finding that the attribution belongs to the setting, not to
+the layer.} Under a $256$M encoder on generated pages the two stages are sharply
+asymmetric, and the one-bit codec accounts for essentially all of the loss.
+Repeating the identical ablation with the reference ColPali encoder on four
+ViDoRe splits reverses this: the codec becomes nearly free, and what fails is the
+saliency premise that a document page is mostly blank paper. We report both
+regimes, give the operating points that follow in each, and argue that a
+compression ratio for multi-vector retrieval should be published with a per-stage
+attribution \emph{and} the encoder and corpus it was measured on --- because the
+attribution, not merely its magnitude, is what changes.
 \end{enumerate}
 
 \section{Related Work}
@@ -320,20 +330,47 @@ container overhead nor deflated by filesystem compression.
 \section{Experimental Setup}
 
 \subsection{Configuration}
-The encoder is \texttt{vidore/colSmol-256M} (ColIdefics3), float32, on CPU;
-hardware is a laptop with $8$~GB of DDR4 and no GPU. The corpus is $60$ generated
-pages ($30$ documents of $2$ pages) rendered at A4, $150$~dpi. Vector dimension is
-$128$ and the encoder emits $875$ vectors per page before compression ($768$
-page-grid patches, $64$ thumbnail, $43$ instruction). Every run uses seed $1337$.
+Two experiments share one pipeline, one measurement protocol and one code path,
+differing only in encoder and corpus. We label them E1 and E2 throughout.
+
+\emph{E1: small encoder, generated corpus.} The encoder is
+\texttt{vidore/colSmol-256M} (ColIdefics3), float32, on CPU; hardware is a laptop
+with $8$~GB of DDR4 and no GPU. The corpus is $60$ generated pages ($30$ documents
+of $2$ pages) rendered at A4, $150$~dpi. The encoder emits $875$ vectors per page
+before compression ($768$ page-grid patches, $64$ thumbnail, $43$ instruction).
+
+\emph{E2: reference encoder, ViDoRe.} The encoder is ColPali-v1.3 ($3$B
+parameters) in bfloat16 on a single Tesla T4. The corpus is four ViDoRe test
+splits --- \texttt{docvqa} ($500$ pages, $451$ queries), \texttt{syntheticDocQA
+energy} ($500$, $100$), \texttt{infovqa} ($500$, $494$) and \texttt{tabfquad}
+($280$, $280$) --- for $1{,}780$ pages and $1{,}325$ queries in total, with the
+benchmark's own ground truth. The encoder emits $1{,}031$ vectors per page.
+
+Vector dimension is $128$ in both and every run uses seed $1337$.
+
+One implementation detail is worth recording, because it silently produces
+plausible numbers. ColPali is published as a LoRA adapter over a PaliGemma base.
+On current \texttt{transformers} and PEFT releases the adapter's key prefixes do
+not match the names of the injected modules, so the projection head is created and
+then left randomly initialised; the loader reports it as a missing key rather than
+as an error. A benchmark run in that state completes normally and yields a
+complete, well-formed, meaningless table. We therefore load the merged-weight
+checkpoint, which contains no adapter to mis-key, and our loader refuses to run if
+any parameter remains unmaterialised after loading.
 
 \subsection{Queries and ground truth}
-There are $72$ queries in two deliberately different families. Sixty
+E1 has $72$ queries in two deliberately different families. Sixty
 \emph{precise} queries pair a subject with a unique identifier and have exactly
 one relevant page; these check that compression has not broken retrieval
 outright. Twelve \emph{topical} queries name only a subject shared by several
 pages, so the metric depends on \emph{ordering} a group of near-identical
 candidates --- which is where compression damage becomes visible. Ground truth is
 exact by construction.
+
+E2 uses the queries and relevance judgements shipped with each ViDoRe split, so
+the query distribution is the benchmark's rather than ours. The precise/topical
+distinction is a property of our generator and does not carry over, so E2 is
+reported per split instead.
 
 \subsection{Controls}
 Two choices make the ablation a controlled experiment rather than a leaderboard.
@@ -363,8 +400,8 @@ only question this layer controls.
 \section{Results}
 
 \begin{table*}[t]
-\caption{Ablation over the compression pipeline. $60$ pages, $72$ queries,
-ColSmol-256M, exact MaxSim. Rows share one encoding pass, so every difference is
+\caption{\textbf{E1.} Ablation over the compression pipeline. $60$ pages,
+$72$ queries, ColSmol-256M, exact MaxSim. Rows share one encoding pass, so every difference is
 attributable to the compression setting alone. \emph{Retain} is nDCG@5 relative
 to the baseline row; $\tau$ is Kendall $\tau$-b against the baseline's own
 ranking.}
@@ -403,110 +440,224 @@ keep-10\% & top $10\%$ by saliency & 162.9 & 2.61 & $171.8\times$ & 0.6700 & 0.4
 \end{tabular}}
 \end{table*}
 
-Table~\ref{tab:ablation} is the full ablation and Fig.~\ref{fig:tradeoff} plots
-it. Three findings follow, and the third is the one that matters.
+Table~\ref{tab:ablation} is the full E1 ablation and Fig.~\ref{fig:tradeoff}
+plots it. Table~\ref{tab:colpali} is the same ablation under E2 on the split with
+the most queries, and Table~\ref{tab:splits} gives retention across all four.
+Three findings follow. Each is stated as E1 supports it and then tested against
+E2, and only the first survives in the form E1 suggested.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figs/tradeoff.pdf}
-\caption{Compression ratio against nDCG@5 retention, by quantizer. The points
-separate by \emph{codec}, not by token count: everything with one-bit codes falls
-into the shaded band between $85\%$ and $88\%$ retention whether it prunes
-nothing or prunes to a tenth, while the unquantized and int8 configurations stay
-above $96\%$.}
+\caption{\textbf{E1.} Compression ratio against nDCG@5 retention, by quantizer.
+The points separate by \emph{codec}, not by token count: everything with one-bit
+codes falls into the shaded band between $85\%$ and $88\%$ retention whether it
+prunes nothing or prunes to a tenth, while the unquantized and int8
+configurations stay above $96\%$. Fig.~\ref{fig:scale} shows what happens to this
+picture under E2.}
 \label{fig:tradeoff}
 \end{figure}
 
-\subsection{Finding 1: pruning is close to free}
-Removing blank patches costs $2.8\%$ of nDCG@5 for a $2.5\times$ token
-reduction, and adding redundancy collapsing brings this to $3.5\times$ for
-$3.9\%$. Rank agreement with the uncompressed baseline remains high throughout
-($\tau = 0.87$--$0.94$), meaning the pruned index does not merely score similarly
-but largely preserves the ordering. Notably, \texttt{spatial-only} matches the
-baseline exactly on Recall@1 ($0.5694$): discarding $59\%$ of the vectors does
-not cost a single top-1 hit. This is the central premise of the approach and it
-holds.
-
-\subsection{Finding 2: pruning harder is nearly free too}
-\label{sec:sweep}
-The token-budget sweep (Fig.~\ref{fig:sweep}) is almost flat. Keeping the top
-$10\%$ of patches --- $163$ vectors per page --- retains $85.6\%$ of nDCG@5, while
-keeping the top $50\%$ --- $288$ vectors, a $1.8\times$ larger index --- retains
-$85.7\%$. The $0.1$ point separating them is well inside the noise of $72$
-queries. Once quantization is in play the token budget barely moves quality, so
-the aggressive setting is not a trade-off at all: it is close to a free
-$1.8\times$.
-
-\begin{figure}[t]
+\begin{table*}[t]
+\caption{\textbf{E2.} The same ablation under ColPali-v1.3 on the ViDoRe
+\texttt{docvqa} split ($500$ pages, $451$ queries), exact MaxSim, one encoding
+pass shared by every row. Compare with Table~\ref{tab:ablation}: the binary rows
+have moved from the mid-$80$s to the mid-$90$s, and the pruning rows have lost
+most of their compression.}
+\label{tab:colpali}
 \centering
-\includegraphics[width=\columnwidth]{figs/sweep.pdf}
-\caption{The token-budget sweep, all rows using one-bit codes. Varying the
-retained fraction from $10\%$ to $50\%$ moves nDCG@5 retention by $0.6$ points,
-while the gap to the unquantized pruned index (dashed) is over $10$ points. The
-budget is not the operative variable; the codec is.}
-\label{fig:sweep}
-\end{figure}
-
-\subsection{Finding 3: the loss lives in the quantizer}
-\texttt{binary-only} loses $12.1\%$ of nDCG@5 \emph{without discarding a single
-token}, and its $\tau$ of $0.585$ says it substantially reorders results rather
-than merely rescaling scores. Against this, \texttt{int8-only} costs $0.5\%$ for
-$4\times$ with $\tau = 0.973$. Every configuration that includes one-bit codes
-lands in a narrow $85$--$88\%$ retention band regardless of how much pruning is
-applied --- the binary floor dominates everything else in the table.
-
-The cleanest statement of the asymmetry is a comparison of $\tau$ across two
-rows. \texttt{spatial+redundancy} and \texttt{prune+int8} have \emph{identical}
-$\tau$ of $0.866$: adding int8 on top of both pruning stages introduces no
-measurable ranking distortion whatsoever, while cutting the index by a further
-$4\times$. All of the reordering in the full pipeline is attributable to the
-one-bit codec.
-
-Read together, the three findings invert the intuition the system was designed
-around. The pruning stages, which are the elaborate part of the pipeline and
-consumed most of the engineering, are the safe part; the quantizer, which is a
-single sign test, is where the quality goes.
-
-\subsection{Two operating points}
-\begin{table}[t]
-\caption{The two defensible configurations that follow from the ablation.}
-\label{tab:operating}
-\centering
-\begin{tabular}{llrrr}
+\setlength{\tabcolsep}{4.5pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrrrrrrrr@{}}
 \toprule
-\textbf{Goal} & \textbf{Configuration} & \textbf{Compr.} & \textbf{Retain} & \textbf{$\tau$} \\
+\textbf{Variant} & \textbf{What it isolates} & \textbf{Tok/pg} & \textbf{KB/pg} &
+\textbf{Compr.} & \textbf{nDCG@5} & \textbf{R@1} & \textbf{Hit@5} &
+\textbf{Retain} & \textbf{$\tau$} \\
 \midrule
-smallest index & prune + binary & $113.5\times$ & 86.7\% & 0.606 \\
-quality per byte & prune + int8 & $14.2\times$ & 97.1\% & 0.866 \\
+baseline-float32 & reference: every patch, full precision & 1031.0 & 527.87 & $1.0\times$ & 0.5841 & 0.4945 & 0.6608 & 100.0\% & 1.000 \\
+\midrule
+\multicolumn{10}{l}{\textit{Pruning alone (no quantization)}} \\
+spatial-only & blank-patch pruning & 846.3 & 433.30 & $1.2\times$ & 0.5794 & 0.4945 & 0.6519 & 99.2\% & 0.873 \\
+spatial+redundancy & both pruning stages & 557.5 & 285.43 & $1.8\times$ & 0.5691 & 0.4856 & 0.6386 & 97.4\% & 0.715 \\
+\midrule
+\multicolumn{10}{l}{\textit{Quantization alone (no pruning)}} \\
+int8-only & scalar quantization & 1031.0 & 131.97 & $4.0\times$ & 0.5838 & 0.4989 & 0.6563 & 99.9\% & 0.919 \\
+binary-only & one-bit quantization & 1031.0 & 16.50 & $32.0\times$ & 0.5625 & 0.4789 & 0.6364 & 96.3\% & 0.527 \\
+\midrule
+\multicolumn{10}{l}{\textit{Both stages}} \\
+prune+int8 & quality-first operating point & 557.5 & 71.36 & $7.4\times$ & 0.5690 & 0.4878 & 0.6386 & 97.4\% & 0.712 \\
+optivision & size-first operating point & 557.5 & 8.92 & $59.2\times$ & 0.5523 & 0.4545 & 0.6341 & 94.6\% & 0.510 \\
+optivision-aggressive & fixed $25\%$ token budget & 156.1 & 2.50 & $211.3\times$ & 0.4874 & 0.4080 & 0.5610 & 83.4\% & 0.409 \\
+\midrule
+\multicolumn{10}{l}{\textit{Token-budget sweep, all with one-bit codes}} \\
+keep-50\% & top $50\%$ by saliency & 373.9 & 5.98 & $88.2\times$ & 0.5404 & 0.4612 & 0.6142 & 92.5\% & 0.486 \\
+keep-40\% & top $40\%$ by saliency & 309.0 & 4.94 & $106.8\times$ & 0.5276 & 0.4501 & 0.5987 & 90.3\% & 0.459 \\
+keep-30\% & top $30\%$ by saliency & 239.8 & 3.84 & $137.6\times$ & 0.5076 & 0.4146 & 0.5942 & 86.9\% & 0.455 \\
+keep-20\% & top $20\%$ by saliency & 165.3 & 2.64 & $199.6\times$ & 0.4778 & 0.3925 & 0.5543 & 81.8\% & 0.398 \\
+keep-10\% & top $10\%$ by saliency & 86.0 & 1.38 & $383.6\times$ & 0.3899 & 0.3126 & 0.4634 & 66.7\% & 0.393 \\
+\bottomrule
+\end{tabular}}
+\end{table*}
+
+\begin{table}[t]
+\caption{\textbf{E2.} nDCG@5 retained across all four ViDoRe splits. The
+\texttt{energy} split has only $100$ queries and reads above $100\%$ for most
+rows; those differences are noise, not improvement.}
+\label{tab:splits}
+\centering
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrl@{}}
+\toprule
+\textbf{Variant} & \textbf{docvqa} & \textbf{energy} & \textbf{infovqa} &
+\textbf{tabfquad} & \textbf{Compr.} \\
+\midrule
+spatial-only & 99.2\% & 101.1\% & 99.8\% & 99.8\% & $1.0$--$1.4\times$ \\
+spatial+redundancy & 97.4\% & 101.8\% & 99.7\% & 99.2\% & $1.7$--$1.9\times$ \\
+int8-only & 99.9\% & 101.6\% & 100.1\% & 99.9\% & $4.0\times$ \\
+binary-only & 96.3\% & 100.6\% & 97.4\% & 100.3\% & $32.0\times$ \\
+prune+int8 & 97.4\% & 101.6\% & 99.5\% & 99.8\% & $6.7$--$7.5\times$ \\
+optivision & 94.6\% & 103.4\% & 97.2\% & 95.6\% & $53.4$--$59.9\times$ \\
+keep-50\% & 92.5\% & 101.8\% & 94.7\% & 97.4\% & $80.7$--$91.4\times$ \\
+keep-10\% & 66.7\% & 89.8\% & 85.4\% & 81.6\% & $342.4$--$387.4\times$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:operating} summarises the practical consequence. For an archive
-where the index must fit in a fixed small memory and the retriever feeds a
-downstream reader that tolerates imperfect ordering, prune + binary at
-$113.5\times$ is appropriate. Where ranking fidelity matters --- a shortlist shown
-directly to a user --- prune + int8 delivers $14.2\times$ at $97.1\%$ retention and
-undistorted ordering, which is the better default. The $8\times$ difference in
-index size between them buys $10.4$ points of retention, and which side of that
-exchange is correct is a deployment question rather than a research one.
+\subsection{Finding 1: pruning is close to free, and buys less than it appears}
+Under E1, removing blank patches costs $2.8\%$ of nDCG@5 for a $2.5\times$ token
+reduction, and adding redundancy collapsing brings this to $3.5\times$ for
+$3.9\%$. Rank agreement with the uncompressed baseline remains high throughout
+($\tau = 0.87$--$0.94$), and \texttt{spatial-only} matches the baseline exactly on
+Recall@1 ($0.5694$): discarding $59\%$ of the vectors does not cost a single top-1
+hit.
 
-One row deserves an explicit caveat. \texttt{prune+int8} scores $0.7596$ against
-\texttt{spatial+redundancy}'s $0.7519$, so quantization appears to \emph{improve}
-nDCG@5 slightly. At $72$ queries this is noise, and it should be read as ``int8
-is free here'', not as ``int8 helps''.
+Under E2 the quality claim holds more strongly and matters much less. Both
+pruning stages together retain $97.4$--$101.8\%$ of nDCG@5 across the four splits,
+but the token reduction collapses from $3.5\times$ to $1.7$--$1.9\times$. The
+reason is visible in the extreme case: on \texttt{infovqa}, spatial pruning keeps
+$1{,}000$ of $1{,}031$ patches and saves essentially nothing. Wide margins are a
+property of the documents our generator renders, not of documents in general, and
+ViDoRe --- scans, infographics, dense tables --- does not have them. The claim
+survives; the number behind it does not.
+
+\subsection{Finding 2: the token budget is free only when the corpus is sparse}
+\label{sec:sweep}
+Under E1 the token-budget sweep (Fig.~\ref{fig:sweep}) is almost flat. Keeping the
+top $10\%$ of patches --- $163$ vectors per page --- retains $85.6\%$ of nDCG@5,
+while keeping the top $50\%$ --- $288$ vectors, a $1.8\times$ larger index ---
+retains $85.7\%$. The $0.1$ point separating them is well inside the noise of $72$
+queries, which invites the conclusion that the token budget is not the operative
+variable once a codec is fixed.
+
+Under E2 that conclusion fails outright. Keeping the top $10\%$ retains $66.7\%$
+on \texttt{docvqa}, $81.6\%$ on \texttt{tabfquad} and $85.4\%$ on
+\texttt{infovqa}, against $92.5\%$, $97.4\%$ and $94.7\%$ at the top $50\%$
+(Table~\ref{tab:splits}). The flat sweep was an artifact of a corpus whose salient
+content fits comfortably inside the top $10\%$ of patches; on pages where it does
+not, the aggressive setting is a genuine trade rather than a free $1.8\times$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figs/sweep.pdf}
+\caption{\textbf{E1.} The token-budget sweep, all rows using one-bit codes.
+Varying the retained fraction from $10\%$ to $50\%$ moves nDCG@5 retention by
+$0.6$ points, while the gap to the unquantized pruned index (dashed) is over $10$
+points. Under E2 the same sweep spans $25.8$ points on \texttt{docvqa}.}
+\label{fig:sweep}
+\end{figure}
+
+\subsection{Finding 3: the binary penalty belongs to the encoder, not the codec}
+Under E1, \texttt{binary-only} loses $12.1\%$ of nDCG@5 \emph{without discarding a
+single token}, and its $\tau$ of $0.585$ says it substantially reorders results
+rather than merely rescaling scores. Against this, \texttt{int8-only} costs
+$0.5\%$ for $4\times$ with $\tau = 0.973$. Every E1 configuration that includes
+one-bit codes lands in a narrow $85$--$88\%$ retention band regardless of how much
+pruning is applied. On that evidence the codec is the binding constraint.
+
+Under E2 the band is gone. \texttt{binary-only} retains $96.3\%$ on
+\texttt{docvqa} and $97.4\%$ on \texttt{infovqa}, and is indistinguishable from
+the baseline on the two splits with fewer queries. The full pipeline reaches
+$53$--$60\times$ at $94.6$--$103.4\%$ (Fig.~\ref{fig:scale}). A $12.1\%$ penalty
+became at most $3.7\%$ under a change of encoder and corpus, with the codec
+itself untouched.
+
+The $\tau$ column explains how both results can be true. Under E2,
+\texttt{binary-only} has $\tau = 0.527$ on \texttt{docvqa} --- as low as E1's
+$0.585$, on a larger and more varied corpus. One-bit rounding reorders results
+just as severely in both experiments. What changed is that nDCG@5 stops charging
+for it: a stronger encoder separates the relevant page from its neighbours by a
+wider margin, so the same perturbation of $\arg\max$ margins moves fewer pages
+across the top-$5$ boundary. The mechanism of Section~\ref{sec:floor} is intact;
+its consequence for the headline metric is not.
+
+Read together, the three findings do not support the statement that the quantizer
+is the binding constraint --- that statement is an artifact of E1. At reference
+scale neither stage binds: compression to roughly $57\times$ is nearly free, and
+the limit on the pipeline is how little a pixel-space saliency detector can
+remove from a dense page.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figs/scale.pdf}
+\caption{The reversal. Every configuration using one-bit codes, under both
+experiments, at the same compression ratios. Under E1 (red) they sit in a band
+below $88\%$ retention; under E2 (blue) the same configurations retain
+$94$--$97\%$, with only the most aggressive budgets falling away. Arrows join
+identical configurations across the two experiments. The codec is unchanged; the
+encoder and the corpus are not.}
+\label{fig:scale}
+\end{figure}
+
+\subsection{Two operating points}
+\begin{table}[t]
+\caption{The configurations that follow from each experiment. Under E1 the two
+are a genuine exchange; under E2 the size-first point dominates on nDCG@5, and
+only $\tau$ separates them.}
+\label{tab:operating}
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lllrl@{}}
+\toprule
+& \textbf{Goal} & \textbf{Configuration} & \textbf{Compr.} & \textbf{Retain} \\
+\midrule
+E1 & smallest index & prune + binary & $113.5\times$ & 86.7\% \\
+E1 & quality per byte & prune + int8 & $14.2\times$ & 97.1\% \\
+\midrule
+E2 & smallest index & prune + binary & $53$--$60\times$ & 94.6--103.4\% \\
+E2 & quality per byte & prune + int8 & $6.7$--$7.5\times$ & 97.4--101.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:operating} summarises the practical consequence, and it differs
+between the two regimes. Under E1 the choice is a real exchange: prune + binary
+buys an $8\times$ smaller index than prune + int8 and pays $10.4$ points of
+retention for it, and which side is correct is a deployment question.
+
+Under E2 that exchange collapses. Prune + binary gives roughly $8\times$ the
+compression of prune + int8 at the same nDCG@5, so on the headline metric the
+size-first configuration simply dominates. What still separates them is ordering:
+Kendall $\tau$ is 0.71$--$0.90 for prune + int8 against 0.51$--$0.70 for prune +
+binary. A pipeline whose output is a shortlist for a downstream reader should
+take the binary configuration and the $57\times$; one that shows a ranked list
+directly to a person should still take int8, and the justification is $\tau$
+rather than nDCG@5. This is a narrower and more specific recommendation than E1
+alone would have produced, and it is the opposite of the one E1 alone would have
+produced.
 
 \subsection{Latency}
-Query latency falls with the token count, from $3.25$~ms at the float32
-baseline to $0.70$~ms at keep-$10\%$ on the $60$-page corpus, since MaxSim cost
-is linear in stored vectors. We do not emphasise these figures: at this corpus
-size latency is dominated by fixed overhead, and the exact index used for
-measurement is not the structure a deployment would use. Query encoding, at
-$65.7$~ms, dominates search entirely at this scale.
+Query latency falls with the token count, since MaxSim cost is linear in stored
+vectors: under E1 from $3.25$~ms at the float32 baseline to $0.70$~ms at
+keep-$10\%$ on $60$ pages, and under E2 on the $500$-page \texttt{docvqa} split
+from 55.9~ms to 23.5~ms for the full pipeline and 4.4~ms at keep-$10\%$. We
+do not emphasise these figures: the exact index used for measurement is not the
+structure a deployment would use, and query encoding dominates search entirely at
+this scale --- $65.7$~ms under E1 and 72.8~ms under E2.
 
 \section{Discussion}
 
 \subsection{Why the binary floor exists}
+\label{sec:floor}
 For random unit vectors the expected cosine between $\mathbf{d}$ and
 $\mathrm{sign}(\mathbf{d})/\sqrt{d}$ is $\sqrt{2/\pi} \approx 0.798$, and the
 distortion is nearly the same for every document vector. Uniform distortion
@@ -520,73 +671,97 @@ expectation is not uniform in its effect on an $\arg\max$, and this is why
 single-vector intuitions about binary quantization transfer poorly to
 late-interaction retrieval.
 
+E2 sharpens rather than contradicts this account. One-bit codes reorder results
+just as severely under the reference encoder --- $\tau = 0.527$ on
+\texttt{docvqa} against E1's $0.585$ --- so the $\arg\max$ argument above is not
+encoder-specific. What differs is how much that reordering costs on a
+top-$5$ metric. A stronger encoder places the relevant page further from its
+competitors, so perturbing the margins moves fewer pages across the cut-off.
+The distortion is a property of the codec; whether it becomes a retrieval error
+is a property of the encoder. This is precisely why an end-to-end retention
+figure cannot be attributed without naming both.
+
 \subsection{Implications}
-Three follow. First, \emph{reported compression ratios for multi-vector retrieval
-should be accompanied by a per-stage attribution}, since the same end-to-end
-number can be reached by configurations with entirely different upgrade paths.
-Second, given a fixed one-bit codec, the token budget is close to a free
-parameter, so a system that has already committed to binary codes should prune as
-aggressively as its saliency detector allows. Third, the highest-value research
-direction for this class of system is not a better saliency model but a better
-codec: a two-bit or product-quantized document side sitting between binary
-($32\times$) and int8 ($4\times$) would dominate both of our operating points if
-it recovers most of the $12\%$ at around $16\times$. Rescoring a binary-retrieved
-shortlist with full-precision vectors for the top $k$ pages only is the cheapest
-test of whether the loss is a ranking problem or a recall problem; our Hit@5
-remains at $0.9583$ for the full pipeline while nDCG@5 drops sharply, which
-suggests the relevant page is usually still in the shortlist and merely
-misordered --- exactly the regime in which shortlist rescoring should recover most
-of the gap.
+Three follow. First, and most strongly, \emph{a reported compression ratio for
+multi-vector retrieval should carry both a per-stage attribution and the encoder
+and corpus it was measured on}. Our two experiments differ only in those two
+variables and produce opposite attributions from the same code; a paper reporting
+either one alone would have supported a confident and wrong generalisation.
+
+Second, the token budget is a free parameter exactly when the corpus is sparse,
+and not otherwise. E1 would have licensed pruning as aggressively as the detector
+allows; on ViDoRe that costs $25.8$ points of retention between the top $50\%$
+and the top $10\%$. Sparsity is cheap to measure --- it is the fraction of
+patches the saliency detector rejects --- and should be reported alongside any
+token-reduction result.
+
+Third, the research direction the attribution recommends is different in each
+regime, which is the practical point of making the attribution at all. Under a
+small encoder the codec binds and an intermediate two-bit or product-quantized
+document side would dominate both operating points. Under the reference encoder
+the codec is already nearly free, and the binding limit is the saliency detector:
+pixel statistics find little to remove on an infographic, which is where a
+learned or attention-derived selector would have to earn its cost. Shortlist
+rescoring remains attractive in both, since Hit@5 stays well above nDCG@5
+throughout --- the relevant page is usually retrieved and merely misordered.
 
 \subsection{Limitations}
 We state these plainly, as they bound the claims above.
 
-\emph{Corpus scale and provenance.} Sixty generated pages with exact ground truth
-give a clean attribution but coarse metric resolution, and real scans add noise,
-skew and bleed-through that a generator does not. The storage ratios are
-scale-independent; the quality figures would tighten with more pages. Our
-harness includes a ViDoRe loader that treats real benchmark data identically, and
-running it is the immediate next step.
+\emph{Corpus scale.} E2 uses $500$-page subsets of each ViDoRe split rather than
+the full splits, so absolute nDCG@5 is not comparable with published leaderboard
+figures. Only the ratios between rows are the measurement here, and those are what
+we claim; but a larger corpus makes retrieval harder, and the compression
+penalties we report may be optimistic in absolute terms.
 
-\emph{Encoder scale.} ColSmol-256M is a $256$M-parameter model, and its
-embeddings are plausibly less robust to one-bit rounding than ColPali-3B's.
-Absolute quality here is below published ColPali figures. The compression
-behaviour is what we expect to transfer, since no stage touches the model --- but
-the magnitude of the binary penalty specifically should be treated as an
-\emph{upper bound} until the same table is produced on ColPali with a GPU.
+\emph{Statistical power.} E1 has $72$ queries and the \texttt{energy} split of E2
+has $100$, at which several rows read above $100\%$ retention. Those readings are
+noise and we decline to interpret them; the \texttt{docvqa} ($451$) and
+\texttt{infovqa} ($494$) splits carry the E2 conclusions.
+
+\emph{Two points, one family.} We measure a $256$M and a $3$B encoder, both
+ColBERT-style vision--language retrievers. We can say the attribution reverses
+between them; we cannot say where in between it does, nor whether the crossing is
+driven by parameter count, embedding quality, or the corpus change that
+accompanies it in our design. Separating encoder scale from corpus provenance
+requires running the reference encoder on the generated corpus as well, which is
+the obvious next experiment.
 
 \emph{Scoring path.} All quality numbers come from exact brute-force MaxSim,
 deliberately. A deployment on an approximate index would see additional recall
 loss from the ANN structure, which our figures do not include and were designed
 not to include.
 
-\emph{Statistical power.} With $72$ queries, differences below roughly one point
-of nDCG@5 are not resolvable, which is why we decline to interpret the
-\texttt{prune+int8} row's apparent improvement and why the sweep is described as
-flat rather than as having a shape.
-
 \section{Conclusion}
 
 We built a model-agnostic compression layer for vision--language document
 retrieval and used it to ask which of its two stages the retrieval quality is
-actually paid to. Under a controlled ablation in which the corpus is encoded once
-and only the compression setting varies, the two stages proved sharply
-asymmetric: both pruning stages together cost $3.9\%$ of nDCG@5 for a
-$3.5\times$ token reduction and largely preserve the baseline ordering, while
-one-bit quantization costs $12.1\%$ while discarding no tokens at all. Every
-binary configuration lands in the same $85$--$88\%$ band regardless of token
-budget, and int8 on top of pruning leaves Kendall $\tau$ exactly unchanged at
-$0.866$ while adding $4\times$ compression. The token count is therefore not the
-binding constraint in this pipeline; the codec is.
+actually paid to. Asking the question twice is what the paper turns on. Under a
+$256$M encoder on generated pages the two stages are sharply asymmetric: pruning
+costs $3.9\%$ of nDCG@5 for a $3.5\times$ token reduction while one-bit
+quantization costs $12.1\%$ having discarded no tokens at all, and every binary
+configuration lands in the same $85$--$88\%$ band. Under ColPali-v1.3 on four
+ViDoRe splits the same code produces the opposite attribution: one-bit
+quantization costs at most $3.7\%$, the full pipeline reaches $53$--$60\times$ at
+$94.6$--$103.4\%$ retention, and what fails instead is the premise that a page is
+mostly blank paper --- pruning yields $1.7$--$1.9\times$ on real pages, and a
+token-budget sweep that was flat becomes a $25.8$-point drop.
 
-The practical output is two defensible operating points --- $113.5\times$ at
-$86.7\%$ retention, or $14.2\times$ at $97.1\%$ with undistorted ranking --- and
-the methodological one is that a compression ratio for multi-vector retrieval
-should not be published without saying which stage paid for it. Future work
-follows directly from the attribution: reproduce the table on ColPali-v1.3 over
-the ViDoRe benchmark, place a two-bit or product-quantized codec between the two
-current operating points, and test shortlist rescoring, which our Hit@5 figures
-suggest should recover much of the binary gap at negligible cost.
+Kendall $\tau$ behaves the same way in both experiments, falling to $0.53$--$0.59$
+under one-bit codes, which locates the difference precisely: the codec distorts
+ranking identically, and only the stronger encoder has the margin to absorb that
+distortion within the top $5$. The conclusion is therefore not that the codec
+binds, nor that the token count binds, but that neither is a property of the
+compression layer alone. A compression ratio for multi-vector retrieval should be
+published with a per-stage attribution and with the encoder and corpus that
+attribution was measured on, because the attribution itself is what moves.
+
+Future work follows directly: run the reference encoder on the generated corpus to
+separate encoder scale from corpus provenance, place a two-bit or
+product-quantized codec between the current operating points for the small-encoder
+regime, replace pixel-space saliency with a learned selector for the dense-page
+regime, and test shortlist rescoring, which our Hit@5 figures suggest should
+recover most of the remaining ranking loss at negligible cost.
 
 \section*{Acknowledgment}
 The authors thank the Department of Emerging Technologies, Mahatma Gandhi

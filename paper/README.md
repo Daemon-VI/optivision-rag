@@ -1,8 +1,11 @@
 # Paper — submission guide
 
-`optivision.tex` is a 7-page IEEE conference paper built from the measured ablation in
-[`../docs/RESULTS.md`](../docs/RESULTS.md). It compiles clean (no errors, two cosmetic
-underfull-hbox warnings) and `optivision.pdf` in this folder is the current build.
+`optivision.tex` is an IEEE conference paper built from the measured ablations in
+[`../docs/RESULTS.md`](../docs/RESULTS.md).
+
+> **`optivision.pdf` in this folder is stale.** It is the build from before the
+> ColPali/ViDoRe results landed, and it still argues the superseded single-experiment
+> claim. Recompile before you send it anywhere — see *Compiling* below.
 
 ## What the paper argues
 
@@ -11,12 +14,24 @@ unremarkable, and a reviewer has seen it before. The paper argues something narr
 more defensible:
 
 > Systems that prune visual tokens *and* quantize them report the product of the two
-> savings. Nobody reports the ratio of the two costs. We measured it, and the two stages
-> are sharply asymmetric: pruning is nearly free, the one-bit codec costs everything.
+> savings. Nobody reports the ratio of the two costs. We measured it twice — once with a
+> 256M encoder on generated pages, once with ColPali-3B on ViDoRe — and got opposite
+> answers from the same code. Under the small encoder the one-bit codec costs everything
+> and pruning is free. Under the reference encoder the codec is nearly free, and what
+> fails is the premise that a document page is mostly blank paper.
 
-The negative result *is* the contribution. Do not soften it into a success story during
-revision — "our headline technique is not where the value is" is what makes this worth
-reading, and it is the part a reviewer cannot get from the ColPali paper.
+The reversal *is* the contribution, and it is a stronger one than the original
+single-experiment claim. That version said "the codec is the binding constraint", which
+the reference encoder shows to be false; this version says the attribution itself is a
+property of the encoder and corpus, which is why publishing a compression ratio without
+naming both is not enough. Do not soften either half during revision, and do not quietly
+drop the E1 numbers — the paper only works because both experiments are reported.
+
+Two details a reviewer will look for, both already in the text: Kendall $\tau$ falls just
+as far under one-bit codes in *both* experiments (0.53 vs 0.59), which is what pins the
+difference on the encoder's margin rather than on the codec; and the `energy` split's
+above-100% retentions are called out as noise at 100 queries rather than presented as
+compression improving retrieval.
 
 ## Compiling
 
@@ -44,10 +59,14 @@ python paper/make_figs.py        # from the repo root
 - [ ] **Check the guide's name and title** are exactly as they should appear, and confirm
       author order with everyone listed. This is the one thing that cannot be fixed after
       acceptance.
-- [ ] **Run the ViDoRe benchmark** (below) and update the numbers.
-- [ ] **Check the venue's page limit.** At 7 pages this fits an 8-page limit as-is. To
-      reach 6 pages: cut Section VI-A (*Why the binary floor exists*, ~20 lines), shorten
-      the sweep discussion, and move Fig. 4 into Fig. 3 as a second panel.
+- [x] ~~**Run the ViDoRe benchmark** and update the numbers.~~ Done: four splits,
+      1,780 pages, 1,325 queries. See `../reports/colpali_*/` and
+      `bash ../scripts/run_bench_gpu.sh` to reproduce.
+- [ ] **Recompile the PDF.** The committed one predates the ColPali results.
+- [ ] **Check the venue's page limit.** The ColPali section adds two tables and a
+      figure, so recount pages after recompiling. To cut: the E1 sweep figure is the most
+      expendable now that Table III carries the sweep across all four splits, and
+      Section VI-A can lose its first paragraph without losing the argument.
 - [ ] **Use the venue's own template** if it supplies one. Most IEEE conferences use
       stock `IEEEtran` and this file will drop straight in; some add a copyright notice
       block or a specific `\documentclass` option.
