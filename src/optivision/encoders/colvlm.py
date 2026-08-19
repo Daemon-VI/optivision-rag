@@ -67,6 +67,46 @@ def _resolve_dtype(dtype: str, device: str):
     return torch.float32 if device == "cpu" else torch.bfloat16
 
 
+def _retie_output_embeddings(model) -> None:
+    """Re-tie the language-model head to the input embeddings after loading.
+
+    PaliGemma ties `lm_head.weight` to the token embeddings, so a merged ColPali
+    checkpoint does not store it — the weight is meant to be re-created by tying
+    at load time. Nested one level down inside ColPali (`model.model.lm_head`),
+    transformers does not always do that, which leaves exactly one parameter on
+    the meta device and makes `.to(device)` fail with "Cannot copy out of meta
+    tensor".
+
+    Tying is safe here in a stronger sense than usual: ColPali reads
+    `hidden_states[-1]`, which is computed *before* the head, and projects that
+    through `custom_text_proj`. The head's values never reach a retrieval vector.
+    It only has to exist on the right device, because the wrapped
+    `...ForConditionalGeneration.forward` still computes logits and discards them.
+    Tying also costs no extra memory, since the tensor is shared.
+    """
+    inner = getattr(model, "model", None)
+    for target in (inner, model):
+        if target is None:
+            continue
+        tie = getattr(target, "tie_weights", None)
+        if callable(tie):
+            tie()
+
+    # Some builds only tie via config flags. If the head is still unmaterialised,
+    # bind it to the embedding tensor directly — that is what tying does.
+    for target in (inner, model):
+        if target is None:
+            continue
+        head = getattr(target, "lm_head", None)
+        get_input = getattr(target, "get_input_embeddings", None)
+        if head is None or not callable(get_input):
+            continue
+        if getattr(head, "weight", None) is not None and head.weight.device.type == "meta":
+            embeddings = get_input()
+            if embeddings is not None and embeddings.weight.device.type != "meta":
+                head.weight = embeddings.weight
+
+
 class ColVLMEncoder(BaseEncoder):
     def __init__(
         self,
@@ -98,12 +138,14 @@ class ColVLMEncoder(BaseEncoder):
             model = model_cls.from_pretrained(checkpoint, dtype=self.torch_dtype)
         except TypeError:
             model = model_cls.from_pretrained(checkpoint, torch_dtype=self.torch_dtype)
+        _retie_output_embeddings(model)
+
         # A parameter still on the meta device never received weights. That happens
-        # when an adapter checkpoint's keys do not match the installed
-        # transformers/peft build: the layers are created, the load silently skips
-        # them, and the model would encode with randomly initialised projections —
-        # producing a complete, plausible, meaningless benchmark table. `.to()`
-        # would raise "Cannot copy out of meta tensor" here anyway; say why.
+        # when a checkpoint's keys do not match the installed transformers build:
+        # the layers are created, the load silently skips them, and the model would
+        # encode with randomly initialised projections — producing a complete,
+        # plausible, meaningless benchmark table. `.to()` would raise "Cannot copy
+        # out of meta tensor" here anyway; say why.
         unloaded = [n for n, p in model.named_parameters() if p.device.type == "meta"]
         if unloaded:
             raise RuntimeError(
