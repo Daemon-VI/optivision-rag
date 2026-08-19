@@ -1,0 +1,73 @@
+encoding corpus (once): 0/280
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|██████████| 2/2 [00:00<00:00, 23497.50it/s]
+Loading weights:   0%|          | 0/605 [00:00<?, ?it/s]Loading weights:  43%|████▎     | 262/605 [00:00<00:00, 2608.40it/s]Loading weights:  86%|████████▋ | 523/605 [00:00<00:00, 2543.69it/s]Loading weights: 100%|██████████| 605/605 [00:00<00:00, 2587.46it/s]
+  14/280
+  28/280
+  42/280
+  56/280
+  70/280
+  84/280
+  98/280
+  112/280
+  126/280
+  140/280
+  154/280
+  168/280
+  182/280
+  196/280
+  210/280
+  224/280
+  238/280
+  252/280
+  266/280
+  280/280
+**Corpus**: 280 pages, 280 queries  
+**Encoder**: colpali (dim 128)  
+**Query encode**: 107.4 ms/query
+
+| Variant | Tok/pg | KB/pg | Compr. | nDCG@5 | R@1 | Hit@5 | Retain | Tau | q ms
+|
+|---|---|---|---|---|---|---|---|---|---|
+| baseline-float32 | 1031.0 | 527.87 | 1.0x | 0.5246 | 0.2250 | 0.8000 | 100.0% 
+| 1.000 | 40.57 |
+| binary-only | 1031.0 | 16.50 | 32.0x | 0.5264 | 0.2143 | 0.8071 | 100.3% | 
+0.686 | 39.80 |
+| int8-only | 1031.0 | 131.97 | 4.0x | 0.5241 | 0.2250 | 0.8000 | 99.9% | 0.986 
+| 37.39 |
+| spatial-only | 940.6 | 481.59 | 1.1x | 0.5238 | 0.2286 | 0.8071 | 99.8% | 
+0.912 | 35.65 |
+| spatial+redundancy | 571.2 | 292.46 | 1.8x | 0.5203 | 0.2214 | 0.8036 | 99.2% 
+| 0.828 | 17.81 |
+| prune+int8 | 571.2 | 73.12 | 7.2x | 0.5233 | 0.2250 | 0.8071 | 99.8% | 0.830 |
+17.46 |
+| optivision | 571.2 | 9.14 | 57.8x | 0.5016 | 0.1893 | 0.7964 | 95.6% | 0.674 |
+17.17 |
+| optivision-aggressive | 151.1 | 2.42 | 218.3x | 0.4853 | 0.2000 | 0.7571 | 
+92.5% | 0.610 | 5.04 |
+| keep-50pct | 363.2 | 5.81 | 90.8x | 0.5108 | 0.2071 | 0.7929 | 97.4% | 0.630 |
+11.16 |
+| keep-40pct | 301.5 | 4.82 | 109.4x | 0.4848 | 0.1893 | 0.7643 | 92.4% | 0.618 
+| 9.42 |
+| keep-30pct | 236.4 | 3.78 | 139.6x | 0.4886 | 0.1857 | 0.7750 | 93.1% | 0.615 
+| 7.71 |
+| keep-20pct | 166.7 | 2.67 | 197.9x | 0.4827 | 0.1893 | 0.7571 | 92.0% | 0.539 
+| 5.47 |
+| keep-10pct | 90.6 | 1.45 | 364.2x | 0.4279 | 0.1643 | 0.6786 | 81.6% | 0.451 |
+3.34 |
+
+- `baseline-float32` — ColPali as published: every patch, full precision
+- `binary-only` — quantization alone (32x)
+- `int8-only` — scalar quantization alone (4x)
+- `spatial-only` — blank-patch pruning alone
+- `spatial+redundancy` — both pruning stages, full precision
+- `prune+int8` — pruning with the cheaper quantizer — the quality-first option
+- `optivision` — full pipeline: prune + binary
+- `optivision-aggressive` — fixed 25% token budget
+- `keep-50pct` — top 50% most salient patches, binary
+- `keep-40pct` — top 40% most salient patches, binary
+- `keep-30pct` — top 30% most salient patches, binary
+- `keep-20pct` — top 20% most salient patches, binary
+- `keep-10pct` — top 10% most salient patches, binary
+
+wrote reports/colpali_tabfquad_test_subsampled/benchmark.json  
+reports/colpali_tabfquad_test_subsampled/benchmark.md

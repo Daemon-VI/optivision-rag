@@ -119,6 +119,15 @@ So the pipeline has two defensible operating points:
 448 KB/page becomes 3.95 KB/page: a million-page archive drops from ~448 GB to ~4 GB.
 At the quality-first setting it is ~32 GB.
 
+**These numbers are the 256M model on generated pages, and the reference model
+disagrees with them.** The same ablation on ColPali-v1.3 over four ViDoRe splits
+(1,780 pages, 1,325 queries) reaches 53-60x at 94.6-103.4% of baseline nDCG@5 -
+less compression, far less loss. Two of the three findings above do not transfer:
+pruning buys only 1.7-1.9x on real pages rather than 3.5x, and binary quantization
+costs 0-3.7% rather than 12.1%. Full table and analysis in
+[docs/RESULTS.md](docs/RESULTS.md#the-same-table-on-colpali-3b-and-real-vidore-pages);
+raw reports in [reports/](reports/).
+
 **And it stays small at query time.** A compressed index is worth nothing if
 searching it expands the vectors back to float32, which costs 32x the index and
 is what the obvious implementation does. Scoring here runs in blocks bounded by

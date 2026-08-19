@@ -106,6 +106,105 @@ one-bit quantization. The binary penalty measured here should be treated as an u
 bound until the same table is produced on ColPali with a GPU — which is item 1 on the
 [roadmap](ROADMAP.md).
 
+## The same table on ColPali-3B and real ViDoRe pages
+
+The caveat above turned out to be the important one. Repeating the ablation with
+the reference encoder on the benchmark everyone else reports changes two of the
+three findings above, and reverses the third.
+
+| | |
+|---|---|
+| Encoder | `vidore/colpali-v1.3-merged` (ColPali), bfloat16, Tesla T4 |
+| Corpus | four ViDoRe test splits, 500 pages each except tabfquad (280) |
+| Index | exact brute-force MaxSim (`NumpyIndex`), as before |
+| Tokens/page before compression | 1031 |
+| Stack | torch 2.10.0+cu128, transformers 5.15.1, peft 0.19.1, colpali-engine 0.3.17, datasets 5.0.0 |
+| Reproduce | `bash scripts/run_bench_gpu.sh` - see [GPU_RUN.md](GPU_RUN.md) |
+
+Per split, the full pipeline against its own uncompressed baseline:
+
+| split | character | pages | queries | baseline nDCG@5 | optivision | retained | tau |
+|---|---|---|---|---|---|---|---|
+| `docvqa_test_subsampled` | scanned industry documents | 500 | 451 | 0.5841 | 59.2x | 94.6% | 0.510 |
+| `syntheticDocQA_energy_test` | clean synthetic reports | 500 | 100 | 0.8403 | 59.9x | 103.4% | 0.696 |
+| `infovqa_test_subsampled` | infographics | 500 | 494 | 0.8458 | 53.4x | 97.2% | 0.655 |
+| `tabfquad_test_subsampled` | tables | 280 | 280 | 0.5246 | 57.8x | 95.6% | 0.674 |
+
+nDCG@5 retained, by variant and split:
+
+| variant | docvqa | energy | infovqa | tabfquad | compression |
+|---|---|---|---|---|---|
+| `spatial-only` | 99.2% | 101.1% | 99.8% | 99.8% | 1.0-1.4x |
+| `spatial+redundancy` | 97.4% | 101.8% | 99.7% | 99.2% | 1.7-1.9x |
+| `int8-only` | 99.9% | 101.6% | 100.1% | 99.9% | 4.0x |
+| `binary-only` | 96.3% | 100.6% | 97.4% | 100.3% | 32.0x |
+| `prune+int8` | 97.4% | 101.6% | 99.5% | 99.8% | 6.7-7.5x |
+| `optivision` | 94.6% | 103.4% | 97.2% | 95.6% | 53.4-59.9x |
+| `keep-50pct` | 92.5% | 101.8% | 94.7% | 97.4% | 80.7-91.4x |
+| `keep-10pct` | 66.7% | 89.8% | 85.4% | 81.6% | 342.4-387.4x |
+
+**1. Pruning is still close to free - and buys much less.** Both stages together
+retain 97.4-101.8% of nDCG@5, better than on the generated corpus. But the token
+reduction collapses from 3.5x to 1.7-1.9x. Real benchmark pages are far denser than
+generated ones: on `infovqa`, spatial pruning keeps
+1000 of 1031 patches and saves essentially nothing. The premise that a page
+is mostly blank paper holds for documents we generated and largely fails on the
+benchmark. **The claim survives; the number behind it does not.**
+
+**2. Pruning harder is not free. This finding does not survive.** On the generated
+corpus the keep-ratio sweep was flat, and we concluded the token budget barely
+mattered. On ViDoRe it falls off a cliff:
+
+| split | keep-50% | keep-10% |
+|---|---|---|
+| docvqa | 92.5% | 66.7% |
+| energy | 101.8% | 89.8% |
+| infovqa | 94.7% | 85.4% |
+| tabfquad | 97.4% | 81.6% |
+
+The flat sweep was an artifact of a corpus whose salient content fit inside the top
+10% of patches. Dense real pages do not have that property, so the aggressive
+setting is a genuine trade-off rather than a free saving.
+
+**3. Binary quantization is not where the quality goes. This reverses.** On
+ColSmol, `binary-only` cost 12.1% of nDCG@5 without dropping a token, and the
+discussion was built around that asymmetry. On ColPali it costs almost nothing:
+
+| split | binary-only retained | tau |
+|---|---|---|
+| docvqa | 96.3% | 0.527 |
+| energy | 100.6% | 0.736 |
+| infovqa | 97.4% | 0.643 |
+| tabfquad | 100.3% | 0.686 |
+
+The 256M model's embeddings were the fragile part, not the one-bit codec. A 3B
+model's 128-d projections survive sign-thresholding nearly intact - which is what
+the caveat in the previous section predicted, stated before the run rather than
+after it.
+
+Read the tau column alongside it: binary quantization still reorders results
+substantially (0.53-0.74 tau). It moves the ranking; it just keeps the relevant
+page inside the top 5. Tau is measuring real distortion that nDCG@5 is too coarse
+to charge for.
+
+**The operating points invert.** On ColSmol, `prune+int8` was the quality-first
+recommendation and binary was the compromise. On ColPali the full pipeline
+dominates it - roughly 8x the compression at the same retention:
+
+| goal | configuration | compression | nDCG@5 retained |
+|---|---|---|---|
+| smallest index | prune + binary | 53-60x | 94.6-103.4% |
+| best quality per byte | prune + int8 | 6.7-7.5x | 97.4-101.6% |
+
+**Two things not to over-read.** The `energy` split reports retention above 100%
+for most variants, peaking at 103.4% - compression appearing to improve retrieval.
+That split has only 100 queries, so those differences are noise. Read them as
+"compression is free here", not as an improvement. Lead with `docvqa` (451
+queries) and `infovqa` (494), which are the statistically meaningful splits.
+
+And these are 500-page corpora. Absolute nDCG is not comparable to published ViDoRe
+leaderboard numbers, which score the full splits; only the *ratios* between rows are
+the measurement here, and those ratios are what the paper claims.
 ## Reading the table
 
 | column | meaning |
