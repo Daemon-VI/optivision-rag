@@ -3,9 +3,9 @@
 `optivision.tex` is an IEEE conference paper built from the measured ablations in
 [`../docs/RESULTS.md`](../docs/RESULTS.md).
 
-> **`optivision.pdf` in this folder is stale.** It is the build from before the
-> ColPali/ViDoRe results landed, and it still argues the superseded single-experiment
-> claim. Recompile before you send it anywhere — see *Compiling* below.
+`optivision.pdf` in this folder is the current build: 8 pages, compiled with
+tectonic, no errors and no overfull boxes. Regenerate it with `tectonic -X compile
+optivision.tex` from this directory after any edit.
 
 ## What the paper argues
 
@@ -73,7 +73,7 @@ per-experiment views a reviewer may ask for during revision.
 - [x] ~~**Run the ViDoRe benchmark** and update the numbers.~~ Done: four splits,
       1,780 pages, 1,325 queries. See `../reports/colpali_*/` and
       `bash ../scripts/run_bench_gpu.sh` to reproduce.
-- [ ] **Recompile the PDF.** The committed one predates the ColPali results.
+- [x] ~~**Recompile the PDF.**~~ Done: 8 pages, clean compile, committed.
 - [ ] **Check the venue's page limit.** The ColPali section adds two tables and a
       figure; the E1 sweep figure was dropped to compensate, since Table III now carries
       the sweep across all four splits. Recount after recompiling. To cut further,
@@ -169,7 +169,7 @@ for a reviewer to catch and the hardest to explain.
 
 ```
 optivision.tex             the paper
-optivision.pdf             STALE — predates the ColPali results, recompile before use
+optivision.pdf             current build, 8 pages
 make_figs.py               regenerates every figs/*.pdf from the benchmark JSON
 
 used by the .tex:
