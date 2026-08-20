@@ -6,6 +6,9 @@
 \usepackage{cite}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+%% Look in figs/ first, then the project root, so the paper builds whether the
+%% figures were uploaded into a figs/ folder or dropped loose at the top level.
+\graphicspath{{figs/}{./}}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
@@ -627,8 +630,8 @@ retention for it, and which side is correct is a deployment question.
 Under E2 that exchange collapses. Prune + binary gives roughly $8\times$ the
 compression of prune + int8 at the same nDCG@5, so on the headline metric the
 size-first configuration simply dominates. What still separates them is ordering:
-Kendall $\tau$ is 0.71$--$0.90 for prune + int8 against 0.51$--$0.70 for prune +
-binary. A pipeline whose output is a shortlist for a downstream reader should
+Kendall $\tau$ is $0.71$--$0.90$ for prune + int8 against $0.51$--$0.70$ for
+prune + binary. A pipeline whose output is a shortlist for a downstream reader should
 take the binary configuration and the $57\times$; one that shows a ranked list
 directly to a person should still take int8, and the justification is $\tau$
 rather than nDCG@5. This is a narrower and more specific recommendation than E1
