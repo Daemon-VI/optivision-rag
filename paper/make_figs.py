@@ -17,6 +17,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(__file__).resolve().parent / "figs"
@@ -155,17 +156,24 @@ def fig_scale(e1: dict, e2: dict) -> None:
             arrowprops=dict(arrowstyle="->", lw=0.5, color="#7f8c8d",
                             shrinkA=3, shrinkB=3, alpha=0.8), zorder=2,
         )
-    for v, text, dy in (("binary-only", "binary, no pruning", 7),
-                        ("optivision", "OptiVision", -11),
-                        ("keep-10pct", "keep-10%", 7)):
+    for v, text, off, ha in (("binary-only", "binary, no pruning", (7, 1), "left"),
+                             ("optivision", "OptiVision", (0, -11), "center"),
+                             ("keep-10pct", "keep-10%", (-6, 6), "right")):
         ax.annotate(text, (e2[v]["compression_ratio"], retention(e2[v])),
-                    textcoords="offset points", xytext=(0, dy), ha="center",
+                    textcoords="offset points", xytext=off, ha=ha,
                     fontsize=5.6, color="#333333")
 
     ax.set_xscale("log")
+    # The data spans barely more than a decade, so matplotlib's log formatter
+    # labels the minor ticks as well and they overlap into a smear. Pin the
+    # ticks we actually want and silence the rest.
+    ax.xaxis.set_major_locator(FixedLocator([30, 50, 100, 200, 400]))
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}$\\times$"))
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlim(24, 520)
     ax.set_xlabel("index compression ratio (log scale)")
     ax.set_ylabel("nDCG@5 retained (%)")
-    ax.set_ylim(60, 103)
+    ax.set_ylim(60, 104)
     ax.grid(True, which="both", alpha=0.25)
     ax.legend(fontsize=5.8, loc="lower left", framealpha=0.95,
               borderpad=0.4, handletextpad=0.4)
