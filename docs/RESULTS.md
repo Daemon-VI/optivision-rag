@@ -59,6 +59,13 @@ deterministic given a fixed corpus and encoder.
 
 Three findings, and the third one is the interesting one.
 
+> **Read this section as "E1: what ColSmol-256M says on generated pages", not as the
+> final answer.** Every finding below was re-run under ColPali-v1.3 on real ViDoRe
+> pages; two did not transfer and the third reversed. The corrections are in
+> [*The same table on ColPali-3B and real ViDoRe pages*](#the-same-table-on-colpali-3b-and-real-vidore-pages)
+> further down, finding by finding. Both are kept because the disagreement between them
+> is the result.
+
 **1. Pruning is close to free.** Removing blank patches costs 2.8% of nDCG@5 for a
 2.5x token reduction; adding redundancy collapsing brings it to 3.5x for 3.9%. Rank
 agreement with the uncompressed baseline stays at tau = 0.87-0.94. This is the central
@@ -100,11 +107,16 @@ One honest note on that row: `prune+int8` scores 0.7596 against `spatial+redunda
 queries, not a real effect — read it as "int8 quantization is free here", not as
 "int8 helps".
 
-**Caveat on magnitudes.** ColSmol-256M is a 256M-parameter model; its embeddings are
-lower-dimensional in effect than ColPali-3B's and are plausibly less robust to
-one-bit quantization. The binary penalty measured here should be treated as an upper
-bound until the same table is produced on ColPali with a GPU — which is item 1 on the
-[roadmap](ROADMAP.md).
+**Caveat on magnitudes — and it turned out to be the whole story.** ColSmol-256M is a
+256M-parameter model; its embeddings are lower-dimensional in effect than ColPali-3B's
+and are plausibly less robust to one-bit quantization. The binary penalty measured here
+should be treated as an upper bound until the same table is produced on ColPali with a
+GPU.
+
+That run has since happened, and it confirmed this caveat rather than the finding it
+qualifies: the 12.1% binary penalty collapses to at most 3.7% on ColPali. We are
+leaving the caveat in its original wording, written *before* the run, because the
+prediction being on record is worth more than a tidy edit.
 
 ## The same table on ColPali-3B and real ViDoRe pages
 
