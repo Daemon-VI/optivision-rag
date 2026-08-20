@@ -85,12 +85,19 @@ it moves scores much more than it moves *ranking*. Queries stay in float32 and a
 scored against ±1 document codes (asymmetric scoring): a corpus has millions of
 vectors, a query has twenty, so query precision is the cheapest thing to keep.
 
-The three stages multiply. Pruning ~3.5× × quantization 32× ≈ **100×+** off the index.
+The three stages multiply — under E1, pruning ~3.5× × quantization 32× ≈ **100×+** off
+the index. On real ViDoRe pages pruning buys less, and the product lands in the 53-60× range; both
+figures are in *Results* below.
 
 ## Results
 
-Measured on 60 pages / 72 queries with **ColSmol-256M** on CPU. Full table and
-analysis in [docs/RESULTS.md](docs/RESULTS.md); reproduce with `make bench`.
+We ran the ablation twice, and the two runs disagree. That disagreement is the
+result — read both tables before drawing a conclusion from either.
+
+### E1 — ColSmol-256M, generated pages
+
+60 pages / 72 queries on CPU. Full table and analysis in
+[docs/RESULTS.md](docs/RESULTS.md); reproduce with `make bench`.
 
 | variant | tok/pg | KB/pg | compression | nDCG@5 | retained | tau |
 |---|---|---|---|---|---|---|
@@ -103,13 +110,13 @@ analysis in [docs/RESULTS.md](docs/RESULTS.md); reproduce with `make bench`.
 | **optivision** | **246.8** | **3.95** | **113.5x** | **0.6782** | **86.7%** | 0.606 |
 | optivision-aggressive | 186.3 | 2.98 | 150.3x | 0.6680 | 85.4% | 0.602 |
 
-**The two halves of the proposal do not contribute equally, and saying so is the
-honest result.** Pruning is nearly free — 3.5x fewer vectors for 3.9% of nDCG@5.
+**Under this encoder, the two halves of the proposal do not contribute equally.**
+Pruning is nearly free — 3.5x fewer vectors for 3.9% of nDCG@5.
 Binary quantization is where the quality goes — 12.1% lost *without dropping a single
 token*, while int8 gives 4x for 0.5%. Pruning harder barely matters once binary is in
 play (keeping the top 10% of patches scores the same as keeping the top 50%).
 
-So the pipeline has two defensible operating points:
+So under E1 the pipeline has two defensible operating points:
 
 - **smallest index** — prune + binary: **113.5x** at 86.7% of baseline nDCG@5
 - **best quality per byte** — prune + int8: **14.2x** at 97.1%, with a Kendall tau of
@@ -119,23 +126,35 @@ So the pipeline has two defensible operating points:
 448 KB/page becomes 3.95 KB/page: a million-page archive drops from ~448 GB to ~4 GB.
 At the quality-first setting it is ~32 GB.
 
-**These numbers are the 256M model on generated pages, and the reference model
-disagrees with them.** The same ablation on ColPali-v1.3 over four ViDoRe splits
-(1,780 pages, 1,325 queries) reaches 53-60x at 94.6-103.4% of baseline nDCG@5 -
-less compression, far less loss. Two of the three findings above do not transfer:
+### E2 — ColPali-v1.3, real ViDoRe pages
+
+**The reference model disagrees with every headline above.** The same ablation on
+ColPali-v1.3 over four ViDoRe splits (1,780 pages, 1,325 queries) reaches 53-60x at
+94.6-103.4% of baseline nDCG@5 — less compression, far less loss. Two of the three findings above do not transfer:
 pruning buys only 1.7-1.9x on real pages rather than 3.5x, and binary quantization
 costs 0-3.7% rather than 12.1%. Full table and analysis in
 [docs/RESULTS.md](docs/RESULTS.md#the-same-table-on-colpali-3b-and-real-vidore-pages);
-raw reports in [reports/](reports/).
+raw reports in [reports/](reports/); reproduce with `bash scripts/run_bench_gpu.sh` on
+any free T4.
 
-**And it stays small at query time.** A compressed index is worth nothing if
+The takeaway is not "E2 supersedes E1". It is that **the per-stage attribution is a
+property of the encoder and the corpus, not of the compression layer** — the same code
+paid its quality in different places under the two. Kendall tau falls about equally far
+under one-bit codes in both (0.585 and 0.527), so the codec distorts ranking either
+way; only the stronger encoder has the margin to absorb that distortion inside the top
+5. A compression ratio reported without naming the encoder and the corpus it was
+measured on is not enough information to act on, which is what the paper argues.
+
+### Memory at query time
+
+This part holds under both experiments. A compressed index is worth nothing if
 searching it expands the vectors back to float32, which costs 32x the index and
 is what the obvious implementation does. Scoring here runs in blocks bounded by
 a memory budget, so peak RAM is set by that budget rather than by the size of
 the corpus — 239 MB at the 256 MB default, whether the index holds sixty pages
 or a million. See [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).
 
-The columns that matter:
+### Reading either table
 
 | column | what it means |
 |---|---|

@@ -7,12 +7,24 @@ Every claim here is checkable — the file to open is named.
 
 **Q. What exactly is your contribution? ColPali already exists.**
 
-The model is stock and the query path is untouched. The contribution sits entirely
-between "model emitted vectors" and "vectors went into the index": drop the patch
-vectors that sit on blank paper, collapse the ones that duplicate each other, and
-store the survivors as sign bits. A team already running ColPali can adopt it without
-retraining or re-encoding their pipeline logic. See `src/optivision/pipeline.py` —
-the whole contribution is two calls between the encoder and the index.
+Two halves, and the second is the one to lead with.
+
+**The artifact.** The model is stock and the query path is untouched. The contribution
+sits entirely between "model emitted vectors" and "vectors went into the index": drop
+the patch vectors that sit on blank paper, collapse the ones that duplicate each other,
+and store the survivors as sign bits. A team already running ColPali can adopt it
+without retraining or re-encoding their pipeline logic. See `src/optivision/pipeline.py`
+— the whole contribution is two calls between the encoder and the index.
+
+**The measurement.** Everyone who prunes *and* quantizes reports the product of the two
+savings. Nobody reports the ratio of the two costs. We measured it twice — ColSmol-256M
+on generated pages, ColPali-3B on four ViDoRe splits — and got **opposite** answers from
+the same code. Under the small encoder the one-bit codec costs 12.1% and pruning is
+nearly free; under the reference encoder the codec costs at most 3.7% and what fails is
+the assumption that a page is mostly blank paper. So the attribution is not a property
+of the compression layer at all — it is a property of the encoder and the corpus, which
+is why a compression ratio published without naming both is not enough information to
+act on. That is the paper's claim, and it is stronger than the one we set out to make.
 
 ---
 
@@ -59,20 +71,37 @@ squash the rest of the page toward zero.
 
 **Q. Which of your two ideas actually does the work?**
 
-Pruning, and the measurement says so plainly. Blank-patch and redundancy pruning give
-3.5x fewer vectors for 3.9% of nDCG@5, holding tau at 0.87. Binary quantization gives
-32x but loses 12.1% *without dropping a single token* — every configuration containing
-it lands in a narrow 85-88% band no matter how much pruning is applied.
+*This is the question the project turns on, and the answer changed after we ran it on a
+real encoder. Do not give the old answer.*
 
-The cleanest way to see it: `prune+int8` has a Kendall tau of 0.866 against the
-baseline ranking — *exactly* the same as pruning with no quantization at all. So int8
-adds no measurable reordering, and all of the reordering in the full pipeline comes
-from the one-bit codec.
+**It depends on the encoder, and demonstrating that is the result.**
 
-We report that rather than hiding it, because it is the finding that tells a deployer
-what to do: prune + int8 (14.2x at 97.1% of baseline nDCG@5) when quality matters,
-prune + binary (113.5x at 86.7%) when index size is the binding constraint. Both rows
-are in the table.
+On **ColSmol-256M with generated pages**, pruning does the work. Blank-patch and
+redundancy pruning give 3.5x fewer vectors for 3.9% of nDCG@5 at tau = 0.87; binary
+quantization gives 32x but loses 12.1% *without dropping a single token*, and every
+configuration containing it lands in a narrow 85-88% band no matter how much pruning is
+applied.
+
+On **ColPali-3B with real ViDoRe pages**, that inverts. `binary-only` costs at most
+3.7% (96.3% retained on `docvqa`, ~100% on two splits) — the codec is nearly free. What
+stops working is pruning: spatial pruning returns **1.03x on infographics** against
+1.42x on the sparse `energy` split, because there is simply nothing on the page to
+discard. And the token-budget sweep that was flat on ColSmol becomes a **25.8-point**
+drop from keep-50% to keep-10% on `docvqa`.
+
+**The one number that explains the reversal.** Kendall tau falls about equally far under
+one-bit codes in *both* experiments — 0.585 on ColSmol, 0.527 on ColPali. The codec
+distorts the ranking identically. What differs is whether that distortion crosses the
+top-5 cut-off: a stronger encoder puts the relevant page further ahead of its
+competitors, so perturbing the margins moves fewer pages across the line. The distortion
+is a property of the codec; whether it becomes a retrieval *error* is a property of the
+encoder. If an examiner presses on only one point, this is the one to have ready.
+
+**What it tells a deployer.** Under a small encoder the two operating points are a real
+exchange — prune + int8 at 14.2x/97.1% against prune + binary at 113.5x/86.7%. Under the
+reference encoder prune + binary gives roughly 8x the compression at the *same* nDCG@5,
+so it simply dominates, and only tau separates them: take binary if the output feeds a
+downstream reader, int8 if a human sees the ranked list. Both rows are in both tables.
 
 ---
 
@@ -118,11 +147,21 @@ separately in the ablation precisely so this claim is falsifiable rather than as
 
 **Q. Your benchmark uses generated documents. Isn't that cheating?**
 
-The generated corpus gives exact ground truth and runs anywhere, and its whitespace
-profile is the realistic part. But we say plainly what it cannot do: real scans have
-noise, skew and bleed-through. `optivision fetch-vidore` pulls the actual ViDoRe
-benchmark used by the ColPali paper for that reason, and the harness treats both
-identically — a folder of pages plus a queries file.
+It did, and then it did not. We ran the whole ablation again on the **real ViDoRe
+benchmark** — `docvqa`, `infovqa`, `tabfquad` and `syntheticDocQA_energy`, 1,780 pages
+and 1,325 queries under ColPali-v1.3 on a T4. The archived runs are in
+`reports/colpali_*/` and `scripts/run_bench_gpu.sh` reproduces them; the harness treats
+both corpora identically, as a folder of pages plus a queries file.
+
+Answer the follow-up before it is asked: **the real benchmark contradicted us.** Two of
+the three findings did not transfer and one reversed outright. We report both
+experiments rather than quietly replacing the first, because the disagreement between
+them is what the paper is about — see the contribution answer above.
+
+The generated corpus stays in the paper for what it is good at: exact ground truth, and
+a whitespace profile that is realistic for scanned forms even though the noise, skew and
+bleed-through of a real scan are absent. Comparing the two is what isolated page density
+as the variable that matters for pruning.
 
 The *synthetic encoder* comes with a stronger warning: its hashed word vectors are
 near-orthogonal, so MaxSim behaves like exact matching and quality metrics saturate at
@@ -146,6 +185,18 @@ by eye.
 
 **Q. What are the limits of what you built?**
 
+- **Two encoders is two points, not a curve.** We can say the attribution reverses
+  between 256M and 3B; we cannot say where in between it crosses, nor whether the
+  driver is parameter count, embedding quality, or the corpus change that comes with
+  it in our design. Running ColPali on the generated corpus separates those and is the
+  obvious next experiment — it is one command, and it is in the roadmap.
+- **The ViDoRe runs use 500-page subsets** of each split, so absolute nDCG@5 is not
+  comparable to published leaderboard figures. Only the ratios between rows are the
+  measurement, and those are all we claim.
+- **Statistical power on the small splits.** 72 queries in E1 and 100 on the `energy`
+  split, where several rows read above 100% retention. That is noise, and we decline to
+  read it as compression improving retrieval. `docvqa` (451) and `infovqa` (494) carry
+  the conclusions.
 - Encoding is the bottleneck: ~30 s/page for ColSmol-256M on a CPU laptop. Pruning
   plus quantization is ~15 ms/page, so the compression is effectively free — but
   indexing a large corpus needs a GPU.

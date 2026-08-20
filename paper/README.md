@@ -46,11 +46,22 @@ binary that downloads what it needs on first run:
 tectonic -X compile optivision.tex
 ```
 
+**Compile in Normal mode, not Fast [draft].** Overleaf's draft mode renders every
+`\includegraphics` as an empty box containing its own filename, which looks exactly like
+missing figure files and is not. The setting is behind the arrow next to *Recompile*.
+Fig. 1 still draws correctly in draft mode because it is built from `\fbox` rules rather
+than an image — if Fig. 1 looks right and Figs. 2–4 are boxes, that is draft mode.
+
 Figures are regenerated from the benchmark JSON, so they never drift from the numbers:
 
 ```bash
 python paper/make_figs.py        # from the repo root
 ```
+
+That writes six PDFs: `tradeoff`/`sweep` for E1, `tradeoff_colpali`/`sweep_colpali` for
+E2, and `scale.pdf` which puts both experiments on one axes. Only three of them are
+used by the current `.tex` (see *Files* below); the rest are kept because they are the
+per-experiment views a reviewer may ask for during revision.
 
 ## Before you submit — checklist
 
@@ -81,34 +92,74 @@ python paper/make_figs.py        # from the repo root
       closely by nature and self-overlap with your Stage-1 report will be flagged — that
       overlap is expected and explainable, but know the number before someone asks.
 
-## The one run that most improves this paper
+## The run that closed two limitations, and the one that would close the third
 
-`notebooks/vidore_colpali_bench.ipynb` reproduces the whole ablation with **ColPali-v1.3
-on real ViDoRe pages** using a free Colab/Kaggle T4. It finishes inside one free session.
+`scripts/run_bench_gpu.sh` reproduces the whole ablation with **ColPali-v1.3 on real
+ViDoRe pages** on a free Kaggle/Colab T4. It has been run: four splits, 1,780 pages,
+1,325 queries, archived under `../reports/colpali_*/`. Two of the paper's limitations —
+"the corpus is generated, not scanned" and "ColSmol-256M is not ColPali-3B" — were
+retired by it, and both would have been the first things a reviewer named.
 
-This matters more than any amount of rewriting. Two of the paper's four limitations —
-"the corpus is generated, not scanned" and "ColSmol-256M is not ColPali-3B" — exist only
-because that run has not happened, and a reviewer will name both. The notebook's closing
-cell lists exactly which parts of the `.tex` to change afterwards.
+It did not confirm the paper. It reversed it. The E1 claim was that the one-bit codec is
+where retrieval quality is paid; under ColPali the codec costs at most 3.7% and what
+fails instead is the pruning premise, because a ViDoRe page is not mostly blank paper.
+That reversal is now the paper's contribution rather than a problem with it. Two things
+about the run are worth knowing before you touch the numbers:
 
-A specific thing to watch: `vidore/infovqa_test_subsampled` is infographics, which are
-*not* mostly blank paper. It is the adversarial case for the pruning premise. If spatial
-pruning survives it, the claim is much stronger than it currently is; if it collapses,
-that is a genuine finding and belongs in the paper rather than in a drawer.
+- **`vidore/infovqa_test_subsampled` is the adversarial split** — infographics, dense
+  ink, nothing for a saliency detector to discard. It was included deliberately as the
+  case that could break the pruning premise, and it did, though not in the way the
+  premise fails loudly: spatial pruning returns **1.03x** there against 1.42x on the
+  `energy` split, and costs almost no quality doing it. The detector is not wrong, it
+  simply has nothing to remove. That is the finding, and it belongs in the paper rather
+  than in a drawer.
+- **The checkpoint matters.** `vidore/colpali-v1.3` is adapter-only; loading it without
+  the base weights leaves `custom_text_proj` randomly initialised and yields a complete,
+  plausible, meaningless table. The config pins `vidore/colpali-v1.3-merged`, and
+  `src/optivision/encoders/colvlm.py` raises rather than proceeding if any parameter is
+  still on the meta device. Do not relax that guard to make a run start.
+
+**The next run, if you want one.** The remaining limitation is that encoder scale and
+corpus provenance change together in our design, so the paper can say the attribution
+reverses between the two but not what drives it. Running ColPali-v1.3 on the *generated*
+corpus separates them, and it is one cell on the same T4:
+
+```bash
+optivision make-corpus data/corpus --docs 20        # seed 7, deterministic
+optivision bench data/corpus/pdfs data/corpus/queries.json --config configs/colpali.yaml
+```
+
+`data/` is gitignored, so the corpus is regenerated rather than downloaded; the default
+seed reproduces the exact pages E1 used. If the reversal follows the encoder, the claim
+is about retrieval margin; if it follows the corpus, it is about page sparsity. Either
+answer sharpens Section VI, and neither weakens the paper as written.
 
 ## Where the numbers come from
 
-Every figure in the paper traces to `reports/colsmol/benchmark.json`, which the benchmark
-harness writes directly — nothing was transcribed by hand. The claims and their sources:
+Every number in the paper traces to a `benchmark.json` the harness wrote directly —
+nothing was transcribed by hand, and `make_figs.py` reads the same files the tables do.
+The claims and their sources:
 
 | claim in the paper | source |
 |---|---|
-| the ablation table, all figures | `reports/colsmol/benchmark.json` |
+| **E1** — Table I, Fig. 3, the E1 half of Fig. 4 | `reports/colsmol/benchmark.json` |
+| **E2** — Table II, the E2 half of Fig. 4 | `reports/colpali_docvqa_test_subsampled/benchmark.json` |
+| **E2** — Table III, the four-split retentions | all four `reports/colpali_*/benchmark.json` |
+| 1,780 pages / 1,325 queries across the four splits | `corpus.n_pages` + `corpus.n_queries` in each of the four |
+| query-encode and MaxSim latencies | `query_encode_ms` and `rows[].query_ms_p50` |
 | 90.12 KB/page RAM before blocked scoring; 0.93x budget tracking | `docs/IMPROVEMENTS.md` §1 |
 | int8 cosine error 3.28e-4 → 8.20e-5; mean abs component 0.071 | `docs/IMPROVEMENTS.md` §2 |
 | saliency weights 0.6/0.4, threshold 0.02, dilate 1, min_keep 8 | `reports/colsmol/benchmark.json` → `config.pruning` |
 | redundancy threshold 0.92, greedy clustering, centroid merge | `src/optivision/pruning/redundancy.py` |
 | 233/768 patches, 233/875 vectors in Fig. 2 | `reports/figures/invoice_000_p1.png` |
+
+E1 and E2 differ **only** in the encoder and the corpus — identical pruning config,
+identical quantizers, identical exact-MaxSim scoring path, same code. That is the whole
+basis for attributing the reversal to those two variables, so if you change a shared
+default you invalidate both experiments at once and must rerun both.
+
+The prose in `../docs/RESULTS.md` §*The same table on ColPali-3B and real ViDoRe pages*
+is generated from the same JSON and is the longer version of Tables II and III.
 
 If you change a config default, rerun the benchmark and `make_figs.py` before touching
 the prose — otherwise the paper and the repo disagree, which is the single easiest thing
@@ -117,13 +168,27 @@ for a reviewer to catch and the hardest to explain.
 ## Files
 
 ```
-optivision.tex      the paper
-optivision.pdf      current build
-make_figs.py        regenerates figs/tradeoff.pdf and figs/sweep.pdf from the JSON
-figs/tradeoff.pdf   Fig. 3 — compression ratio vs nDCG@5 retention, by quantizer
-figs/sweep.pdf      Fig. 4 — the token-budget sweep
+optivision.tex             the paper
+optivision.pdf             STALE — predates the ColPali results, recompile before use
+make_figs.py               regenerates every figs/*.pdf from the benchmark JSON
+
+used by the .tex:
 figs/pruning_example.png   Fig. 2 — page / saliency / retained mask
+figs/tradeoff.pdf          Fig. 3 — E1: compression ratio vs nDCG@5 retention
+figs/scale.pdf             Fig. 4 — both experiments on one axes, arrows joining
+                                    identical variants; the paper's key figure
+
+generated, not currently referenced:
+figs/sweep.pdf             E1 token-budget sweep — was Fig. 4 until Table III
+                                    subsumed it across all four splits
+figs/tradeoff_colpali.pdf  E2 alone, the counterpart to Fig. 3
+figs/sweep_colpali.pdf     E2 token-budget sweep on docvqa — the 25.8-point
+                                    drop from keep-50% to keep-10%, alone
 ```
 
 Fig. 1 (the pipeline) is drawn in the `.tex` itself with a `tabular` of boxes, so there
-is no external asset to keep in sync.
+is no external asset to keep in sync — which is also why it is the one figure that
+still renders under draft mode.
+
+If a reviewer asks to see E2's trade-off curve on its own, `figs/tradeoff_colpali.pdf`
+and `figs/sweep_colpali.pdf` are already built and need only an `\includegraphics`.
