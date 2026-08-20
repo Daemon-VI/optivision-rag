@@ -6,8 +6,17 @@
 # Colab/Kaggle path is notebooks/vidore_colpali_bench.ipynb; this is the same
 # run without a notebook UI.
 #
-#   bash scripts/run_bench_gpu.sh                    # all four splits
+#   bash scripts/run_bench_gpu.sh                    # E2: all four ViDoRe splits
 #   SPLITS="vidore/docvqa_test_subsampled" bash scripts/run_bench_gpu.sh
+#   MODE=generated bash scripts/run_bench_gpu.sh     # E3: the E1 corpus, ColPali
+#
+# MODE=generated is the experiment that separates encoder scale from corpus
+# provenance. E1 (ColSmol, generated pages) and E2 (ColPali, ViDoRe) change both
+# variables at once, so neither can say which one moved the attribution. This
+# runs the reference encoder over the *same* corpus E1 used, which pins it: if
+# the reversal follows the encoder the story is about retrieval margin, if it
+# follows the corpus it is about page sparsity. It is 60 pages, so it costs
+# minutes rather than the hour E2 takes.
 #
 # Run it under tmux. An SSH drop kills the foreground process otherwise, and
 # these runs are long enough that it will happen:
@@ -119,6 +128,28 @@ PYEOF
 # console script: pip can install that script somewhere off PATH, and the
 # failure then reads as a missing program rather than a missing PATH entry.
 mkdir -p data/cache reports
+
+if [ "${MODE:-vidore}" = "generated" ]; then
+    # Exactly the corpus E1 measured: 30 documents x 2 pages at seed 7 is the
+    # spec recorded in reports/colsmol/benchmark.json. The generator is
+    # deterministic, so this reproduces those pages rather than resembling them.
+    say "E3: ColPali-v1.3 over the generated corpus (E1's corpus, encoder swapped)"
+    python -m optivision.cli make-corpus data/corpus --docs 30 --pages 2 --seed 7
+
+    python -m optivision.cli bench \
+        data/corpus/pdfs data/corpus/queries.json \
+        -c configs/colpali_bench.yaml \
+        --out reports/colpali_generated \
+        --sweep \
+        --cache data/cache/colpali_generated.npz \
+        2>&1 | tee reports/colpali_generated.log
+
+    tar czf "$WORKDIR/optivision_reports.tar.gz" reports
+    say "done - archived $WORKDIR/optivision_reports.tar.gz"
+    ls -la "$WORKDIR/optivision_reports.tar.gz"
+    exit 0
+fi
+
 for split in $SPLITS; do
     tag="${split##*/}"
     say "$split"
