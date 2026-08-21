@@ -144,6 +144,11 @@ if [ "${MODE:-vidore}" = "generated" ]; then
         --cache data/cache/colpali_generated.npz \
         2>&1 | tee reports/colpali_generated.log
 
+    # The encode cache is ~1 GB and not worth shipping home, but the statistic
+    # derived from it is three lines. Compute it here while the cache is warm.
+    python scripts/winner_stats.py --cache data/cache/colpali_generated.npz \
+        --corpus data/corpus 2>&1 | tee reports/winner_stats_generated.txt
+
     tar czf "$WORKDIR/optivision_reports.tar.gz" reports
     say "done - archived $WORKDIR/optivision_reports.tar.gz"
     ls -la "$WORKDIR/optivision_reports.tar.gz"
@@ -162,6 +167,12 @@ for split in $SPLITS; do
         --sweep \
         --cache "data/cache/colpali_$tag.npz" \
         2>&1 | tee "reports/colpali_$tag.log"
+
+    # Label-free: what fraction of this split's patches ever wins a MaxSim.
+    # Real pages are denser than the generated corpus, so this is the number
+    # that says whether retrieval-space rate allocation has room to work.
+    python scripts/winner_stats.py --cache "data/cache/colpali_$tag.npz" \
+        2>&1 | tee "reports/winner_stats_$tag.txt"
 
     # Archive now. A pod that dies during split 3 must not cost you splits 1-2.
     tar czf "$WORKDIR/optivision_reports.tar.gz" reports
