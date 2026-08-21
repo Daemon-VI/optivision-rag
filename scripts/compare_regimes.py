@@ -83,23 +83,48 @@ def main() -> int:
     binary = {tag: retain(rows, "binary-only") for tag, _, _, rows in have}
     prune = {tag: rows["spatial+redundancy"]["compression_ratio"] for tag, _, _, rows in have}
     print("the codec's cost, alone:")
-    for tag in binary:
-        if binary[tag] is not None:
-            print(f"  {tag}: {100 - binary[tag]:5.1f} points")
+    for tag, val in binary.items():
+        if val is not None:
+            print(f"  {tag}: {100 - val:5.1f} points")
     print("what pruning buys:")
-    for tag in prune:
-        print(f"  {tag}: {prune[tag]:.2f}x")
+    for tag, val in prune.items():
+        print(f"  {tag}: {val:.2f}x")
 
-    if "E3" in binary and binary["E3"] is not None:
-        e1, e2, e3 = (100 - binary[t] if binary.get(t) is not None else None
-                      for t in ("E1", "E2", "E3"))
-        if e1 is not None and e2 is not None:
-            verdict = ("the ENCODER drove the reversal (E3 tracks E2)"
-                       if abs(e3 - e2) < abs(e3 - e1)
-                       else "the CORPUS drove the reversal (E3 tracks E1)")
+    if binary.get("E3") is not None and binary.get("E1") and binary.get("E2"):
+        # Two quantities were conflated, and they do not answer to the same
+        # factor. Report each against its own control rather than collapsing
+        # both into one verdict.
+        cost = {t: 100 - binary[t] for t in ("E1", "E2", "E3")}
+        print()
+        print("E3 shares E1's corpus and E2's encoder, so each axis has a control:")
+        print(f"  codec cost, corpus held fixed (E1 -> E3, encoder swapped): "
+              f"{cost['E1']:.1f} -> {cost['E3']:.1f} points")
+        print(f"  codec cost, encoder held fixed (E3 -> E2, corpus swapped): "
+              f"{cost['E3']:.1f} -> {cost['E2']:.1f} points")
+        print(f"  prune gain, corpus held fixed (E1 -> E3, encoder swapped): "
+              f"{prune['E1']:.2f}x -> {prune['E3']:.2f}x")
+        print(f"  prune gain, encoder held fixed (E3 -> E2, corpus swapped): "
+              f"{prune['E3']:.2f}x -> {prune['E2']:.2f}x")
+        print()
+        print(f"=> the ENCODER sets what the codec costs "
+              f"({cost['E1']:.1f} -> {cost['E3']:.1f} on identical pages)")
+        print(f"=> the CORPUS sets what pruning buys "
+              f"({prune['E3']:.2f}x -> {prune['E2']:.2f}x under one encoder)")
+
+        # The paper explains the codec result by retrieval margin: only a
+        # stronger retriever has room to absorb the distortion. E3 tests that
+        # directly, because it is the weaker retriever on this corpus.
+        base = {t: rows["baseline-float32"] for t, _, _, rows in have}
+        b1, b3 = base["E1"]["ndcg@5"], base["E3"]["ndcg@5"]
+        r1, r3 = base["E1"]["recall@1"], base["E3"]["recall@1"]
+        if b3 < b1:
             print()
-            print(f"=> {verdict}")
-            print(f"   codec cost: E1 {e1:.1f}, E2 {e2:.1f}, E3 {e3:.1f} points")
+            print("note: on these same pages the reference encoder is the WEAKER "
+                  "retriever")
+            print(f"      baseline nDCG@5 {b1:.4f} (E1) vs {b3:.4f} (E3), "
+                  f"R@1 {r1:.3f} vs {r3:.3f}")
+            print("      so retrieval margin cannot be what absorbs the codec's "
+                  "distortion")
     return 0
 
 
