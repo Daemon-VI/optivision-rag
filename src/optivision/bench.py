@@ -32,7 +32,12 @@ from .corpus import load_queries
 from .encoders import BaseEncoder, get_encoder
 from .index.numpy_index import NumpyIndex
 from .ingest import iter_pages
-from .metrics import evaluate, rank_correlation, storage_summary
+from .metrics import (
+    evaluate,
+    rank_correlation,
+    rank_correlation_shared,
+    storage_summary,
+)
 from .pruning import TokenPruner
 from .types import PageEncoding, PageRef, PatchGrid
 
@@ -241,23 +246,28 @@ def run_variant(
     index.add(compressed)
     build_s = time.perf_counter() - t0
 
+    # Rank agreement is measured over the whole candidate set rather than the
+    # top-k hit list. A page that falls out of the list entirely is the damage
+    # most worth counting, and a truncated list cannot see it.
+    #
+    # Both come from one scoring pass. MaxSim over the corpus is the whole cost
+    # of a search, so the timed section covers exactly what a deployment pays
+    # and the full ordering is taken afterwards for free.
+    depth = tau_depth or len(corpus.encodings)
+    refs = index.refs
     run: dict[str, list[str]] = {}
+    deep: dict[str, list[str]] = {}
     latencies = []
     for qid, qv in zip(qids, query_vectors, strict=True):
         t1 = time.perf_counter()
-        hits = index.search(qv, top_k=top_k)
+        scores = index.score_all(qv)
+        k = min(top_k, scores.size)
+        top = np.argpartition(-scores, k - 1)[:k]
+        top = top[np.argsort(-scores[top])]
         latencies.append((time.perf_counter() - t1) * 1000.0)
-        run[qid] = [h.ref.page_id for h in hits]
 
-    # Rank agreement is measured over the whole candidate set rather than the
-    # top-k hit list. A page that falls out of the list entirely is the damage
-    # most worth counting, and a truncated list cannot see it. This search is
-    # deliberately untimed: it is measurement, not an operation a deployment
-    # performs.
-    depth = tau_depth or len(corpus.encodings)
-    deep: dict[str, list[str]] = {}
-    for qid, qv in zip(qids, query_vectors, strict=True):
-        deep[qid] = [h.ref.page_id for h in index.search(qv, top_k=depth)]
+        run[qid] = [refs[int(i)].page_id for i in top]
+        deep[qid] = [refs[int(i)].page_id for i in np.argsort(-scores)[:depth]]
 
     stats = index.stats()
     metrics = evaluate(run, qrels, ks=(1, 3, 5, 10))
@@ -362,6 +372,7 @@ def run_benchmark(
 
     rows = []
     runs: dict[str, dict] = {}
+    shallow: dict[str, dict] = {}
     for variant in variants:
         out = run_variant(
             corpus, cfg, variant, query_vectors, qids, qrels, top_k=top_k,
@@ -369,6 +380,7 @@ def run_benchmark(
         )
         rows.append(out["row"])
         runs[variant.name] = out["deep"]
+        shallow[variant.name] = out["run"]
 
     # Rank agreement with the uncompressed baseline, over the full candidate
     # pool. Reported alongside the pool size, because a tau is only comparable
@@ -379,11 +391,21 @@ def run_benchmark(
     pool = page_ids if tau_depth is None else None
     base_name = variants[0].name
     base_run = runs[base_name]
+    base_shallow = shallow[base_name]
     for row in rows:
         this = runs[row["variant"]]
         taus = [rank_correlation(base_run[q], this[q], pool=pool) for q in qids]
         row["kendall_tau_vs_baseline"] = float(np.mean(taus))
         row["kendall_tau_pool"] = len(pool) if pool is not None else int(tau_depth)
+
+        # Also carry the superseded statistic. Reports predating the fix have
+        # only this one, and the paper's tables quote it across all three
+        # experiments; recording it keeps those tables regenerable in one pass
+        # instead of stranding whichever experiment was re-run first.
+        that = shallow[row["variant"]]
+        legacy = [rank_correlation_shared(base_shallow[q], that[q]) for q in qids]
+        row["kendall_tau_shared_topk"] = float(np.mean(legacy))
+        row["kendall_tau_shared_k"] = top_k
         base_ndcg = rows[0].get("ndcg@5", 0.0)
         row["ndcg5_retention"] = (row.get("ndcg@5", 0.0) / base_ndcg) if base_ndcg else 0.0
 
