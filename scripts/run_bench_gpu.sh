@@ -9,6 +9,13 @@
 #   bash scripts/run_bench_gpu.sh                    # E2: all four ViDoRe splits
 #   SPLITS="vidore/docvqa_test_subsampled" bash scripts/run_bench_gpu.sh
 #   MODE=generated bash scripts/run_bench_gpu.sh     # E3: the E1 corpus, ColPali
+#   KEEP_CACHE=1 bash scripts/run_bench_gpu.sh       # also ship the encode caches
+#
+# The encode caches are the raw patch embeddings, about a gigabyte per split.
+# We derive what we need from them on-box -- winner_stats.py and
+# geometry_stats.py both write a few lines of text -- so the default archive
+# stays small. KEEP_CACHE=1 tars the caches too, for work that needs the
+# vectors themselves rather than statistics over them.
 #
 # MODE=generated is the experiment that separates encoder scale from corpus
 # provenance. E1 (ColSmol, generated pages) and E2 (ColPali, ViDoRe) change both
@@ -127,6 +134,17 @@ PYEOF
 # The CLI is invoked as `python -m optivision.cli`, not via the `optivision`
 # console script: pip can install that script somewhere off PATH, and the
 # failure then reads as a missing program rather than a missing PATH entry.
+# One archive step for every exit path, so KEEP_CACHE is honoured everywhere
+# rather than in whichever branch remembered it.
+archive() {
+    if [ -n "${KEEP_CACHE:-}" ]; then
+        say "KEEP_CACHE set - including data/cache (this makes the archive large)"
+        tar czf "$WORKDIR/optivision_reports.tar.gz" "$@" data/cache
+    else
+        tar czf "$WORKDIR/optivision_reports.tar.gz" "$@"
+    fi
+}
+
 mkdir -p data/cache reports
 
 if [ "${MODE:-vidore}" = "generated" ]; then
@@ -149,7 +167,12 @@ if [ "${MODE:-vidore}" = "generated" ]; then
     python scripts/winner_stats.py --cache data/cache/colpali_generated.npz \
         --corpus data/corpus 2>&1 | tee reports/winner_stats_generated.txt
 
-    tar czf "$WORKDIR/optivision_reports.tar.gz" reports
+    # The E1 half of this is already measured on a laptop; this is the half
+    # that decides whether Section VI-A's patch-geometry claim survives.
+    python scripts/geometry_stats.py --cache data/cache/colpali_generated.npz \
+        --label "E3 ColPali-3B, generated" 2>&1 | tee reports/geometry_generated.txt
+
+    archive reports
     say "done - archived $WORKDIR/optivision_reports.tar.gz"
     ls -la "$WORKDIR/optivision_reports.tar.gz"
     exit 0
@@ -174,8 +197,11 @@ for split in $SPLITS; do
     python scripts/winner_stats.py --cache "data/cache/colpali_$tag.npz" \
         2>&1 | tee "reports/winner_stats_$tag.txt"
 
+    python scripts/geometry_stats.py --cache "data/cache/colpali_$tag.npz" \
+        --label "E2 ColPali-3B, $tag" 2>&1 | tee "reports/geometry_$tag.txt"
+
     # Archive now. A pod that dies during split 3 must not cost you splits 1-2.
-    tar czf "$WORKDIR/optivision_reports.tar.gz" reports
+    archive reports
     say "archived $WORKDIR/optivision_reports.tar.gz after $tag"
 done
 
