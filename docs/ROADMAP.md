@@ -36,6 +36,66 @@ optivision bench data/corpus/pdfs data/corpus/queries.json --config configs/colp
 If the reversal follows the encoder, the story is about retrieval margin; if it follows
 the corpus, it is about page sparsity. Either result is publishable and cheap.
 
+**1c. Rate allocation in retrieval space, not pixel space. — the Stage-II thesis.**
+Every compression stage in Stage-I asks a pixel-space question: does this patch have
+ink, does it duplicate a neighbour. But a late-interaction score is a *sum over query
+tokens of a max over patches*, so a patch contributes exactly nothing unless it is the
+argmax for some query token. Its quantization error is multiplied by zero. Uniform
+allocation therefore provably spends bits it cannot recover, and the waste grows with
+the patch count.
+
+How large is the dead set? `scripts/winner_stats.py` measures it on cached embeddings
+and needs no relevance labels, so it runs on any corpus. On E1's 60 pages under
+ColSmol:
+
+```
+patches that ever win a MaxSim, over all 72 queries: 4,424 / 52,500 = 8.4%
+  per page: median 8.3%  min 7.1%  max 10.3%
+```
+
+91.6% of the index is encoded, quantized, stored and never read. And the set is a
+property of the page rather than the query: fitted on 36 queries it is 8.1% of
+patches, and retrieving the *other* 36 queries against a winner-only index gives
+nDCG@5 0.7865 against 0.7865 for the full index — 12.4x smaller at no measured cost,
+where the hand-tuned spatial detector gets 2.46x and pays 2.8 points.
+
+The stacking result is the one that matters, because it attacks the stage the paper
+blames. Binarization collides sign vectors and promotes patches that were never
+competitive, so removing the dead set removes the distractors it invents:
+
+```
+binary, full index   0.6749
+binary, winners only 0.7003     <- pruning *recovers* quality the codec lost
+```
+
+That is a different claim from "prune, then quantize, and hope the losses do not
+compound." It says the two stages interact, with a sign the current framing cannot
+express. What to build, in order:
+
+- *A label-free win-rate estimator.* The oracle above uses the evaluation queries,
+  which a deployment does not have. Replace them with a query codebook — k-means
+  centroids over query-token embeddings from any corpus, or the encoder's own text
+  token embeddings — and measure what fraction of the oracle winner set it recovers.
+  This is the step that decides whether any of this is deployable.
+- *Distil it into a head.* A linear probe or two-layer MLP on the patch embedding
+  predicting win rate, supervised by MaxSim outcomes rather than by human saliency.
+  One forward pass at index time, no queries needed. This is item 3, given a
+  supervision signal it did not previously have.
+- *Non-uniform bit allocation.* Drop / 1-bit / int8 / fp16 tiers assigned by predicted
+  win rate under a Lagrangian size budget, instead of one precision for everything.
+  The ~8% that decide rankings keep precision while the mean rate stays near one bit.
+  The current pipeline is the budget-matched baseline.
+- *The unification.* Winner fraction is a per-(encoder, corpus) scalar computable
+  without labels. If codec cost tracks it, E1 and E2 stop being two contradictory
+  points and become two samples of one curve — which is the explanation the paper
+  currently reports as an open question. Run `winner_stats.py` on the ViDoRe caches to
+  find out; the run needs the caches archived, which `run_bench_gpu.sh` does not
+  currently do.
+
+Caveat worth stating before anyone gets excited: E1's generated pages are sparse, and
+60 pages is an easy retrieval problem. The 8.4% will rise on dense ViDoRe pages and
+the held-out retention will fall below 100%. The size of that gap is the experiment.
+
 **2. Close the binary-quantization gap — a big lever under a *small* encoder only.**
 Under ColSmol the measurement located the loss precisely: pruning costs ~4% of nDCG@5,
 binary quantization costs ~12%, and pruning harder costs almost nothing on top. Under
