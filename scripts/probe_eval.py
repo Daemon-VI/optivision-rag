@@ -60,13 +60,19 @@ def top_k_mask(score: np.ndarray, budget: int) -> np.ndarray:
 
 
 def ndcg5(pages, queries, gold, qidx, masks=None) -> float:
+    """Held-out nDCG@5 with only the selected patches.
+
+    The masked pages are built once rather than per query: slicing 500 pages
+    inside the query loop dominated everything else on a ViDoRe-sized split.
+    """
+    subs = pages if masks is None else [p[m] for p, m in zip(pages, masks, strict=True)]
     out = []
     for qi in qidx:
         q = queries[qi]
-        scores = np.empty(len(pages), dtype=np.float32)
-        for pi, page in enumerate(pages):
-            sub = page[masks[pi]] if masks is not None else page
-            scores[pi] = -1e9 if sub.shape[0] == 0 else float((q @ sub.T).max(1).sum())
+        scores = np.array(
+            [-1e9 if s.shape[0] == 0 else float((q @ s.T).max(1).sum()) for s in subs],
+            dtype=np.float32,
+        )
         top = np.argsort(-scores)[:5]
         rank = next((k for k, i in enumerate(top) if i in gold[qi]), None)
         out.append(0.0 if rank is None else 1.0 / np.log2(rank + 2))
@@ -80,6 +86,8 @@ def main() -> int:
     ap.add_argument("--budgets", type=float, nargs="+", default=[0.30, 0.10])
     ap.add_argument("--probes", type=int, default=256)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--max-queries", type=int, default=200,
+                    help="cap on queries used, for splits with hundreds")
     a = ap.parse_args()
 
     if not a.cache.exists():
@@ -101,7 +109,10 @@ def main() -> int:
 
     rng = np.random.default_rng(a.seed)
     perm = rng.permutation(len(queries))
-    fit, held = list(perm[: len(queries) // 2]), list(perm[len(queries) // 2:])
+    if len(perm) > a.max_queries:
+        print(f"(using {a.max_queries} of {len(queries)} queries)")
+        perm = perm[: a.max_queries]
+    fit, held = list(perm[: len(perm) // 2]), list(perm[len(perm) // 2:])
     print(f"{len(pages)} pages x {n_patch} patches, {len(queries)} queries "
           f"({len(fit)} fit / {len(held)} held out)\n")
 

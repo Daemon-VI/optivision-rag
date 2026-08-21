@@ -10,6 +10,14 @@
 #   SPLITS="vidore/docvqa_test_subsampled" bash scripts/run_bench_gpu.sh
 #   MODE=generated bash scripts/run_bench_gpu.sh     # E3: the E1 corpus, ColPali
 #   KEEP_CACHE=1 bash scripts/run_bench_gpu.sh       # also ship the encode caches
+#   CODEBOOK=1 bash scripts/run_bench_gpu.sh         # add the Stage-II rows
+#
+# CODEBOOK=1 adds retrieval-space saliency at matched token budgets, with
+# random and k-means probes as controls. On E1 it is +2.5 points over pixel
+# saliency at keep-10% and behind it at keep-30%; the claim is that the
+# advantage grows on dense pages, where the pixel detector returns 1.03x and
+# has nothing to remove. infovqa is the split that decides it. It roughly
+# doubles the replay, not the encode, so it is cheap next to the download.
 #
 # The encode caches are the raw patch embeddings, about a gigabyte per split.
 # We derive what we need from them on-box -- winner_stats.py and
@@ -143,14 +151,25 @@ PYEOF
 # `set -e` an unguarded failure here would discard a benchmark that already
 # finished. Errors are reported and stepped over.
 stats() {
-    local cache="$1" tag="$2" label="$3"
-    shift 3
-    python scripts/winner_stats.py --cache "$cache" "$@" 2>&1 \
+    local cache="$1" tag="$2" label="$3" corpus="${4:-}"
+    local with_corpus=()
+    [ -n "$corpus" ] && with_corpus=(--corpus "$corpus")
+
+    python scripts/winner_stats.py --cache "$cache" "${with_corpus[@]}" 2>&1 \
         | tee "reports/winner_stats_$tag.txt" \
         || say "winner_stats failed on $tag - continuing"
     python scripts/geometry_stats.py --cache "$cache" --label "$label" 2>&1 \
         | tee "reports/geometry_$tag.txt" \
         || say "geometry_stats failed on $tag - continuing"
+
+    # Selection scored against the oracle winner set. Needs labels, so it only
+    # runs where a corpus was passed; it is the diagnostic that says *why* a
+    # codebook row won or lost, which the benchmark table cannot.
+    if [ -n "$corpus" ]; then
+        python scripts/probe_eval.py --cache "$cache" --corpus "$corpus" 2>&1 \
+            | tee "reports/probe_eval_$tag.txt" \
+            || say "probe_eval failed on $tag - continuing"
+    fi
 }
 
 # One archive step for every exit path, so KEEP_CACHE is honoured everywhere
@@ -177,7 +196,7 @@ if [ "${MODE:-vidore}" = "generated" ]; then
         data/corpus/pdfs data/corpus/queries.json \
         -c "$CONFIG" \
         --out reports/colpali_generated \
-        --sweep \
+        --sweep ${CODEBOOK:+--codebook} \
         --cache data/cache/colpali_generated.npz \
         2>&1 | tee reports/colpali_generated.log
 
@@ -186,8 +205,8 @@ if [ "${MODE:-vidore}" = "generated" ]; then
     # Bank the benchmark before running anything optional over it.
     archive reports
 
-    stats data/cache/colpali_generated.npz generated "E3 ColPali-3B, generated" \
-        --corpus data/corpus
+    stats data/cache/colpali_generated.npz generated \
+        "E3 ColPali-3B, generated" data/corpus
 
     archive reports
     say "done - archived $WORKDIR/optivision_reports.tar.gz"
@@ -204,7 +223,7 @@ for split in $SPLITS; do
         "data/vidore_$tag/images" "data/vidore_$tag/queries.json" \
         -c "$CONFIG" \
         --out "reports/colpali_$tag" \
-        --sweep \
+        --sweep ${CODEBOOK:+--codebook} \
         --cache "data/cache/colpali_$tag.npz" \
         2>&1 | tee "reports/colpali_$tag.log"
 
@@ -214,7 +233,8 @@ for split in $SPLITS; do
     # Archive now. A pod that dies during split 3 must not cost you splits 1-2.
     archive reports
 
-    stats "data/cache/colpali_$tag.npz" "$tag" "E2 ColPali-3B, $tag"
+    stats "data/cache/colpali_$tag.npz" "$tag" "E2 ColPali-3B, $tag" \
+        "data/vidore_$tag"
 
     archive reports
     say "archived $WORKDIR/optivision_reports.tar.gz after $tag"
