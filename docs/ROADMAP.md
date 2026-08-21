@@ -23,18 +23,33 @@ three Stage-I findings did not transfer and one reversed. Read
 [RESULTS.md](RESULTS.md#the-same-table-on-colpali-3b-and-real-vidore-pages) before
 picking up anything below, because the reference encoder moved which lever matters.
 
-**1b. Separate encoder scale from corpus provenance. — now the highest-value run.**
-E1 and E2 change the encoder *and* the corpus together, so the paper can report that
-the attribution reverses but not what drives it. Running ColPali on the generated
-corpus pins it down, and it is two commands on a machine we already know works:
+**1b. Separate encoder scale from corpus provenance. — DONE, and it refuted an explanation.**
+Ran as `MODE=generated bash scripts/run_bench_gpu.sh`; results in
+`reports/colpali_generated/`, printed by `python scripts/compare_regimes.py`. The answer
+was neither of the two we expected — it was both, on different axes:
 
-```bash
-optivision make-corpus data/corpus --docs 20        # seed 7, deterministic
-optivision bench data/corpus/pdfs data/corpus/queries.json --config configs/colpali.yaml
+```
+codec cost, corpus fixed (E1 -> E3):  12.1 -> 1.6 points
+codec cost, encoder fixed (E3 -> E2):  1.6 -> 3.7 points
+prune gain, corpus fixed (E1 -> E3):  3.55x -> 4.20x
+prune gain, encoder fixed (E3 -> E2): 4.20x -> 1.85x
 ```
 
-If the reversal follows the encoder, the story is about retrieval margin; if it follows
-the corpus, it is about page sparsity. Either result is publishable and cheap.
+The encoder sets what the codec costs; the corpus sets what pruning buys. It also
+refutes the retrieval-margin explanation the paper offered, because ColPali is the
+*weaker* retriever on those pages (nDCG@5 0.6954 against 0.7823) and still loses nothing
+to one-bit codes. See [RESULTS.md](RESULTS.md#e3---colpali-3b-on-the-generated-corpus).
+
+Two follow-ups this opened, both cheap:
+
+- *Fix what tau reports.* `scripts/tau_audit.py` shows the published value is tau-b over
+  the intersection of two top-10 lists, not over the corpus, and that it moves with the
+  cutoff. `metrics.rank_correlation` should take a candidate pool and stop returning 1.0
+  for disjoint lists. This changes published numbers, so land it with a note.
+- *Measure the geometry.* If ColPali loses less to sign-thresholding than ColSmol does,
+  that should be visible in the patch embeddings themselves — how much of each vector's
+  norm sits in near-zero components. That is the mechanism the margin story was standing
+  in for, and it needs the encode caches, which the runner does not currently archive.
 
 **1c. Rate allocation in retrieval space, not pixel space. — the Stage-II thesis.**
 Every compression stage in Stage-I asks a pixel-space question: does this patch have

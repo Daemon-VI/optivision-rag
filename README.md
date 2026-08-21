@@ -139,11 +139,30 @@ any free T4.
 
 The takeaway is not "E2 supersedes E1". It is that **the per-stage attribution is a
 property of the encoder and the corpus, not of the compression layer** — the same code
-paid its quality in different places under the two. Kendall tau falls about equally far
-under one-bit codes in both (0.585 and 0.527), so the codec distorts ranking either
-way; only the stronger encoder has the margin to absorb that distortion inside the top
-5. A compression ratio reported without naming the encoder and the corpus it was
-measured on is not enough information to act on, which is what the paper argues.
+paid its quality in different places under the two. A third run separates those two
+variables; see below. A compression ratio reported without naming the encoder and the
+corpus it was measured on is not enough information to act on, which is what the paper
+argues.
+
+### E3 — ColPali-3B, generated pages
+
+The missing cell: the reference encoder over E1's own corpus, regenerated at seed 7 so
+the pages are the same ones. It splits the reversal in two.
+
+| | corpus fixed, encoder swapped | encoder fixed, corpus swapped |
+|---|---|---|
+| one-bit codec costs | E1 → E3: **12.1 → 1.6 points** | E3 → E2: 1.6 → 3.7 points |
+| pruning buys | E1 → E3: 3.55x → 4.20x | E3 → E2: **4.20x → 1.85x** |
+
+**The encoder sets what the one-bit codec costs; the corpus sets what pruning buys.**
+Run `python scripts/compare_regimes.py` to print it from the benchmark files. It is also
+the best operating point in the project: 98.7% retention at 134.5x.
+
+An earlier version of this section explained the codec result by *retrieval margin*.
+E3 refutes that — on those identical pages ColPali is the weaker retriever (nDCG@5
+0.6954 against 0.7823, R@1 0.375 against 0.569) and still loses nothing to binarization.
+See [RESULTS.md](docs/RESULTS.md) for the correction, and `scripts/tau_audit.py` for why
+E1's tau of 0.585 and E2's 0.527 were never the same measurement.
 
 ### Memory at query time
 

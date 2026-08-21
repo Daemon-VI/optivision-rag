@@ -89,13 +89,35 @@ stops working is pruning: spatial pruning returns **1.03x on infographics** agai
 discard. And the token-budget sweep that was flat on ColSmol becomes a **25.8-point**
 drop from keep-50% to keep-10% on `docvqa`.
 
-**The one number that explains the reversal.** Kendall tau falls about equally far under
-one-bit codes in *both* experiments — 0.585 on ColSmol, 0.527 on ColPali. The codec
-distorts the ranking identically. What differs is whether that distortion crosses the
-top-5 cut-off: a stronger encoder puts the relevant page further ahead of its
-competitors, so perturbing the margins moves fewer pages across the line. The distortion
-is a property of the codec; whether it becomes a retrieval *error* is a property of the
-encoder. If an examiner presses on only one point, this is the one to have ready.
+**The run that explains the reversal — and do not give the tau answer.** An earlier
+draft of this document said the codec distorts ranking equally in both experiments
+(tau 0.585 on ColSmol, 0.527 on ColPali) and only the stronger encoder has the *margin*
+to absorb it. **That answer is refuted by our own third experiment. Do not use it.**
+
+E3 runs ColPali-3B over E1's exact 60 pages and 72 queries, so the corpus is held fixed
+and only the encoder changes. It gives a double dissociation:
+
+| | corpus fixed, encoder swapped | encoder fixed, corpus swapped |
+|---|---|---|
+| one-bit codec costs | E1 → E3: **12.1 → 1.6 points** | E3 → E2: 1.6 → 3.7 points |
+| pruning buys | E1 → E3: 3.55x → 4.20x | E3 → E2: **4.20x → 1.85x** |
+
+**The encoder sets what the codec costs; the corpus sets what pruning buys.** The single
+reversal was two effects with two causes. That is the answer to have ready.
+
+Why margin is not the mechanism: on those identical pages ColPali is the *weaker*
+retriever — baseline nDCG@5 0.6954 against ColSmol's 0.7823, R@1 0.375 against 0.569 —
+and it still loses nothing to binarization (R@1 0.375 before and after, against ColSmol's
+0.569 → 0.417). The encoder with less margin is the robust one, so margin cannot be
+doing the work. Tau says the same: 0.762 for E3 against 0.585 for E1, same corpus, same
+cutoff. Under ColPali the distortion is *smaller*, not better absorbed.
+
+If an examiner presses on tau itself, concede the point first: `scripts/tau_audit.py`
+shows the published 0.585 is tau-b over the intersection of two **top-10** lists, not
+over the corpus (0.643 for the same run), the value moves with the cutoff, and top-10 is
+17% of a 60-page corpus against 2% of a 500-page one. So E1's 0.585 and E2's 0.527 were
+never the same measurement. E1 vs E3 is clean — same pages, same queries, same cutoff —
+which is exactly why the argument now rests on it.
 
 **What it tells a deployer.** Under a small encoder the two operating points are a real
 exchange — prune + int8 at 14.2x/97.1% against prune + binary at 113.5x/86.7%. Under the

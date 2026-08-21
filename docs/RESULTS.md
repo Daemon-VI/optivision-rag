@@ -199,6 +199,12 @@ substantially (0.53-0.74 tau). It moves the ranking; it just keeps the relevant
 page inside the top 5. Tau is measuring real distortion that nDCG@5 is too coarse
 to charge for.
 
+> **Superseded by E3.** The paragraph above went on to explain the difference by
+> *retrieval margin* - a stronger encoder separating the gold page from its
+> neighbours, so the same perturbation moves fewer pages across the top-5 cut.
+> E3 refutes that; see the next section. The observation that tau falls while
+> nDCG@5 does not still holds. The explanation for it does not.
+
 **The operating points invert.** On ColSmol, `prune+int8` was the quality-first
 recommendation and binary was the compromise. On ColPali the full pipeline
 dominates it - roughly 8x the compression at the same retention:
@@ -217,6 +223,66 @@ queries) and `infovqa` (494), which are the statistically meaningful splits.
 And these are 500-page corpora. Absolute nDCG is not comparable to published ViDoRe
 leaderboard numbers, which score the full splits; only the *ratios* between rows are
 the measurement here, and those ratios are what the paper claims.
+## E3 - ColPali-3B on the generated corpus
+
+E1 and E2 swap the encoder and the corpus at once, so neither can say which one
+moved the attribution. E3 is the missing cell: the reference encoder over E1's own
+60 pages and 72 queries, regenerated at seed 7 so the pages are the same ones, not
+merely similar ones. `reports/colpali_generated/`.
+
+| | corpus fixed, encoder swapped | encoder fixed, corpus swapped |
+|---|---|---|
+| **one-bit codec costs** | E1 -> E3: **12.1 -> 1.6 points** | E3 -> E2: 1.6 -> 3.7 points |
+| **pruning buys** | E1 -> E3: 3.55x -> 4.20x | E3 -> E2: **4.20x -> 1.85x** |
+
+**The encoder sets what the codec costs; the corpus sets what pruning buys.** The
+single reversal reported in E2 was two effects with two different causes, and
+`python scripts/compare_regimes.py` prints this table from the benchmark files.
+
+**It also refutes the margin explanation.** On these identical pages ColPali is the
+*weaker* retriever:
+
+| | baseline nDCG@5 | baseline R@1 | R@1 under one-bit |
+|---|---|---|---|
+| E1 ColSmol-256M | 0.7823 | 0.569 | 0.417 |
+| E3 ColPali-3B | 0.6954 | 0.375 | 0.375 |
+
+ColPali starts further behind and loses nothing to binarization; ColSmol starts
+ahead and loses 27% of R@1. Margin cannot be the mechanism, because the encoder
+with less of it is the robust one. Tau agrees and sharpens it: 0.762 for E3
+against 0.585 for E1, at the same cutoff on the same corpus. The distortion under
+ColPali is *smaller*, not better absorbed - a property of how much of a patch
+vector survives sign-thresholding, which is measurable and worth measuring.
+
+**Caveats, both real.** E3's `hit@5` is 1.000 on nearly every row, so nDCG@5 can
+only move by reordering inside the top 5. E1's is 0.972 on the same corpus, so
+E1 vs E3 remains a fair comparison; it is E2, at 0.661, that sits on a different
+scale - which is why R@1 is quoted above. And a 3B model scoring *below* a 256M
+model on these pages is a fact about the generator, not about the encoders. It
+belongs in the limitations.
+
+## A caution about the tau column
+
+`scripts/tau_audit.py` reproduces E1's published 0.585 exactly and shows what it
+is: tau-b over the intersection of two **top-10** hit lists, because that is what
+`bench` hands to `rank_correlation`. It is not rank agreement over the corpus,
+which the same run puts at 0.643.
+
+```
+top-5     tau 0.402    4 queries fell back to tau=1.0
+top-10    tau 0.585    <- the published number
+top-20    tau 0.691
+top-60    tau 0.643    (whole corpus)
+```
+
+Three things follow. The cutoff moves the number, so quote tau with its k.
+`rank_correlation` returns 1.0 when fewer than two ids are common, so two rankings
+sharing nothing score as perfect agreement - harmless on E1 at k=10, not obviously
+harmless on a 500-page split with `hit@5` of 0.661. And top-10 covers 17% of a
+60-page corpus against 2% of a 500-page one, so **E1's 0.585 and E2's 0.527 are
+not the same measurement** and should not be compared as though they were. E1 vs
+E3 is unaffected: same pages, same queries, same cutoff.
+
 ## Reading the table
 
 | column | meaning |
@@ -226,7 +292,7 @@ the measurement here, and those ratios are what the paper claims.
 | `Compr.` | index bytes vs. the uncompressed float32 index |
 | `nDCG@5`, `R@1`, `Hit@5` | absolute retrieval quality against ground truth |
 | `Retain` | nDCG@5 as a fraction of the `baseline-float32` row |
-| `Tau` | Kendall tau-b against the **baseline's own ranking** |
+| `Tau` | Kendall tau-b against the baseline's ranking, over the shared ids of the two **top-10** lists - not the whole corpus; see the caution above |
 | `q ms` | median query latency over the whole corpus |
 
 `Tau` is the load-bearing column. Absolute metrics answer "is this system any good?",

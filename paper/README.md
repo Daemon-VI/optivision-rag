@@ -130,9 +130,16 @@ optivision bench data/corpus/pdfs data/corpus/queries.json --config configs/colp
 ```
 
 `data/` is gitignored, so the corpus is regenerated rather than downloaded; the default
-seed reproduces the exact pages E1 used. If the reversal follows the encoder, the claim
-is about retrieval margin; if it follows the corpus, it is about page sparsity. Either
-answer sharpens Section VI, and neither weakens the paper as written.
+seed reproduces the exact pages E1 used.
+
+**This has now run** (`MODE=generated bash scripts/run_bench_gpu.sh`,
+`reports/colpali_generated/`), and the answer was both at once: the encoder sets what
+the one-bit codec costs (12.1 -> 1.6 points with the corpus held fixed) and the corpus
+sets what pruning buys (4.20x -> 1.85x with the encoder held fixed). It also refutes the
+retrieval-margin explanation the paper currently gives in the abstract, Section V,
+Section VI and the conclusion — ColPali is the *weaker* retriever on those pages and
+still loses nothing to binarization. Those four passages need rewriting before
+submission; the numbers in the tables are unaffected.
 
 ## Where the numbers come from
 
