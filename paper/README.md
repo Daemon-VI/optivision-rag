@@ -3,7 +3,7 @@
 `optivision.tex` is an IEEE conference paper built from the measured ablations in
 [`../docs/RESULTS.md`](../docs/RESULTS.md).
 
-`optivision.pdf` in this folder is the current build: 8 pages, compiled with
+`optivision.pdf` in this folder is the current build: 9 pages, compiled with
 tectonic, no errors and no overfull boxes. Regenerate it with `tectonic -X compile
 optivision.tex` from this directory after any edit.
 
@@ -73,7 +73,8 @@ per-experiment views a reviewer may ask for during revision.
 - [x] ~~**Run the ViDoRe benchmark** and update the numbers.~~ Done: four splits,
       1,780 pages, 1,325 queries. See `../reports/colpali_*/` and
       `bash ../scripts/run_bench_gpu.sh` to reproduce.
-- [x] ~~**Recompile the PDF.**~~ Done: 8 pages, clean compile, committed.
+- [x] ~~**Recompile the PDF.**~~ Done: 9 pages, clean compile, committed. It grew
+      by a page when E3 went in; check your venue's limit before submitting.
 - [ ] **Check the venue's page limit.** The ColPali section adds two tables and a
       figure; the E1 sweep figure was dropped to compensate, since Table III now carries
       the sweep across all four splits. Recount after recompiling. To cut further,
@@ -135,11 +136,15 @@ seed reproduces the exact pages E1 used.
 **This has now run** (`MODE=generated bash scripts/run_bench_gpu.sh`,
 `reports/colpali_generated/`), and the answer was both at once: the encoder sets what
 the one-bit codec costs (12.1 -> 1.6 points with the corpus held fixed) and the corpus
-sets what pruning buys (4.20x -> 1.85x with the encoder held fixed). It also refutes the
-retrieval-margin explanation the paper currently gives in the abstract, Section V,
-Section VI and the conclusion — ColPali is the *weaker* retriever on those pages and
-still loses nothing to binarization. Those four passages need rewriting before
-submission; the numbers in the tables are unaffected.
+sets what pruning buys (4.20x -> 1.85x with the encoder held fixed). It also refuted the
+retrieval-margin explanation the paper gave in the abstract, Section V, Section VI and
+the conclusion — ColPali is the *weaker* retriever on those pages and still loses
+nothing to binarization.
+
+**All of that is now in the `.tex`.** E3 has a setup paragraph (Section IV-A), Table IV
+carries the dissociation, Table V gains its operating points, Fig. 4 plots it in green,
+and the limitations gained two entries: the generator's realism, and what our Kendall
+tau actually measures. No table number changed; the E1 and E2 figures are untouched.
 
 ## Where the numbers come from
 
@@ -176,7 +181,7 @@ for a reviewer to catch and the hardest to explain.
 
 ```
 optivision.tex             the paper
-optivision.pdf             current build, 8 pages
+optivision.pdf             current build, 9 pages
 make_figs.py               regenerates every figs/*.pdf from the benchmark JSON
 
 used by the .tex:

@@ -26,6 +26,7 @@ OUT.mkdir(exist_ok=True)
 REPORTS = {
     "": ROOT / "reports" / "colsmol" / "benchmark.json",
     "_colpali": ROOT / "reports" / "colpali_docvqa_test_subsampled" / "benchmark.json",
+    "_generated": ROOT / "reports" / "colpali_generated" / "benchmark.json",
 }
 
 plt.rcParams.update({
@@ -128,17 +129,20 @@ def fig_sweep(rows: dict, suffix: str) -> None:
     plt.close(fig)
 
 
-def fig_scale(e1: dict, e2: dict) -> None:
-    """The reversal: the same variants under a 256M and a 3B encoder.
+def fig_scale(e1: dict, e2: dict, e3: dict | None = None) -> None:
+    """The dissociation: the same variants across the 2x2 of encoder and corpus.
 
-    One axes, two experiments. The binary configurations are the ones that move:
-    they sit in a band below 88% under the small encoder and above 94% under the
-    reference one, at the same compression ratios.
+    E1 and E2 differ in both variables, so the gap between them is ambiguous.
+    E3 resolves it on the page: it shares E1's corpus and E2's encoder, and it
+    lands with E2, which is what "the encoder governs the codec's cost" looks
+    like when drawn rather than tabulated.
     """
     series = [
         ("E1: ColSmol-256M, generated pages", e1, "#c0392b", "^", 0.35),
         ("E2: ColPali-3B, ViDoRe docvqa", e2, "#1b6ca8", "o", 1.0),
     ]
+    if e3 is not None:
+        series.append(("E3: ColPali-3B, generated pages", e3, "#1e8449", "s", 0.9))
 
     fig, ax = plt.subplots(figsize=(3.4, 2.6))
     for label, rows, colour, marker, alpha in series:
@@ -149,13 +153,17 @@ def fig_scale(e1: dict, e2: dict) -> None:
 
     # Join the same variant across experiments, so the shift is legible as motion
     # rather than as two unrelated clouds.
+    hops = [(e1, e3 or e2, "#7f8c8d", 0.8)]
+    if e3 is not None:
+        hops.append((e3, e2, "#b0b7bb", 0.7))
     for v in ("binary-only", "optivision", "keep-10pct"):
-        ax.annotate(
-            "", xy=(e2[v]["compression_ratio"], retention(e2[v])),
-            xytext=(e1[v]["compression_ratio"], retention(e1[v])),
-            arrowprops=dict(arrowstyle="->", lw=0.5, color="#7f8c8d",
-                            shrinkA=3, shrinkB=3, alpha=0.8), zorder=2,
-        )
+        for src, dst, colour, alpha in hops:
+            ax.annotate(
+                "", xy=(dst[v]["compression_ratio"], retention(dst[v])),
+                xytext=(src[v]["compression_ratio"], retention(src[v])),
+                arrowprops={"arrowstyle": "->", "lw": 0.5, "color": colour,
+                            "shrinkA": 3, "shrinkB": 3, "alpha": alpha}, zorder=2,
+            )
     for v, text, off, ha in (("binary-only", "binary, no pruning", (7, 1), "left"),
                              ("optivision", "OptiVision", (0, -11), "center"),
                              ("keep-10pct", "keep-10%", (-6, 6), "right")):
@@ -195,5 +203,5 @@ if __name__ == "__main__":
         print(f"wrote {OUT}/tradeoff{suffix}.pdf and {OUT}/sweep{suffix}.pdf")
 
     if "" in loaded and "_colpali" in loaded:
-        fig_scale(loaded[""], loaded["_colpali"])
+        fig_scale(loaded[""], loaded["_colpali"], loaded.get("_generated"))
         print(f"wrote {OUT}/scale.pdf")
