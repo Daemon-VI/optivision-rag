@@ -43,7 +43,10 @@ class PruningConfig:
     # many probe directions it wins, which is what MaxSim actually rewards.
     saliency: str = "pixel"  # "pixel" | "codebook"
     codebook_size: int = 256
-    codebook_source: str = "kmeans"  # "kmeans" | "random" (the control)
+    # "farthest" by default: probes chosen for coverage. k-means puts them
+    # where patches are dense, which is where the redundant patches are, and
+    # it measures far worse than either alternative (scripts/probe_eval.py).
+    codebook_source: str = "farthest"  # "farthest" | "random" | "kmeans"
     codebook_sample: int = 20_000  # patches drawn corpus-wide to fit the probes
     codebook_seed: int = 7  # fixed so the probes are reproducible run to run
     ink_weight: float = 0.6  # weight of foreground-pixel density
