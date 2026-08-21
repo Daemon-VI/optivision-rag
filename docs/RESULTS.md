@@ -47,8 +47,8 @@ Measured run, 60 pages / 72 queries, ColSmol-256M on CPU:
 | baseline-float32 | 875.0 | 448.00 | 1.0x | 0.7823 | 0.5694 | 100.0% | 1.000 |
 | spatial-only | 356.1 | 182.32 | 2.5x | 0.7602 | 0.5694 | 97.2% | 0.935 |
 | spatial+redundancy | 246.8 | 126.34 | 3.5x | 0.7519 | 0.5139 | 96.1% | 0.866 |
-| int8-only | 875.0 | 112.00 | 4.0x | 0.7787 | 0.5556 | 99.5% | 0.973 |
-| prune+int8 | 246.8 | 31.59 | 14.2x | 0.7596 | 0.5278 | 97.1% | 0.866 |
+| int8-only | 875.0 | 112.00 | 4.0x | 0.7877 | 0.5694 | 100.7% | 0.972 |
+| prune+int8 | 246.8 | 31.59 | 14.2x | 0.7511 | 0.5139 | 96.0% | 0.864 |
 | binary-only | 875.0 | 14.00 | 32.0x | 0.6875 | 0.4167 | 87.9% | 0.585 |
 | optivision | 246.8 | 3.95 | 113.5x | 0.6782 | 0.4028 | 86.7% | 0.606 |
 | optivision-aggressive | 186.3 | 2.98 | 150.3x | 0.6680 | 0.3611 | 85.4% | 0.602 |
@@ -94,7 +94,7 @@ points, and which one is right depends on the deployment:
 | goal | configuration | compression | nDCG@5 retained | tau |
 |---|---|---|---|---|
 | smallest index | prune + binary | 113.5x | 86.7% | 0.606 |
-| best quality per byte | prune + int8 | 14.2x | 97.1% | 0.866 |
+| best quality per byte | prune + int8 | 14.2x | 96.0% | 0.864 |
 
 `prune+int8` is in the variant list for exactly this reason. If an examiner asks "can
 you get most of the saving for less loss?", that row is the answer — and note its tau
@@ -102,10 +102,11 @@ of 0.866 is *identical* to `spatial+redundancy`, meaning int8 adds no measurable
 ranking distortion on top of the pruning. All of the reordering in the full pipeline
 comes from the one-bit codec.
 
-One honest note on that row: `prune+int8` scores 0.7596 against `spatial+redundancy`'s
-0.7519, i.e. quantizing appears to *improve* nDCG@5 slightly. That is noise at 72
-queries, not a real effect — read it as "int8 quantization is free here", not as
-"int8 helps".
+One honest note on that row: `prune+int8` scores 0.7511 against `spatial+redundancy`'s
+0.7519, a gap of 0.0008 at 72 queries. Read it as "int8 quantization is free on top of
+pruning", not as a measurable cost. (An earlier version of this table had the two the
+other way round, with int8 apparently *improving* nDCG@5; that came from the
+pre-rescaling int8 codec and the inversion went away with it.)
 
 **Caveat on magnitudes — and it turned out to be the whole story.** ColSmol-256M is a
 256M-parameter model; its embeddings are lower-dimensional in effect than ColPali-3B's

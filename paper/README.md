@@ -150,6 +150,29 @@ tau actually measures. No table number changed; the E1 and E2 figures are untouc
 
 Every number in the paper traces to a `benchmark.json` the harness wrote directly —
 nothing was transcribed by hand, and `make_figs.py` reads the same files the tables do.
+As of the current build that is checkable: every E1 nDCG@5 and retention figure printed
+in the PDF was matched against `reports/colsmol/benchmark.json` programmatically.
+
+Two notes on reading those files.
+
+`reports/colsmol` was regenerated after the int8 codec was rescaled in `93d3348`. The
+original was written the day before that commit, so its two int8 rows came from the
+textbook `round(127v)` mapping that Section III-C explicitly rejects — the method
+section described one codec and the E1 table reported another, while E2 and E3, run
+later from HEAD, used the described one. `int8-only` moved from 0.7787 to 0.7877 and
+`prune+int8` from 0.7596 to 0.7511. Nothing else moved, including every tau. The replay
+is a CPU job off the encode cache:
+
+```bash
+optivision bench data/corpus/pdfs data/corpus/queries.json     -c configs/colsmol.yaml --out reports/colsmol --sweep --cache data/cache/colsmol.npz
+```
+
+The tables quote the **`Tau(k)`** column, not `Tau`. `Tau` is rank agreement over the
+whole 60-page pool; `Tau(k)` is the superseded top-10 shared-ids statistic (see
+`scripts/tau_audit.py`). Both are recorded so all three experiments can move to the
+corrected statistic in one pass on the next GPU run — E1 alone would leave the tables
+mixing two definitions, which is worse than either.
+
 The claims and their sources:
 
 | claim in the paper | source |

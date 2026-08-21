@@ -436,11 +436,11 @@ spatial-only & blank-patch pruning & 356.1 & 182.32 & $2.5\times$ & 0.7602 & 0.5
 spatial+redundancy & both pruning stages & 246.8 & 126.34 & $3.5\times$ & 0.7519 & 0.5139 & 0.9722 & 96.1\% & 0.866 \\
 \midrule
 \multicolumn{10}{l}{\textit{Quantization alone (no pruning)}} \\
-int8-only & scalar quantization & 875.0 & 112.00 & $4.0\times$ & 0.7787 & 0.5556 & 0.9722 & 99.5\% & 0.973 \\
+int8-only & scalar quantization & 875.0 & 112.00 & $4.0\times$ & 0.7877 & 0.5694 & 0.9861 & 100.7\% & 0.972 \\
 binary-only & one-bit quantization & 875.0 & 14.00 & $32.0\times$ & 0.6875 & 0.4167 & 0.9444 & 87.9\% & 0.585 \\
 \midrule
 \multicolumn{10}{l}{\textit{Both stages}} \\
-prune+int8 & quality-first operating point & 246.8 & 31.59 & $14.2\times$ & 0.7596 & 0.5278 & 0.9722 & 97.1\% & 0.866 \\
+prune+int8 & quality-first operating point & 246.8 & 31.59 & $14.2\times$ & 0.7511 & 0.5139 & 0.9722 & 96.0\% & 0.864 \\
 optivision & size-first operating point & 246.8 & 3.95 & $113.5\times$ & 0.6782 & 0.4028 & 0.9583 & 86.7\% & 0.606 \\
 optivision-aggressive & fixed $25\%$ token budget & 186.3 & 2.98 & $150.3\times$ & 0.6680 & 0.3611 & 0.9722 & 85.4\% & 0.602 \\
 \midrule
@@ -575,7 +575,8 @@ not, the aggressive setting is a genuine trade rather than a free $1.8\times$.
 Under E1, \texttt{binary-only} loses $12.1\%$ of nDCG@5 \emph{without discarding a
 single token}, and its $\tau$ of $0.585$ says it substantially reorders results
 rather than merely rescaling scores. Against this, \texttt{int8-only} costs
-$0.5\%$ for $4\times$ with $\tau = 0.973$. Every E1 configuration that includes
+nothing measurable at $4\times$ --- $100.7\%$ retention with $\tau = 0.972$, the
+excess above $100\%$ being noise at $72$ queries. Every E1 configuration that includes
 one-bit codes lands in a narrow $85$--$88\%$ retention band regardless of how much
 pruning is applied. On that evidence the codec is the binding constraint.
 
@@ -661,7 +662,7 @@ measure, but on sparse generated pages rather than real ones.}
 & \textbf{Goal} & \textbf{Configuration} & \textbf{Compr.} & \textbf{Retain} \\
 \midrule
 E1 & smallest index & prune + binary & $113.5\times$ & 86.7\% \\
-E1 & quality per byte & prune + int8 & $14.2\times$ & 97.1\% \\
+E1 & quality per byte & prune + int8 & $14.2\times$ & 96.0\% \\
 \midrule
 E2 & smallest index & prune + binary & $53$--$60\times$ & 94.6--103.4\% \\
 E2 & quality per byte & prune + int8 & $6.7$--$7.5\times$ & 97.4--101.6\% \\
@@ -674,7 +675,7 @@ E3 & quality per byte & prune + int8 & $16.8\times$ & 102.3\% \\
 
 Table~\ref{tab:operating} summarises the practical consequence, and it differs
 between the two regimes. Under E1 the choice is a real exchange: prune + binary
-buys an $8\times$ smaller index than prune + int8 and pays $10.4$ points of
+buys an $8\times$ smaller index than prune + int8 and pays $9.3$ points of
 retention for it, and which side is correct is a deployment question.
 
 Under E2 that exchange collapses. Prune + binary gives roughly $8\times$ the

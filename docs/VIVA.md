@@ -120,7 +120,7 @@ never the same measurement. E1 vs E3 is clean — same pages, same queries, same
 which is exactly why the argument now rests on it.
 
 **What it tells a deployer.** Under a small encoder the two operating points are a real
-exchange — prune + int8 at 14.2x/97.1% against prune + binary at 113.5x/86.7%. Under the
+exchange — prune + int8 at 14.2x/96.0% against prune + binary at 113.5x/86.7%. Under the
 reference encoder prune + binary gives roughly 8x the compression at the *same* nDCG@5,
 so it simply dominates, and only tau separates them: take binary if the output feeds a
 downstream reader, int8 if a human sees the ranked list. Both rows are in both tables.
