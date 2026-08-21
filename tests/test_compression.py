@@ -201,3 +201,59 @@ class TestInt8Scale:
     def test_storage_is_still_exactly_4x(self, rng):
         v = self._unit_vectors(rng, n=40)
         assert _int8_codes(v).view(np.uint8).nbytes == 40 * 128 == v.nbytes // 4
+
+
+class TestCodebookSaliency:
+    """Retrieval-space saliency: which patches win against probe directions."""
+
+    def test_fitted_probes_are_unit_vectors_and_reproducible(self):
+        from optivision.pruning import fit_codebook
+
+        rng = np.random.default_rng(0)
+        sample = _unit(rng, 500, 32)
+        a = fit_codebook(sample, size=16, seed=7)
+        b = fit_codebook(sample, size=16, seed=7)
+        assert a.shape == (16, 32)
+        assert np.allclose(np.linalg.norm(a, axis=1), 1.0, atol=1e-5)
+        assert np.array_equal(a, b), "same seed must give the same probes"
+
+    def test_random_source_differs_from_kmeans(self):
+        from optivision.pruning import fit_codebook
+
+        rng = np.random.default_rng(0)
+        sample = _unit(rng, 300, 32)
+        km = fit_codebook(sample, size=8, seed=7, source="kmeans")
+        rand = fit_codebook(sample, size=8, seed=7, source="random")
+        assert not np.allclose(km, rand), "the control must not be the fitted codebook"
+
+    def test_saliency_favours_patches_that_win_probes(self):
+        """A patch that wins a probe must outscore every patch that wins none.
+
+        Not that it outscores *everything*: another patch may win two probes and
+        outrank it, which is the metric working rather than failing.
+        """
+        from optivision.pruning import codebook_saliency
+
+        rng = np.random.default_rng(1)
+        probes = _unit(rng, 4, 16)
+        patches = _unit(rng, 9, 16)
+        patches[3] = probes[0]  # exact match: wins probe 0 outright
+        sal = codebook_saliency(patches, probes, 3, 3)
+        assert sal.shape == (3, 3)
+
+        flat = sal.reshape(-1)
+        winners = set(np.asarray(probes @ patches.T).argmax(axis=1).tolist())
+        assert 3 in winners
+        losers = [i for i in range(9) if i not in winners]
+        assert min(flat[i] for i in winners) > max(flat[i] for i in losers)
+
+    def test_saliency_is_bounded_and_breaks_ties(self):
+        from optivision.pruning import codebook_saliency
+
+        rng = np.random.default_rng(2)
+        sal = codebook_saliency(_unit(rng, 16, 16), _unit(rng, 3, 16), 4, 4).reshape(-1)
+        assert sal.min() >= 0.0 and sal.max() <= 1.0
+        # At most 3 patches can win a probe; the rest are separated only by the
+        # tie-break, which must still order them rather than leaving a flat zero.
+        losers = np.sort(sal)[:-3]
+        assert len(set(losers.tolist())) > 1, "tie-break must order the non-winners"

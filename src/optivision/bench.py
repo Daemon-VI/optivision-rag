@@ -38,7 +38,7 @@ from .metrics import (
     rank_correlation_shared,
     storage_summary,
 )
-from .pruning import TokenPruner
+from .pruning import TokenPruner, fit_codebook
 from .types import PageEncoding, PageRef, PatchGrid
 
 
@@ -120,6 +120,51 @@ def keep_ratio_sweep(ratios: Sequence[float] = (0.5, 0.4, 0.3, 0.2, 0.1)) -> lis
         )
         for r in ratios
     ]
+
+
+def codebook_sweep(
+    ratios: Sequence[float] = (0.5, 0.3, 0.1),
+    with_control: bool = True,
+) -> list[Variant]:
+    """The same budgets, chosen in retrieval space instead of pixel space.
+
+    Every row mirrors a ``keep-N%`` row exactly -- same token budget, same
+    redundancy stage, same one-bit codec -- so the only variable is where the
+    saliency came from. That is the comparison ROADMAP item 3 asks for, and the
+    one a reviewer will ask for.
+
+    ``cb-random-N%`` is the control. Probes fitted to the corpus should beat
+    probes drawn at random; if they do not, the fitting is not what is working
+    and the result is about having *any* set of directions to compete against.
+    """
+    out: list[Variant] = []
+    for r in ratios:
+        pct = int(r * 100)
+        out.append(
+            Variant(
+                f"cb-keep-{pct}pct",
+                pruning={
+                    "enabled": True, "spatial": True, "redundancy": True,
+                    "keep_ratio": r, "saliency": "codebook",
+                },
+                compression={"enabled": True, "method": "binary"},
+                note=f"top {pct}% by codebook wins, binary — matches keep-{pct}pct",
+            )
+        )
+        if with_control:
+            out.append(
+                Variant(
+                    f"cb-random-{pct}pct",
+                    pruning={
+                        "enabled": True, "spatial": True, "redundancy": True,
+                        "keep_ratio": r, "saliency": "codebook",
+                        "codebook_source": "random",
+                    },
+                    compression={"enabled": True, "method": "binary"},
+                    note=f"control: top {pct}% by random-probe wins, binary",
+                )
+            )
+    return out
 
 
 # --------------------------------------------------------------------- cache
@@ -231,9 +276,10 @@ def run_variant(
     top_k: int = 10,
     workdir: str | Path = "data/bench",
     tau_depth: int | None = None,
+    codebook: np.ndarray | None = None,
 ) -> dict:
     vcfg = cfg.with_overrides(pruning=variant.pruning, compression=variant.compression)
-    pruner = TokenPruner(vcfg.pruning)
+    pruner = TokenPruner(vcfg.pruning, codebook=codebook)
     compressor = Compressor(vcfg.compression)
     method = vcfg.compression.method if vcfg.compression.enabled else "none"
 
@@ -370,6 +416,31 @@ def run_benchmark(
         texts, cfg, encoder, queries_cache
     )
 
+    # Probe directions for retrieval-space saliency, fitted once over patches
+    # drawn across the corpus. Unlabelled and query-free: the whole point is
+    # that a deployment has neither at index time. Skipped unless some variant
+    # asks for it, since it is a k-means over thousands of vectors.
+    # One codebook per requested source. The control asks for "random" via a
+    # per-variant override, so fitting from cfg alone would have handed it the
+    # k-means probes and quietly made it not a control.
+    pcfg = cfg.pruning
+    wanted = {
+        v.pruning.get("codebook_source", pcfg.codebook_source)
+        for v in variants
+        if v.pruning.get("saliency", pcfg.saliency) == "codebook"
+    }
+    codebooks: dict[str, np.ndarray] = {}
+    if wanted:
+        pool = np.concatenate([e.embeddings for e in corpus.encodings], axis=0)
+        rng = np.random.default_rng(pcfg.codebook_seed)
+        take = min(pcfg.codebook_sample, pool.shape[0])
+        sample = pool[rng.choice(pool.shape[0], take, replace=False)]
+        for kind in sorted(wanted):
+            codebooks[kind] = fit_codebook(
+                sample, size=pcfg.codebook_size, seed=pcfg.codebook_seed,
+                source=kind,
+            )
+
     rows = []
     runs: dict[str, dict] = {}
     shallow: dict[str, dict] = {}
@@ -377,6 +448,9 @@ def run_benchmark(
         out = run_variant(
             corpus, cfg, variant, query_vectors, qids, qrels, top_k=top_k,
             workdir=workdir, tau_depth=tau_depth,
+            codebook=codebooks.get(
+                variant.pruning.get("codebook_source", pcfg.codebook_source)
+            ),
         )
         rows.append(out["row"])
         runs[variant.name] = out["deep"]
@@ -413,6 +487,16 @@ def run_benchmark(
         "config": cfg.to_dict(),
         "corpus": {"source": str(source), "n_pages": corpus.n_pages, "n_queries": len(qids)},
         "encoder": {"backend": cfg.encoder.backend, "dim": corpus.dim},
+        "codebook": (
+            {
+                "sources": sorted(codebooks),
+                "size": pcfg.codebook_size,
+                "fitted_on_patches": int(take),
+                "seed": pcfg.codebook_seed,
+            }
+            if codebooks
+            else None
+        ),
         "query_encode_ms": query_encode_ms,
         "rows": rows,
     }

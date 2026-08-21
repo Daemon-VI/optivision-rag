@@ -7,6 +7,7 @@ from PIL import Image
 
 from ..config import PruningConfig
 from ..types import PageEncoding, PrunedPage
+from .codebook import codebook_saliency, fit_codebook
 from .redundancy import prune_redundant
 from .saliency import patch_saliency
 from .spatial import build_keep_mask, dilate_mask
@@ -14,7 +15,9 @@ from .spatial import build_keep_mask, dilate_mask
 __all__ = [
     "TokenPruner",
     "build_keep_mask",
+    "codebook_saliency",
     "dilate_mask",
+    "fit_codebook",
     "patch_saliency",
     "prune_redundant",
 ]
@@ -23,8 +26,11 @@ __all__ = [
 class TokenPruner:
     """Two-stage pruner: blank-region removal, then duplicate collapsing."""
 
-    def __init__(self, cfg: PruningConfig) -> None:
+    def __init__(self, cfg: PruningConfig, codebook: np.ndarray | None = None) -> None:
         self.cfg = cfg
+        # Fitted once over the corpus and shared by every page: probe directions
+        # are a property of the collection, not of a page.
+        self.codebook = codebook
 
     def prune(self, enc: PageEncoding, image: Image.Image | None = None) -> PrunedPage:
         cfg = self.cfg
@@ -46,7 +52,21 @@ class TokenPruner:
             )
 
         # -------------------------------------------------- stage 1: spatial
-        if cfg.spatial and image is not None:
+        if cfg.spatial and cfg.saliency == "codebook" and self.codebook is not None:
+            # Retrieval space rather than pixel space: score each patch by how
+            # many probe directions it is the arg max for. No image needed, and
+            # nothing about page density limits what it can find.
+            saliency = codebook_saliency(
+                enc.embeddings[patch_idx], self.codebook, rows, cols
+            )
+            keep_mask = build_keep_mask(
+                saliency,
+                blank_threshold=cfg.blank_threshold,
+                keep_ratio=cfg.keep_ratio,
+                min_keep=cfg.min_keep,
+                dilate=cfg.dilate,
+            )
+        elif cfg.spatial and image is not None:
             saliency = patch_saliency(
                 image, rows, cols, ink_weight=cfg.ink_weight, edge_weight=cfg.edge_weight
             )
