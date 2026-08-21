@@ -7,7 +7,13 @@ import pytest
 
 from optivision.config import Config
 from optivision.corpus import CorpusSpec, generate_synthetic_corpus, load_queries
-from optivision.metrics import evaluate, ndcg_at_k, rank_correlation, recall_at_k
+from optivision.metrics import (
+    evaluate,
+    ndcg_at_k,
+    rank_correlation,
+    rank_correlation_shared,
+    recall_at_k,
+)
 from optivision.pipeline import OptiVisionRAG
 from optivision.types import PageRef
 
@@ -93,17 +99,24 @@ class TestEndToEnd:
             cfg = _cfg(corpus, tmp_path / name, **over)
             rag = OptiVisionRAG(cfg)
             rag.build(corpus / "pdfs")
+            # Deep enough to rank the whole fixture corpus: tau over truncated
+            # lists charges for pages that simply fell off the end, which is
+            # not what this test is asking about.
             runs[name] = {
-                qid: [h.ref.page_id for h in rag.search(t, top_k=5).hits]
+                qid: [h.ref.page_id for h in rag.search(t, top_k=64).hits]
                 for qid, t in zip(qids, texts)
             }
             rag.close()
 
         base = evaluate(runs["baseline"], qrels, ks=(5,))
         opti = evaluate(runs["optivision"], qrels, ks=(5,))
+        pool = sorted({p for r in runs.values() for lst in r.values() for p in lst})
         assert opti["ndcg@5"] >= base["ndcg@5"] * 0.9
 
-        taus = [rank_correlation(runs["baseline"][q], runs["optivision"][q]) for q in qids]
+        taus = [
+            rank_correlation(runs["baseline"][q], runs["optivision"][q], pool=pool)
+            for q in qids
+        ]
         assert float(np.mean(taus)) > 0.5
 
     def test_manifest_is_written(self, corpus, tmp_path):
@@ -142,8 +155,29 @@ class TestMetrics:
         assert rank_correlation(order, order) == 1.0
         assert rank_correlation(order, list(reversed(order))) == -1.0
 
-    def test_kendall_tau_ignores_unshared_items(self):
+    def test_kendall_tau_ranks_absentees_last(self):
+        # An item only one list ranks sits after everything that list does
+        # rank, so agreeing on the shared prefix still reads as agreement.
         assert rank_correlation(["a", "b"], ["a", "b", "z"]) == 1.0
+
+    def test_kendall_tau_scores_disjoint_lists_as_disagreement(self):
+        # The bug this replaced: shared-ids-only scored these as identical,
+        # so the worst possible outcome read as the best one.
+        assert rank_correlation(["a", "b", "c"], ["x", "y", "z"]) < 0.0
+        assert rank_correlation_shared(["a", "b", "c"], ["x", "y", "z"]) == 1.0
+
+    def test_kendall_tau_pool_counts_pages_neither_list_ranked(self):
+        # Two rankings that agree on what they return can still disagree about
+        # the rest of the corpus; without a pool that is invisible.
+        a, b = ["a", "b"], ["b", "a"]
+        assert rank_correlation(a, b) == -1.0
+        assert rank_correlation(a, b, pool=["a", "b", "c", "d"]) > -1.0
+
+    def test_kendall_tau_pool_makes_the_cutoff_irrelevant(self):
+        pool = list("abcdef")
+        full = rank_correlation(list("abcdef"), list("bacdef"), pool=pool)
+        assert full == rank_correlation(list("abcdef"), list("bacdef"), pool=pool)
+        assert 0.8 < full < 1.0
 
     def test_evaluate_averages_over_queries(self):
         run = {"q1": ["a"], "q2": ["z"]}

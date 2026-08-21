@@ -5,15 +5,20 @@ severely under both encoders, and only the stronger encoder absorbs it. That
 argument needs tau to mean what `metrics.rank_correlation` says it means --
 "whether the compressed index orders pages the way the float baseline did".
 
-It does not, quite. `bench` passes `run[q]`, which is the top-`k` hit list with
-`k = 10`, so tau-b is taken over the *intersection of two top-10 lists*, not
-over the corpus. Two consequences follow, and this script measures both:
+It did not, quite. `bench` passed `run[q]`, which is the top-`k` hit list with
+`k = 10`, so tau-b was taken over the *intersection of two top-10 lists*, not
+over the corpus. Two consequences followed, and this script measures both:
 
   * the value depends on the cutoff, so quoting a tau without naming k is
     under-specified;
   * `rank_correlation` returns 1.0 when fewer than two ids are common, so the
     worst case -- the two rankings sharing nothing -- scores as perfect
     agreement.
+
+`metrics.rank_correlation` now takes a candidate pool and ranks absentees last,
+which fixes both; `rank_correlation_shared` keeps the old behaviour so the
+published figures stay reproducible, and is what this script measures. Reports
+written before that change carry the old statistic.
 
 Runs on a cached corpus, no GPU:
 
@@ -29,7 +34,7 @@ import numpy as np
 from scipy.stats import kendalltau
 
 from optivision.compression.binary import pack_bits, unpack_signs
-from optivision.metrics import rank_correlation
+from optivision.metrics import rank_correlation_shared
 
 BENCH_TOP_K = 10  # bench.run_variant's default, and what the paper's tau uses
 
@@ -61,12 +66,12 @@ def main() -> int:
         for sf, sb in zip(float_scores, bin_scores, strict=True):
             top_f = [str(i) for i in np.argsort(-sf)[:k]]
             top_b = [str(i) for i in np.argsort(-sb)[:k]]
-            taus.append(rank_correlation(top_f, top_b))
+            taus.append(rank_correlation_shared(top_f, top_b))
             shared = len(set(top_f) & set(top_b))
             common.append(shared)
             fallback += shared < 2
         label = f"top-{k}" + (" (whole corpus)" if k >= n else "")
-        mark = "  <- what the paper reports" if k == BENCH_TOP_K else ""
+        mark = "  <- what the published reports carry" if k == BENCH_TOP_K else ""
         print(f"{label:<24} tau {np.mean(taus):.3f}   "
               f"ids compared {np.mean(common):4.1f}/{k}   "
               f"tau=1.0 fallbacks {fallback:>3}{mark}")

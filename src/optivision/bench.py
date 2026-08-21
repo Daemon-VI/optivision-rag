@@ -225,6 +225,7 @@ def run_variant(
     qrels: dict[str, set[str]],
     top_k: int = 10,
     workdir: str | Path = "data/bench",
+    tau_depth: int | None = None,
 ) -> dict:
     vcfg = cfg.with_overrides(pruning=variant.pruning, compression=variant.compression)
     pruner = TokenPruner(vcfg.pruning)
@@ -248,6 +249,16 @@ def run_variant(
         latencies.append((time.perf_counter() - t1) * 1000.0)
         run[qid] = [h.ref.page_id for h in hits]
 
+    # Rank agreement is measured over the whole candidate set rather than the
+    # top-k hit list. A page that falls out of the list entirely is the damage
+    # most worth counting, and a truncated list cannot see it. This search is
+    # deliberately untimed: it is measurement, not an operation a deployment
+    # performs.
+    depth = tau_depth or len(corpus.encodings)
+    deep: dict[str, list[str]] = {}
+    for qid, qv in zip(qids, query_vectors, strict=True):
+        deep[qid] = [h.ref.page_id for h in index.search(qv, top_k=depth)]
+
     stats = index.stats()
     metrics = evaluate(run, qrels, ks=(1, 3, 5, 10))
     row = {
@@ -262,7 +273,7 @@ def run_variant(
         "query_ms_p50": float(np.percentile(latencies, 50)) if latencies else 0.0,
         "query_ms_mean": float(np.mean(latencies)) if latencies else 0.0,
     }
-    return {"row": row, "run": run}
+    return {"row": row, "run": run, "deep": deep}
 
 
 def _encode_queries_cached(
@@ -307,6 +318,7 @@ def run_benchmark(
     workdir: str | Path = "data/bench",
     progress=None,
     cache: str | Path | None = None,
+    tau_depth: int | None = None,
 ) -> dict:
     """Run every variant over one encode pass.
 
@@ -352,18 +364,26 @@ def run_benchmark(
     runs: dict[str, dict] = {}
     for variant in variants:
         out = run_variant(
-            corpus, cfg, variant, query_vectors, qids, qrels, top_k=top_k, workdir=workdir
+            corpus, cfg, variant, query_vectors, qids, qrels, top_k=top_k,
+            workdir=workdir, tau_depth=tau_depth,
         )
         rows.append(out["row"])
-        runs[variant.name] = out["run"]
+        runs[variant.name] = out["deep"]
 
-    # Rank agreement with the uncompressed baseline.
+    # Rank agreement with the uncompressed baseline, over the full candidate
+    # pool. Reported alongside the pool size, because a tau is only comparable
+    # to another tau taken over a comparable fraction of its corpus.
+    page_ids = [e.ref.page_id for e in corpus.encodings]
+    # A truncated deep search cannot speak for pages it never returned, so the
+    # pool falls back to the union of the two lists in that case.
+    pool = page_ids if tau_depth is None else None
     base_name = variants[0].name
     base_run = runs[base_name]
     for row in rows:
         this = runs[row["variant"]]
-        taus = [rank_correlation(base_run[q], this[q]) for q in qids]
+        taus = [rank_correlation(base_run[q], this[q], pool=pool) for q in qids]
         row["kendall_tau_vs_baseline"] = float(np.mean(taus))
+        row["kendall_tau_pool"] = len(pool) if pool is not None else int(tau_depth)
         base_ndcg = rows[0].get("ndcg@5", 0.0)
         row["ndcg5_retention"] = (row.get("ndcg@5", 0.0) / base_ndcg) if base_ndcg else 0.0
 
@@ -408,6 +428,8 @@ def to_markdown(report: dict) -> str:
     preamble = (
         f"**Corpus**: {corpus['n_pages']} pages, {corpus['n_queries']} queries  \n"
         f"**Encoder**: {enc['backend']} (dim {enc['dim']})  \n"
+        f"**Tau pool**: {rows[0].get('kendall_tau_pool', corpus['n_pages'])} candidates "
+        f"— rank agreement is comparable across runs only at a comparable pool  \n"
         f"**Query encode**: {report['query_encode_ms']:.1f} ms/query\n"
     )
     notes = "\n".join(f"- `{r['variant']}` — {r['note']}" for r in rows if r.get("note"))
