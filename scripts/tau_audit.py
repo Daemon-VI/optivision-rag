@@ -31,10 +31,9 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import kendalltau
 
 from optivision.compression.binary import pack_bits, unpack_signs
-from optivision.metrics import rank_correlation_shared
+from optivision.metrics import rank_correlation, rank_correlation_shared
 
 BENCH_TOP_K = 10  # bench.run_variant's default, and what the paper's tau uses
 
@@ -77,8 +76,9 @@ def main() -> int:
               f"tau=1.0 fallbacks {fallback:>3}{mark}")
 
     # The quantity the prose actually describes: agreement over the full ranking.
-    full = [kendalltau(np.argsort(np.argsort(-sf)),
-                       np.argsort(np.argsort(-sb))).statistic
+    ids = [str(i) for i in range(n)]
+    full = [rank_correlation([str(i) for i in np.argsort(-sf)],
+                             [str(i) for i in np.argsort(-sb)], pool=ids)
             for sf, sb in zip(float_scores, bin_scores, strict=True)]
     print(f"\ntrue rank correlation over all {n} pages: {np.mean(full):.3f}")
     print("\nThe cutoff moves the number, so a tau quoted without its k is "
