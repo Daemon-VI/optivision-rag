@@ -38,6 +38,14 @@ class PruningConfig:
     enabled: bool = True
     # Spatial (image-space) pruning
     spatial: bool = True
+    # Where saliency comes from. "pixel" is ink density and edge energy, which
+    # has nothing to say about a dense page. "codebook" scores a patch by how
+    # many probe directions it wins, which is what MaxSim actually rewards.
+    saliency: str = "pixel"  # "pixel" | "codebook"
+    codebook_size: int = 256
+    codebook_source: str = "kmeans"  # "kmeans" | "random" (the control)
+    codebook_sample: int = 20_000  # patches drawn corpus-wide to fit the probes
+    codebook_seed: int = 7  # fixed so the probes are reproducible run to run
     ink_weight: float = 0.6  # weight of foreground-pixel density
     edge_weight: float = 0.4  # weight of local gradient energy
     blank_threshold: float = 0.02  # saliency below this is treated as blank

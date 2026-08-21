@@ -228,13 +228,29 @@ def bench(
     cache: str | None = typer.Option(
         None, help="reuse/write an encode cache (.npz) so new rows skip re-encoding"
     ),
+    codebook: bool = typer.Option(
+        False, help="add retrieval-space saliency rows at matched token budgets"
+    ),
 ) -> None:
     """Run the ablation table: baseline vs pruning vs quantization vs both."""
-    from .bench import default_variants, keep_ratio_sweep, run_benchmark, save_report, to_markdown
+    from .bench import (
+        codebook_sweep,
+        default_variants,
+        keep_ratio_sweep,
+        run_benchmark,
+        save_report,
+        to_markdown,
+    )
     from .ingest import count_pages
 
     cfg = _load_cfg(config)
     variants = default_variants() + (keep_ratio_sweep() if sweep else [])
+    if codebook:
+        # Needs the keep-N% rows to compare against; a matched-budget claim with
+        # nothing to match is not a comparison.
+        if not sweep:
+            variants += keep_ratio_sweep()
+        variants += codebook_sweep()
     total = count_pages(source, cfg.ingest)
     if limit:
         total = min(total, limit)
