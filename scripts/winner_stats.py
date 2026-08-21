@@ -11,8 +11,8 @@ labels at all, so it runs on any cached corpus:
 
     python scripts/winner_stats.py --cache data/cache/colsmol.npz
 
-Pass a corpus to also score retrieval with a winner-only index, fitted on half
-the queries and evaluated on the other half:
+Pass a corpus for its relevance labels, to also score retrieval with a
+winner-only index, fitted on half the queries and evaluated on the other half:
 
     python scripts/winner_stats.py --cache data/cache/colsmol.npz \
         --corpus data/corpus
@@ -69,11 +69,17 @@ def ndcg5(pages, queries, gold, qidx, mask=None) -> float:
     return float(np.mean(out))
 
 
-def page_ids(corpus: Path) -> list[str]:
-    """Reproduce ingest.iter_pages: sorted pdfs, pages numbered from one."""
-    spec = json.loads((corpus / "manifest.json").read_text())["spec"]
-    stems = sorted(p.stem for p in (corpus / "pdfs").glob("*.pdf"))
-    return [f"{s}::p{k + 1}" for s in stems for k in range(spec["pages_per_doc"])]
+def page_ids(cache: Path) -> list[str]:
+    """Page ids in cache order, taken from the cache itself.
+
+    An earlier version rebuilt them from the generated corpus' manifest, which
+    made this work on E1 and E3 and crash on every ViDoRe split -- their
+    manifest has no ``spec`` key and their pages are images, not PDFs. The cache
+    already records each page's ref, and it is by construction in the order the
+    embeddings are stored, so there is nothing to reconstruct.
+    """
+    meta = json.loads(str(np.load(cache, allow_pickle=True)["meta"]))
+    return [f"{m['ref']['doc_id']}::p{m['ref']['page_no']}" for m in meta]
 
 
 def main() -> int:
@@ -103,7 +109,7 @@ def main() -> int:
         return 0
 
     # --- does the set transfer to unseen queries? -------------------------
-    ids = page_ids(a.corpus)
+    ids = page_ids(a.cache)
     if len(ids) != len(pages):
         print(f"\ncorpus has {len(ids)} pages but the cache has {len(pages)}; "
               "skipping the retrieval half")

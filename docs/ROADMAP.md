@@ -161,6 +161,50 @@ Next, in order:
 - *Then bit allocation.* Selection is the first half of 1c; spending bits by predicted
   win rate rather than uniformly is the second, and it has not been tried.
 
+**1e. The dense-page test ran, and Stage-II holds where it was supposed to.**
+`CODEBOOK=1 SPLITS="vidore/infovqa_test_subsampled" bash scripts/run_bench_gpu.sh`.
+500 pages, 494 queries, the split where pixel saliency returns 1.03x and has nothing
+left to remove. Full pipeline, retention of baseline nDCG@5:
+
+| budget | pixel | farthest | random | kmeans |
+|---|---|---|---|---|
+| keep 50% | 94.7% | 96.2% | **96.7%** | 95.2% |
+| keep 30% | 92.3% | **95.9%** | 95.7% | 94.6% |
+| keep 10% | 85.4% | 89.6% | **90.7%** | 88.7% |
+
+**Every probe variant beats pixel saliency at every budget**, by +1.4, +3.6 and +4.2
+points for the farthest-point default, and the gap widens as the budget tightens —
+which is the shape the argument predicts. Compression is not exactly matched (134x
+against 145x at keep-30%); interpolating pixel to 134x still leaves about +3 points.
+
+Two corrections come with it, and both matter more than the win.
+
+*The dead set is corpus-specific, and much smaller on real pages.* On E1, 8.4% of
+patches ever win a MaxSim and the headroom is 11.9x. On `infovqa` it is **74.2%**, and
+the headroom is **1.3x**. The oracle at 48% of patches scores 0.8390 against the full
+index's 0.8410 — lossless, but at 2x, not 12x. "Most of the index is never read" is
+true of sparse generated pages and false of dense real ones, so item 1c's framing needs
+rewriting before it goes anywhere near the paper.
+
+*The patch-geometry prediction in Section VI-A looks wrong.* It says the reference
+encoder loses less to one-bit codes because more of each patch vector survives the
+sign. Measured, rho is 0.7991 for ColPali on `infovqa` against 0.8001 for ColSmol on
+E1 — the same number, both sitting on the random-unit reference of 0.7979 — and
+ColPali flips *more* arg maxes, 76.6% against 56.1%. That is evidence against the
+mechanism the paper now offers. It is not yet decisive, because those two runs differ
+in corpus as well as encoder; the controlled comparison is geometry on E3, which is a
+`MODE=generated` re-run away and cheap.
+
+Next:
+
+- *Geometry on E3*, to settle Section VI-A against a proper control rather than a
+  cross-corpus comparison.
+- *`docvqa` with `CODEBOOK=1`*, to see whether the win replicates on a second dense
+  split before it is written up.
+- *Bit allocation*, still untried, and now the more promising half: if 74% of patches
+  win on real pages, dropping them is not where the gain is — spending fewer bits on
+  the ones that win rarely might be.
+
 **2. Close the binary-quantization gap — a big lever under a *small* encoder only.**
 Under ColSmol the measurement located the loss precisely: pruning costs ~4% of nDCG@5,
 binary quantization costs ~12%, and pruning harder costs almost nothing on top. Under
