@@ -43,8 +43,10 @@ def fit_codebook(
     and MaxSim compares them by inner product: Lloyd's algorithm under cosine is
     assignment by max dot product and an update that renormalises the mean.
 
-    ``source="random"`` returns random unit vectors instead, as the control that
-    says whether fitting the probes to the corpus buys anything.
+    ``source="random"`` returns random unit vectors, as the control that says
+    whether fitting the probes to the corpus buys anything at all;
+    ``source="farthest"`` spreads them by greedy farthest-point sampling, which
+    keeps them on real data while maximising coverage rather than fit.
     """
     rng = np.random.default_rng(seed)
     sample = _normalise(np.asarray(sample, dtype=np.float32))
@@ -53,6 +55,19 @@ def fit_codebook(
 
     if source == "random":
         return _normalise(rng.standard_normal((size, dim)).astype(np.float32))
+    if source == "farthest":
+        # Coverage rather than fit. k-means puts probes where patches are dense,
+        # which is where the *redundant* patches are; a query is a rare, specific
+        # direction. Greedy farthest-point sampling spreads probes to maximise
+        # the minimum angle between them, so each one speaks for a distinct part
+        # of the space instead of all of them crowding the mode.
+        chosen = [int(rng.integers(sample.shape[0]))]
+        closest = sample @ sample[chosen[0]]
+        for _ in range(size - 1):
+            nxt = int(closest.argmin())  # least similar to anything chosen
+            chosen.append(nxt)
+            closest = np.maximum(closest, sample @ sample[nxt])
+        return sample[chosen].copy()
     if source != "kmeans":
         raise ValueError(f"unknown codebook source {source!r}")
 

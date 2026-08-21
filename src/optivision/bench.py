@@ -152,18 +152,20 @@ def codebook_sweep(
             )
         )
         if with_control:
-            out.append(
-                Variant(
-                    f"cb-random-{pct}pct",
-                    pruning={
-                        "enabled": True, "spatial": True, "redundancy": True,
-                        "keep_ratio": r, "saliency": "codebook",
-                        "codebook_source": "random",
-                    },
-                    compression={"enabled": True, "method": "binary"},
-                    note=f"control: top {pct}% by random-probe wins, binary",
+            for src, why in (("random", "control: probes drawn at random"),
+                             ("kmeans", "control: probes fitted to patch density")):
+                out.append(
+                    Variant(
+                        f"cb-{src}-{pct}pct",
+                        pruning={
+                            "enabled": True, "spatial": True, "redundancy": True,
+                            "keep_ratio": r, "saliency": "codebook",
+                            "codebook_source": src,
+                        },
+                        compression={"enabled": True, "method": "binary"},
+                        note=f"{why}, top {pct}%, binary",
+                    )
                 )
-            )
     return out
 
 

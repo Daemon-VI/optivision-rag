@@ -111,6 +111,56 @@ Caveat worth stating before anyone gets excited: E1's generated pages are sparse
 60 pages is an easy retrieval problem. The 8.4% will rise on dense ViDoRe pages and
 the held-out retention will fall below 100%. The size of that gap is the experiment.
 
+**1d. Stage-II, started: probe coverage beats pixel saliency at a tight budget.**
+`scripts/probe_eval.py` scores a patch selector against the oracle winner set on cached
+embeddings in seconds, which is the loop this work needed — the full 13-variant
+benchmark answers a question about the pipeline when the open question is about one
+step. On E1, selection in isolation:
+
+```
+                       keep 30%            keep 10%
+                  nDCG@5  oracle rec   nDCG@5  oracle rec
+oracle (ceiling)  0.8016      100%     0.8016      100%
+pixel             0.7980     69.5%     0.6372     28.7%
+probe:kmeans      0.6571     30.6%     0.3602      9.6%
+probe:random      0.7738     65.7%     0.6738     37.9%
+probe:farthest    0.7672     67.6%     0.7164     35.9%
+```
+
+**Coverage is the property that matters, not fit.** k-means puts probes where patches
+are dense, which is where the *redundant* patches are; a query is a rare, specific
+direction. Greedy farthest-point sampling maximises the minimum angle between probes
+(max pairwise cosine 0.19 against k-means' 0.36) and is now the default.
+
+End to end on E1, with the redundancy stage and the one-bit codec on top:
+
+| budget | pixel | farthest | random | kmeans |
+|---|---|---|---|---|
+| keep 50% | 85.7% | 86.0% | 83.3% | 84.2% |
+| keep 30% | **85.9%** | 85.1% | 84.9% | 82.7% |
+| keep 10% | 85.6% | **88.2%** | 81.0% | 78.6% |
+
+At keep-10% that is **+2.5 points over pixel saliency and the best retention of any
+one-bit configuration on E1** — above `binary-only` at 87.9%, which is the
+winner-set effect from 1c showing up in the real pipeline: dropping patches that never
+win removes the distractors binarisation invents.
+
+Read it with the caveat it deserves. 2.5 points over 72 queries is under two queries,
+and E1 is the incumbent's best case. What makes it worth continuing is the *shape* —
+the advantage appears exactly where the budget is tight and pixel statistics run out,
+which is what the argument predicts.
+
+Next, in order:
+
+- *The dense-page test.* `--codebook` on `infovqa`, where the pixel detector returns
+  1.03x and has nothing to remove. 494 queries, so the power problem goes away too.
+  This is the run that decides whether Stage-II is a paper.
+- *Text-derived probes.* Queries are text and `encode_queries` already exists, so the
+  most query-like probes are one encode away. Needs the probes cached beside the encode
+  cache, or a warm-cache replay has no encoder to build them with.
+- *Then bit allocation.* Selection is the first half of 1c; spending bits by predicted
+  win rate rather than uniformly is the second, and it has not been tried.
+
 **2. Close the binary-quantization gap — a big lever under a *small* encoder only.**
 Under ColSmol the measurement located the loss precisely: pruning costs ~4% of nDCG@5,
 binary quantization costs ~12%, and pruning harder costs almost nothing on top. Under
