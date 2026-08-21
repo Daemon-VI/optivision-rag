@@ -28,8 +28,15 @@ import numpy as np
 
 
 def load(cache: Path) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    if not cache.exists():
+        raise SystemExit(f"no encode cache at {cache}")
     z = np.load(cache, allow_pickle=True)
-    zq = np.load(cache.with_suffix("").with_suffix(".queries.npz"), allow_pickle=True)
+    qpath = cache.with_suffix("").with_suffix(".queries.npz")
+    if not qpath.exists():
+        # bench writes this beside the encode cache; a cache copied without it
+        # is a normal enough mistake to deserve a sentence rather than a stack.
+        raise SystemExit(f"no query cache at {qpath} - nothing to measure winners against")
+    zq = np.load(qpath, allow_pickle=True)
     n = len([k for k in z.files if k.startswith("emb_")])
     pages = [np.asarray(z[f"emb_{i}"], np.float32) for i in range(n)]
     nq = len([k for k in zq.files if k.startswith("q_")])

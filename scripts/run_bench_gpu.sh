@@ -45,6 +45,9 @@ fi
 REPO="${REPO:-https://github.com/Daemon-VI/optivision-rag.git}"
 CHECKOUT="$WORKDIR/optivision-rag"
 LIMIT="${LIMIT:-500}"
+# Overridable so the control flow can be exercised without a GPU:
+#   CONFIG=configs/synthetic.yaml MODE=generated bash scripts/run_bench_gpu.sh
+CONFIG="${CONFIG:-configs/colpali_bench.yaml}"
 SPLITS="${SPLITS:-vidore/docvqa_test_subsampled vidore/syntheticDocQA_energy_test vidore/infovqa_test_subsampled vidore/tabfquad_test_subsampled}"
 
 # Keep the Hub cache on the persistent volume. The merged ColPali weights are a
@@ -134,6 +137,22 @@ PYEOF
 # The CLI is invoked as `python -m optivision.cli`, not via the `optivision`
 # console script: pip can install that script somewhere off PATH, and the
 # failure then reads as a missing program rather than a missing PATH entry.
+
+# Derive the statistics that would otherwise need the encode cache shipped
+# home. Neither is a deliverable, so neither is allowed to end the run: under
+# `set -e` an unguarded failure here would discard a benchmark that already
+# finished. Errors are reported and stepped over.
+stats() {
+    local cache="$1" tag="$2" label="$3"
+    shift 3
+    python scripts/winner_stats.py --cache "$cache" "$@" 2>&1 \
+        | tee "reports/winner_stats_$tag.txt" \
+        || say "winner_stats failed on $tag - continuing"
+    python scripts/geometry_stats.py --cache "$cache" --label "$label" 2>&1 \
+        | tee "reports/geometry_$tag.txt" \
+        || say "geometry_stats failed on $tag - continuing"
+}
+
 # One archive step for every exit path, so KEEP_CACHE is honoured everywhere
 # rather than in whichever branch remembered it.
 archive() {
@@ -156,7 +175,7 @@ if [ "${MODE:-vidore}" = "generated" ]; then
 
     python -m optivision.cli bench \
         data/corpus/pdfs data/corpus/queries.json \
-        -c configs/colpali_bench.yaml \
+        -c "$CONFIG" \
         --out reports/colpali_generated \
         --sweep \
         --cache data/cache/colpali_generated.npz \
@@ -164,13 +183,11 @@ if [ "${MODE:-vidore}" = "generated" ]; then
 
     # The encode cache is ~1 GB and not worth shipping home, but the statistic
     # derived from it is three lines. Compute it here while the cache is warm.
-    python scripts/winner_stats.py --cache data/cache/colpali_generated.npz \
-        --corpus data/corpus 2>&1 | tee reports/winner_stats_generated.txt
+    # Bank the benchmark before running anything optional over it.
+    archive reports
 
-    # The E1 half of this is already measured on a laptop; this is the half
-    # that decides whether Section VI-A's patch-geometry claim survives.
-    python scripts/geometry_stats.py --cache data/cache/colpali_generated.npz \
-        --label "E3 ColPali-3B, generated" 2>&1 | tee reports/geometry_generated.txt
+    stats data/cache/colpali_generated.npz generated "E3 ColPali-3B, generated" \
+        --corpus data/corpus
 
     archive reports
     say "done - archived $WORKDIR/optivision_reports.tar.gz"
@@ -185,7 +202,7 @@ for split in $SPLITS; do
     python -m optivision.cli fetch-vidore --dataset "$split" --out "data/vidore_$tag" --limit "$LIMIT"
     python -m optivision.cli bench \
         "data/vidore_$tag/images" "data/vidore_$tag/queries.json" \
-        -c configs/colpali_bench.yaml \
+        -c "$CONFIG" \
         --out "reports/colpali_$tag" \
         --sweep \
         --cache "data/cache/colpali_$tag.npz" \
@@ -194,13 +211,11 @@ for split in $SPLITS; do
     # Label-free: what fraction of this split's patches ever wins a MaxSim.
     # Real pages are denser than the generated corpus, so this is the number
     # that says whether retrieval-space rate allocation has room to work.
-    python scripts/winner_stats.py --cache "data/cache/colpali_$tag.npz" \
-        2>&1 | tee "reports/winner_stats_$tag.txt"
-
-    python scripts/geometry_stats.py --cache "data/cache/colpali_$tag.npz" \
-        --label "E2 ColPali-3B, $tag" 2>&1 | tee "reports/geometry_$tag.txt"
-
     # Archive now. A pod that dies during split 3 must not cost you splits 1-2.
+    archive reports
+
+    stats "data/cache/colpali_$tag.npz" "$tag" "E2 ColPali-3B, $tag"
+
     archive reports
     say "archived $WORKDIR/optivision_reports.tar.gz after $tag"
 done
