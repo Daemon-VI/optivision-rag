@@ -74,9 +74,14 @@ def rank_correlation(
 
     # Pairwise sign comparison. Quadratic, but vectorised and only ever run over
     # one query's candidate list, where n is hundreds rather than millions.
-    iu = np.triu_indices(len(universe), k=1)
-    sa = np.sign(ra[:, None] - ra[None, :])[iu]
-    sb = np.sign(rb[:, None] - rb[None, :])[iu]
+    #
+    # Counted over the whole matrix rather than its upper triangle: the sign
+    # matrix is antisymmetric, so each count comes out exactly doubled and the
+    # ratio below is unaffected. The diagonal is tied on both sides and so
+    # falls into none of the four buckets. Materialising the triangle instead
+    # costs two index arrays per call and roughly triples the runtime.
+    sa = np.sign(ra[:, None] - ra[None, :]).astype(np.int8)
+    sb = np.sign(rb[:, None] - rb[None, :]).astype(np.int8)
 
     agree = sa * sb
     concordant = int(np.count_nonzero(agree > 0))
