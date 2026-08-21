@@ -430,6 +430,7 @@ TABLE_COLUMNS = [
     ("hit@5", "Hit@5", "{:.4f}"),
     ("ndcg5_retention", "Retain", "{:.1%}"),
     ("kendall_tau_vs_baseline", "Tau", "{:.3f}"),
+    ("kendall_tau_shared_topk", "Tau(k)", "{:.3f}"),
     ("query_ms_p50", "q ms", "{:.2f}"),
 ]
 
@@ -450,8 +451,11 @@ def to_markdown(report: dict) -> str:
     preamble = (
         f"**Corpus**: {corpus['n_pages']} pages, {corpus['n_queries']} queries  \n"
         f"**Encoder**: {enc['backend']} (dim {enc['dim']})  \n"
-        f"**Tau pool**: {rows[0].get('kendall_tau_pool', corpus['n_pages'])} candidates "
-        f"— rank agreement is comparable across runs only at a comparable pool  \n"
+        f"**Tau**: rank agreement over a pool of "
+        f"{rows[0].get('kendall_tau_pool', corpus['n_pages'])} candidates, comparable "
+        f"across runs only at a comparable pool. `Tau(k)` is the superseded top-"
+        f"{rows[0].get('kendall_tau_shared_k', 10)} shared-ids statistic, kept because "
+        f"the paper's tables quote it  \n"
         f"**Query encode**: {report['query_encode_ms']:.1f} ms/query\n"
     )
     notes = "\n".join(f"- `{r['variant']}` — {r['note']}" for r in rows if r.get("note"))

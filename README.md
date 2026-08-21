@@ -104,8 +104,8 @@ result — read both tables before drawing a conclusion from either.
 | baseline-float32 | 875.0 | 448.00 | 1.0x | 0.7823 | 100.0% | 1.000 |
 | spatial-only | 356.1 | 182.32 | 2.5x | 0.7602 | 97.2% | 0.935 |
 | spatial+redundancy | 246.8 | 126.34 | 3.5x | 0.7519 | 96.1% | 0.866 |
-| int8-only | 875.0 | 112.00 | 4.0x | 0.7787 | 99.5% | 0.973 |
-| **prune+int8** | **246.8** | **31.59** | **14.2x** | **0.7596** | **97.1%** | 0.866 |
+| int8-only | 875.0 | 112.00 | 4.0x | 0.7877 | 100.7% | 0.972 |
+| **prune+int8** | **246.8** | **31.59** | **14.2x** | **0.7511** | **96.0%** | 0.864 |
 | binary-only | 875.0 | 14.00 | 32.0x | 0.6875 | 87.9% | 0.585 |
 | **optivision** | **246.8** | **3.95** | **113.5x** | **0.6782** | **86.7%** | 0.606 |
 | optivision-aggressive | 186.3 | 2.98 | 150.3x | 0.6680 | 85.4% | 0.602 |
@@ -119,8 +119,8 @@ play (keeping the top 10% of patches scores the same as keeping the top 50%).
 So under E1 the pipeline has two defensible operating points:
 
 - **smallest index** — prune + binary: **113.5x** at 86.7% of baseline nDCG@5
-- **best quality per byte** — prune + int8: **14.2x** at 97.1%, with a Kendall tau of
-  0.866 — identical to pruning alone, so int8 adds no measurable ranking distortion on
+- **best quality per byte** — prune + int8: **14.2x** at 96.0%, with a Kendall tau of
+  0.864 against 0.866 for pruning alone, so int8 adds no measurable ranking distortion on
   top of the pruning
 
 448 KB/page becomes 3.95 KB/page: a million-page archive drops from ~448 GB to ~4 GB.
