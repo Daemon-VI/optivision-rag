@@ -501,6 +501,11 @@ def run_benchmark(
         ),
         "query_encode_ms": query_encode_ms,
         "rows": rows,
+        # Top-k page ids per query per variant. A few hundred KB on a ViDoRe
+        # split, and the only way to split a finished run by query family
+        # (precise/topical) or to bootstrap a difference between two rows
+        # without re-running it.
+        "runs": {name: {q: list(r) for q, r in run.items()} for name, run in shallow.items()},
     }
 
 

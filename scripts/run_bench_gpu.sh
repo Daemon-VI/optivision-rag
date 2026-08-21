@@ -11,6 +11,15 @@
 #   MODE=generated bash scripts/run_bench_gpu.sh     # E3: the E1 corpus, ColPali
 #   KEEP_CACHE=1 bash scripts/run_bench_gpu.sh       # also ship the encode caches
 #   CODEBOOK=1 bash scripts/run_bench_gpu.sh         # add the Stage-II rows
+#   LADDER=1 bash scripts/run_bench_gpu.sh           # codec ladder + geometry on each cache
+#   MODE=generated CODE_SCALE=3 bash scripts/run_bench_gpu.sh   # E3 on the big-code corpus
+#
+# LADDER=1 runs scripts/review/codec_ladder.py after every bench: sign vs centred
+# vs ITQ vs 2-bit vs centroid+residual codecs, with bootstrap CIs, plus the
+# embedding-geometry statistics that replace rho (docs/REVIEW-2026-08-21.md).
+# CODE_SCALE renders the generated corpus with the unique code N times larger
+# (or smaller) and nothing else changed, so the reference encoder can (or cannot)
+# read it at 448px. Outputs land in reports/colpali_generated_code<N>x/.
 #
 # CODEBOOK=1 adds retrieval-space saliency at matched token budgets, with
 # random and k-means probes as controls. On E1 it is +2.5 points over pixel
@@ -170,6 +179,17 @@ stats() {
             | tee "reports/probe_eval_$tag.txt" \
             || say "probe_eval failed on $tag - continuing"
     fi
+
+    # Codec ladder and the geometry statistics that actually differ between
+    # encoders (||mean||, dead bits, participation ratio, distractor promotion).
+    # CPU-only, a few minutes on a 500-page split; --pruned adds the optivision
+    # prune config under every codec.
+    if [ -n "${LADDER:-}" ] && [ -n "$corpus" ]; then
+        python scripts/review/codec_ladder.py --cache "$cache" --corpus "$corpus" \
+            --label "$label" --pruned --out "reports/ladder_$tag.json" 2>&1 \
+            | tee "reports/ladder_$tag.txt" \
+            || say "codec_ladder failed on $tag - continuing"
+    fi
 }
 
 # One archive step for every exit path, so KEEP_CACHE is honoured everywhere
@@ -189,24 +209,34 @@ if [ "${MODE:-vidore}" = "generated" ]; then
     # Exactly the corpus E1 measured: 30 documents x 2 pages at seed 7 is the
     # spec recorded in reports/colsmol/benchmark.json. The generator is
     # deterministic, so this reproduces those pages rather than resembling them.
-    say "E3: ColPali-v1.3 over the generated corpus (E1's corpus, encoder swapped)"
-    python -m optivision.cli make-corpus data/corpus --docs 30 --pages 2 --seed 7
+    # CODE_SCALE=3 renders the same pages with only the unique code three times
+    # larger, under its own corpus/report/cache names so runs do not collide.
+    if [ -n "${CODE_SCALE:-}" ]; then
+        SCALE_TAG="code$(printf '%s' "$CODE_SCALE" | tr -d '.')x"
+        CORPUS="data/corpus_$SCALE_TAG"; GEN_TAG="generated_$SCALE_TAG"
+        SCALE_ARG=(--code-scale "$CODE_SCALE")
+        say "E3 at code scale $CODE_SCALE: ColPali-v1.3 over the generated corpus with the code rendered ${CODE_SCALE}x"
+    else
+        CORPUS="data/corpus"; GEN_TAG="generated"; SCALE_ARG=()
+        say "E3: ColPali-v1.3 over the generated corpus (E1's corpus, encoder swapped)"
+    fi
+    python -m optivision.cli make-corpus "$CORPUS" --docs 30 --pages 2 --seed 7 "${SCALE_ARG[@]}"
 
     python -m optivision.cli bench \
-        data/corpus/pdfs data/corpus/queries.json \
+        "$CORPUS/pdfs" "$CORPUS/queries.json" \
         -c "$CONFIG" \
-        --out reports/colpali_generated \
+        --out "reports/colpali_$GEN_TAG" \
         --sweep ${CODEBOOK:+--codebook} \
-        --cache data/cache/colpali_generated.npz \
-        2>&1 | tee reports/colpali_generated.log
+        --cache "data/cache/colpali_$GEN_TAG.npz" \
+        2>&1 | tee "reports/colpali_$GEN_TAG.log"
 
-    # The encode cache is ~1 GB and not worth shipping home, but the statistic
-    # derived from it is three lines. Compute it here while the cache is warm.
-    # Bank the benchmark before running anything optional over it.
+    # The encode cache is ~30 MB for 60 pages, so KEEP_CACHE=1 is cheap here.
+    # Compute the derived statistics while the cache is warm, but bank the
+    # benchmark before running anything optional over it.
     archive reports
 
-    stats data/cache/colpali_generated.npz generated \
-        "E3 ColPali-3B, generated" data/corpus
+    stats "data/cache/colpali_$GEN_TAG.npz" "$GEN_TAG" \
+        "E3 ColPali-3B, $GEN_TAG" "$CORPUS"
 
     archive reports
     say "done - archived $WORKDIR/optivision_reports.tar.gz"

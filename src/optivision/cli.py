@@ -89,11 +89,14 @@ def make_corpus(
     docs: int = typer.Option(20, help="number of documents"),
     pages: int = typer.Option(2, help="pages per document"),
     seed: int = typer.Option(7),
+    code_scale: float = typer.Option(
+        1.0, help="font multiplier for the unique code only; pages are otherwise identical"
+    ),
 ) -> None:
     """Generate a synthetic scanned-document corpus with ground-truth queries."""
     from .corpus import CorpusSpec, generate_synthetic_corpus
 
-    spec = CorpusSpec(n_docs=docs, pages_per_doc=pages, seed=seed)
+    spec = CorpusSpec(n_docs=docs, pages_per_doc=pages, seed=seed, code_scale=code_scale)
     with console.status(f"rendering {docs * pages} pages..."):
         manifest = generate_synthetic_corpus(out, spec)
     console.print(f"[green]wrote[/] {manifest['n_pages']} pages, {manifest['n_queries']} queries")
