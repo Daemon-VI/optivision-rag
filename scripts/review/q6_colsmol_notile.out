@@ -1,0 +1,27 @@
+C:\Users\Rishi\optivision-rag\.venv\Lib\site-packages\huggingface_hub\file_download.py:141: UserWarning: `huggingface_hub` cache-system uses symlinks by default to efficiently store duplicated files but your machine does not support them in C:\Users\MPPS KANAJIGUDA\.cache\huggingface\hub\models--vidore--colSmol-256M. Caching files will still work but in a degraded version that might require more space on your disk. This warning can be disabled by setting the `HF_HUB_DISABLE_SYMLINKS_WARNING` environment variable. For more details, see https://huggingface.co/docs/huggingface_hub/how-to-cache#limitations.
+To support symlinks on Windows, you either need to activate Developer Mode or to run Python as an administrator. In order to activate developer mode, see this article: https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development
+  warnings.warn(message)
+[transformers] Model config: pad_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 128002. This may result in unexpected behavior.
+Loading weights:   0%|          | 0/472 [00:00<?, ?it/s]Loading weights:  12%|#1        | 56/472 [00:00<00:00, 559.68it/s]Loading weights:  38%|###7      | 177/472 [00:00<00:00, 933.43it/s]Loading weights:  57%|#####7    | 271/472 [00:00<00:00, 771.15it/s]Loading weights:  74%|#######4  | 351/472 [00:00<00:00, 603.43it/s]Loading weights:  88%|########8 | 417/472 [00:00<00:00, 504.26it/s]Loading weights: 100%|##########| 472/472 [00:00<00:00, 413.97it/s]Loading weights: 100%|##########| 472/472 [00:00<00:00, 515.22it/s]
+Loading weights:   0%|          | 0/420 [00:00<?, ?it/s]Loading weights: 100%|##########| 420/420 [00:00<00:00, 7692.31it/s]
+image processor: Idefics3ImageProcessorPil do_image_splitting = True size = SizeDict(height=None, width=None, longest_edge=2048, shortest_edge=None, max_height=None, max_width=None) max_image_size = {'longest_edge': 512}
+  10/60 invoice_024::p2 18s
+  20/60 lab_report_025::p2 38s
+  30/60 land_record_026::p2 60s
+  40/60 loan_form_028::p2 87s
+  50/60 memo_027::p2 119s
+  60/60 transcript_029::p2 164s
+tokens on page 0: 79 grid 8 x 8 text tokens 15
+
+ColSmol, no tiling: 60 pages x 79 tokens
+geometry: ||mu|| 0.398  dead bits (H<0.5) 1  participation ratio 23.5
+
+codec              nDCG@5  retain   R@1   tau60 | precise nDCG/R@1 | topical nDCG/R@1
+float32            0.6376  100.0%  0.333  1.000 |  0.589 / 0.217   |  0.879 / 0.917
+sign(d)            0.6203   97.3%  0.306  0.658 |  0.578 / 0.200   |  0.833 / 0.833
+sign(ITQ(d-mu))    0.6283   98.5%  0.333  0.717 |  0.585 / 0.233   |  0.844 / 0.833
+int8               0.6394  100.3%  0.333  0.991 |  0.591 / 0.217   |  0.879 / 0.917
+
+reference, tiled ColSmol (E1): float 0.7823/R@1 0.569 (precise 0.745/0.483); sign 87.9%, R@1 0.417; tau60 0.643
+reference, ColPali on same pages (E3): float 0.6954/R@1 0.375; sign 98.4%, R@1 0.375; tau 0.762 (shared-top10)
+subject-only floor on this corpus: R@1 = (60*0.2+12)/72 = 0.333, nDCG@5 = (60*0.59+12)/72 = 0.658

@@ -59,6 +59,13 @@ class CorpusSpec:
     pages_per_doc: int = 2
     seed: int = 7
     page_size: str = "A4"
+    # Font multiplier applied to the unique code only (field line and footer).
+    # Everything else on the page, and the RNG sequence, is untouched, so a
+    # corpus at code_scale 3.0 has the same pages as the default corpus with
+    # one line rendered three times larger. This is the manipulation that tests
+    # whether the one-bit codec's cost follows the legibility of the
+    # discriminative evidence (docs/REVIEW-2026-08-21.md, item 2).
+    code_scale: float = 1.0
 
 
 def _rng(seed: int) -> random.Random:
@@ -129,8 +136,15 @@ def generate_synthetic_corpus(out_dir: str | Path, spec: CorpusSpec | None = Non
             subject = SUBJECTS[(d * spec.pages_per_doc + p) % len(SUBJECTS)]
             for i, field in enumerate(fields):
                 value = unique_code if i == 0 else _field_value(field, rng)
-                put(f"{field}: {value}", margin, y, 11, "Helvetica-Bold" if i == 0 else "Helvetica")
-                y -= 18
+                if i == 0:
+                    size = 11 * spec.code_scale
+                    if size > 11:  # drop the baseline so a taller glyph clears the rule above
+                        y -= size - 11
+                    put(f"{field}: {value}", margin, y, size, "Helvetica-Bold")
+                    y -= 18 * max(spec.code_scale, 1.0)
+                else:
+                    put(f"{field}: {value}", margin, y, 11, "Helvetica")
+                    y -= 18
             y -= 8
             put(f"Subject: {subject}", margin, y, 11)
             y -= 24
@@ -146,7 +160,7 @@ def generate_synthetic_corpus(out_dir: str | Path, spec: CorpusSpec | None = Non
 
             # Footer
             put(f"Page {p + 1} of {spec.pages_per_doc}", margin, margin * 0.6, 8)
-            put(unique_code, page_w - margin - 80, margin * 0.6, 8)
+            put(unique_code, page_w - margin - 80 * max(spec.code_scale, 1.0), margin * 0.6, 8 * spec.code_scale)
 
             layout[page_id] = words
             page_index.append(
