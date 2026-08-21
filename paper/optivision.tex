@@ -66,11 +66,12 @@ reaches $53$--$60\times$ compression at $94.6$--$103.4\%$ retention. What fails
 instead is the pruning premise. Real pages are dense, so both pruning stages
 together yield only $1.7$--$1.9\times$ rather than $3.5\times$, and a
 token-budget sweep that was flat under the small encoder falls to $66.7\%$
-retention at a $10\%$ budget. Kendall $\tau$ drops under one-bit codes in both
-settings ($0.53$--$0.74$), so the reordering is equally real in both; only the
-larger encoder has enough margin for nDCG@5 to absorb it. We conclude that
-per-stage attribution is necessary, and that it is a property of the encoder and
-corpus rather than of the compression layer --- so a compression ratio for
+retention at a $10\%$ budget. A third experiment holds the corpus fixed and swaps only the
+encoder, which separates the two: the encoder governs what the codec costs
+($12.1\%$ to $1.6\%$ on identical pages), while the corpus governs what pruning
+buys ($4.2\times$ to $1.9\times$ under one encoder). We conclude that per-stage
+attribution is necessary, and that it is a property of the encoder and corpus
+rather than of the compression layer --- so a compression ratio for
 multi-vector retrieval should be published together with its attribution and the
 setting the attribution was measured in.
 \end{abstract}
@@ -333,8 +334,11 @@ container overhead nor deflated by filesystem compression.
 \section{Experimental Setup}
 
 \subsection{Configuration}
-Two experiments share one pipeline, one measurement protocol and one code path,
-differing only in encoder and corpus. We label them E1 and E2 throughout.
+Three experiments share one pipeline, one measurement protocol and one code
+path, differing only in encoder and corpus. We label them E1, E2 and E3
+throughout. E1 and E2 differ in both variables at once; E3 exists to separate
+them, and forms the fourth cell of a $2 \times 2$ over $\{$small,
+reference$\}$ encoders and $\{$generated, real$\}$ pages.
 
 \emph{E1: small encoder, generated corpus.} The encoder is
 \texttt{vidore/colSmol-256M} (ColIdefics3), float32, on CPU; hardware is a laptop
@@ -349,7 +353,14 @@ energy} ($500$, $100$), \texttt{infovqa} ($500$, $494$) and \texttt{tabfquad}
 ($280$, $280$) --- for $1{,}780$ pages and $1{,}325$ queries in total, with the
 benchmark's own ground truth. The encoder emits $1{,}031$ vectors per page.
 
-Vector dimension is $128$ in both and every run uses seed $1337$.
+\emph{E3: reference encoder, generated corpus.} ColPali-v1.3 as in E2, over
+E1's corpus. The generator is deterministic, so regenerating at seed $7$
+reproduces the pages E1 measured rather than pages resembling them; we verified
+that the manifests match. The encoder emits $1{,}031$ vectors per page, as in
+E2. E1 and E3 therefore share a corpus, E2 and E3 share an encoder, and each
+comparison isolates one variable.
+
+Vector dimension is $128$ in all three and every run uses seed $1337$.
 
 One implementation detail is worth recording, because it silently produces
 plausible numbers. ColPali is published as a LoRA adapter over a PaliGemma base.
@@ -575,14 +586,27 @@ $53$--$60\times$ at $94.6$--$103.4\%$ (Fig.~\ref{fig:scale}). A $12.1\%$ penalty
 became at most $3.7\%$ under a change of encoder and corpus, with the codec
 itself untouched.
 
-The $\tau$ column explains how both results can be true. Under E2,
-\texttt{binary-only} has $\tau = 0.527$ on \texttt{docvqa} --- as low as E1's
-$0.585$, on a larger and more varied corpus. One-bit rounding reorders results
-just as severely in both experiments. What changed is that nDCG@5 stops charging
-for it: a stronger encoder separates the relevant page from its neighbours by a
-wider margin, so the same perturbation of $\arg\max$ margins moves fewer pages
-across the top-$5$ boundary. The mechanism of Section~\ref{sec:floor} is intact;
-its consequence for the headline metric is not.
+E1 and E2 differ in encoder and corpus together, so neither can say which
+variable moved. E3 holds the corpus fixed --- ColPali over E1's own pages ---
+and the two quantities separate cleanly (Table~\ref{tab:dissociation}). With the
+corpus fixed, swapping the encoder takes the codec's cost from $12.1$ to $1.6$
+points. With the encoder fixed, swapping the corpus takes pruning's yield from
+$4.2\times$ to $1.9\times$. \emph{The encoder governs what the codec costs; the
+corpus governs what pruning buys.} What E2 reported as one reversal is two
+effects with two causes.
+
+E3 also rules out the explanation that suggests itself first, that a stronger
+retriever separates the gold page from its neighbours by a wider margin and so
+absorbs the same perturbation. On these identical pages ColPali is the
+\emph{weaker} retriever --- baseline nDCG@5 $0.6954$ against ColSmol's $0.7823$,
+R@1 $0.375$ against $0.569$ --- and loses nothing at all to one-bit codes, with
+R@1 unchanged at $0.375$ where ColSmol falls from $0.569$ to $0.417$. An encoder
+with less margin is the more robust one, so margin is not the mechanism. The
+$\tau$ column agrees: $0.762$ for E3 against $0.585$ for E1, at the same cutoff
+on the same corpus. Under the reference encoder the distortion is smaller, not
+better tolerated --- a property of how much of a patch vector survives
+sign-thresholding, which we do not measure here and flag in
+Section~\ref{sec:limits}.
 
 Read together, the three findings do not support the statement that the quantizer
 is the binding constraint --- that statement is an artifact of E1. At reference
@@ -593,20 +617,42 @@ remove from a dense page.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figs/scale.pdf}
-\caption{The reversal. Every configuration using one-bit codes, under both
-experiments, at the same compression ratios. Under E1 (red) they sit in a band
-below $88\%$ retention; under E2 (blue) the same configurations retain
-$94$--$97\%$, with only the most aggressive budgets falling away. Arrows join
-identical configurations across the two experiments. The codec is unchanged; the
-encoder and the corpus are not.}
+\caption{The dissociation. Every configuration using one-bit codes, under all
+three experiments, at the same compression ratios. Under E1 (red) they sit in a
+band below $88\%$ retention; under E2 (blue) the same configurations retain
+$94$--$97\%$. E3 (green) shares E1's pages and E2's encoder, and sits at or above E2,
+clear of E1's band --- the codec's cost follows the encoder, not the corpus. Dark arrows join identical
+configurations from E1 to E3, which changes only the encoder; light arrows
+continue to E2, which changes only the corpus.}
 \label{fig:scale}
 \end{figure}
+
+\begin{table}[t]
+\caption{Each quantity against its own control. E3 shares E1's corpus and E2's
+encoder, so every row changes exactly one thing. The codec's cost answers to the
+encoder; pruning's yield answers to the corpus. E2 figures are the
+\texttt{docvqa} split.}
+\label{tab:dissociation}
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llr@{}}
+\toprule
+Quantity & Control & Change \\
+\midrule
+one-bit codec cost & corpus fixed, encoder swapped & $12.1 \to 1.6$ pts \\
+one-bit codec cost & encoder fixed, corpus swapped & $1.6 \to 3.7$ pts \\
+pruning yield & corpus fixed, encoder swapped & $3.6 \to 4.2\times$ \\
+pruning yield & encoder fixed, corpus swapped & $4.2 \to 1.9\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Two operating points}
 \begin{table}[t]
 \caption{The configurations that follow from each experiment. Under E1 the two
-are a genuine exchange; under E2 the size-first point dominates on nDCG@5, and
-only $\tau$ separates them.}
+are a genuine exchange; under E2 and E3 the size-first point dominates on
+nDCG@5, and only $\tau$ separates them. E3 is the most favourable point we
+measure, but on sparse generated pages rather than real ones.}
 \label{tab:operating}
 \centering
 \setlength{\tabcolsep}{4pt}
@@ -619,6 +665,9 @@ E1 & quality per byte & prune + int8 & $14.2\times$ & 97.1\% \\
 \midrule
 E2 & smallest index & prune + binary & $53$--$60\times$ & 94.6--103.4\% \\
 E2 & quality per byte & prune + int8 & $6.7$--$7.5\times$ & 97.4--101.6\% \\
+\midrule
+E3 & smallest index & prune + binary & $134.5\times$ & 98.7\% \\
+E3 & quality per byte & prune + int8 & $16.8\times$ & 102.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -638,6 +687,12 @@ directly to a person should still take int8, and the justification is $\tau$
 rather than nDCG@5. This is a narrower and more specific recommendation than E1
 alone would have produced, and it is the opposite of the one E1 alone would have
 produced.
+
+E3 makes the same recommendation more emphatically --- $134.5\times$ at $98.7\%$
+retention --- but it should not be read as the headline. It combines the
+encoder that tolerates one-bit codes with the corpus that has the most blank
+paper to discard, which is the best case rather than a representative one. Its
+role here is to identify which variable supplies which part of the gain.
 
 \subsection{Latency}
 Query latency falls with the token count, since MaxSim cost is linear in stored
@@ -665,22 +720,25 @@ expectation is not uniform in its effect on an $\arg\max$, and this is why
 single-vector intuitions about binary quantization transfer poorly to
 late-interaction retrieval.
 
-E2 sharpens rather than contradicts this account. One-bit codes reorder results
-just as severely under the reference encoder --- $\tau = 0.527$ on
-\texttt{docvqa} against E1's $0.585$ --- so the $\arg\max$ argument above is not
-encoder-specific. What differs is how much that reordering costs on a
-top-$5$ metric. A stronger encoder places the relevant page further from its
-competitors, so perturbing the margins moves fewer pages across the cut-off.
-The distortion is a property of the codec; whether it becomes a retrieval error
-is a property of the encoder. This is precisely why an end-to-end retention
-figure cannot be attributed without naming both.
+E3 tells us where this floor comes from. The $\arg\max$ argument above predicts
+damage whenever competing document vectors are close; it does not predict how
+close they are, which is a property of the representation. Under ColPali on the
+same pages, $\tau$ is $0.762$ rather than $0.585$ and R@1 is untouched, so
+sign-thresholding perturbs that encoder's $\arg\max$ far less. The floor is
+therefore not a fixed property of one-bit codes but of the encoder's patch
+geometry --- how much of each vector's norm sits far enough from zero to survive
+the sign. This is precisely why an end-to-end retention figure cannot be
+attributed without naming the encoder it was measured on, and it is a directly
+testable prediction we leave to future work.
 
 \subsection{Implications}
 Three follow. First, and most strongly, \emph{a reported compression ratio for
 multi-vector retrieval should carry both a per-stage attribution and the encoder
-and corpus it was measured on}. Our two experiments differ only in those two
+and corpus it was measured on}. Our first two experiments differ only in those two
 variables and produce opposite attributions from the same code; a paper reporting
-either one alone would have supported a confident and wrong generalisation.
+either one alone would have supported a confident and wrong generalisation, and
+it took a third run to establish which variable was responsible for which half
+of the difference.
 
 Second, the token budget is a free parameter exactly when the corpus is sparse,
 and not otherwise. E1 would have licensed pruning as aggressively as the detector
@@ -700,6 +758,7 @@ rescoring remains attractive in both, since Hit@5 stays well above nDCG@5
 throughout --- the relevant page is usually retrieved and merely misordered.
 
 \subsection{Limitations}
+\label{sec:limits}
 We state these plainly, as they bound the claims above.
 
 \emph{Corpus scale.} E2 uses $500$-page subsets of each ViDoRe split rather than
@@ -714,12 +773,26 @@ noise and we decline to interpret them; the \texttt{docvqa} ($451$) and
 \texttt{infovqa} ($494$) splits carry the E2 conclusions.
 
 \emph{Two points, one family.} We measure a $256$M and a $3$B encoder, both
-ColBERT-style vision--language retrievers. We can say the attribution reverses
-between them; we cannot say where in between it does, nor whether the crossing is
-driven by parameter count, embedding quality, or the corpus change that
-accompanies it in our design. Separating encoder scale from corpus provenance
-requires running the reference encoder on the generated corpus as well, which is
-the obvious next experiment.
+ColBERT-style vision--language retrievers. E3 separates encoder from corpus, but two
+points still do not locate a crossing: we cannot say at what scale the
+attribution changes, nor whether parameter count or embedding quality is the
+operative variable. We also do not measure the patch geometry that
+Section~\ref{sec:floor} now rests on; that requires retaining the encode caches,
+which our runs discard.
+
+\emph{Generator realism.} On E3's pages ColPali-v1.3 scores \emph{below}
+ColSmol-256M (nDCG@5 $0.6954$ against $0.7823$). A $3$B reference encoder losing
+to a $256$M one is a fact about our generated pages rather than about the
+encoders, and it bounds what E1 and E3 can be taken to represent. It does not
+affect the comparisons we draw from them, which are within-encoder ratios.
+
+\emph{What $\tau$ measures.} Our $\tau$ is Kendall $\tau_b$ over the shared ids
+of two top-$10$ hit lists, not over the full ranking; the same E1 run scores
+$0.643$ over all $60$ pages, and the value moves with the cutoff ($0.402$ at
+top-$5$, $0.691$ at top-$20$). It should therefore be read with its cutoff
+named, and $\tau$ values are comparable across experiments only when the
+candidate pool is a comparable fraction of the corpus --- which holds for E1
+against E3, both $60$ pages, and not for either against E2's $500$.
 
 \emph{Scoring path.} All quality numbers come from exact brute-force MaxSim,
 deliberately. A deployment on an approximate index would see additional recall
@@ -741,18 +814,19 @@ $94.6$--$103.4\%$ retention, and what fails instead is the premise that a page i
 mostly blank paper --- pruning yields $1.7$--$1.9\times$ on real pages, and a
 token-budget sweep that was flat becomes a $25.8$-point drop.
 
-Kendall $\tau$ behaves the same way in both experiments, falling to $0.53$--$0.59$
-under one-bit codes, which locates the difference precisely: the codec distorts
-ranking identically, and only the stronger encoder has the margin to absorb that
-distortion within the top $5$. The conclusion is therefore not that the codec
-binds, nor that the token count binds, but that neither is a property of the
-compression layer alone. A compression ratio for multi-vector retrieval should be
+A third experiment holds the corpus fixed and swaps only the encoder, which
+separates the two quantities that reversal confounded: the encoder governs what
+the codec costs ($12.1\%$ to $1.6\%$ on identical pages) and the corpus governs
+what pruning buys ($4.2\times$ to $1.9\times$ under one encoder). It also rules
+out retrieval margin as the mechanism, since the reference encoder is the weaker
+retriever on those pages and still loses nothing to one-bit codes. The
+conclusion is therefore not that the codec binds, nor that the token count
+binds, but that neither is a property of the compression layer alone. A compression ratio for multi-vector retrieval should be
 published with a per-stage attribution and with the encoder and corpus that
 attribution was measured on, because the attribution itself is what moves.
 
-Future work follows directly: run the reference encoder on the generated corpus to
-separate encoder scale from corpus provenance, place a two-bit or
-product-quantized codec between the current operating points for the small-encoder
+Future work follows directly: measure the patch geometry that decides how much
+sign-thresholding costs an encoder, place a two-bit or product-quantized codec between the current operating points for the small-encoder
 regime, replace pixel-space saliency with a learned selector for the dense-page
 regime, and test shortlist rescoring, which our Hit@5 figures suggest should
 recover most of the remaining ranking loss at negligible cost.
