@@ -154,15 +154,23 @@ the pages are the same ones. It splits the reversal in two.
 | one-bit codec costs | E1 → E3: **12.1 → 1.6 points** | E3 → E2: 1.6 → 3.7 points |
 | pruning buys | E1 → E3: 3.55x → 4.20x | E3 → E2: **4.20x → 1.85x** |
 
-**The encoder sets what the one-bit codec costs; the corpus sets what pruning buys.**
-Run `python scripts/compare_regimes.py` to print it from the benchmark files. It is also
-the best operating point in the project: 98.7% retention at 134.5x.
+**The corpus sets what pruning buys.** Run `python scripts/compare_regimes.py` to
+print it from the benchmark files. E3 is also the best operating point in the project
+(98.7% retention at 134.5x) and the least representative one.
 
-An earlier version of this section explained the codec result by *retrieval margin*.
-E3 refutes that — on those identical pages ColPali is the weaker retriever (nDCG@5
-0.6954 against 0.7823, R@1 0.375 against 0.569) and still loses nothing to binarization.
-See [RESULTS.md](docs/RESULTS.md) for the correction, and `scripts/tau_audit.py` for why
+The codec half is not an encoder property. Per query, a sign code adds the same ~3% of
+score noise under both encoders, and it flips exactly the queries whose float margin over
+the best competitor is smaller than that — none above twice the noise, on eight caches.
+E1's precise queries are decided by three digits at a 0.05% margin, which is why the
+small encoder looks fragile; ColPali cannot read those digits at 448 px and never wins
+the queries it is credited with not losing (precise R@1 0.250, floor 0.200). Enlarge the
+code and its one-bit cost appears. See [RESULTS.md](docs/RESULTS.md#e3---colpali-3b-on-the-generated-corpus)
+and [REVIEW-2026-08-21.md](docs/REVIEW-2026-08-21.md); `scripts/tau_audit.py` explains why
 E1's tau of 0.585 and E2's 0.527 were never the same measurement.
+
+On dense pages, selecting tokens by embedding coverage beats pixel saliency below a 50%
+budget — and 256 random probe directions do as well as the designed selector
+([RESULTS.md](docs/RESULTS.md#token-selection-on-dense-pages---the-stage-ii-controls)).
 
 ### Memory at query time
 

@@ -67,11 +67,20 @@ instead is the pruning premise. Real pages are dense, so both pruning stages
 together yield only $1.7$--$1.9\times$ rather than $3.5\times$, and a
 token-budget sweep that was flat under the small encoder falls to $66.7\%$
 retention at a $10\%$ budget. A third experiment holds the corpus fixed and swaps only the
-encoder, which separates the two: the encoder governs what the codec costs
-($12.1\%$ to $1.6\%$ on identical pages), while the corpus governs what pruning
-buys ($4.2\times$ to $1.9\times$ under one encoder). We conclude that per-stage
-attribution is necessary, and that it is a property of the encoder and corpus
-rather than of the compression layer --- so a compression ratio for
+encoder, and a per-query analysis of the encode caches says what moved. The
+corpus governs what pruning buys ($4.2\times$ to $1.9\times$ under one encoder).
+The codec's cost follows neither encoder nor corpus as such but the queries'
+decision margins: a sign code perturbs page scores by about $3\%$ under either
+encoder, and it flips exactly the queries whose float-precision margin over the
+best competitor is smaller than that --- none above twice the noise, on eight
+caches. The generated corpus decides $60$ of its $72$ queries by three digits at
+a median margin of $0.05\%$, which is why the small encoder looks fragile; the
+reference encoder cannot read those digits at $448$\,px and never wins the
+queries it is credited with not losing. On dense pages, finally, selecting
+tokens by embedding coverage beats pixel saliency below a $50\%$ budget, and no
+selector we tried beats uniformly random probes. We conclude that per-stage
+attribution is necessary, and that it is a property of the queries and the
+corpus rather than of the compression layer --- so a compression ratio for
 multi-vector retrieval should be published together with its attribution and the
 setting the attribution was measured in.
 \end{abstract}
@@ -148,6 +157,14 @@ regimes, give the operating points that follow in each, and argue that a
 compression ratio for multi-vector retrieval should be published with a per-stage
 attribution \emph{and} the encoder and corpus it was measured on --- because the
 attribution, not merely its magnitude, is what changes.
+\item \textbf{The mechanism, and a control for token selection.} A per-query
+analysis over eight encode caches locates the one-bit codec's cost in the
+queries' decision margins rather than in the encoder: the codec's score noise is
+the same under both encoders, and it flips exactly the queries decided by less
+than that noise. A matched-budget study on two dense ViDoRe splits shows that
+selecting tokens by embedding coverage beats pixel saliency, and that uniformly
+random probes do as well as a designed selector --- the control any future
+selector has to clear.
 \end{enumerate}
 
 \section{Related Work}
@@ -571,49 +588,97 @@ on \texttt{docvqa}, $81.6\%$ on \texttt{tabfquad} and $85.4\%$ on
 content fits comfortably inside the top $10\%$ of patches; on pages where it does
 not, the aggressive setting is a genuine trade rather than a free $1.8\times$.
 
-\subsection{Finding 3: the binary penalty belongs to the encoder, not the codec}
+\subsection{Finding 3: the one-bit penalty follows the decision margin, not the encoder}
+\label{sec:finding3}
 Under E1, \texttt{binary-only} loses $12.1\%$ of nDCG@5 \emph{without discarding a
 single token}, and its $\tau$ of $0.585$ says it substantially reorders results
 rather than merely rescaling scores. Against this, \texttt{int8-only} costs
 nothing measurable at $4\times$ --- $100.7\%$ retention with $\tau = 0.972$, the
 excess above $100\%$ being noise at $72$ queries. Every E1 configuration that includes
 one-bit codes lands in a narrow $85$--$88\%$ retention band regardless of how much
-pruning is applied. On that evidence the codec is the binding constraint.
+pruning is applied. Under E2 the band is gone: \texttt{binary-only} retains
+$96.3\%$ on \texttt{docvqa} and $97.4\%$ on \texttt{infovqa}. Under E3 --- ColPali
+over E1's own pages --- it retains $98.4\%$ with R@1 unchanged at $0.375$. A
+$12.1\%$ penalty became $1.6\%$ under a change of encoder alone, with the codec
+and the pages untouched (Table~\ref{tab:dissociation}).
 
-Under E2 the band is gone. \texttt{binary-only} retains $96.3\%$ on
-\texttt{docvqa} and $97.4\%$ on \texttt{infovqa}, and is indistinguishable from
-the baseline on the two splits with fewer queries. The full pipeline reaches
-$53$--$60\times$ at $94.6$--$103.4\%$ (Fig.~\ref{fig:scale}). A $12.1\%$ penalty
-became at most $3.7\%$ under a change of encoder and corpus, with the codec
-itself untouched.
+The reading that suggests itself --- that the codec's cost is a property of the
+encoder --- does not survive a per-query look at the same caches. For each query
+we take the float-precision margin $m$ by which the gold page beats its best
+non-relevant competitor, as a fraction of the gold score, and the noise $\sigma$
+a codec adds to page scores, measured as the residual of the codec's scores
+around a linear fit to the float scores in the same units. A sign code adds
+$\sigma \approx 2.8\%$ of the score under ColSmol and $2.5\%$ under ColPali; a
+two-bit code about half that; int8 $0.06\%$. The noise is a property of the
+codec, and it is the same for both encoders. What differs is where the queries
+sit. E1's $60$ \emph{precise} queries are decided by three digits inside a
+nine-character code, and the retriever resolves them by a median margin of
+$0.05\%$ (interquartile $-0.7\%$ to $+0.9\%$): the gold page is effectively tied
+with its same-subject neighbour before any codec is applied. The $12$ topical
+queries are won by $31\%$. Under every codec, on every cache we hold (six
+ColSmol, two ColPali), \emph{no query whose margin exceeds $2\sigma$ changes its
+top result}, while $32$--$43\%$ of those below $0.5\sigma$ do; among the queries
+the float retriever wins, the margin alone separates the ones a sign code keeps
+from the ones it loses with AUC $0.78$--$0.95$ (Table~\ref{tab:margin}).
 
-E1 and E2 differ in encoder and corpus together, so neither can say which
-variable moved. E3 holds the corpus fixed --- ColPali over E1's own pages ---
-and the two quantities separate cleanly (Table~\ref{tab:dissociation}). With the
-corpus fixed, swapping the encoder takes the codec's cost from $12.1$ to $1.6$
-points. With the encoder fixed, swapping the corpus takes pruning's yield from
-$4.2\times$ to $1.9\times$. \emph{The encoder governs what the codec costs; the
-corpus governs what pruning buys.} What E2 reported as one reversal is two
-effects with two causes.
+\begin{table}[t]
+\caption{Per-query decision margin against codec noise, both as a fraction of
+the gold page's float score. $m$ is the median float margin of the $60$ precise
+queries; $\sigma$ is the score noise a codec adds; flip rates are the share of
+queries whose top-$1$ result changes under the sign code, by $|m|/\sigma$ bin;
+AUC is how well $m$ alone separates the float winners the sign code keeps from
+those it loses. Rows are the E1 encoder (ColSmol) and the E3 encoder (ColPali)
+on the same $60$ pages with the code's glyphs at the stated size; the ColSmol
+rows re-render only those glyphs, the ColPali $3\times$ row was rendered with the
+code in the text flow, which also shifts the lines below it.}
+\label{tab:margin}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+encoder, code & $m$ & $\sigma_{\mathrm{sign}}$ & $\sigma_{\mathrm{2bit}}$ & $<0.5\sigma$ & $>2\sigma$ & AUC \\
+\midrule
+ColSmol $1\times$ (E1) & $-0.05\%$ & $2.8\%$ & $1.5\%$ & $32\%$ & $0\%$ & $0.78$ \\
+ColSmol $3\times$ & $-0.31\%$ & $2.7\%$ & $1.4\%$ & $32\%$ & $0\%$ & $0.90$ \\
+ColSmol $0.4\times$ & $-0.65\%$ & $2.8\%$ & $1.6\%$ & $41\%$ & $0\%$ & $0.94$ \\
+ColPali $1\times$ (E3) & $-1.39\%$ & $2.5\%$ & $1.3\%$ & $43\%$ & $0\%$ & $0.86$ \\
+ColPali $3\times$ & $-0.52\%$ & $2.2\%$ & $1.2\%$ & $40\%$ & $0\%$ & $0.88$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-E3 also rules out the explanation that suggests itself first, that a stronger
-retriever separates the gold page from its neighbours by a wider margin and so
-absorbs the same perturbation. On these identical pages ColPali is the
-\emph{weaker} retriever --- baseline nDCG@5 $0.6954$ against ColSmol's $0.7823$,
-R@1 $0.375$ against $0.569$ --- and loses nothing at all to one-bit codes, with
-R@1 unchanged at $0.375$ where ColSmol falls from $0.569$ to $0.417$. An encoder
-with less margin is the more robust one, so margin is not the mechanism. The
-$\tau$ column agrees: $0.762$ for E3 against $0.585$ for E1, at the same cutoff
-on the same corpus. Under the reference encoder the distortion is smaller, not
-better tolerated --- a property of how much of a patch vector survives
-sign-thresholding, which we do not measure here and flag in
-Section~\ref{sec:limits}.
+This is also why ColPali appears immune. On E1's pages it wins $15$ of the $60$
+precise queries in float, three more than the $12$ a subject-only ranker gets by
+chance, and its median precise-query margin is $-1.4\%$: it cannot read an
+$11$\,pt code at $448$\,px and has lost those queries before any quantization.
+Under the sign code seven of them flip from won to lost and seven from lost to
+won, which nets to the ``unchanged'' R@1 of $0.375$. Re-rendering only the
+code's glyphs three times larger, with every other line, the generator's random
+sequence and the queries held fixed, lifts ColPali's precise R@1 to $0.317$ and
+its one-bit cost from $1.6\%$ to $4.1\%$, with precise R@1 under the sign code
+back at $0.233$: the encoder starts winning near-tie queries and starts losing
+them to the codec. At $72$ queries the aggregate change is inside the noise
+(paired over identical queries, $-0.019$ nDCG@5, $95\%$ CI $[-0.094, +0.058]$),
+so we report it as a direction; the per-query structure in
+Table~\ref{tab:margin} is the measurement. The same manipulation on ColSmol, at
+$0.4\times$, $1\times$ and $3\times$ the code size, moves the float retriever
+(precise R@1 $0.283$, $0.483$, $0.333$ --- a $33$\,pt code spans three patches,
+and no single document vector then holds the string a query vector must match)
+but leaves the one-bit cost at $9.6\%$, $12.1\%$ and $9.0\%$, with paired
+differences of $+0.03$ nDCG@5 and intervals through zero. Glyph size, like
+encoder identity, is not the variable.
 
-Read together, the three findings do not support the statement that the quantizer
-is the binding constraint --- that statement is an artifact of E1. At reference
-scale neither stage binds: compression to roughly $57\times$ is nearly free, and
-the limit on the pipeline is how little a pixel-space saliency detector can
-remove from a dense page.
+The statement that survives is narrower than the one the aggregate numbers
+invite, and more useful: \emph{a codec costs the queries whose decision margin is
+smaller than its score noise.} E1 is the worst case by construction --- $40$ of
+its $72$ queries sit below $0.5\sigma$ for a sign code --- E3 is a floor, and E2's
+$2.6$--$3.7\%$ measures how many ViDoRe queries are within about $3\%$ of a tie.
+Pruning's yield, by contrast, does answer to the corpus and only to the corpus:
+$4.2\times$ to $1.9\times$ under one encoder, $3.6\times$ to $4.2\times$ under
+one corpus. At reference scale neither stage binds: compression to roughly
+$57\times$ is nearly free, and the limit on the pipeline is how little a
+pixel-space saliency detector can remove from a dense page.
 
 \begin{figure}[t]
 \centering
@@ -622,20 +687,24 @@ remove from a dense page.
 three experiments, at the same compression ratios. Under E1 (red) they sit in a
 band below $88\%$ retention; under E2 (blue) the same configurations retain
 $94$--$97\%$. E3 (green) shares E1's pages and E2's encoder, and sits at or above E2,
-clear of E1's band --- the codec's cost follows the encoder, not the corpus. Dark arrows join identical
-configurations from E1 to E3, which changes only the encoder; light arrows
-continue to E2, which changes only the corpus.}
+clear of E1's band. Finding~3 shows why this is not an encoder property: E1's
+band is made of near-tie queries that ColPali does not win in float precision
+either. Dark arrows join identical configurations from E1 to E3, which changes
+only the encoder; light arrows continue to E2, which changes only the corpus.}
 \label{fig:scale}
 \end{figure}
 
 \begin{table}[t]
 \caption{Each quantity against its own control. E3 shares E1's corpus and E2's
-encoder, so every row changes exactly one thing. The codec's cost answers to the
-encoder; pruning's yield answers to the corpus. E2 figures are the
-\texttt{docvqa} split.}
+encoder, so the first four rows change exactly one thing; the last two change
+nothing but the size of the one discriminative string on the page. Pruning's
+yield answers to the corpus. The codec's cost moves with the encoder and moves
+again with glyph size alone, and Finding~3 traces both to the queries' decision
+margins. E2 figures are the \texttt{docvqa} split; the last two rows are at $72$
+queries and inside their confidence intervals.}
 \label{tab:dissociation}
 \centering
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}llr@{}}
 \toprule
 Quantity & Control & Change \\
@@ -644,9 +713,73 @@ one-bit codec cost & corpus fixed, encoder swapped & $12.1 \to 1.6$ pts \\
 one-bit codec cost & encoder fixed, corpus swapped & $1.6 \to 3.7$ pts \\
 pruning yield & corpus fixed, encoder swapped & $3.6 \to 4.2\times$ \\
 pruning yield & encoder fixed, corpus swapped & $4.2 \to 1.9\times$ \\
+one-bit codec cost & ColPali, glyphs $3\times$ & $1.6 \to 4.1$ pts \\
+one-bit codec cost & ColSmol, glyphs $0.4\times$/$3\times$ & $12.1 \to 9.6$/$9.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Finding 4: on dense pages, coverage beats ink and nothing beats random}
+\label{sec:selection}
+Finding 2 leaves a question the pixel detector cannot answer: when the page is
+dense and a token budget is imposed anyway, which tokens should go? The natural
+alternative to ranking patches by ink is to rank them by how much of the
+embedding space they cover --- score every document vector against a set of
+probe directions and keep the ones that win a MaxSim most often, so that
+whatever a query turns out to ask, some retained vector is near it. We built
+this selector with $256$ probes chosen by greedy farthest-point traversal of a
+$20{,}000$-patch sample of the corpus, and ran it on \texttt{infovqa} and
+\texttt{docvqa} at three budgets against the two controls any such selector has
+to beat: the same procedure with $256$ uniformly random unit vectors that have
+never seen the corpus, and the pixel detector at the same budget
+(Table~\ref{tab:selection}). Budgets match to within $3\%$ of tokens per page,
+and every row uses the one-bit codec.
+
+\begin{table}[t]
+\caption{Token selection on dense pages: retention of float nDCG@5 at three
+budgets, all rows one-bit. \texttt{pixel} is the saliency detector of Stage~1;
+\texttt{coverage} keeps the patches that win most MaxSims against $256$
+farthest-point probes; \texttt{random} is the same procedure with $256$ random
+unit vectors. Budgets match to within $3\%$ of tokens per page; $494$ queries on
+\texttt{infovqa}, $451$ on \texttt{docvqa}.}
+\label{tab:selection}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+split & budget & pixel & coverage & random \\
+\midrule
+\texttt{infovqa} & $50\%$ & $94.7\%$ & $96.2\%$ & $96.7\%$ \\
+ & $30\%$ & $92.3\%$ & $95.9\%$ & $95.7\%$ \\
+ & $10\%$ & $85.4\%$ & $89.6\%$ & $90.7\%$ \\
+\texttt{docvqa} & $50\%$ & $92.5\%$ & $91.4\%$ & $92.3\%$ \\
+ & $30\%$ & $86.9\%$ & $88.2\%$ & $90.5\%$ \\
+ & $10\%$ & $66.7\%$ & $77.9\%$ & $76.9\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two things are true at once. Coverage-based selection beats pixel saliency
+below a $50\%$ budget on both splits, by $4$ points at $10\%$ on
+\texttt{infovqa} and $11$ on \texttt{docvqa}: on a dense page the ink ranking
+discards the vectors queries actually match. And the probe construction
+contributes nothing to that. Random probes are within one point of the designed
+probes at every budget on \texttt{infovqa}, ahead by one to two points at
+$50\%$ and $30\%$ on \texttt{docvqa}, and behind by one at $10\%$; across $945$
+queries no selector we tried beats random. This reproduces, for a different
+selector and a different encoder, the observation of Ma
+et~al.~\cite{lightcolpali} that random pruning outperforms saliency-based
+pruning for ColPali, and we read it as a statement about the corpus rather than
+about any method. On these splits $74\%$ (\texttt{infovqa}) and $66\%$
+(\texttt{docvqa}) of all patches win at least one MaxSim over the query set; the
+set of winners fitted on half the queries covers $64\%$ and $52\%$ of the index
+and retains $100\%$ and $99.7\%$ of nDCG@5 on the other half. That is the
+ceiling for any query-agnostic selector on dense pages --- $1.6$--$1.9\times$ at
+no loss --- and below it every selector falls off a cliff at a similar rate. A
+learned selector for this regime has to beat uniformly random dropping at a
+matched budget, and we would regard that as the minimum control for any future
+claim of the kind.
 
 \subsection{Two operating points}
 \begin{table}[t]
@@ -691,9 +824,10 @@ produced.
 
 E3 makes the same recommendation more emphatically --- $134.5\times$ at $98.7\%$
 retention --- but it should not be read as the headline. It combines the
-encoder that tolerates one-bit codes with the corpus that has the most blank
-paper to discard, which is the best case rather than a representative one. Its
-role here is to identify which variable supplies which part of the gain.
+corpus with the most blank paper to discard with an encoder that never wins the
+near-tie queries a one-bit code would cost it (Finding~3), which is the best
+case rather than a representative one. Its role here is to identify which
+variable supplies which part of the gain.
 
 \subsection{Latency}
 Query latency falls with the token count, since MaxSim cost is linear in stored
@@ -706,31 +840,50 @@ this scale --- $65.7$~ms under E1 and 72.8~ms under E2.
 
 \section{Discussion}
 
-\subsection{Why the binary floor exists}
+\subsection{What the one-bit codec costs, and why}
 \label{sec:floor}
 For random unit vectors the expected cosine between $\mathbf{d}$ and
-$\mathrm{sign}(\mathbf{d})/\sqrt{d}$ is $\sqrt{2/\pi} \approx 0.798$, and the
-distortion is nearly the same for every document vector. Uniform distortion
-shifts scores far more than it reorders them, which is the usual argument for why
-binary quantization is safe. Our $\tau$ of $0.585$ shows the argument is
-insufficient under MaxSim, and the reason is the maximum. A page score is a sum
-of per-query-vector maxima over hundreds of candidates; the identity of the
-$\arg\max$ is decided by small margins between the top few document vectors, and
-one-bit rounding perturbs exactly those margins. Distortion that is uniform in
-expectation is not uniform in its effect on an $\arg\max$, and this is why
-single-vector intuitions about binary quantization transfer poorly to
-late-interaction retrieval.
+$\mathrm{sign}(\mathbf{d})/\sqrt{d}$ is $\sqrt{2/\pi} \approx 0.798$, and it is
+tempting to read an encoder's departure from that figure as its susceptibility
+to one-bit codes. We measured it on every cache we hold: $0.800$ for ColSmol,
+and $0.800$, $0.800$, $0.799$ and $0.801$ for ColPali on four corpora, against
+the random reference of $0.798$. The statistic is a per-vector property of any
+roughly isotropic $128$-dimensional distribution and carries no information
+about retrieval. The same is true of the share of per-query-vector $\arg\max$
+identities that change under the sign code, which is $75$--$83\%$ on every
+cache, including those where the ranking barely moves. Neither quantity can be
+the mechanism, and we withdraw both from the argument.
 
-E3 tells us where this floor comes from. The $\arg\max$ argument above predicts
-damage whenever competing document vectors are close; it does not predict how
-close they are, which is a property of the representation. Under ColPali on the
-same pages, $\tau$ is $0.762$ rather than $0.585$ and R@1 is untouched, so
-sign-thresholding perturbs that encoder's $\arg\max$ far less. The floor is
-therefore not a fixed property of one-bit codes but of the encoder's patch
-geometry --- how much of each vector's norm sits far enough from zero to survive
-the sign. This is precisely why an end-to-end retention figure cannot be
-attributed without naming the encoder it was measured on, and it is a directly
-testable prediction we leave to future work.
+What a codec does to a ranking is decided one query at a time by two numbers.
+The first is the noise it adds to a page's score, $\sigma$, which for a sign
+code is $2.2$--$2.8\%$ of the score across both encoders and all corpora, for
+the two-bit code about half that, and for int8 $0.06\%$; it is set by the codec
+and, weakly, by how anisotropic the encoder's vectors are on that corpus. The
+second is the margin $m$ by which the query's gold page leads its best
+competitor in float, which is set by the corpus and by what the retriever can
+read. A query flips when $|m| \lesssim \sigma$. On the generated corpus the
+precise queries are near-ties by construction, so a sign code flips
+$32$--$43\%$ of those below $0.5\sigma$ and none above $2\sigma$, under either
+encoder; ColPali escapes only because its margins on those queries are negative
+to begin with. On ViDoRe a sign code costs $2.6$--$3.7\%$, which is the
+fraction of real queries within about $3\%$ of a tie, and it changes the
+top-ranked page of $11\%$ of \texttt{infovqa} queries while nDCG@5 reports
+$97.4\%$ retention --- a reason to report top-$1$ agreement alongside $\tau$.
+
+The ladder of codecs follows. Int8 is lossless at $4\times$ on every cache
+($99.9$--$100.2\%$). A rotated two-bit Lloyd--Max code at $16\times$ halves
+$\sigma$ and recovers about half the sign code's loss everywhere ($99.4\%$ on
+\texttt{infovqa}, $97.0\%$ on \texttt{docvqa}, $99.4\%$ on E3). The zero-byte
+refinements of the sign code --- subtracting a global mean, an ITQ rotation, or
+a ColBERTv2-style centroid with a one-bit residual~\cite{colbertv2} --- recover
+$3$--$10$ points on E1, where $80\%$ of every page is blank paper and the mean
+vector is the paper's direction, and nothing on ViDoRe: $+0.7$ ($95\%$ CI
+$[-0.2, +1.8]$) and $+0.7$ $[-0.6, +2.0]$ on \texttt{infovqa} for centring and
+ITQ, $-0.8$ $[-2.3, +0.7]$ and $-0.2$ $[-2.0, +1.6]$ on \texttt{docvqa}, and
+$-4.2$ $[-6.5, -2.1]$ for the residual code on \texttt{docvqa} with its codebook
+capped at $4{,}096$ centroids for $515{,}500$ vectors. The anisotropy those
+refinements correct is a property of blank pages, not of the encoder, and it is
+why E1 overstates their value.
 
 \subsection{Implications}
 Three follow. First, and most strongly, \emph{a reported compression ratio for
@@ -749,14 +902,18 @@ patches the saliency detector rejects --- and should be reported alongside any
 token-reduction result.
 
 Third, the research direction the attribution recommends is different in each
-regime, which is the practical point of making the attribution at all. Under a
-small encoder the codec binds and an intermediate two-bit or product-quantized
-document side would dominate both operating points. Under the reference encoder
-the codec is already nearly free, and the binding limit is the saliency detector:
-pixel statistics find little to remove on an infographic, which is where a
-learned or attention-derived selector would have to earn its cost. Shortlist
-rescoring remains attractive in both, since Hit@5 stays well above nDCG@5
-throughout --- the relevant page is usually retrieved and merely misordered.
+regime, which is the practical point of making the attribution at all. Where
+queries are near-ties --- exact identifiers, codes, serial numbers on otherwise
+similar pages --- the codec binds, the sign code is the wrong choice, and a
+two-bit code at $16\times$ or int8 at $4\times$ is what a deployment should pay
+for. Where queries are decided by wide margins the codec is nearly free and the
+binding limit is the selector: on dense pages pixel saliency discards the
+vectors queries match, coverage-based selection does better below a $50\%$
+budget, and uniformly random probes do as well as any selector we tried
+(Finding~4). A learned selector for this regime has to beat random at a matched
+budget before it has earned anything. Shortlist rescoring remains attractive in
+both, since Hit@5 stays well above nDCG@5 throughout --- the relevant page is
+usually retrieved and merely misordered.
 
 \subsection{Limitations}
 \label{sec:limits}
@@ -771,15 +928,20 @@ penalties we report may be optimistic in absolute terms.
 \emph{Statistical power.} E1 has $72$ queries and the \texttt{energy} split of E2
 has $100$, at which several rows read above $100\%$ retention. Those readings are
 noise and we decline to interpret them; the \texttt{docvqa} ($451$) and
-\texttt{infovqa} ($494$) splits carry the E2 conclusions.
+\texttt{infovqa} ($494$) splits carry the E2 conclusions. Every E3 aggregate
+difference is likewise at $72$ queries and inside $\pm 0.08$ nDCG@5; the
+per-query margin structure of Table~\ref{tab:margin}, not the aggregates,
+carries the E3 conclusion.
 
 \emph{Two points, one family.} We measure a $256$M and a $3$B encoder, both
 ColBERT-style vision--language retrievers. E3 separates encoder from corpus, but two
 points still do not locate a crossing: we cannot say at what scale the
 attribution changes, nor whether parameter count or embedding quality is the
-operative variable. We also do not measure the patch geometry that
-Section~\ref{sec:floor} now rests on; that requires retaining the encode caches,
-which our runs discard.
+operative variable. The decision-margin rule of Finding~3 is verified on the
+generated corpus, eight caches deep, and is a prediction rather than a
+measurement on ViDoRe, whose caches we did not retain. The ColPali run with the
+enlarged code was rendered with the code in the text flow, which also shifts
+the lines below it; the three ColSmol runs hold every other pixel fixed.
 
 \emph{Generator realism.} On E3's pages ColPali-v1.3 scores \emph{below}
 ColSmol-256M (nDCG@5 $0.6954$ against $0.7823$). A $3$B reference encoder losing
@@ -793,7 +955,10 @@ $0.643$ over all $60$ pages, and the value moves with the cutoff ($0.402$ at
 top-$5$, $0.691$ at top-$20$). It should therefore be read with its cutoff
 named, and $\tau$ values are comparable across experiments only when the
 candidate pool is a comparable fraction of the corpus --- which holds for E1
-against E3, both $60$ pages, and not for either against E2's $500$.
+against E3, both $60$ pages, and not for either against E2's $500$. Where one
+number is wanted we now prefer top-$1$ agreement and top-$5$ overlap with the
+float ranking, which are free of a cutoff and report what a user would see;
+under the sign code on \texttt{infovqa} they are $0.89$ and $0.77$.
 
 \emph{Scoring path.} All quality numbers come from exact brute-force MaxSim,
 deliberately. A deployment on an approximate index would see additional recall
@@ -815,22 +980,31 @@ $94.6$--$103.4\%$ retention, and what fails instead is the premise that a page i
 mostly blank paper --- pruning yields $1.7$--$1.9\times$ on real pages, and a
 token-budget sweep that was flat becomes a $25.8$-point drop.
 
-A third experiment holds the corpus fixed and swaps only the encoder, which
-separates the two quantities that reversal confounded: the encoder governs what
-the codec costs ($12.1\%$ to $1.6\%$ on identical pages) and the corpus governs
-what pruning buys ($4.2\times$ to $1.9\times$ under one encoder). It also rules
-out retrieval margin as the mechanism, since the reference encoder is the weaker
-retriever on those pages and still loses nothing to one-bit codes. The
-conclusion is therefore not that the codec binds, nor that the token count
-binds, but that neither is a property of the compression layer alone. A compression ratio for multi-vector retrieval should be
-published with a per-stage attribution and with the encoder and corpus that
-attribution was measured on, because the attribution itself is what moves.
+A third experiment holds the corpus fixed and swaps only the encoder, and a
+per-query analysis of the caches separates what that reversal confounded. The
+corpus governs what pruning buys ($4.2\times$ to $1.9\times$ under one encoder).
+The codec's cost is not an encoder property: a sign code adds the same
+$2$--$3\%$ of score noise under either encoder, and it costs exactly the queries
+whose float margin over the best competitor is smaller than that --- none above
+twice the noise on any of eight caches. The generated corpus decides its precise
+queries at a median margin of $0.05\%$, which is why the small encoder looks
+fragile; the reference encoder never wins those queries in the first place,
+which is why it looks immune, and enlarging the code until it can lifts its
+precise R@1 off the floor and its one-bit cost with it. On dense pages,
+selecting tokens by embedding coverage beats pixel saliency below a $50\%$
+budget and nothing beats uniformly random probes. The conclusion is therefore
+not that the codec binds, nor that the token count binds, but that neither is a
+property of the compression layer alone. A compression ratio for multi-vector
+retrieval should be published with a per-stage attribution and with the
+encoder, corpus and query regime that attribution was measured on, because the
+attribution itself is what moves.
 
-Future work follows directly: measure the patch geometry that decides how much
-sign-thresholding costs an encoder, place a two-bit or product-quantized codec between the current operating points for the small-encoder
-regime, replace pixel-space saliency with a learned selector for the dense-page
-regime, and test shortlist rescoring, which our Hit@5 figures suggest should
-recover most of the remaining ranking loss at negligible cost.
+Future work follows directly: verify the decision-margin rule on the ViDoRe
+caches, where it is so far a prediction; place the two-bit code, which halves
+the sign code's noise at twice its bytes, at the operating point for near-tie
+query regimes; hold any learned token selector to the random-dropping control
+at a matched budget; and test shortlist rescoring, which our Hit@5 figures
+suggest should recover most of the remaining ranking loss at negligible cost.
 
 \section*{Acknowledgment}
 The authors thank the Department of Emerging Technologies, Mahatma Gandhi
@@ -882,6 +1056,12 @@ Trans. Pattern Anal. Mach. Intell.}, vol. 42, no. 4, pp. 824--836, 2020.
 \bibitem{dse}
 X. Ma, S.-C. Lin, M. Li, W. Chen and J. Lin, ``Unifying Multimodal Retrieval via
 Document Screenshot Embedding,'' in \emph{Proc. EMNLP}, 2024, pp. 6600--6611.
+
+\bibitem{lightcolpali}
+Y. Ma, J. Li, Y. Zang, X. Wu, X. Dong, P. Zhang, Y. Cao, H. Duan, J. Wang,
+Y. Cao and A. Sun, ``Towards Storage-Efficient Visual Document Retrieval: An
+Empirical Study on Reducing Patch-Level Embeddings,'' in \emph{Findings of the
+Association for Computational Linguistics: ACL 2025}, 2025. arXiv:2506.04997.
 
 \bibitem{qdrant}
 Qdrant, ``Multivectors, Binary Quantization and Rescoring,'' Qdrant

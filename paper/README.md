@@ -3,8 +3,8 @@
 `optivision.tex` is an IEEE conference paper built from the measured ablations in
 [`../docs/RESULTS.md`](../docs/RESULTS.md).
 
-`optivision.pdf` in this folder is the current build: 9 pages, compiled with
-tectonic, no errors and no overfull boxes. Regenerate it with `tectonic -X compile
+`optivision.pdf` in this folder is the current build: 10 pages, compiled with
+tectonic 0.17, no errors and no overfull boxes. Regenerate it with `tectonic -X compile
 optivision.tex` from this directory after any edit.
 
 ## What the paper argues
@@ -16,22 +16,31 @@ more defensible:
 > Systems that prune visual tokens *and* quantize them report the product of the two
 > savings. Nobody reports the ratio of the two costs. We measured it twice — once with a
 > 256M encoder on generated pages, once with ColPali-3B on ViDoRe — and got opposite
-> answers from the same code. Under the small encoder the one-bit codec costs everything
-> and pruning is free. Under the reference encoder the codec is nearly free, and what
-> fails is the premise that a document page is mostly blank paper.
+> answers from the same code. A third run with the corpus fixed, and a per-query analysis
+> of the encode caches, say why: the corpus decides what pruning buys, and the one-bit
+> codec costs exactly the queries whose float decision margin is smaller than the
+> codec's score noise (about 3%, the same under both encoders). The generated corpus
+> decides 60 of its 72 queries by three digits at a 0.05% margin, so the small encoder
+> looks fragile; the reference encoder cannot read those digits at 448 px and never wins
+> the queries it is credited with not losing. On dense pages, selecting tokens by
+> embedding coverage beats pixel saliency below a 50% budget, and nothing beats random.
 
-The reversal *is* the contribution, and it is a stronger one than the original
-single-experiment claim. That version said "the codec is the binding constraint", which
-the reference encoder shows to be false; this version says the attribution itself is a
-property of the encoder and corpus, which is why publishing a compression ratio without
-naming both is not enough. Do not soften either half during revision, and do not quietly
-drop the E1 numbers — the paper only works because both experiments are reported.
+The reversal *is* the contribution, and Findings 3 and 4 are what make it more than an
+anecdote. Do not soften either half during revision, and do not quietly drop the E1
+numbers — the paper only works because both experiments are reported.
 
-Two details a reviewer will look for, both already in the text: Kendall $\tau$ falls just
-as far under one-bit codes in *both* experiments (0.53 vs 0.59), which is what pins the
-difference on the encoder's margin rather than on the codec; and the `energy` split's
+Things a reviewer will look for, all in the text: the decision-margin rule (0% of
+queries above 2σ flip under any codec) is verified on eight caches on the generated
+corpus and stated as a *prediction* on ViDoRe (Limitations); every E3 aggregate delta is
+at 72 queries and inside its confidence interval, so the per-query table (Table IV)
+carries the E3 conclusion, not the aggregates; the ColPali 3× row was rendered with the
+code in the text flow, which is disclosed in the table caption; and the `energy` split's
 above-100% retentions are called out as noise at 100 queries rather than presented as
-compression improving retrieval.
+compression improving retrieval. The zero-byte codec refinements (centring, ITQ,
+centroid+residual) help on E1 and not on ViDoRe, and the paper says so with CIs.
+
+Provenance: `docs/REVIEW-2026-08-21.md` sections 2, 6 and 8 hold every number in
+Findings 3–4 and the Discussion, with the scripts that produce them.
 
 ## Compiling
 

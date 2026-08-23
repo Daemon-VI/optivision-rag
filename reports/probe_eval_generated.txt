@@ -1,0 +1,15 @@
+60 pages x 1024 patches, 72 queries (36 fit / 36 held out)
+
+full index        nDCG@5 0.6697
+oracle winners    nDCG@5 0.6697   12.3% of patches  <- the ceiling
+
+selector                      keep 30%              keep 10%
+                 nDCG@5  oracle recall nDCG@5  oracle recall
+------------------------------------------------------------
+pixel                   0.6709   44.8%        0.6020   17.6%
+probe:kmeans            0.6661   33.3%        0.6170   11.4%
+probe:random            0.6624   43.3%        0.6110   18.6%
+probe:farthest          0.6619   46.7%        0.6337   21.6%
+
+nDCG@5 is on held-out queries; oracle recall is of the winner set fitted on the
+other half. A proxy has to beat `pixel` here before it is worth a GPU.

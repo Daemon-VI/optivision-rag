@@ -53,6 +53,24 @@
   int8              0.0008     0.333     0.333         0         0     0%( 1)    -        -        0%(71)
   sign(d): among 24 float winners, AUC(margin separates kept from lost) = 0.95; median margin kept +0.1012 vs lost +0.0104
 
+=== ColPali generated (E3): 60 pages x 1031 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0139  IQR [-0.0261, -0.0003]   topical median +0.4714
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0251     0.375     0.375         7         7    43%(21)   21%(19)    7%(15)    0%(17)
+  sign(d-mu)        0.0259     0.375     0.389         5         6    30%(20)   17%(24)    9%(11)    0%(17)
+  2-bit             0.0134     0.375     0.361         4         3    27%(11)    0%( 9)   14%(22)    3%(30)
+  int8              0.0005     0.375     0.375         1         1   100%( 1)   50%( 2)    -        0%(69)
+  sign(d): among 27 float winners, AUC(margin separates kept from lost) = 0.86; median margin kept +0.4159 vs lost +0.0111
+
+=== ColPali 3x shifted: 60 pages x 1031 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0052  IQR [-0.0179, +0.0026]   topical median +0.4897
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0218     0.431     0.361        10         5    40%(30)   19%(16)    0%(11)    0%(15)
+  sign(d-mu)        0.0230     0.431     0.375         9         5    35%(31)   11%(19)   14%( 7)    0%(15)
+  2-bit             0.0118     0.431     0.361        11         6    44%(25)   56%( 9)    9%(11)    0%(27)
+  int8              0.0005     0.431     0.444         0         1   100%( 1)    0%( 1)    0%( 6)    0%(64)
+  sign(d): among 31 float winners, AUC(margin separates kept from lost) = 0.88; median margin kept +0.4236 vs lost +0.0044
+
 === summary: median precise-query margin vs sign-codec noise (both as a fraction of the gold score) ===
 run                 margin(precise)  margin(topical)  sigma sign sigma 2-bit  sigma int8   one-bit R@1 loss on precise
 E1 tiled 1x                 -0.0005          +0.3069      0.0282      0.0149      0.0006   +0.167
@@ -61,3 +79,5 @@ tiled 0.4x                  -0.0065          +0.3176      0.0281      0.0158    
 3x shifted                  -0.0018          +0.3124      0.0293      0.0148      0.0006   +0.067
 0.4x incl. label            -0.0020          +0.3085      0.0318      0.0161      0.0006   +0.117
 untiled                     -0.0219          +0.2999      0.0341      0.0204      0.0008   +0.017
+ColPali generated (E3)          -0.0139          +0.4714      0.0251      0.0134      0.0005   +0.000
+ColPali 3x shifted          -0.0052          +0.4897      0.0218      0.0118      0.0005   +0.083

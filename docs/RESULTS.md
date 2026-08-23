@@ -236,24 +236,43 @@ merely similar ones. `reports/colpali_generated/`.
 | **one-bit codec costs** | E1 -> E3: **12.1 -> 1.6 points** | E3 -> E2: 1.6 -> 3.7 points |
 | **pruning buys** | E1 -> E3: 3.55x -> 4.20x | E3 -> E2: **4.20x -> 1.85x** |
 
-**The encoder sets what the codec costs; the corpus sets what pruning buys.** The
-single reversal reported in E2 was two effects with two different causes, and
-`python scripts/compare_regimes.py` prints this table from the benchmark files.
+**The corpus sets what pruning buys.** That half is solid, and
+`python scripts/compare_regimes.py` prints the table from the benchmark files.
 
-**It also refutes the margin explanation.** On these identical pages ColPali is the
-*weaker* retriever:
+**The codec half needed a per-query look, and the per-query look reversed the
+reading** (2026-08-23; `scripts/review/q9_margin.py`, `reports/margin_summary.txt`;
+the full argument is [REVIEW-2026-08-21.md](REVIEW-2026-08-21.md) sections 2 and 8).
+An earlier version of this section said the encoder sets what the codec costs, and
+that E3 refutes the margin explanation because ColPali is the weaker retriever on
+these pages yet loses nothing. Both statements rest on aggregates. Per query, with
+*m* = (gold score - best other score) / gold score under float and *sigma* = the
+score noise a codec adds (residual around a linear fit to the float scores):
 
-| | baseline nDCG@5 | baseline R@1 | R@1 under one-bit |
-|---|---|---|---|
-| E1 ColSmol-256M | 0.7823 | 0.569 | 0.417 |
-| E3 ColPali-3B | 0.6954 | 0.375 | 0.375 |
+| | ColSmol-256M (E1) | ColPali-3B (E3) |
+|---|---|---|
+| sign-codec noise sigma | 2.8% of score | 2.5% |
+| median *m*, 60 precise queries | -0.05% | -1.4% |
+| median *m*, 12 topical queries | +31% | +47% |
+| queries flipped by sign, \|m\|/sigma < 0.5 | 32% | 43% |
+| queries flipped by sign, \|m\|/sigma > 2 | **0%** | **0%** |
+| precise R@1, float -> sign | 0.483 -> 0.317 | 0.250 -> 0.250 (7 won->lost, 7 lost->won) |
 
-ColPali starts further behind and loses nothing to binarization; ColSmol starts
-ahead and loses 27% of R@1. Margin cannot be the mechanism, because the encoder
-with less of it is the robust one. Tau agrees and sharpens it: 0.762 for E3
-against 0.585 for E1, at the same cutoff on the same corpus. The distortion under
-ColPali is *smaller*, not better absorbed - a property of how much of a patch
-vector survives sign-thresholding, which is measurable and worth measuring.
+The codec adds the same noise under both encoders. E1's precise queries are decided
+by three digits inside a nine-character code at a 0.05% margin, so a 3% perturbation
+flips a third of them. ColPali cannot read an 11 pt code at 448 px: it wins 15 of
+the 60 precise queries in float (the subject-only floor is 12), its margin on them is
+negative, and what the sign code does is reshuffle queries it had already lost.
+"Loses nothing" is a floor effect, not robustness. Render only the code's glyphs 3x
+larger (`make-corpus --code-scale 3`, `reports/colpali_generated_code3x_shifted/`)
+and ColPali's precise R@1 rises to 0.317 and its one-bit cost from 1.6 to 4.1 points
+(72 queries, inside the CI; the per-query structure is the evidence, not the
+aggregate).
+
+The rule that holds on every cache we have - six ColSmol, two ColPali: **a codec
+costs the queries whose float margin is smaller than its score noise.** It is
+verified on the generated corpus and is a prediction, not a measurement, on ViDoRe.
+rho = cos(d, sign d) is 0.800 on every cache against a random reference of 0.798 and
+says nothing; drop it.
 
 **Caveats, both real.** E3's `hit@5` is 1.000 on nearly every row, so nDCG@5 can
 only move by reordering inside the top 5. E1's is 0.972 on the same corpus, so
@@ -261,6 +280,78 @@ E1 vs E3 remains a fair comparison; it is E2, at 0.661, that sits on a different
 scale - which is why R@1 is quoted above. And a 3B model scoring *below* a 256M
 model on these pages is a fact about the generator, not about the encoders. It
 belongs in the limitations.
+
+## E4 - the font-scale control and the codec ladder (ColSmol, CPU)
+
+`make-corpus --code-scale` re-renders E1's 60 pages with only the unique code's
+glyphs at 0.4x or 3x; every other glyph, the RNG sequence and `queries.json` are
+byte-identical (pixel diff 0.15% / 0.93%), and the tiled ColSmol re-encodes them
+(~27 min CPU each, `reports/colsmol_code04x/`, `reports/colsmol_code3x/`,
+`scripts/review/q8_fontscale.py`). Every comparison is paired per query.
+
+| tiled ColSmol, 875 tok | float nDCG@5 / R@1 | precise float R@1 | sign retain | one-bit loss [95% CI] | paired vs 1x |
+|---|---|---|---|---|---|
+| code 0.4x (4.4 pt) | 0.701 / 0.403 | 0.283 | 90.4% | -0.067 [-0.125, -0.009] | +0.028 [-0.029, +0.086] |
+| code 1x (11 pt, E1) | 0.782 / 0.569 | 0.483 | 87.9% | -0.095 [-0.159, -0.033] | - |
+| code 3x (33 pt) | 0.718 / 0.444 | 0.333 | 91.0% | -0.065 [-0.126, -0.008] | +0.030 [-0.043, +0.101] |
+
+Glyph size moves the *float* retriever in both directions (a 33 pt code spans three
+patches, so no single document vector holds the string a query vector must match)
+and does not move the one-bit cost. The codec's cost is not about legibility or
+evidence concentration either; it is the margin rule above. ColSmol's tokens are
+local - rows the manipulation did not touch have cos(1x, variant) = 1.00 - and a
+58 pt layout shift re-encodes half the page (cos 0.35-0.55 on the moved rows), which
+is why the first-round `*_shifted` / `*_label` runs are kept separately.
+
+Codec ladder, retention of float nDCG@5 (`scripts/review/codec_ladder.py`,
+`reports/ladder_*.txt`; CIs are paired bootstrap vs the sign code):
+
+| codec | bytes/vec | E1 | infovqa (494 q) | docvqa (451 q) | E3 |
+|---|---|---|---|---|---|
+| int8 | 128 | 100.7% | 100.1% | 99.9% | 100.0% |
+| 2-bit Lloyd-Max, rotated | 32 | 94.5% | 99.4% | 97.0% | 99.4% |
+| sign(d) - the pipeline | 16 | 87.9% | 97.4% | 96.3% | 98.4% |
+| sign(d - mu) | 16 | 91.1% | 98.3% (+0.7 [-0.2, +1.8]) | 94.9% (-0.8 [-2.3, +0.7]) | 99.1% |
+| sign(ITQ(d - mu)) | 16 | 93.6-94.3% | 98.3% (+0.7 [-0.6, +2.0]) | 95.9% (-0.2 [-2.0, +1.6]) | 99.3% |
+| centroid K=4096 + 1-bit residual | 17.5 | 92-100% (seed-dependent) | 98.8% (+1.2 [-0.1, +2.5]) | **89.1% (-4.2 [-6.5, -2.1])** | 97.7% |
+
+What holds everywhere: int8 is lossless at 4x; 2-bit recovers about half the sign
+loss at 16x; the sign code costs 2.6-3.7 points on ViDoRe and changes the top-1 page
+of 11% of infovqa queries (top-1 agreement 0.89, top-5 overlap 0.77). What does not
+transfer: the zero-byte refinements that gain 3-10 points on E1 are inside +/-1 point
+on ViDoRe, and the residual code is significantly worse on docvqa (the K cap, 126
+vectors per centroid, not PLAID's codec). E1's gains come from blank-page anisotropy
+(||mean|| 0.57 on E1 against 0.23 on infovqa; blank-patch distractor promotion
+34.7% -> 46.8% on E1, 7.9% -> 8.2% on infovqa), which is a corpus property.
+
+## Token selection on dense pages - the Stage-II controls
+
+`CODEBOOK=1` on infovqa and docvqa (`reports/colpali_{infovqa,docvqa}_test_subsampled/`).
+All rows one-bit; budgets within 3% of each other except `cb-kmeans` (15-20% fewer
+tokens, not a fair row). `cb-keep` = 256 greedy farthest-point probes from a 20k-patch
+sample (the designed selector); `cb-random` = 256 random unit vectors that have never
+seen the corpus.
+
+| budget | pixel keep-N | cb-keep (designed) | cb-random | cb-kmeans |
+|---|---|---|---|---|
+| infovqa 50% | 94.7% | 96.2% | **96.7%** | 95.2% |
+| infovqa 30% | 92.3% | 95.9% | 95.7% | 94.6% |
+| infovqa 10% | 85.4% | 89.6% | **90.7%** | 88.7% |
+| docvqa 50% | 92.5% | 91.4% | **92.3%** | 86.8% |
+| docvqa 30% | 86.9% | 88.2% | **90.5%** | 83.0% |
+| docvqa 10% | 66.7% | **77.9%** | 76.9% | 64.9% |
+
+Random probes are within +/-1 point of the designed probes at every budget on
+infovqa and ahead by 1-2 points at 50% and 30% on docvqa. The probe construction has
+no measurable effect; what beats pixel saliency below 50% (by 4-11 points at 10%) is
+selecting by embedding coverage instead of ink, which is Ma et al. (ACL Findings
+2025, arXiv:2506.04997) "random pruning beats saliency pruning" reproduced. The
+winner sets say there is nothing for a selector to find on dense pages: 74% / 66% of
+patches win at least one MaxSim, and the winner-only index fitted on half the queries
+is 64% / 52% of the index (1.6x / 1.9x) at 100% / 99.7% retention on the other half.
+On E1 the same "100% held-out" figure was subject leakage (85-96% on subject-disjoint
+splits). Any learned selector for this regime has to beat random dropping at a
+matched budget.
 
 ## A caution about the tau column
 
@@ -283,6 +374,10 @@ harmless on a 500-page split with `hit@5` of 0.661. And top-10 covers 17% of a
 60-page corpus against 2% of a 500-page one, so **E1's 0.585 and E2's 0.527 are
 not the same measurement** and should not be compared as though they were. E1 vs
 E3 is unaffected: same pages, same queries, same cutoff.
+
+Where one number is needed, report top-1 agreement and top-5 overlap with the float
+ranking instead (or alongside): they have no cutoff and say what a user would see.
+`scripts/review/codec_ladder.py` prints both, with tau_AP for a correlation.
 
 ## Reading the table
 

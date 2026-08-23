@@ -3,14 +3,12 @@
 patches that ever win a MaxSim, over all 494 queries: 382,353 / 515,500 = 74.2%
   per page: median 74.2%  min 56.6%  max 89.7%
   headroom if the dead set were free to drop: 1.3x
-Traceback (most recent call last):
-  File "/kaggle/working/optivision-rag/scripts/winner_stats.py", line 139, in <module>
-    raise SystemExit(main())
-                     ^^^^^^
-  File "/kaggle/working/optivision-rag/scripts/winner_stats.py", line 106, in main
-    ids = page_ids(a.corpus)
-          ^^^^^^^^^^^^^^^^^^
-  File "/kaggle/working/optivision-rag/scripts/winner_stats.py", line 74, in page_ids
-    spec = json.loads((corpus / "manifest.json").read_text())["spec"]
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
-KeyError: 'spec'
+
+winner set fitted on 247 queries: 329,004 patches (63.8%, 1.6x smaller index)
+nDCG@5 on the 247 held-out queries
+  full index         0.8643
+  winners only       0.8642   (100.0% retained)
+
+with the one-bit codec on top
+  binary, full index   0.8432
+  binary, winners only 0.8456

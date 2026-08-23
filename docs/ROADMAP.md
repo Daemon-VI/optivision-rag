@@ -11,7 +11,10 @@
   both absolute quality and rank-agreement against the uncompressed baseline.
 - A corpus generator with exact ground truth, and a ViDoRe loader for the real benchmark.
 - Figures showing which patches were dropped, a CLI and a demo UI.
-- 75 tests and a clean lint.
+- 115 tests and a clean lint.
+- An independent review (`docs/REVIEW-2026-08-21.md`) with the local falsification
+  scripts in `scripts/review/`, the Kaggle E2/E3 follow-ups in `reports/`, and the
+  paper rewritten from it.
 
 ## Stage-II candidates, roughly in order of value
 
@@ -35,10 +38,13 @@ prune gain, corpus fixed (E1 -> E3):  3.55x -> 4.20x
 prune gain, encoder fixed (E3 -> E2): 4.20x -> 1.85x
 ```
 
-The encoder sets what the codec costs; the corpus sets what pruning buys. It also
-refutes the retrieval-margin explanation the paper offered, because ColPali is the
+What we wrote at the time: the encoder sets what the codec costs; the corpus sets what
+pruning buys; and it refutes the retrieval-margin explanation, because ColPali is the
 *weaker* retriever on those pages (nDCG@5 0.6954 against 0.7823) and still loses nothing
-to one-bit codes. See [RESULTS.md](RESULTS.md#e3---colpali-3b-on-the-generated-corpus).
+to one-bit codes. **The pruning half stands; the codec half was wrong - see 1f.** The
+aggregate "weaker retriever" argument missed that ColPali never wins the near-tie
+queries in float at all, so there was nothing for the codec to cost it. See
+[RESULTS.md](RESULTS.md#e3---colpali-3b-on-the-generated-corpus).
 
 Two follow-ups this opened, both cheap:
 
@@ -205,6 +211,37 @@ Next:
   win on real pages, dropping them is not where the gain is — spending fewer bits on
   the ones that win rarely might be.
 
+**1f. The review closed 1b's follow-ups and rewrote 1c-1e's framing (2026-08-23).**
+`docs/REVIEW-2026-08-21.md` sections 2, 6 and 8 hold the evidence; `scripts/review/`
+holds the code; the paper's Findings 3-4 and Discussion VI-A are rewritten from it.
+
+- *Geometry on E3 - done, and it killed the mechanism.* rho is 0.800 on every cache
+  (random reference 0.798); arg-max flip rate is 75-83% everywhere. Neither says
+  anything. Both rows are out of the paper.
+- *What the codec cost actually is.* A sign code adds ~3% of score noise under either
+  encoder and flips the queries whose float margin is below that; 0% of queries above
+  2 sigma flip, on all eight caches (`q9_margin.py`). E1's precise queries are
+  near-ties by construction; ColPali never wins them in float (R@1 0.250, floor 0.200),
+  so "loses nothing" was a floor effect. The font-scale control
+  (`make-corpus --code-scale`, item 1 of REVIEW section 6) showed glyph size moves the
+  float retriever and not the codec cost. The rule is verified on the generated corpus
+  and predicted on ViDoRe; `codec_ladder.py` now prints the margin block if anyone
+  runs `LADDER=1` again.
+- *1e's "every probe variant beats pixel saliency" stands; "the designed probes" does
+  not.* `cb-random` is within +/-1 point of `cb-keep` at every budget on infovqa and
+  ahead by 1-2 points at 50% and 30% on docvqa. It is Ma et al. (ACL Findings 2025)
+  reproduced. Stage-II's selector contribution is the control, not the selector.
+- *1c's "12x at no cost" was subject leakage* (85-96% on subject-disjoint splits of
+  E1); on dense pages the winner-only index is 1.6-1.9x.
+- *The E1 codec tricks do not transfer.* Centring / ITQ / centroid+residual gain 3-10
+  points on E1 and are inside +/-1 point on ViDoRe (residual -4.2 on docvqa at
+  K=4096). int8 is lossless at 4x everywhere and 2-bit recovers half the sign loss at
+  16x everywhere: that is the codec story.
+- *Tau.* Report top-1 agreement / top-5 overlap with float (0.89 / 0.77 for the sign
+  code on infovqa); tau_AP if a correlation is wanted.
+
+No further GPU runs are planned. What is left open is listed in REVIEW section 8.5.
+
 **2. Close the binary-quantization gap — a big lever under a *small* encoder only.**
 Under ColSmol the measurement located the loss precisely: pruning costs ~4% of nDCG@5,
 binary quantization costs ~12%, and pruning harder costs almost nothing on top. Under
@@ -213,17 +250,17 @@ is worth doing for edge/small-model deployments and is *not* the top lever if yo
 running a reference-scale encoder. Concretely:
 
 - *Two-bit or product quantization on the document side.* Sits between binary (32x)
-  and int8 (4x). If it recovers most of the 12% at ~16x it dominates both current
-  operating points. `compression/` is where the codec goes; the ablation table already
-  has a slot for the row.
+  and int8 (4x). **Measured (1f): a rotated 2-bit Lloyd-Max code recovers about half
+  the sign loss on every cache** - 94.5% on E1, 99.4% on infovqa, 97.0% on docvqa.
+  Still only in `scripts/review/codec_ladder.py`; promoting it to `compression/` and
+  the ablation table is the one codec item worth building.
 - *Rescoring the shortlist.* Fetch top-k with binary codes, rescore with int8 or float
   vectors for those pages only. `SearchConfig.rerank` and `prefilter_k` already exist
   (see item 4) — this is the cheapest way to test whether the loss is a ranking
   problem or a recall problem.
-- *Diagnose before optimising.* Is the 12% concentrated in the topical queries (where
-  candidates are near-identical) or spread evenly? `benchmark.json` holds the per-query
-  runs; splitting the metric by query type answers this in a few lines and would say
-  whether a shortlist rescore can help at all.
+- *Diagnose before optimising.* Done (1f): the 12% is entirely the 60 precise
+  queries, which are decided at a 0.05% margin; the 12 topical queries (31% margin)
+  never flip. `benchmark.json` now holds per-query `runs` for every report.
 
 **3. Learned saliency instead of hand-tuned weights. — promoted: this is the binding
 limit under a reference-scale encoder.**
@@ -231,7 +268,8 @@ ViDoRe made the case. Spatial pruning returns 1.03x on `infovqa` against 1.42x o
 sparse `energy` split: pixel statistics find almost nothing to discard on an
 infographic, and pushing the budget down by hand costs 25.8 points of retention on
 `docvqa` between keep-50% and keep-10%. A selector that knows which patches ever win a
-MaxSim max is exactly what that regime is short of.
+MaxSim max is exactly what that regime is short of - **but it has to beat 256 random
+probe directions at a matched budget (1f), which nothing tried so far does.**
 
 Ink density and edge energy with weights 0.6/0.4 is a deliberate first cut — cheap,
 interpretable, no extra forward pass. A small model predicting "will this patch ever
