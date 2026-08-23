@@ -1,0 +1,33 @@
+E2 ColPali-3B, infovqa_test_subsampled: 500 pages x 1031 tokens, 515,500 vectors, 494 queries
+
+geometry (all tokens)
+  rho = cos(d, sign d)      0.7991   (random reference 0.7979; uninformative by construction)
+  ||mean vector||           0.229   mean pairwise cos 0.052
+  dead sign bits (H<0.5)    0 of 128   total sign entropy 124.9 bits
+  covariance                participation ratio 66.1 of 128, top-8 share 0.24
+  grid patches blank (pixel) 10.3%   pairwise cos: blank 0.054  ink 0.055
+  query tokens whose best grid match is BLANK: float 7.9%  sign 8.2%   (distractor promotion)
+
+fitting codecs ... done (50s)
+
+codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
+----------------------------------------------------------------------------------------------------------------------------
+float32                          512.0   1.0x   0.8458  100.0% 0.775 0.903 | 1.000 1.000  1.00 1.00 |
+int8 (repo)                      128.0   4.0x   0.8467  100.1% 0.777 0.903 | 0.994 0.992  1.00 0.99 |
+2-bit LM, rotated                 32.0  16.0x   0.8404   99.4% 0.771 0.897 | 0.849 0.813  0.92 0.86 |
+sign(d)  [pipeline]               16.0  32.0x   0.8243   97.4% 0.753 0.885 | 0.734 0.690  0.89 0.77 |
+sign(d - mu)                      16.0  32.0x   0.8317   98.3% 0.761 0.889 | 0.734 0.689  0.88 0.75 | +0.0074 [-0.0021,+0.0176]
+sign(ITQ(d - mu))                 16.0  32.0x   0.8311   98.3% 0.765 0.889 | 0.753 0.709  0.89 0.78 | +0.0068 [-0.0064,+0.0196]
+centroid(K=4096)+1-bit residual   17.5  29.3x   0.8358   98.8% 0.767 0.895 | 0.717 0.674  0.87 0.73 | +0.0115 [-0.0014,+0.0249]
+
+optivision prune config (618 tok/pg, 1.67x fewer vectors) under each codec, retention vs float full index:
+  float32                          nDCG@5 0.8434 ( 99.7%)     1.7x
+  int8 (repo)                      nDCG@5 0.8418 ( 99.5%)     6.7x
+  2-bit LM, rotated                nDCG@5 0.8405 ( 99.4%)    26.7x
+  sign(d)  [pipeline]              nDCG@5 0.8225 ( 97.2%)    53.4x
+  sign(d - mu)                     nDCG@5 0.8272 ( 97.8%)    53.4x
+  sign(ITQ(d - mu))                nDCG@5 0.8253 ( 97.6%)    53.4x
+  centroid(K=4096)+1-bit residual  nDCG@5 0.8321 ( 98.4%)    48.8x
+
+wrote reports/ladder_infovqa_test_subsampled.json
+(448s)

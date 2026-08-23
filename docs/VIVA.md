@@ -22,9 +22,12 @@ on generated pages, ColPali-3B on four ViDoRe splits — and got **opposite** an
 the same code. Under the small encoder the one-bit codec costs 12.1% and pruning is
 nearly free; under the reference encoder the codec costs at most 3.7% and what fails is
 the assumption that a page is mostly blank paper. So the attribution is not a property
-of the compression layer at all — it is a property of the encoder and the corpus, which
-is why a compression ratio published without naming both is not enough information to
-act on. That is the paper's claim, and it is stronger than the one we set out to make.
+of the compression layer at all — it is a property of the queries and the corpus: the
+corpus decides what pruning can remove, and the codec costs exactly the queries decided
+by a margin smaller than its score noise, which is the same ~3% under both encoders.
+That is why a compression ratio published without naming the setting is not enough
+information to act on. That is the paper's claim, and it is stronger than the one we
+set out to make.
 
 ---
 
@@ -71,10 +74,12 @@ squash the rest of the page toward zero.
 
 **Q. Which of your two ideas actually does the work?**
 
-*This is the question the project turns on, and the answer changed after we ran it on a
-real encoder. Do not give the old answer.*
+*This is the question the project turns on, and the answer changed twice — once after
+the real encoder, once after the per-query review. Give the current one.*
 
-**It depends on the encoder, and demonstrating that is the result.**
+**It depends on the setting, and demonstrating that — and saying which part of the
+setting — is the result.** Pruning's yield is set by the corpus; the codec's cost is set
+by how many queries are decided by less than the codec's score noise.
 
 On **ColSmol-256M with generated pages**, pruning does the work. Blank-patch and
 redundancy pruning give 3.5x fewer vectors for 3.9% of nDCG@5 at tau = 0.87; binary
@@ -89,28 +94,55 @@ stops working is pruning: spatial pruning returns **1.03x on infographics** agai
 discard. And the token-budget sweep that was flat on ColSmol becomes a **25.8-point**
 drop from keep-50% to keep-10% on `docvqa`.
 
-**The run that explains the reversal — and do not give the tau answer.** An earlier
-draft of this document said the codec distorts ranking equally in both experiments
-(tau 0.585 on ColSmol, 0.527 on ColPali) and only the stronger encoder has the *margin*
-to absorb it. **That answer is refuted by our own third experiment. Do not use it.**
+**The run that explains the reversal — and the answer has changed twice, so get the
+current one right.** The first draft said the codec distorts both encoders equally and
+only the stronger encoder has the *margin* to absorb it. The second draft (after E3) said
+margin cannot be the mechanism because ColPali is the weaker retriever on those pages and
+still loses nothing, so the encoder's patch geometry must decide the cost. **Both are
+wrong, and the second is wrong in a way an examiner can see from the E3 table.** The
+current answer, verified per query on eight encode caches (`scripts/review/q9_margin.py`,
+`docs/REVIEW-2026-08-21.md` sections 2 and 8):
 
 E3 runs ColPali-3B over E1's exact 60 pages and 72 queries, so the corpus is held fixed
-and only the encoder changes. It gives a double dissociation:
+and only the encoder changes:
 
 | | corpus fixed, encoder swapped | encoder fixed, corpus swapped |
 |---|---|---|
 | one-bit codec costs | E1 → E3: **12.1 → 1.6 points** | E3 → E2: 1.6 → 3.7 points |
 | pruning buys | E1 → E3: 3.55x → 4.20x | E3 → E2: **4.20x → 1.85x** |
 
-**The encoder sets what the codec costs; the corpus sets what pruning buys.** The single
-reversal was two effects with two causes. That is the answer to have ready.
+**The corpus sets what pruning buys — that half is solid. The codec half is about the
+queries, not the encoder.** A sign code adds the same noise to a page's score under both
+encoders: about 2.8% of the score for ColSmol, 2.5% for ColPali (2-bit: half that; int8:
+0.06%). What differs is how close each query is to a tie. E1's 60 precise queries are
+decided by three digits inside a nine-character code, and the float retriever wins them
+by a median margin of **0.05%** of the score — a 3% perturbation is a coin flip on those.
+On every cache, for every codec, **no query whose margin exceeds twice the codec's noise
+changes its top result**, and 32–43% of those below half the noise do.
 
-Why margin is not the mechanism: on those identical pages ColPali is the *weaker*
-retriever — baseline nDCG@5 0.6954 against ColSmol's 0.7823, R@1 0.375 against 0.569 —
-and it still loses nothing to binarization (R@1 0.375 before and after, against ColSmol's
-0.569 → 0.417). The encoder with less margin is the robust one, so margin cannot be
-doing the work. Tau says the same: 0.762 for E3 against 0.585 for E1, same corpus, same
-cutoff. Under ColPali the distortion is *smaller*, not better absorbed.
+Why ColPali "loses nothing": it cannot read an 11 pt code at 448 px. It wins 15 of the 60
+precise queries in float, where a subject-only ranker gets 12 by chance, and its margin
+on them is *negative* (−1.4%). Under the sign code 7 flip from won to lost and 7 from
+lost to won, which nets to the "unchanged" R@1 of 0.375. It is a floor, not robustness.
+Render only the code's glyphs 3x larger and ColPali's precise R@1 rises to 0.317 and its
+one-bit cost to 4.1 points — the same mechanism on the encoder that looked immune (at
+72 queries that aggregate is inside its CI; the per-query structure is the evidence).
+
+The one-sentence answer: **a codec costs the queries whose float margin over the best
+competitor is smaller than the codec's score noise; E1 is the worst case by construction,
+E3 is a floor, and E2's 2.6–3.7 points measure how many real queries are within ~3% of a
+tie.** If asked what "the encoder's patch geometry" has to do with it: nothing we could
+measure — rho = cos(d, sign d) is 0.800 on every cache against 0.798 for random vectors,
+and the arg-max flip rate is 75–83% everywhere. Say plainly that an earlier version of
+the paper offered that mechanism and the measurement removed it.
+
+**Two follow-ups an examiner may raise.** (1) *Does the rule hold on ViDoRe?* It is
+verified on the generated corpus and predicted on ViDoRe, where we did not retain the
+caches; say so. (2) *What about the cheap fixes to the sign code?* Centring, an ITQ
+rotation and a centroid-plus-residual code recover 3–10 points on E1 and are inside ±1
+point on ViDoRe with CIs (the residual code is −4.2 on docvqa at our centroid cap). What
+holds everywhere: int8 is lossless at 4x, and a rotated 2-bit code recovers about half
+the sign loss at 16x.
 
 If an examiner presses on tau itself, concede the point first: `scripts/tau_audit.py`
 shows the published 0.585 is tau-b over the intersection of two **top-10** lists, not
