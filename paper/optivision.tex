@@ -221,7 +221,7 @@ MaxSim. The encoder is never fine-tuned and never sees the compression, which is
 what makes the layer transferable across ColPali, ColQwen2 and ColSmol
 checkpoints.
 
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \footnotesize
 \setlength{\fboxsep}{3.2pt}
@@ -275,7 +275,7 @@ in Section~\ref{sec:sweep}, since a fixed budget is what index-size guarantees
 require. Fig.~\ref{fig:pruning} shows the two modes' effect on a representative
 page.
 
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figs/pruning_example.png}
 \caption{Spatial pruning on a page from the evaluation corpus. Left: the
@@ -403,34 +403,7 @@ the query distribution is the benchmark's rather than ours. The precise/topical
 distinction is a property of our generator and does not carry over, so E2 is
 reported per split instead.
 
-\subsection{Controls}
-Two choices make the ablation a controlled experiment rather than a leaderboard.
-
-\emph{Exact scoring.} Every quality figure comes from exhaustive brute-force
-MaxSim, not from an approximate index. An ANN structure would contribute its own
-recall loss and confound the attribution we are trying to make. The Qdrant
-backend is tested separately and is the deployment path, not the measurement
-path.
-
-\emph{One encoding pass.} The corpus is encoded once into a cache and every
-ablation row replays over those identical vectors. Nothing but the compression
-setting differs between rows, so a difference in a metric can have no other
-cause. Re-running the benchmark reproduces the reported figures exactly; the
-pipeline is deterministic given a fixed corpus and encoder.
-
-\subsection{Metrics}
-We report nDCG@5 with binary relevance (the standard ViDoRe metric), Recall@1 and
-Hit@5, index bytes per page, and the compression ratio against the uncompressed
-float32 index. We additionally report \emph{retention} --- nDCG@5 as a fraction of
-the baseline row --- and Kendall $\tau$-b against the \emph{baseline's own
-ranking}. The last is the load-bearing metric here. Absolute quality answers
-``is this retriever any good?'', which depends mostly on the choice of encoder;
-$\tau$ answers ``did compression change the retriever's mind?'', which is the
-only question this layer controls.
-
-\section{Results}
-
-\begin{table*}[t]
+\begin{table*}[!t]
 \caption{\textbf{E1.} Ablation over the compression pipeline. $60$ pages,
 $72$ queries, ColSmol-256M, exact MaxSim. Rows share one encoding pass, so every difference is
 attributable to the compression setting alone. \emph{Retain} is nDCG@5 relative
@@ -470,26 +443,7 @@ keep-10\% & top $10\%$ by saliency & 162.9 & 2.61 & $171.8\times$ & 0.6700 & 0.4
 \bottomrule
 \end{tabular}}
 \end{table*}
-
-Table~\ref{tab:ablation} is the full E1 ablation and Fig.~\ref{fig:tradeoff}
-plots it. Table~\ref{tab:colpali} is the same ablation under E2 on the split with
-the most queries, and Table~\ref{tab:splits} gives retention across all four.
-Three findings follow. Each is stated as E1 supports it and then tested against
-E2, and only the first survives in the form E1 suggested.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figs/tradeoff.pdf}
-\caption{\textbf{E1.} Compression ratio against nDCG@5 retention, by quantizer.
-The points separate by \emph{codec}, not by token count: everything with one-bit
-codes falls into the shaded band between $85\%$ and $88\%$ retention whether it
-prunes nothing or prunes to a tenth, while the unquantized and int8
-configurations stay above $96\%$. Fig.~\ref{fig:scale} shows what happens to this
-picture under E2.}
-\label{fig:tradeoff}
-\end{figure}
-
-\begin{table*}[t]
+\begin{table*}[!t]
 \caption{\textbf{E2.} The same ablation under ColPali-v1.3 on the ViDoRe
 \texttt{docvqa} split ($500$ pages, $451$ queries), exact MaxSim, one encoding
 pass shared by every row. Compare with Table~\ref{tab:ablation}: the binary rows
@@ -530,7 +484,54 @@ keep-10\% & top $10\%$ by saliency & 86.0 & 1.38 & $383.6\times$ & 0.3899 & 0.31
 \end{tabular}}
 \end{table*}
 
-\begin{table}[t]
+\subsection{Controls}
+Two choices make the ablation a controlled experiment rather than a leaderboard.
+
+\emph{Exact scoring.} Every quality figure comes from exhaustive brute-force
+MaxSim, not from an approximate index. An ANN structure would contribute its own
+recall loss and confound the attribution we are trying to make. The Qdrant
+backend is tested separately and is the deployment path, not the measurement
+path.
+
+\emph{One encoding pass.} The corpus is encoded once into a cache and every
+ablation row replays over those identical vectors. Nothing but the compression
+setting differs between rows, so a difference in a metric can have no other
+cause. Re-running the benchmark reproduces the reported figures exactly; the
+pipeline is deterministic given a fixed corpus and encoder.
+
+\subsection{Metrics}
+We report nDCG@5 with binary relevance (the standard ViDoRe metric), Recall@1 and
+Hit@5, index bytes per page, and the compression ratio against the uncompressed
+float32 index. We additionally report \emph{retention} --- nDCG@5 as a fraction of
+the baseline row --- and Kendall $\tau$-b against the \emph{baseline's own
+ranking}. The last is the load-bearing metric here. Absolute quality answers
+``is this retriever any good?'', which depends mostly on the choice of encoder;
+$\tau$ answers ``did compression change the retriever's mind?'', which is the
+only question this layer controls.
+
+\section{Results}
+
+
+Table~\ref{tab:ablation} is the full E1 ablation and Fig.~\ref{fig:tradeoff}
+plots it. Table~\ref{tab:colpali} is the same ablation under E2 on the split with
+the most queries, and Table~\ref{tab:splits} gives retention across all four.
+Three findings follow. Each is stated as E1 supports it and then tested against
+E2, and only the first survives in the form E1 suggested.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figs/tradeoff.pdf}
+\caption{\textbf{E1.} Compression ratio against nDCG@5 retention, by quantizer.
+The points separate by \emph{codec}, not by token count: everything with one-bit
+codes falls into the shaded band between $85\%$ and $88\%$ retention whether it
+prunes nothing or prunes to a tenth, while the unquantized and int8
+configurations stay above $96\%$. Fig.~\ref{fig:scale} shows what happens to this
+picture under E2.}
+\label{fig:tradeoff}
+\end{figure}
+
+
+\begin{table}[!t]
 \caption{\textbf{E2.} nDCG@5 retained across all four ViDoRe splits. The
 \texttt{energy} split has only $100$ queries and reads above $100\%$ for most
 rows; those differences are noise, not improvement. Compression ratios are
@@ -621,7 +622,7 @@ top result}, while $32$--$43\%$ of those below $0.5\sigma$ do; among the queries
 the float retriever wins, the margin alone separates the ones a sign code keeps
 from the ones it loses with AUC $0.78$--$0.95$ (Table~\ref{tab:margin}).
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{Per-query decision margin against codec noise, both as a fraction of
 the gold page's float score. $m$ is the median float margin of the $60$ precise
 queries; $\sigma$ is the score noise a codec adds; flip rates are the share of
@@ -680,7 +681,7 @@ one corpus. At reference scale neither stage binds: compression to roughly
 $57\times$ is nearly free, and the limit on the pipeline is how little a
 pixel-space saliency detector can remove from a dense page.
 
-\begin{figure}[t]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figs/scale.pdf}
 \caption{The dissociation. Every configuration using one-bit codes, under all
@@ -694,7 +695,7 @@ only the encoder; light arrows continue to E2, which changes only the corpus.}
 \label{fig:scale}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{Each quantity against its own control. E3 shares E1's corpus and E2's
 encoder, so the first four rows change exactly one thing; the last two change
 nothing but the size of the one discriminative string on the page. Pruning's
@@ -735,7 +736,7 @@ never seen the corpus, and the pixel detector at the same budget
 (Table~\ref{tab:selection}). Budgets match to within $3\%$ of tokens per page,
 and every row uses the one-bit codec.
 
-\begin{table}[t]
+\begin{table}[!t]
 \caption{Token selection on dense pages: retention of float nDCG@5 at three
 budgets, all rows one-bit. \texttt{pixel} is the saliency detector of Stage~1;
 \texttt{coverage} keeps the patches that win most MaxSims against $256$
@@ -782,7 +783,7 @@ matched budget, and we would regard that as the minimum control for any future
 claim of the kind.
 
 \subsection{Two operating points}
-\begin{table}[t]
+\begin{table}[!t]
 \caption{The configurations that follow from each experiment. Under E1 the two
 are a genuine exchange; under E2 and E3 the size-first point dominates on
 nDCG@5, and only $\tau$ separates them. E3 is the most favourable point we
