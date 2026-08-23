@@ -126,9 +126,12 @@ cd optivision-rag
 #    on the ColPali cache -- the controlled comparison against E1 the paper lacks.
 MODE=generated LADDER=1 KEEP_CACHE=1 bash scripts/run_bench_gpu.sh
 
-# 2. Same pages with only the unique code rendered 3x larger, so ColPali can read it at
-#    448 px. If its one-bit loss rises from 1.6 points towards E1's 12, the codec's cost
-#    follows evidence legibility, not the encoder.
+# 2. Same pages with only the unique code's glyphs rendered 3x larger (33 pt, drawn in
+#    the blank right half of the field block; nothing else moves). On tiled ColSmol this
+#    did NOT change the one-bit cost (docs/REVIEW-2026-08-21.md, section 2): the cost
+#    follows each query's float decision margin vs the codec's score noise. Here the
+#    question is only whether ColPali's precise-query R@1 leaves the 0.2 floor at all;
+#    split precise/topical from benchmark.json["runs"] before reading the codec rows.
 MODE=generated CODE_SCALE=3 LADDER=1 KEEP_CACHE=1 bash scripts/run_bench_gpu.sh
 
 # 3. The two dense splits with enough queries to resolve 1-2 point differences: Stage-II
@@ -146,7 +149,8 @@ What comes back, and what to read first:
 | file | what it answers |
 |---|---|
 | `reports/ladder_generated.txt`, `ladder_generated_code3x.txt` | ColPali's geometry next to E1's (`reports/ladder_colsmol.json` locally), and its codec ladder when it can vs cannot read the code |
-| `reports/colpali_generated_code3x/benchmark.md` + `benchmark.json["runs"]` | E3 on the legible corpus; `runs` holds top-10 ids per query so precise/topical R@1 can be split |
+| `reports/colpali_generated_code3x/benchmark.md` + `benchmark.json["runs"]` | E3 on the big-code corpus; `runs` holds top-10 ids per query so precise/topical R@1 can be split |
 | `reports/ladder_infovqa_test_subsampled.txt`, `ladder_docvqa_test_subsampled.txt` | whether centring / ITQ / 2-bit / centroid+residual make the one-bit codec free on ColPali, with CIs over 494/451 queries |
+| same files, `decision margin` block | per-query float margin vs each codec's score noise and the R@1 flip rate by margin/noise; the review's prediction is 0% flips above 2 sigma (docs/REVIEW-2026-08-21.md, sections 2 and 8) |
 | `reports/colpali_docvqa_test_subsampled/benchmark.md` | the Stage-II rows on the second dense split |
 | `data/cache/colpali_generated*.npz` | 30 MB each; replay anything in `scripts/review/` against ColPali locally |

@@ -1,0 +1,63 @@
+
+=== E1 tiled 1x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0005  IQR [-0.0069, +0.0085]   topical median +0.3069
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0282     0.569     0.417        13         2    32%(40)    7%(15)   14%( 7)    0%(10)
+  sign(d-mu)        0.0285     0.569     0.472        15         8    42%(40)   36%(11)   18%(11)    0%(10)
+  2-bit             0.0149     0.569     0.472        11         4    29%(28)   23%(13)   29%(14)    0%(17)
+  int8              0.0006     0.569     0.569         0         0     0%( 2)    -        0%( 2)    0%(68)
+  sign(d): among 41 float winners, AUC(margin separates kept from lost) = 0.78; median margin kept +0.0243 vs lost +0.0070
+
+=== tiled 3x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0031  IQR [-0.0099, +0.0017]   topical median +0.3083
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0270     0.444     0.389         9         5    32%(40)    6%(16)    0%( 6)    0%(10)
+  sign(d-mu)        0.0286     0.444     0.472         8        10    39%(41)    0%(12)   22%( 9)    0%(10)
+  2-bit             0.0137     0.444     0.444         7         7    41%(29)    0%( 8)    6%(16)    5%(19)
+  int8              0.0006     0.444     0.431         1         0     0%( 2)   50%( 2)    0%( 2)    0%(66)
+  sign(d): among 32 float winners, AUC(margin separates kept from lost) = 0.90; median margin kept +0.0304 vs lost +0.0021
+
+=== tiled 0.4x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0065  IQR [-0.0195, +0.0009]   topical median +0.3176
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0281     0.403     0.347        11         7    41%(32)   29%(17)    0%(10)    0%(13)
+  sign(d-mu)        0.0297     0.403     0.347         6         2    18%(39)    0%(11)   10%(10)    0%(12)
+  2-bit             0.0158     0.403     0.389         7         6    33%(21)   40%(15)    0%(16)    0%(20)
+  int8              0.0007     0.403     0.389         2         1   100%( 2)   50%( 2)    -        0%(68)
+  sign(d): among 29 float winners, AUC(margin separates kept from lost) = 0.94; median margin kept +0.0728 vs lost +0.0080
+
+=== 3x shifted: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0018  IQR [-0.0098, +0.0054]   topical median +0.3124
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0293     0.500     0.431         7         2    19%(42)    0%(13)   17%( 6)    0%(11)
+  sign(d-mu)        0.0259     0.500     0.444        11         7    36%(42)   14%(14)   20%( 5)    0%(11)
+  2-bit             0.0148     0.500     0.417        10         4    33%(27)   24%(17)    9%(11)    0%(17)
+  int8              0.0006     0.500     0.514         0         1   100%( 1)    -        -        0%(71)
+  sign(d): among 36 float winners, AUC(margin separates kept from lost) = 0.81; median margin kept +0.0183 vs lost +0.0033
+
+=== 0.4x incl. label: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0020  IQR [-0.0093, +0.0036]   topical median +0.3085
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0318     0.486     0.375        15         7    42%(45)   14%( 7)   20%(10)    0%(10)
+  sign(d-mu)        0.0278     0.486     0.417        15        10    44%(43)   45%(11)   12%( 8)    0%(10)
+  2-bit             0.0161     0.486     0.431        10         6    40%(25)   22%(18)    8%(12)    6%(17)
+  int8              0.0006     0.486     0.472         1         0     0%( 2)  100%( 1)    0%( 2)    0%(67)
+  sign(d): among 35 float winners, AUC(margin separates kept from lost) = 0.89; median margin kept +0.0667 vs lost +0.0061
+
+=== untiled: 60 pages x 79 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0219  IQR [-0.0459, -0.0023]   topical median +0.2999
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0341     0.333     0.306         8         6    53%(19)    0%(10)   17%(23)    0%(20)
+  sign(d-mu)        0.0417     0.333     0.319         7         6    26%(19)   20%(15)   21%(19)    5%(19)
+  2-bit             0.0204     0.333     0.306         3         1    22%( 9)   25%( 8)    0%(17)    0%(38)
+  int8              0.0008     0.333     0.333         0         0     0%( 1)    -        -        0%(71)
+  sign(d): among 24 float winners, AUC(margin separates kept from lost) = 0.95; median margin kept +0.1012 vs lost +0.0104
+
+=== summary: median precise-query margin vs sign-codec noise (both as a fraction of the gold score) ===
+run                 margin(precise)  margin(topical)  sigma sign sigma 2-bit  sigma int8   one-bit R@1 loss on precise
+E1 tiled 1x                 -0.0005          +0.3069      0.0282      0.0149      0.0006   +0.167
+tiled 3x                    -0.0031          +0.3083      0.0270      0.0137      0.0006   +0.033
+tiled 0.4x                  -0.0065          +0.3176      0.0281      0.0158      0.0007   +0.050
+3x shifted                  -0.0018          +0.3124      0.0293      0.0148      0.0006   +0.067
+0.4x incl. label            -0.0020          +0.3085      0.0318      0.0161      0.0006   +0.117
+untiled                     -0.0219          +0.2999      0.0341      0.0204      0.0008   +0.017

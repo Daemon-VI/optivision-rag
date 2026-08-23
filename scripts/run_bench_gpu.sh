@@ -17,9 +17,10 @@
 # LADDER=1 runs scripts/review/codec_ladder.py after every bench: sign vs centred
 # vs ITQ vs 2-bit vs centroid+residual codecs, with bootstrap CIs, plus the
 # embedding-geometry statistics that replace rho (docs/REVIEW-2026-08-21.md).
-# CODE_SCALE renders the generated corpus with the unique code N times larger
-# (or smaller) and nothing else changed, so the reference encoder can (or cannot)
-# read it at 448px. Outputs land in reports/colpali_generated_code<N>x/.
+# CODE_SCALE renders the generated corpus with the unique code's glyphs N times
+# larger (or smaller) and nothing else changed -- above 1 the code is drawn in the
+# blank right half of the field block so no other line moves. Outputs land in
+# reports/colpali_generated_code<N>x/.
 #
 # CODEBOOK=1 adds retrieval-space saliency at matched token budgets, with
 # random and k-means probes as controls. On E1 it is +2.5 points over pixel
