@@ -60,7 +60,7 @@ class Scorer:
 
 def evaluate(mats, queries, ids, qrels, q_fn=lambda q: q):
     sc = Scorer(mats)
-    nd, r1, h5, top = [], [], [], []
+    nd, r1, h5, top, raw = [], [], [], [], []
     for qi, q in enumerate(queries):
         s = sc.scores(np.ascontiguousarray(q_fn(q), dtype=np.float32))
         order = np.argsort(-s, kind="stable")
@@ -69,7 +69,8 @@ def evaluate(mats, queries, ids, qrels, q_fn=lambda q: q):
         r1.append(float(ranked[0] in qrels[qi]))
         h5.append(float(bool(set(ranked[:5]) & qrels[qi])))
         top.append(order)
-    return {"ndcg": np.array(nd), "r1": np.array(r1), "hit5": np.array(h5), "order": top}
+        raw.append(s)
+    return {"ndcg": np.array(nd), "r1": np.array(r1), "hit5": np.array(h5), "order": top, "scores": raw}
 
 
 def tau_ap(ref_order: np.ndarray, other_order: np.ndarray) -> float:
@@ -274,6 +275,55 @@ def main() -> int:
         print("\nper query family, nDCG@5 / R@1:")
         for name, r in results.items():
             print(f"  {name:<32}" + "  ".join(f"{f}: {r['row'][f'ndcg5_{f}']:.3f}/{r['row'][f'r1_{f}']:.3f}" for f in sorted(set(family))))
+
+    # ---- decision margin vs codec noise (docs/REVIEW-2026-08-21.md, section 2):
+    # a codec flips the queries whose float margin m = (s_gold - s_best_other)/s_gold is
+    # below its score noise sigma (std of the codec score around a linear fit to the
+    # float score, per query, in the same units).
+    F = np.stack(base["scores"])
+    gold_idx = [np.array([i for i, pid in enumerate(ids) if pid in qrels[qi]], dtype=np.intp) for qi in range(len(queries))]
+    margin = np.full(len(queries), np.nan)
+    gscore = np.full(len(queries), np.nan)
+    for qi in range(len(queries)):
+        g = gold_idx[qi]
+        if g.size == 0 or g.size == len(ids):
+            continue
+        f = F[qi]; gi = g[f[g].argmax()]
+        others = np.ones(len(ids), bool); others[g] = False
+        margin[qi] = (f[gi] - f[others].max()) / abs(f[gi]); gscore[qi] = abs(f[gi])
+    ok = ~np.isnan(margin)
+    print(f"\ndecision margin m = (s_gold - s_best_other)/s_gold under float: median {np.nanmedian(margin):+.4f}, "
+          f"IQR [{np.nanpercentile(margin, 25):+.4f}, {np.nanpercentile(margin, 75):+.4f}]; "
+          f"won by < 1% of score: {100*np.mean((margin[ok] > 0) & (margin[ok] < 0.01)):.1f}% of queries, "
+          f"< 3%: {100*np.mean((margin[ok] > 0) & (margin[ok] < 0.03)):.1f}%")
+    if len(set(family)) > 1:
+        print("  by family: " + "  ".join(f"{f}: {np.nanmedian(margin[family == f]):+.4f}" for f in sorted(set(family))))
+    bins = [(0, 0.5), (0.5, 1), (1, 2), (2, np.inf)]
+    print(f"  {'codec':<32} {'sigma (median)':>14} {'R@1 flips':>9}   flip rate by |m|/sigma:   <0.5     0.5-1      1-2       >2    AUC(m: kept|lost)")
+    geo["margin_median"] = float(np.nanmedian(margin))
+    for name, r in results.items():
+        if r is base:
+            continue
+        C = np.stack(r["scores"])
+        sigma = np.full(len(queries), np.nan)
+        for qi in np.flatnonzero(ok):
+            f, c = F[qi], C[qi]
+            coef = np.polyfit(f, c, 1)
+            sigma[qi] = np.std(c - np.polyval(coef, f)) / max(abs(coef[0]), 1e-9) / gscore[qi]
+        ratio = np.abs(margin) / np.maximum(sigma, 1e-12)
+        flip = (base["r1"] != r["r1"]) & ok
+        cells, by_bin = [], {}
+        for lo, hi in bins:
+            sel = ok & (ratio >= lo) & (ratio < hi)
+            rate = float(flip[sel].mean()) if sel.any() else float("nan")
+            by_bin[f"{lo}-{hi}"] = [rate, int(sel.sum())]
+            cells.append(f"{100*rate:4.0f}%({sel.sum():3d})" if sel.any() else "    -     ")
+        wf = ok & (base["r1"] > 0)
+        kept, lost = margin[wf & (r["r1"] > 0)], margin[wf & (r["r1"] == 0)]
+        auc = float((kept[:, None] > lost[None, :]).mean()) if kept.size and lost.size else float("nan")
+        r["row"]["margin"] = {"sigma_median": float(np.nanmedian(sigma)), "flip_by_ratio": by_bin, "auc": auc,
+                              "n_flips": int(flip.sum())}
+        print(f"  {name:<32} {np.nanmedian(sigma):>14.4f} {int(flip.sum()):>9}   " + " ".join(cells) + f"   {auc:.2f}")
 
     pruned_rows = {}
     if a.pruned:

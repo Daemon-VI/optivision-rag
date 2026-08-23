@@ -1,0 +1,42 @@
+E1 ColSmol tiled, code3x: 60 pages x 875 tokens, 52,500 vectors, 72 queries ({'precise': 60, 'topical': 12})
+
+geometry (all tokens)
+  rho = cos(d, sign d)      0.7996   (random reference 0.7979; uninformative by construction)
+  ||mean vector||           0.563   mean pairwise cos 0.326
+  dead sign bits (H<0.5)    12 of 128   total sign entropy 107.5 bits
+  covariance                participation ratio 17.2 of 128, top-8 share 0.54
+  grid patches blank (pixel) 77.8%   pairwise cos: blank 0.411  ink 0.180
+  query tokens whose best grid match is BLANK: float 31.3%  sign 36.2%   (distractor promotion)
+
+fitting codecs ... done (29s)
+
+codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
+----------------------------------------------------------------------------------------------------------------------------
+float32                          512.0   1.0x   0.7181  100.0% 0.444 0.986 | 1.000 1.000  1.00 1.00 |
+int8 (repo)                      128.0   4.0x   0.7189  100.1% 0.431 0.986 | 0.990 0.984  0.96 1.00 |
+2-bit LM, rotated                 32.0  16.0x   0.7382  102.8% 0.500 0.972 | 0.780 0.752  0.53 0.98 |
+sign(d)  [pipeline]               16.0  32.0x   0.6532   91.0% 0.389 0.944 | 0.680 0.657  0.49 0.94 |
+sign(d - mu)                      16.0  32.0x   0.7086   98.7% 0.472 0.972 | 0.662 0.642  0.47 0.95 | +0.0555 [-0.0118,+0.1217]
+sign(ITQ(d - mu))                 16.0  32.0x   0.6930   96.5% 0.403 0.986 | 0.702 0.669  0.36 0.97 | +0.0398 [-0.0333,+0.1070]
+centroid(K=3666)+1-bit residual   17.5  29.3x   0.6910   96.2% 0.417 0.972 | 0.870 0.831  0.51 0.97 | +0.0378 [-0.0198,+0.1009]
+
+per query family, nDCG@5 / R@1:
+  float32                         precise: 0.667/0.333  topical: 0.971/1.000
+  int8 (repo)                     precise: 0.671/0.333  topical: 0.961/0.917
+  2-bit LM, rotated               precise: 0.690/0.400  topical: 0.977/1.000
+  sign(d)  [pipeline]             precise: 0.615/0.300  topical: 0.844/0.833
+  sign(d - mu)                    precise: 0.673/0.400  topical: 0.888/0.833
+  sign(ITQ(d - mu))               precise: 0.653/0.300  topical: 0.894/0.917
+  centroid(K=3666)+1-bit residual precise: 0.653/0.333  topical: 0.882/0.833
+
+optivision prune config (274 tok/pg, 3.19x fewer vectors) under each codec, retention vs float full index:
+  float32                          nDCG@5 0.7067 ( 98.4%)     3.2x
+  int8 (repo)                      nDCG@5 0.7004 ( 97.5%)    12.8x
+  2-bit LM, rotated                nDCG@5 0.7215 (100.5%)    51.1x
+  sign(d)  [pipeline]              nDCG@5 0.6428 ( 89.5%)   102.2x
+  sign(d - mu)                     nDCG@5 0.6831 ( 95.1%)   102.2x
+  sign(ITQ(d - mu))                nDCG@5 0.6654 ( 92.7%)   102.2x
+  centroid(K=3666)+1-bit residual  nDCG@5 0.6923 ( 96.4%)    93.5x
+
+wrote reports\ladder_colsmol_code3x.json
+(33s)

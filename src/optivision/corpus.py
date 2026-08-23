@@ -59,12 +59,17 @@ class CorpusSpec:
     pages_per_doc: int = 2
     seed: int = 7
     page_size: str = "A4"
-    # Font multiplier applied to the unique code only (field line and footer).
-    # Everything else on the page, and the RNG sequence, is untouched, so a
-    # corpus at code_scale 3.0 has the same pages as the default corpus with
-    # one line rendered three times larger. This is the manipulation that tests
-    # whether the one-bit codec's cost follows the legibility of the
-    # discriminative evidence (docs/REVIEW-2026-08-21.md, item 2).
+    # Font multiplier applied to the unique code's glyphs only (the value on
+    # the first field line, and the footer copy). The field label, every other
+    # line, the line pitch and the RNG sequence are untouched, so a corpus at
+    # code_scale 3.0 or 0.4 has byte-identical pages except for those glyphs.
+    # A value above 1 is drawn right-aligned in the blank right half of the
+    # field block instead of in the text flow: a taller glyph in the flow would
+    # push every line below it down by ~2 patch rows, which re-encodes half the
+    # page and is a layout change, not a legibility change (measured: cos 0.35
+    # to 0.55 between the 1x and shifted-3x tokens of the moved rows). This is
+    # the manipulation that tests whether the one-bit codec's cost follows the
+    # legibility of the discriminative evidence (docs/REVIEW-2026-08-21.md).
     code_scale: float = 1.0
 
 
@@ -136,12 +141,22 @@ def generate_synthetic_corpus(out_dir: str | Path, spec: CorpusSpec | None = Non
             subject = SUBJECTS[(d * spec.pages_per_doc + p) % len(SUBJECTS)]
             for i, field in enumerate(fields):
                 value = unique_code if i == 0 else _field_value(field, rng)
-                if i == 0:
+                if i == 0 and spec.code_scale == 1.0:
+                    put(f"{field}: {value}", margin, y, 11, "Helvetica-Bold")
+                    y -= 18
+                elif i == 0:
+                    from reportlab.pdfbase import pdfmetrics
+
                     size = 11 * spec.code_scale
-                    if size > 11:  # drop the baseline so a taller glyph clears the rule above
-                        y -= size - 11
-                    put(f"{field}: {value}", margin, y, size, "Helvetica-Bold")
-                    y -= 18 * max(spec.code_scale, 1.0)
+                    label = f"{field}:"
+                    put(label, margin, y, 11, "Helvetica-Bold")
+                    if size < 11:  # shrink in place, right after the label
+                        x = margin + pdfmetrics.stringWidth(label + " ", "Helvetica-Bold", 11)
+                        put(value, x, y, size, "Helvetica-Bold")
+                    else:  # grow into the blank right half, one line lower
+                        x = page_w - margin - pdfmetrics.stringWidth(value, "Helvetica-Bold", size)
+                        put(value, x, y - 18, size, "Helvetica-Bold")
+                    y -= 18
                 else:
                     put(f"{field}: {value}", margin, y, 11, "Helvetica")
                     y -= 18
