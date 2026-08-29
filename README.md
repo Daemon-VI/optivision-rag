@@ -20,10 +20,6 @@ short_description: Visual-token pruning and binary quantization for document ret
 > and by every tool in this repo; see [docs/DEPLOY.md](docs/DEPLOY.md) for how
 > the Space is set up.
 
-Project Stage-I (CD753PC) · B.Tech CSE (Data Science) · Dept. of Emerging Technologies
-T. Rithik Krishna (23261A6753) · Amgovath Navanitha (23261A6704) · Badavath Akhila (23261A6709)
-Guide: Ms. E. Sathiya Lakshmi
-
 ---
 
 ## The problem
