@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..compression import decode
+from ..compression import Lloyd2Codec, decode
 from ..types import CompressedPage, PageRef, SearchHit
 from .base import BaseIndex
 
@@ -40,11 +40,15 @@ class NumpyIndex(BaseIndex):
         dim: int,
         method: str = "binary",
         max_decoded_bytes: int = DEFAULT_MAX_DECODED_BYTES,
+        codec: Lloyd2Codec | None = None,
     ) -> None:
         self.path = Path(path)
         self.dim = int(dim)
         self.method = method
         self.max_decoded_bytes = int(max_decoded_bytes)
+        # Corpus-fitted state ``method == "lloyd2"`` needs to decode -- see
+        # Lloyd2Codec. Every other method ignores this.
+        self.codec = codec
         self._codes: np.ndarray | None = None
         self._offsets = np.zeros(1, dtype=np.int64)
         self._refs: list[PageRef] = []
@@ -62,11 +66,18 @@ class NumpyIndex(BaseIndex):
         path = Path(path)
         with open(path / "meta.json", encoding="utf-8") as fh:
             meta = json.load(fh)
+        codec = None
+        if meta.get("codec") is not None:
+            c = meta["codec"]
+            codec = Lloyd2Codec(
+                mu=np.array(c["mu"], dtype=np.float32), sigma=c["sigma"], seed=c["seed"]
+            )
         idx = cls(
             path,
             dim=meta["dim"],
             method=meta["method"],
             max_decoded_bytes=max_decoded_bytes,
+            codec=codec,
         )
         idx._codes = np.load(path / "codes.npy")
         idx._offsets = np.load(path / "offsets.npy")
@@ -86,6 +97,11 @@ class NumpyIndex(BaseIndex):
             "n_pages": self.n_pages,
             "refs": [r.__dict__ for r in self._refs],
             "page_stats": self._page_stats,
+            "codec": (
+                {"mu": self.codec.mu.tolist(), "sigma": self.codec.sigma, "seed": self.codec.seed}
+                if self.codec is not None
+                else None
+            ),
         }
         with open(self.path / "meta.json", "w", encoding="utf-8") as fh:
             json.dump(meta, fh, indent=2)
@@ -125,7 +141,8 @@ class NumpyIndex(BaseIndex):
                 self._decoded = np.zeros((0, self.dim), dtype=np.float32)
             else:
                 self._decoded = np.ascontiguousarray(
-                    decode(self._codes, self.dim, self.method), dtype=np.float32
+                    decode(self._codes, self.dim, self.method, codec=self.codec),
+                    dtype=np.float32,
                 )
         return self._decoded
 
@@ -196,7 +213,8 @@ class NumpyIndex(BaseIndex):
             end = min(max(end, start + 1), n_pages)  # always make progress
             lo, hi = int(self._offsets[start]), int(self._offsets[end])
             block = np.ascontiguousarray(
-                decode(self._codes[lo:hi], self.dim, self.method), dtype=np.float32
+                decode(self._codes[lo:hi], self.dim, self.method, codec=self.codec),
+                dtype=np.float32,
             )
             local = self._offsets[start : end + 1] - lo
             scores[start:end] = self._segment_maxsim(q, block, local, end - start)
@@ -231,6 +249,11 @@ class NumpyIndex(BaseIndex):
     def stats(self) -> dict:
         total_vectors = int(self._offsets[-1]) if self._offsets.size else 0
         index_bytes = int(self._codes.nbytes) if self._codes is not None else 0
+        # lloyd2's mu/sigma are shared corpus-fitted state, not per-page cost --
+        # charged once here so it amortizes across pages exactly the way
+        # storage_summary's kb_per_page already divides index_bytes by n_pages.
+        if self.codec is not None:
+            index_bytes += self.codec.overhead_bytes
         raw_bytes = sum(s["raw_nbytes"] for s in self._page_stats)
         tokens_before = sum(s["n_tokens_before"] for s in self._page_stats)
         return {

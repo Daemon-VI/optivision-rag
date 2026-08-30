@@ -9,10 +9,19 @@ from optivision.compression import (
     _int8_codes,
     code_nbytes,
     decode,
+    decode_lloyd2,
+    encode_lloyd2,
+    fit_lloyd2,
+    lloyd2_code_nbytes,
     maxsim_asymmetric,
     maxsim_asymmetric_batch,
+    maxsim_asymmetric_lloyd2,
+    maxsim_asymmetric_lloyd2_batch,
     maxsim_float,
+    pack2,
     pack_bits,
+    rotation_matrix,
+    unpack2,
     unpack_signs,
 )
 from optivision.config import CompressionConfig
@@ -257,3 +266,173 @@ class TestCodebookSaliency:
         # tie-break, which must still order them rather than leaving a flat zero.
         losers = np.sort(sal)[:-3]
         assert len(set(losers.tolist())) > 1, "tie-break must order the non-winners"
+
+
+def _fit(rng, n=2000, d=128, seed=7):
+    v = _unit(rng, n, d)
+    return v, fit_lloyd2(v, seed=seed)
+
+
+class TestLloyd2Packing:
+    """Rotated 2-bit Lloyd-Max: pack2/unpack2 round trip and byte size."""
+
+    def test_roundtrip_preserves_indices(self, rng):
+        idx = rng.integers(0, 4, size=(20, 37)).astype(np.uint8)
+        back = unpack2(pack2(idx), 37)
+        assert np.array_equal(back, idx)
+
+    def test_size_is_two_bits_per_dimension(self, rng):
+        v = _unit(rng, 10, 128)
+        codec = fit_lloyd2(v, seed=1)
+        codes = encode_lloyd2(v, codec)
+        assert codes.shape == (10, 32)
+        assert codes.nbytes * 16 == v.nbytes  # exactly 16x smaller
+
+    @pytest.mark.parametrize("dim", [5, 6, 7, 96, 128, 130])
+    def test_non_multiple_of_four_dims(self, rng, dim):
+        v = _unit(rng, 5, dim)
+        codec = fit_lloyd2(v, seed=1)
+        codes = encode_lloyd2(v, codec)
+        assert codes.shape == (5, lloyd2_code_nbytes(dim))
+        decoded = decode_lloyd2(codes, dim, codec)
+        assert decoded.shape == (5, dim)
+
+    def test_rejects_1d_input(self, rng):
+        codec = fit_lloyd2(_unit(rng, 10, 8), seed=1)
+        with pytest.raises(ValueError):
+            encode_lloyd2(np.zeros(8, dtype=np.float32), codec)
+
+
+class TestLloyd2Fit:
+    def test_reproducible_given_seed(self, rng):
+        v = _unit(rng, 500, 32)
+        a = fit_lloyd2(v, seed=7)
+        b = fit_lloyd2(v, seed=7)
+        assert np.array_equal(a.mu, b.mu)
+        assert a.sigma == b.sigma
+        assert np.array_equal(a.rotation, b.rotation)
+
+    def test_rotation_is_orthonormal_and_needs_no_data(self):
+        r7 = rotation_matrix(64, seed=7)
+        r7_again = rotation_matrix(64, seed=7)
+        r3 = rotation_matrix(64, seed=3)
+        assert np.allclose(r7 @ r7.T, np.eye(64), atol=1e-4)
+        assert np.array_equal(r7, r7_again), "same (dim, seed) must give the same rotation"
+        assert not np.allclose(r7, r3), "different seeds must give different rotations"
+
+    def test_overhead_is_mu_plus_one_scalar(self, rng):
+        _, codec = _fit(rng, d=128)
+        assert codec.overhead_bytes == 128 * 4 + 4
+
+
+class TestLloyd2MaxSim:
+    def test_preserves_self_as_best_match(self, rng):
+        pages = [_unit(rng, 40, 128) for _ in range(12)]
+        codec = fit_lloyd2(np.concatenate(pages), seed=7)
+        query = pages[7][:8]
+        scores = [
+            maxsim_asymmetric_lloyd2(query, encode_lloyd2(p, codec), 128, codec) for p in pages
+        ]
+        assert int(np.argmax(scores)) == 7
+
+    def test_batch_matches_per_page(self, rng):
+        pages = [_unit(rng, n, 32) for n in (5, 8, 3)]
+        codec = fit_lloyd2(np.concatenate(pages), seed=7)
+        codes = np.concatenate([encode_lloyd2(p, codec) for p in pages])
+        offsets = np.array([0, 5, 13, 16], dtype=np.int64)
+        q = _unit(rng, 6, 32)
+        batch = maxsim_asymmetric_lloyd2_batch(q, codes, 32, offsets, codec)
+        one_by_one = [
+            maxsim_asymmetric_lloyd2(q, encode_lloyd2(p, codec), 32, codec) for p in pages
+        ]
+        assert np.allclose(batch, one_by_one, atol=1e-4)
+
+    def test_empty_document_scores_zero(self, rng):
+        q = _unit(rng, 4, 16)
+        codec = fit_lloyd2(_unit(rng, 50, 16), seed=7)
+        assert maxsim_asymmetric_lloyd2(q, np.zeros((0, 4), dtype=np.uint8), 16, codec) == 0.0
+
+    def test_ranking_tracks_float_ranking(self, rng):
+        """Same construction as the binary codec's equivalent test: plant known
+        signal, then check compression shifts scores more than it reorders them."""
+        from optivision.metrics import rank_correlation
+
+        n_query = 8
+        query = _unit(rng, n_query, 128)
+        pages = []
+        for i in range(n_query + 1):
+            page = _unit(rng, 30, 128)
+            for j in range(i):
+                noise = rng.standard_normal(128).astype(np.float32)
+                mixed = query[j] + 0.35 * (noise / np.linalg.norm(noise))
+                page[j] = mixed / np.linalg.norm(mixed)
+            pages.append(page)
+        codec = fit_lloyd2(np.concatenate(pages), seed=7)
+
+        float_order = list(np.argsort([-maxsim_float(query, p) for p in pages]))
+        assert float_order[0] == n_query
+
+        lloyd2_order = list(
+            np.argsort(
+                [-maxsim_asymmetric_lloyd2(query, encode_lloyd2(p, codec), 128, codec) for p in pages]
+            )
+        )
+        tau = rank_correlation([str(i) for i in float_order], [str(i) for i in lloyd2_order])
+        assert tau > 0.6
+
+    def test_reconstruction_error_beats_one_bit_sign(self, rng):
+        """2-bit should approximate the float vector much more closely than the
+        1-bit sign codec it sits above -- the whole point of spending 2 bits."""
+        v = _unit(rng, 300, 128)
+        codec = fit_lloyd2(v, seed=7)
+        lloyd2_err = np.abs(decode(encode_lloyd2(v, codec), 128, "lloyd2", codec=codec) - v).mean()
+        sign_err = np.abs(unpack_signs(pack_bits(v), 128) - v).mean()
+        assert lloyd2_err < sign_err
+
+
+class TestCompressorLloyd2:
+    def _page(self, rng, n=40, d=128):
+        vectors = _unit(rng, n, d)
+        return PrunedPage(
+            ref=PageRef(doc_id="d", page_no=1),
+            embeddings=vectors,
+            kept_token_index=np.arange(n, dtype=np.int32),
+            keep_mask=np.ones((1, n), dtype=bool),
+            grid=PatchGrid.contiguous(1, n),
+            n_tokens_before=1024,
+        )
+
+    def test_lloyd2_is_16x_smaller_than_raw(self, rng):
+        page = self._page(rng)
+        codec = fit_lloyd2(page.embeddings, seed=7)
+        out = Compressor(CompressionConfig(method="lloyd2"), codec=codec).compress(page)
+        assert out.nbytes == 40 * 32
+        assert out.raw_nbytes() == 1024 * 128 * 4
+
+    def test_lloyd2_bytes_sit_between_binary_and_int8(self, rng):
+        page = self._page(rng)
+        codec = fit_lloyd2(page.embeddings, seed=7)
+        binary = Compressor(CompressionConfig(method="binary")).compress(page)
+        lloyd2 = Compressor(CompressionConfig(method="lloyd2"), codec=codec).compress(page)
+        int8 = Compressor(CompressionConfig(method="int8")).compress(page)
+        assert binary.nbytes < lloyd2.nbytes < int8.nbytes
+
+    def test_lloyd2_without_a_fitted_codec_raises(self, rng):
+        page = self._page(rng)
+        with pytest.raises(ValueError, match="fitted codec"):
+            Compressor(CompressionConfig(method="lloyd2")).compress(page)
+
+    def test_decode_matches_module_function(self, rng):
+        page = self._page(rng)
+        codec = fit_lloyd2(page.embeddings, seed=7)
+        out = Compressor(CompressionConfig(method="lloyd2"), codec=codec).compress(page)
+        direct = encode_lloyd2(page.embeddings, codec)
+        assert np.array_equal(out.codes, direct)
+        assert np.allclose(decode(out.codes, 128, "lloyd2", codec=codec), decode(direct, 128, "lloyd2", codec=codec))
+
+    def test_decode_without_codec_raises(self, rng):
+        page = self._page(rng)
+        codec = fit_lloyd2(page.embeddings, seed=7)
+        out = Compressor(CompressionConfig(method="lloyd2"), codec=codec).compress(page)
+        with pytest.raises(ValueError):
+            decode(out.codes, 128, "lloyd2")

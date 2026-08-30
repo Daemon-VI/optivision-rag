@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from .compression import Compressor
+from .compression import Compressor, Lloyd2Codec, fit_lloyd2
 from .config import Config
 from .corpus import load_queries
 from .encoders import BaseEncoder, get_encoder
@@ -70,6 +70,12 @@ def default_variants() -> list[Variant]:
             pruning={"enabled": False},
             compression={"enabled": True, "method": "int8"},
             note="scalar quantization alone (4x)",
+        ),
+        Variant(
+            "lloyd2-only",
+            pruning={"enabled": False},
+            compression={"enabled": True, "method": "lloyd2"},
+            note="rotated 2-bit Lloyd-Max quantization alone (16x)",
         ),
         Variant(
             "spatial-only",
@@ -279,14 +285,20 @@ def run_variant(
     workdir: str | Path = "data/bench",
     tau_depth: int | None = None,
     codebook: np.ndarray | None = None,
+    lloyd2_codec: Lloyd2Codec | None = None,
 ) -> dict:
     vcfg = cfg.with_overrides(pruning=variant.pruning, compression=variant.compression)
     pruner = TokenPruner(vcfg.pruning, codebook=codebook)
-    compressor = Compressor(vcfg.compression)
     method = vcfg.compression.method if vcfg.compression.enabled else "none"
+    compressor = Compressor(vcfg.compression, codec=lloyd2_codec if method == "lloyd2" else None)
 
     t0 = time.perf_counter()
-    index = NumpyIndex(Path(workdir) / variant.name, dim=corpus.dim, method=method)
+    index = NumpyIndex(
+        Path(workdir) / variant.name,
+        dim=corpus.dim,
+        method=method,
+        codec=lloyd2_codec if method == "lloyd2" else None,
+    )
     compressed = []
     for enc, image in zip(corpus.encodings, corpus.images, strict=True):
         pruned = pruner.prune(enc, image)
@@ -443,6 +455,15 @@ def run_benchmark(
                 source=kind,
             )
 
+    # The rotated 2-bit codec's mean/scale are corpus-fitted state too (see
+    # compression.lloyd2) -- fit once over every vector and share it across
+    # every variant that asks for "lloyd2", the same reasoning as the codebook
+    # above. Cheap: one pass over a sample to get a mean and a scalar std.
+    lloyd2_codec: Lloyd2Codec | None = None
+    if any(v.compression.get("method", cfg.compression.method) == "lloyd2" for v in variants):
+        pool = np.concatenate([e.embeddings for e in corpus.encodings], axis=0)
+        lloyd2_codec = fit_lloyd2(pool, seed=cfg.compression.lloyd2_seed)
+
     rows = []
     runs: dict[str, dict] = {}
     shallow: dict[str, dict] = {}
@@ -453,6 +474,7 @@ def run_benchmark(
             codebook=codebooks.get(
                 variant.pruning.get("codebook_source", pcfg.codebook_source)
             ),
+            lloyd2_codec=lloyd2_codec,
         )
         rows.append(out["row"])
         runs[variant.name] = out["deep"]
