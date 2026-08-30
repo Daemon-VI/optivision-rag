@@ -15,15 +15,37 @@ from .binary import (
     pack_bits,
     unpack_signs,
 )
+from .lloyd2 import (
+    Lloyd2Codec,
+    decode_lloyd2,
+    encode_lloyd2,
+    fit_lloyd2,
+    maxsim_asymmetric_lloyd2,
+    maxsim_asymmetric_lloyd2_batch,
+    pack2,
+    rotation_matrix,
+    unpack2,
+)
+from .lloyd2 import code_nbytes as lloyd2_code_nbytes
 
 __all__ = [
     "Compressor",
+    "Lloyd2Codec",
     "code_nbytes",
+    "decode_lloyd2",
+    "encode_lloyd2",
+    "fit_lloyd2",
+    "lloyd2_code_nbytes",
     "maxsim_asymmetric",
     "maxsim_asymmetric_batch",
+    "maxsim_asymmetric_lloyd2",
+    "maxsim_asymmetric_lloyd2_batch",
     "maxsim_float",
     "maxsim_hamming",
+    "pack2",
     "pack_bits",
+    "rotation_matrix",
+    "unpack2",
     "unpack_signs",
 ]
 
@@ -52,10 +74,18 @@ INT8_SCALE = 0.50
 
 
 class Compressor:
-    """Turns pruned float vectors into the bytes that go into the index."""
+    """Turns pruned float vectors into the bytes that go into the index.
 
-    def __init__(self, cfg: CompressionConfig) -> None:
+    ``codec`` carries corpus-fitted state that a stateless per-vector method
+    (``binary``, ``int8``) does not need but ``lloyd2`` does -- the rotated
+    2-bit quantizer's mean and scale are properties of the corpus, fit once via
+    :func:`fit_lloyd2` and shared by every page, the same way
+    ``TokenPruner(codebook=...)`` shares one fitted probe set.
+    """
+
+    def __init__(self, cfg: CompressionConfig, codec: Lloyd2Codec | None = None) -> None:
         self.cfg = cfg
+        self.codec = codec
 
     @property
     def bytes_per_vector(self) -> int | None:
@@ -75,6 +105,13 @@ class Compressor:
             codes = pack_bits(vectors)
         elif cfg.method == "int8":
             codes = _int8_codes(vectors)
+        elif cfg.method == "lloyd2":
+            if self.codec is None:
+                raise ValueError(
+                    "compression.method='lloyd2' needs a fitted codec: "
+                    "Compressor(cfg, codec=fit_lloyd2(corpus_vectors))"
+                )
+            codes = encode_lloyd2(vectors, self.codec)
         else:
             raise ValueError(f"unknown compression method {cfg.method!r}")
 
@@ -111,12 +148,23 @@ def decode_int8(codes: np.ndarray, dim: int) -> np.ndarray:
     return out
 
 
-def decode(codes: np.ndarray, dim: int, method: str) -> np.ndarray:
-    """Inverse of :meth:`Compressor.compress` for one page's codes."""
+def decode(
+    codes: np.ndarray, dim: int, method: str, codec: Lloyd2Codec | None = None
+) -> np.ndarray:
+    """Inverse of :meth:`Compressor.compress` for one page's codes.
+
+    ``codec`` is required when ``method == "lloyd2"`` -- the rotation and
+    centring it carries are corpus-fitted state, not derivable from the codes
+    alone. Every other method ignores it.
+    """
     if method in ("none", None):
         return codes.view(np.float32).reshape(-1, dim)
     if method == "binary":
         return unpack_signs(codes, dim)
     if method == "int8":
         return decode_int8(codes, dim)
+    if method == "lloyd2":
+        if codec is None:
+            raise ValueError("decoding method='lloyd2' needs the fitted codec")
+        return decode_lloyd2(codes, dim, codec)
     raise ValueError(f"unknown compression method {method!r}")

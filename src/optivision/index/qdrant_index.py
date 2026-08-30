@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..compression import decode
+from ..compression import Lloyd2Codec, decode
 from ..types import CompressedPage, PageRef, SearchHit
 from .base import BaseIndex
 
@@ -53,11 +53,13 @@ class QdrantIndex(BaseIndex):
         on_disk: bool = True,
         mode: str = "server_quantized",
         recreate: bool = False,
+        codec: Lloyd2Codec | None = None,
     ) -> None:
         from qdrant_client import QdrantClient
 
         self.dim = int(dim)
         self.method = method
+        self.codec = codec
         self.collection = collection
         self.mode = mode
         self.path = Path(path)
@@ -151,7 +153,7 @@ class QdrantIndex(BaseIndex):
     # ----------------------------------------------------------------- write
 
     def _vectors_for(self, page: CompressedPage) -> list[list[float]]:
-        vectors = decode(page.codes, page.dim, self.method)
+        vectors = decode(page.codes, page.dim, self.method, codec=self.codec)
         return np.ascontiguousarray(vectors, dtype=np.float32).tolist()
 
     def add(self, pages: Sequence[CompressedPage]) -> None:

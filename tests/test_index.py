@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from optivision.compression import Compressor, maxsim_asymmetric
+from optivision.compression import Compressor, fit_lloyd2, maxsim_asymmetric
 from optivision.config import CompressionConfig
 from optivision.index.numpy_index import NumpyIndex
 from optivision.types import PageRef, PatchGrid, PrunedPage
@@ -25,6 +25,19 @@ def _page(rng, doc_id, n=10, d=32, before=100):
         n_tokens_before=before,
     )
     return Compressor(CompressionConfig(method="binary")).compress(pruned), vectors
+
+
+def _lloyd2_page(rng, doc_id, codec, n=10, d=32, before=100):
+    vectors = _unit(rng, n, d)
+    pruned = PrunedPage(
+        ref=PageRef(doc_id=doc_id, page_no=1),
+        embeddings=vectors,
+        kept_token_index=np.arange(n, dtype=np.int32),
+        keep_mask=np.ones((1, n), dtype=bool),
+        grid=PatchGrid.contiguous(1, n),
+        n_tokens_before=before,
+    )
+    return Compressor(CompressionConfig(method="lloyd2"), codec=codec).compress(pruned), vectors
 
 
 class TestNumpyIndex:
@@ -152,3 +165,42 @@ class TestBoundedMemoryScoring:
         reloaded = NumpyIndex.load(tmp_path / "idx", max_decoded_bytes=256)
         assert reloaded.max_decoded_bytes == 256
         assert np.allclose(reloaded.score_all(q), idx.score_all(q))
+
+
+class TestLloyd2Index:
+    """The rotated 2-bit codec needs a fitted codec threaded through the index,
+    unlike binary/int8 -- these pin that the extra state round-trips."""
+
+    def test_scores_match_direct_maxsim(self, rng, tmp_path):
+        from optivision.compression import maxsim_asymmetric_lloyd2
+
+        codec = fit_lloyd2(_unit(rng, 300, 32), seed=7)
+        idx = NumpyIndex(tmp_path / "idx", dim=32, method="lloyd2", codec=codec)
+        pages, _ = zip(*[_lloyd2_page(rng, f"d{i}", codec) for i in range(6)])
+        idx.add(list(pages))
+        q = _unit(rng, 5, 32)
+        scores = idx.score_all(q)
+        expected = [maxsim_asymmetric_lloyd2(q, p.codes, 32, codec) for p in pages]
+        assert np.allclose(scores, expected, atol=1e-4)
+
+    def test_save_load_roundtrip_carries_the_codec(self, rng, tmp_path):
+        codec = fit_lloyd2(_unit(rng, 300, 32), seed=7)
+        idx = NumpyIndex(tmp_path / "idx", dim=32, method="lloyd2", codec=codec)
+        idx.add([_lloyd2_page(rng, f"d{i}", codec)[0] for i in range(7)])
+        q = _unit(rng, 4, 32)
+        before = idx.score_all(q)
+        idx.save()
+
+        reloaded = NumpyIndex.load(tmp_path / "idx")
+        assert reloaded.codec is not None
+        assert np.array_equal(reloaded.codec.mu, codec.mu)
+        assert reloaded.codec.sigma == pytest.approx(codec.sigma)
+        assert np.allclose(reloaded.score_all(q), before)
+
+    def test_stats_amortize_the_codec_overhead(self, rng, tmp_path):
+        codec = fit_lloyd2(_unit(rng, 300, 32), seed=7)
+        idx = NumpyIndex(tmp_path / "idx", dim=32, method="lloyd2", codec=codec)
+        idx.add([_lloyd2_page(rng, f"d{i}", codec, n=10, d=32)[0] for i in range(4)])
+        s = idx.stats()
+        # 4 pages x 10 vectors x 8 bytes/vector (2 bits x 32 dims) + shared mu/sigma
+        assert s["index_bytes"] == 4 * 10 * 8 + codec.overhead_bytes

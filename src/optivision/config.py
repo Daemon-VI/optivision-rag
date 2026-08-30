@@ -66,9 +66,14 @@ class PruningConfig:
 @dataclass
 class CompressionConfig:
     enabled: bool = True
-    method: str = "binary"  # "binary" | "int8" | "none"
+    method: str = "binary"  # "binary" | "int8" | "lloyd2" | "none"
     keep_norm: bool = False  # store a per-vector norm alongside the code
     asymmetric: bool = True  # float query vs binary doc (better ranking)
+    # "lloyd2" only: rotation seed for the rotated 2-bit Lloyd-Max codec. The
+    # rotation needs no data (see compression.lloyd2), so this alone makes it
+    # reproducible; mu/sigma are still fit once per corpus via fit_lloyd2 and
+    # threaded through explicitly (see bench.run_benchmark).
+    lloyd2_seed: int = 7
 
 
 @dataclass
