@@ -8,7 +8,7 @@ geometry (all tokens)
   grid patches blank (pixel) 10.3%   pairwise cos: blank 0.054  ink 0.055
   query tokens whose best grid match is BLANK: float 7.9%  sign 8.2%   (distractor promotion)
 
-fitting codecs ... done (50s)
+fitting codecs ... done (47s)
 
 codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
 ----------------------------------------------------------------------------------------------------------------------------
@@ -20,6 +20,15 @@ sign(d - mu)                      16.0  32.0x   0.8317   98.3% 0.761 0.889 | 0.7
 sign(ITQ(d - mu))                 16.0  32.0x   0.8311   98.3% 0.765 0.889 | 0.753 0.709  0.89 0.78 | +0.0068 [-0.0064,+0.0196]
 centroid(K=4096)+1-bit residual   17.5  29.3x   0.8358   98.8% 0.767 0.895 | 0.717 0.674  0.87 0.73 | +0.0115 [-0.0014,+0.0249]
 
+decision margin m = (s_gold - s_best_other)/s_gold under float: median +0.1249, IQR [+0.0134, +0.2225]; won by < 1% of score: 1.0% of queries, < 3%: 5.5%
+  codec                            sigma (median) R@1 flips   flip rate by |m|/sigma:   <0.5     0.5-1      1-2       >2    AUC(m: kept|lost)
+  int8 (repo)                              0.0006         1    100%(  1)     -         0%(  2)    0%(491)   nan
+  2-bit LM, rotated                        0.0146        20     45%( 11)   35%( 17)   18%( 28)    1%(438)   0.96
+  sign(d)  [pipeline]                      0.0270        21     38%( 29)    4%( 24)   12%( 49)    1%(392)   0.96
+  sign(d - mu)                             0.0269        27     42%( 31)   24%( 25)   10%( 49)    1%(389)   0.96
+  sign(ITQ(d - mu))                        0.0245        31     52%( 25)   33%( 24)   14%( 43)    1%(402)   0.94
+  centroid(K=4096)+1-bit residual          0.0306        32     55%( 31)   30%( 30)    6%( 52)    1%(381)   0.92
+
 optivision prune config (618 tok/pg, 1.67x fewer vectors) under each codec, retention vs float full index:
   float32                          nDCG@5 0.8434 ( 99.7%)     1.7x
   int8 (repo)                      nDCG@5 0.8418 ( 99.5%)     6.7x
@@ -30,4 +39,4 @@ optivision prune config (618 tok/pg, 1.67x fewer vectors) under each codec, rete
   centroid(K=4096)+1-bit residual  nDCG@5 0.8321 ( 98.4%)    48.8x
 
 wrote reports/ladder_infovqa_test_subsampled.json
-(448s)
+(403s)
