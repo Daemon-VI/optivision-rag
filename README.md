@@ -155,8 +155,9 @@ print it from the benchmark files. E3 is also the best operating point in the pr
 (98.7% retention at 134.5x) and the least representative one.
 
 The codec half is not an encoder property. Per query, a sign code adds the same ~3% of
-score noise under both encoders, and it flips exactly the queries whose float margin over
-the best competitor is smaller than that — none above twice the noise, on eight caches.
+score noise under both encoders, and it flips only queries whose float margin over
+the best competitor is smaller than that noise — under 1% of 945 real ViDoRe queries
+above twice the noise, against a third of those below half.
 E1's precise queries are decided by three digits at a 0.05% margin, which is why the
 small encoder looks fragile; ColPali cannot read those digits at 448 px and never wins
 the queries it is credited with not losing (precise R@1 0.250, floor 0.200). Enlarge the

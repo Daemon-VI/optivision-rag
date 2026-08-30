@@ -71,9 +71,9 @@ encoder, and a per-query analysis of the encode caches says what moved. The
 corpus governs what pruning buys ($4.2\times$ to $1.9\times$ under one encoder).
 The codec's cost follows neither encoder nor corpus as such but the queries'
 decision margins: a sign code perturbs page scores by about $3\%$ under either
-encoder, and it flips exactly the queries whose float-precision margin over the
-best competitor is smaller than that --- none above twice the noise, on eight
-caches. The generated corpus decides $60$ of its $72$ queries by three digits at
+encoder, and it flips only queries whose float-precision margin over the
+best competitor is smaller than that noise --- under $1\%$ of $945$ real ViDoRe
+queries above twice the noise, against a third of those below half. The generated corpus decides $60$ of its $72$ queries by three digits at
 a median margin of $0.05\%$, which is why the small encoder looks fragile; the
 reference encoder cannot read those digits at $448$\,px and never wins the
 queries it is credited with not losing. On dense pages, finally, selecting
@@ -158,13 +158,15 @@ compression ratio for multi-vector retrieval should be published with a per-stag
 attribution \emph{and} the encoder and corpus it was measured on --- because the
 attribution, not merely its magnitude, is what changes.
 \item \textbf{The mechanism, and a control for token selection.} A per-query
-analysis over eight encode caches locates the one-bit codec's cost in the
-queries' decision margins rather than in the encoder: the codec's score noise is
-the same under both encoders, and it flips exactly the queries decided by less
-than that noise. A matched-budget study on two dense ViDoRe splits shows that
+analysis over eight encode caches and two dense ViDoRe splits locates the
+one-bit codec's cost in the queries' decision margins rather than in the
+encoder: the codec's score noise is the same under both encoders, and it flips
+only queries decided by less than that noise --- under $1\%$ of $945$ real
+ViDoRe queries above twice the noise, against a third of those below half. The
+same matched-budget study on those splits shows that
 selecting tokens by embedding coverage beats pixel saliency, and that uniformly
-random probes do as well as a designed selector --- the control any future
-selector has to clear.
+random probes do as well as a designed pixel-saliency selector --- the control
+any future selector has to clear.
 \end{enumerate}
 
 \section{Related Work}
@@ -200,13 +202,50 @@ binary quantization and rescoring. These techniques are typically evaluated on
 quantization error affects one score. Under MaxSim the error enters through a
 maximum over hundreds of vectors per page, which is a different statistical
 regime, and it is applied uniformly with no notion of which tokens matter.
+Binary quantization's cost also has a documented cause in the single-vector
+literature: it depends on the encoder's training objective through the
+Gaussianity of its coordinates, giving a pairwise misordering bound
+$P \le \exp(-\gamma^2 b^2 \Delta^2 / 2\sigma^2)$ in the score gap $\Delta$ and
+noise variance $\sigma^2$~\cite{covariance2026} --- a tail bound, not a
+per-query test. The same margin-vs-noise mechanism explains quantized
+classifier and LLM-agent decisions~\cite{hu2022quantized,lowbitdecisions2026},
+but neither line applies it per query through a MaxSim maximum, or validates a
+flip threshold on a retrieval benchmark.
+
+\subsection{Compressing multi-vector visual indexes}
+Token pooling~\cite{clavie2024pooling} evaluates pooling alone and pooling
+with 2-bit PLAID compression as two separate pipelines, never decomposed
+against a shared baseline. CRISP~\cite{crisp2025} folds clustering into
+training on a single encoder with no quantization axis.
+HPC-ColPali~\cite{hpccolpali2025} defines a pruning-ablated baseline for
+exactly this purpose, but states that ``all numerical results presented
+herein are estimated based on the theoretical advantages of HPC-ColPali's
+design and typical performance gains observed in similar research'' --- the
+ablation is designed, not measured. DocPruner~\cite{docpruner2025}, Structural
+Anchor Pruning~\cite{structuralanchor2026} and a Voronoi-cell
+formulation~\cite{voronoi2026} refine which tokens to prune, without adding a
+codec. SaMer~\cite{samer2026} instead shows random and spatial pruning sit
+within 0.2 Flickr30K R@1 points of each other while merging adds four to five
+points, ``because pruning removes visual evidence before the query is known,
+whereas merging keeps it in aggregated representatives'';
+MarginMerge~\cite{marginmerge2026} and Sculpting~\cite{sculpting2026} report
+the same pattern (Sculpting: nDCG@5 0.86 vs. DocPruner's 0.77 at comparable
+compression). None of these seven systems isolate pruning from quantization
+on shared cached vectors with exact MaxSim and rank correlation.
 
 \subsection{Positioning}
 The individual components we use are not novel, and we do not claim them.
-What is missing from the literature is a controlled attribution of quality loss
-\emph{between} pruning and quantization when both are applied to the same
-multi-vector visual index. Systems report the product of the two savings; we
-report the ratio of the two costs.
+What is missing is a controlled attribution of quality loss \emph{between}
+pruning and quantization on identical cached vectors under exact MaxSim ---
+a decomposition that
+\cite{clavie2024pooling,crisp2025,hpccolpali2025} each stop short of. Systems
+report the product of the two savings; we report the ratio of the two costs.
+Our random-probe control (Contribution 4) applies to token \emph{selection}
+within the pruning family, where SaMer's own numbers show designed and random
+pruning tie; merging~\cite{samer2026,marginmerge2026,sculpting2026} is the
+direction that escapes that tie, and we do not claim to beat it. Whether the
+pruning-versus-codec attribution itself reverses across encoders or corpora,
+which none of the above measure, is the question this paper answers.
 
 \section{Method}
 
@@ -620,18 +659,25 @@ queries are won by $31\%$. Under every codec, on every cache we hold (six
 ColSmol, two ColPali), \emph{no query whose margin exceeds $2\sigma$ changes its
 top result}, while $32$--$43\%$ of those below $0.5\sigma$ do; among the queries
 the float retriever wins, the margin alone separates the ones a sign code keeps
-from the ones it loses with AUC $0.78$--$0.95$ (Table~\ref{tab:margin}).
+from the ones it loses with AUC $0.78$--$0.95$ on the generated caches. The same
+rule now holds at far higher power on $945$ real ViDoRe queries: of $698$ above
+$2\sigma$, $3$ flip ($0.4\%$), against $32$--$38\%$ of those below $0.5\sigma$,
+with AUC $0.92$--$0.96$ (Table~\ref{tab:margin}).
 
 \begin{table}[!t]
 \caption{Per-query decision margin against codec noise, both as a fraction of
-the gold page's float score. $m$ is the median float margin of the $60$ precise
-queries; $\sigma$ is the score noise a codec adds; flip rates are the share of
-queries whose top-$1$ result changes under the sign code, by $|m|/\sigma$ bin;
-AUC is how well $m$ alone separates the float winners the sign code keeps from
-those it loses. Rows are the E1 encoder (ColSmol) and the E3 encoder (ColPali)
-on the same $60$ pages with the code's glyphs at the stated size; the ColSmol
-rows re-render only those glyphs, the ColPali $3\times$ row was rendered with the
-code in the text flow, which also shifts the lines below it.}
+the gold page's float score. $m$ is the median float margin: over the $60$
+precise queries for the generated rows, and over all $494$ / $451$ queries of
+the \texttt{infovqa} / \texttt{docvqa} ViDoRe splits for the E2 rows; $\sigma$
+is the score noise a codec adds; flip rates are the share of queries whose
+top-$1$ result changes under the sign code, by $|m|/\sigma$ bin; AUC is how
+well $m$ alone separates the float winners the sign code keeps from those it
+loses. The first five rows are the E1 encoder (ColSmol) and the E3 encoder
+(ColPali) on the same $60$ pages with the code's glyphs at the stated size; the
+ColSmol rows re-render only those glyphs, the ColPali $3\times$ row was
+rendered with the code in the text flow, which also shifts the lines below it.
+The last two rows are ColPali-v1.3 on the real \texttt{infovqa} and
+\texttt{docvqa} test splits (E2).}
 \label{tab:margin}
 \centering
 \footnotesize
@@ -645,6 +691,9 @@ ColSmol $3\times$ & $-0.31\%$ & $2.7\%$ & $1.4\%$ & $32\%$ & $0\%$ & $0.90$ \\
 ColSmol $0.4\times$ & $-0.65\%$ & $2.8\%$ & $1.6\%$ & $41\%$ & $0\%$ & $0.94$ \\
 ColPali $1\times$ (E3) & $-1.39\%$ & $2.5\%$ & $1.3\%$ & $43\%$ & $0\%$ & $0.86$ \\
 ColPali $3\times$ & $-0.52\%$ & $2.2\%$ & $1.2\%$ & $40\%$ & $0\%$ & $0.88$ \\
+\midrule
+ColPali, infovqa (E2) & $+12.49\%$ & $2.7\%$ & $1.5\%$ & $38\%$ & $0.8\%$ & $0.96$ \\
+ColPali, docvqa (E2) & $-0.07\%$ & $2.2\%$ & $1.3\%$ & $32\%$ & $0\%$ & $0.92$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -866,10 +915,15 @@ read. A query flips when $|m| \lesssim \sigma$. On the generated corpus the
 precise queries are near-ties by construction, so a sign code flips
 $32$--$43\%$ of those below $0.5\sigma$ and none above $2\sigma$, under either
 encoder; ColPali escapes only because its margins on those queries are negative
-to begin with. On ViDoRe a sign code costs $2.6$--$3.7\%$, which is the
-fraction of real queries within about $3\%$ of a tie, and it changes the
-top-ranked page of $11\%$ of \texttt{infovqa} queries while nDCG@5 reports
-$97.4\%$ retention --- a reason to report top-$1$ agreement alongside $\tau$.
+to begin with. The same rule holds, at far higher statistical power, on the two
+dense ViDoRe splits: of $698$ real queries above $2\sigma$, $3$ flip ($0.4\%$),
+against $32$--$38\%$ of those below $0.5\sigma$. On the two splits a sign code
+flips $21$ top-$1$ results on \texttt{infovqa} and $23$ on \texttt{docvqa} ---
+$5.5\%$ and $8.2\%$ of queries sit within about $3\%$ of a tie, respectively;
+the splits' median float margins are $+12.5\%$ and $-0.07\%$, i.e.\
+\texttt{docvqa}'s float retriever is already losing half its queries outright
+before any codec is applied --- while nDCG@5 reports $97.4\%$ and $96.3\%$
+retention, a reason to report top-$1$ agreement alongside $\tau$.
 
 The ladder of codecs follows. Int8 is lossless at $4\times$ on every cache
 ($99.9$--$100.2\%$). A rotated two-bit Lloyd--Max code at $16\times$ halves
@@ -938,9 +992,10 @@ carries the E3 conclusion.
 ColBERT-style vision--language retrievers. E3 separates encoder from corpus, but two
 points still do not locate a crossing: we cannot say at what scale the
 attribution changes, nor whether parameter count or embedding quality is the
-operative variable. The decision-margin rule of Finding~3 is verified on the
-generated corpus, eight caches deep, and is a prediction rather than a
-measurement on ViDoRe, whose caches we did not retain. The ColPali run with the
+operative variable. The decision-margin rule of Finding~3, verified on the
+generated corpus across eight caches, is now also measured on the two dense
+ViDoRe splits ($945$ real queries, ColPali-v1.3): $3$ of $698$ queries above
+$2\sigma$ flip ($0.4\%$), against $32$--$38\%$ below $0.5\sigma$. The ColPali run with the
 enlarged code was rendered with the code in the text flow, which also shifts
 the lines below it; the three ColSmol runs hold every other pixel fixed.
 
@@ -985,9 +1040,10 @@ A third experiment holds the corpus fixed and swaps only the encoder, and a
 per-query analysis of the caches separates what that reversal confounded. The
 corpus governs what pruning buys ($4.2\times$ to $1.9\times$ under one encoder).
 The codec's cost is not an encoder property: a sign code adds the same
-$2$--$3\%$ of score noise under either encoder, and it costs exactly the queries
-whose float margin over the best competitor is smaller than that --- none above
-twice the noise on any of eight caches. The generated corpus decides its precise
+$2$--$3\%$ of score noise under either encoder, and it costs only the queries
+whose float margin over the best competitor is smaller than that noise ---
+under $1\%$ of $945$ real ViDoRe queries above twice the noise, against a third
+of those below half. The generated corpus decides its precise
 queries at a median margin of $0.05\%$, which is why the small encoder looks
 fragile; the reference encoder never wins those queries in the first place,
 which is why it looks immune, and enlarging the code until it can lifts its
@@ -1000,8 +1056,7 @@ retrieval should be published with a per-stage attribution and with the
 encoder, corpus and query regime that attribution was measured on, because the
 attribution itself is what moves.
 
-Future work follows directly: verify the decision-margin rule on the ViDoRe
-caches, where it is so far a prediction; place the two-bit code, which halves
+Future work follows directly: place the two-bit code, which halves
 the sign code's noise at twice its bytes, at the operating point for near-tie
 query regimes; hold any learned token selector to the random-dropping control
 at a matched budget; and test shortlist rescoring, which our Hit@5 figures
@@ -1067,6 +1122,70 @@ Association for Computational Linguistics: ACL 2025}, 2025. arXiv:2506.04997.
 \bibitem{qdrant}
 Qdrant, ``Multivectors, Binary Quantization and Rescoring,'' Qdrant
 Documentation. [Online]. Available: \url{https://qdrant.tech/documentation/}
+
+\bibitem{clavie2024pooling}
+B. Clavi\'e, A. Chaffin and G. Adams, ``Reducing the Footprint of Multi-Vector
+Retrieval with Minimal Performance Impact via Token Pooling,'' in \emph{Findings
+of the Association for Computational Linguistics: EMNLP 2024}, 2024.
+arXiv:2409.14683.
+
+\bibitem{crisp2025}
+J. Veneroso, R. Jayaram, J. Rao, G. Hern\'andez \'Abrego, M. Hadian and D. Cer,
+``CRISP: Clustering Multi-Vector Representations for Denoising and Pruning,''
+\emph{arXiv preprint arXiv:2505.11471}, 2025.
+
+\bibitem{hpccolpali2025}
+D. Bach, ``Hierarchical Patch Compression for ColPali: Efficient Multi-Vector
+Document Retrieval with Dynamic Pruning and Quantization,'' \emph{arXiv
+preprint arXiv:2506.21601}, 2025.
+
+\bibitem{docpruner2025}
+Y. Yan, G. Xu, X. Zou, S. Liu, J. Kwok and X. Hu, ``DocPruner: A
+Storage-Efficient Framework for Multi-Vector Visual Document Retrieval via
+Adaptive Patch-Level Embedding Pruning,'' \emph{arXiv preprint
+arXiv:2509.23883}, 2025.
+
+\bibitem{sculpting2026}
+Y. Yan, M. Ou, Y. Cao, X. Zou, J. Huo, S. Liu, J. Kwok and X. Hu, ``Sculpting
+the Vector Space: Towards Efficient Multi-Vector Visual Document Retrieval via
+Prune-then-Merge Framework,'' in \emph{Findings of the Association for
+Computational Linguistics: ACL 2026}, 2026. arXiv:2602.19549.
+
+\bibitem{structuralanchor2026}
+Z. Liu, Z. Hu, Y. Zhang and Y. Xiao, ``Structural Anchor Pruning:
+Training-Free Multi-Vector Compression for Visual Document Retrieval,''
+\emph{arXiv preprint arXiv:2601.20107}, 2026.
+
+\bibitem{marginmerge2026}
+A. Mahdizadeh, A. Salari, S. Rajabi, S. Mirabbasi, P. Nasiopoulos and
+A. Morsali, ``Coverage Matters: MarginMerge for Compressing Multi-Vector
+Visual Document Retrievers,'' \emph{arXiv preprint arXiv:2608.02969}, 2026.
+
+\bibitem{voronoi2026}
+Y. Kankanampati, Y. Zong, N. Tomeh, B. Piwowarski and J. Le Roux, ``A Voronoi
+Cell Formulation for Principled Token Pruning in Late-Interaction Retrieval
+Models,'' in \emph{Proc. 49th Int. ACM SIGIR Conf. on Research and Development
+in Information Retrieval}, 2026. arXiv:2603.09933.
+
+\bibitem{samer2026}
+S. Park, J. Jung, J. Park and J. Kang, ``Do All Visual Tokens Matter Equally?
+Object-Evidence Preserving Token Merging for Vision-Language Retrieval,''
+\emph{arXiv preprint arXiv:2607.04605}, 2026.
+
+\bibitem{covariance2026}
+W. Xiao, ``Covariance Structure and Coordinate Heterogeneity Govern Binary
+Quantization of Contrastive Embeddings,'' \emph{arXiv preprint
+arXiv:2605.17524}, 2026.
+
+\bibitem{lowbitdecisions2026}
+Z. Wu, S. Dhiman and A. Koshiyama, ``Which Decisions Low-Bit Quantization
+Breaks, and How to Predict Them,'' \emph{arXiv preprint arXiv:2608.06564},
+2026.
+
+\bibitem{hu2022quantized}
+Q. Hu, Y. Guo, M. Cordy, X. Xie, W. Ma, M. Papadakis and Y. Le Traon,
+``Characterizing and Understanding the Behavior of Quantized Models for
+Reliable Deployment,'' \emph{arXiv preprint arXiv:2204.04220}, 2022.
 
 \end{thebibliography}
 

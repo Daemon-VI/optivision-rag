@@ -269,10 +269,24 @@ and ColPali's precise R@1 rises to 0.317 and its one-bit cost from 1.6 to 4.1 po
 aggregate).
 
 The rule that holds on every cache we have - six ColSmol, two ColPali: **a codec
-costs the queries whose float margin is smaller than its score noise.** It is
-verified on the generated corpus and is a prediction, not a measurement, on ViDoRe.
-rho = cos(d, sign d) is 0.800 on every cache against a random reference of 0.798 and
-says nothing; drop it.
+costs the queries whose float margin is smaller than its score noise.** It was
+verified on the generated corpus (eight caches) and, as of 2026-08-30, measured
+directly on ViDoRe too (Kaggle, ColPali-v1.3, `reports/ladder_infovqa_test_subsampled.json`,
+`reports/ladder_docvqa_test_subsampled.json`):
+
+| | infovqa (494 q) | docvqa (451 q) |
+|---|---|---|
+| sign-codec noise sigma | 2.70% | 2.24% |
+| median *m*, all queries | +12.49% | -0.07% |
+| queries flipped by sign, \|m\|/sigma < 0.5 | 38% (11/29) | 32% (12/37) |
+| queries flipped by sign, \|m\|/sigma > 2 | **0.8% (3/392)** | **0% (0/306)** |
+| AUC (kept vs lost) | 0.96 | 0.92 |
+
+Pooled over the two splits: 3 of 698 queries above 2sigma flip (0.4%), against 23 of
+66 below 0.5sigma (35%). The rule is now measured, not predicted, on ViDoRe; the
+generated-corpus "0%" above 2sigma was a low-power statement (10-20 queries per bin)
+and refines to **under 1%** at real-corpus scale. rho = cos(d, sign d) is 0.800 on
+every cache against a random reference of 0.798 and says nothing; drop it.
 
 **Caveats, both real.** E3's `hit@5` is 1.000 on nearly every row, so nDCG@5 can
 only move by reordering inside the top 5. E1's is 0.972 on the same corpus, so

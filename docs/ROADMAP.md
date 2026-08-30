@@ -219,14 +219,15 @@ holds the code; the paper's Findings 3-4 and Discussion VI-A are rewritten from 
   (random reference 0.798); arg-max flip rate is 75-83% everywhere. Neither says
   anything. Both rows are out of the paper.
 - *What the codec cost actually is.* A sign code adds ~3% of score noise under either
-  encoder and flips the queries whose float margin is below that; 0% of queries above
-  2 sigma flip, on all eight caches (`q9_margin.py`). E1's precise queries are
+  encoder and flips only the queries whose float margin is below that; 0% of queries
+  above 2 sigma flip on the eight generated caches (`q9_margin.py`), refined to
+  **under 1%** (0.4%, 3/698) measured directly on the two dense ViDoRe splits
+  (2026-08-30, Kaggle, ColPali-v1.3). E1's precise queries are
   near-ties by construction; ColPali never wins them in float (R@1 0.250, floor 0.200),
   so "loses nothing" was a floor effect. The font-scale control
   (`make-corpus --code-scale`, item 1 of REVIEW section 6) showed glyph size moves the
-  float retriever and not the codec cost. The rule is verified on the generated corpus
-  and predicted on ViDoRe; `codec_ladder.py` now prints the margin block if anyone
-  runs `LADDER=1` again.
+  float retriever and not the codec cost. The rule is now measured, not predicted, on
+  ViDoRe; `codec_ladder.py` prints the margin block if the ladder is rerun.
 - *1e's "every probe variant beats pixel saliency" stands; "the designed probes" does
   not.* `cb-random` is within +/-1 point of `cb-keep` at every budget on infovqa and
   ahead by 1-2 points at 50% and 30% on docvqa. It is Ma et al. (ACL Findings 2025)
