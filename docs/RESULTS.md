@@ -263,10 +263,15 @@ flips a third of them. ColPali cannot read an 11 pt code at 448 px: it wins 15 o
 the 60 precise queries in float (the subject-only floor is 12), its margin on them is
 negative, and what the sign code does is reshuffle queries it had already lost.
 "Loses nothing" is a floor effect, not robustness. Render only the code's glyphs 3x
-larger (`make-corpus --code-scale 3`, `reports/colpali_generated_code3x_shifted/`)
-and ColPali's precise R@1 rises to 0.317 and its one-bit cost from 1.6 to 4.1 points
-(72 queries, inside the CI; the per-query structure is the evidence, not the
-aggregate).
+larger, nothing else moving (`make-corpus --code-scale 3`,
+`reports/colpali_generated_code3x/`, run 2026-08-30) and ColPali stays on the floor:
+precise R@1 0.267 -> 0.300 (16 -> 18 of 60), median precise margin -1.41% (was
+-1.39% at 1x), one-bit cost -1.6 points (a gain; was +1.6 at 1x) (72 queries, inside
+the CI; the per-query structure is the evidence, not the aggregate). An earlier run
+that enlarged the same glyphs inside the text flow, which also shifted every line
+below them (`reports/colpali_generated_code3x_shifted/`), had shown precise R@1
+0.317 and a one-bit cost of 4.1 points - that was the layout change, not the glyph
+size.
 
 The rule that holds on every cache we have - six ColSmol, two ColPali: **a codec
 costs the queries whose float margin is smaller than its score noise.** It was

@@ -673,9 +673,8 @@ is the score noise a codec adds; flip rates are the share of queries whose
 top-$1$ result changes under the sign code, by $|m|/\sigma$ bin; AUC is how
 well $m$ alone separates the float winners the sign code keeps from those it
 loses. The first five rows are the E1 encoder (ColSmol) and the E3 encoder
-(ColPali) on the same $60$ pages with the code's glyphs at the stated size; the
-ColSmol rows re-render only those glyphs, the ColPali $3\times$ row was
-rendered with the code in the text flow, which also shifts the lines below it.
+(ColPali) on the same $60$ pages with the code's glyphs at the stated size;
+every row re-renders only those glyphs, leaving every other pixel fixed.
 The last two rows are ColPali-v1.3 on the real \texttt{infovqa} and
 \texttt{docvqa} test splits (E2).}
 \label{tab:margin}
@@ -690,7 +689,7 @@ ColSmol $1\times$ (E1) & $-0.05\%$ & $2.8\%$ & $1.5\%$ & $32\%$ & $0\%$ & $0.78$
 ColSmol $3\times$ & $-0.31\%$ & $2.7\%$ & $1.4\%$ & $32\%$ & $0\%$ & $0.90$ \\
 ColSmol $0.4\times$ & $-0.65\%$ & $2.8\%$ & $1.6\%$ & $41\%$ & $0\%$ & $0.94$ \\
 ColPali $1\times$ (E3) & $-1.39\%$ & $2.5\%$ & $1.3\%$ & $43\%$ & $0\%$ & $0.86$ \\
-ColPali $3\times$ & $-0.52\%$ & $2.2\%$ & $1.2\%$ & $40\%$ & $0\%$ & $0.88$ \\
+ColPali $3\times$ & $-1.41\%$ & $2.3\%$ & $1.4\%$ & $33\%$ & $0\%$ & $0.83$ \\
 \midrule
 ColPali, infovqa (E2) & $+12.49\%$ & $2.7\%$ & $1.5\%$ & $38\%$ & $0.8\%$ & $0.96$ \\
 ColPali, docvqa (E2) & $-0.07\%$ & $2.2\%$ & $1.3\%$ & $32\%$ & $0\%$ & $0.92$ \\
@@ -704,14 +703,23 @@ chance, and its median precise-query margin is $-1.4\%$: it cannot read an
 $11$\,pt code at $448$\,px and has lost those queries before any quantization.
 Under the sign code seven of them flip from won to lost and seven from lost to
 won, which nets to the ``unchanged'' R@1 of $0.375$. Re-rendering only the
-code's glyphs three times larger, with every other line, the generator's random
-sequence and the queries held fixed, lifts ColPali's precise R@1 to $0.317$ and
-its one-bit cost from $1.6\%$ to $4.1\%$, with precise R@1 under the sign code
-back at $0.233$: the encoder starts winning near-tie queries and starts losing
-them to the codec. At $72$ queries the aggregate change is inside the noise
-(paired over identical queries, $-0.019$ nDCG@5, $95\%$ CI $[-0.094, +0.058]$),
-so we report it as a direction; the per-query structure in
-Table~\ref{tab:margin} is the measurement. The same manipulation on ColSmol, at
+code's glyphs three times larger, with every other pixel, the generator's
+random sequence and the queries held fixed, does not get ColPali off the
+floor: it wins $16$ of the $60$ precise queries in float (median precise
+margin $-1.41\%$, against $-1.39\%$ at $1\times$), and the one-bit cost goes
+negative, from $+1.6\%$ to $-1.6\%$ (R@1 $0.389 \to 0.417$). The sign code
+changes $12$ top-$1$ results, $7$ lost-to-won against $5$ won-to-lost, netting
+the precise count from $16$ to $18$ of $60$ --- the same reshuffle-at-the-floor
+pattern as $1\times$. An earlier render that enlarged the code's glyphs inside
+the text flow, which also shifted every line below them, had given a different
+picture --- precise R@1 lifting to $0.317$ and the one-bit cost rising to
+$4.1\%$, with precise R@1 under the sign code falling to $0.233$ --- but that
+was the layout change, not the glyph size: with only the glyphs enlarged, the
+effect vanishes. At $72$ queries every aggregate delta is inside the paired
+confidence interval, so we report the per-query structure in
+Table~\ref{tab:margin} --- $0$ of $18$ queries above $2\sigma$ flip, $33\%$ of
+those below $0.5\sigma$ do, AUC $0.83$ --- as the measurement. The same
+manipulation on ColSmol, at
 $0.4\times$, $1\times$ and $3\times$ the code size, moves the float retriever
 (precise R@1 $0.283$, $0.483$, $0.333$ --- a $33$\,pt code spans three patches,
 and no single document vector then holds the string a query vector must match)
@@ -995,9 +1003,7 @@ attribution changes, nor whether parameter count or embedding quality is the
 operative variable. The decision-margin rule of Finding~3, verified on the
 generated corpus across eight caches, is now also measured on the two dense
 ViDoRe splits ($945$ real queries, ColPali-v1.3): $3$ of $698$ queries above
-$2\sigma$ flip ($0.4\%$), against $32$--$38\%$ below $0.5\sigma$. The ColPali run with the
-enlarged code was rendered with the code in the text flow, which also shifts
-the lines below it; the three ColSmol runs hold every other pixel fixed.
+$2\sigma$ flip ($0.4\%$), against $32$--$38\%$ below $0.5\sigma$.
 
 \emph{Generator realism.} On E3's pages ColPali-v1.3 scores \emph{below}
 ColSmol-256M (nDCG@5 $0.6954$ against $0.7823$). A $3$B reference encoder losing

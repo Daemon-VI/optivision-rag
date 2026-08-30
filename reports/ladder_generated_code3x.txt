@@ -1,0 +1,52 @@
+E3 ColPali-3B, generated_code3x: 60 pages x 1031 tokens, 61,860 vectors, 72 queries ({'precise': 60, 'topical': 12})
+
+geometry (all tokens)
+  rho = cos(d, sign d)      0.7999   (random reference 0.7979; uninformative by construction)
+  ||mean vector||           0.426   mean pairwise cos 0.182
+  dead sign bits (H<0.5)    1 of 128   total sign entropy 115.9 bits
+  covariance                participation ratio 26.7 of 128, top-8 share 0.44
+  grid patches blank (pixel) 78.5%   pairwise cos: blank 0.200  ink 0.124
+  query tokens whose best grid match is BLANK: float 39.0%  sign 47.0%   (distractor promotion)
+
+fitting codecs ... done (35s)
+
+codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
+----------------------------------------------------------------------------------------------------------------------------
+float32                          512.0   1.0x   0.6880  100.0% 0.389 1.000 | 1.000 1.000  1.00 1.00 |
+int8 (repo)                      128.0   4.0x   0.6886  100.1% 0.389 1.000 | 0.993 0.992  1.00 1.00 |
+2-bit LM, rotated                 32.0  16.0x   0.6795   98.8% 0.361 1.000 | 0.821 0.811  0.76 1.00 |
+sign(d)  [pipeline]               16.0  32.0x   0.6992  101.6% 0.417 1.000 | 0.706 0.698  0.49 1.00 |
+sign(d - mu)                      16.0  32.0x   0.6776   98.5% 0.361 1.000 | 0.710 0.715  0.83 1.00 | -0.0216 [-0.0649,+0.0202]
+sign(ITQ(d - mu))                 16.0  32.0x   0.6899  100.3% 0.375 1.000 | 0.748 0.742  0.74 1.00 | -0.0093 [-0.0642,+0.0435]
+centroid(K=3979)+1-bit residual   17.5  29.3x   0.6765   98.3% 0.347 1.000 | 0.849 0.838  0.71 1.00 | -0.0227 [-0.0787,+0.0347]
+
+per query family, nDCG@5 / R@1:
+  float32                         precise: 0.626/0.267  topical: 1.000/1.000
+  int8 (repo)                     precise: 0.626/0.267  topical: 1.000/1.000
+  2-bit LM, rotated               precise: 0.615/0.233  topical: 1.000/1.000
+  sign(d)  [pipeline]             precise: 0.639/0.300  topical: 1.000/1.000
+  sign(d - mu)                    precise: 0.613/0.233  topical: 1.000/1.000
+  sign(ITQ(d - mu))               precise: 0.628/0.250  topical: 1.000/1.000
+  centroid(K=3979)+1-bit residual precise: 0.612/0.217  topical: 1.000/1.000
+
+decision margin m = (s_gold - s_best_other)/s_gold under float: median -0.0076, IQR [-0.0234, +0.0138]; won by < 1% of score: 11.1% of queries, < 3%: 20.8%
+  by family: precise: -0.0141  topical: +0.4739
+  codec                            sigma (median) R@1 flips   flip rate by |m|/sigma:   <0.5     0.5-1      1-2       >2    AUC(m: kept|lost)
+  int8 (repo)                              0.0005         0       -          -          -         0%( 72)   nan
+  2-bit LM, rotated                        0.0139         8     33%(  9)   20%( 15)   11%( 19)    0%( 29)   0.86
+  sign(d)  [pipeline]                      0.0226        12     33%( 18)   30%( 20)    0%( 16)    0%( 18)   0.83
+  sign(d - mu)                             0.0221         4     15%( 20)    5%( 20)    0%( 12)    0%( 20)   0.92
+  sign(ITQ(d - mu))                        0.0205         9     24%( 17)   25%( 20)    0%( 12)    0%( 23)   0.90
+  centroid(K=3979)+1-bit residual          0.0110         7     25%(  8)    8%( 12)   12%( 17)    6%( 35)   0.85
+
+optivision prune config (272 tok/pg, 3.79x fewer vectors) under each codec, retention vs float full index:
+  float32                          nDCG@5 0.6858 ( 99.7%)     3.8x
+  int8 (repo)                      nDCG@5 0.6813 ( 99.0%)    15.1x
+  2-bit LM, rotated                nDCG@5 0.7044 (102.4%)    60.6x
+  sign(d)  [pipeline]              nDCG@5 0.6904 (100.3%)   121.2x
+  sign(d - mu)                     nDCG@5 0.6808 ( 99.0%)   121.2x
+  sign(ITQ(d - mu))                nDCG@5 0.6940 (100.9%)   121.2x
+  centroid(K=3979)+1-bit residual  nDCG@5 0.6807 ( 98.9%)   110.8x
+
+wrote reports/ladder_generated_code3x.json
+(40s)
