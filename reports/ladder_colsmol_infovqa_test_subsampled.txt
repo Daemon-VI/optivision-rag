@@ -1,0 +1,42 @@
+ColSmol-256M, infovqa_test_subsampled (E1 encoder on real pages): 500 pages x 347 tokens, 356,661 vectors, 494 queries
+
+geometry (all tokens)
+  rho = cos(d, sign d)      0.8008   (random reference 0.7979; uninformative by construction)
+  ||mean vector||           0.324   mean pairwise cos 0.103
+  dead sign bits (H<0.5)    0 of 128   total sign entropy 121.4 bits
+  covariance                participation ratio 49.8 of 128, top-8 share 0.30
+  grid patches blank (pixel) 10.2%   pairwise cos: blank 0.173  ink 0.105
+  query tokens whose best grid match is BLANK: float 6.5%  sign 6.9%   (distractor promotion)
+
+fitting codecs ... done (41s)
+
+codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
+----------------------------------------------------------------------------------------------------------------------------
+float32                          512.0   1.0x   0.8257  100.0% 0.767 0.872 | 1.000 1.000  1.00 1.00 |
+int8 (repo)                      128.0   4.0x   0.8272  100.2% 0.769 0.874 | 0.994 0.992  0.99 0.99 |
+2-bit LM, rotated                 32.0  16.0x   0.8183   99.1% 0.741 0.879 | 0.853 0.809  0.88 0.82 |
+sign(d)  [pipeline]               16.0  32.0x   0.8091   98.0% 0.743 0.862 | 0.745 0.693  0.86 0.73 |
+sign(d - mu)                      16.0  32.0x   0.8045   97.4% 0.735 0.864 | 0.737 0.681  0.83 0.71 | -0.0046 [-0.0172,+0.0079]
+sign(ITQ(d - mu))                 16.0  32.0x   0.7812   94.6% 0.694 0.848 | 0.753 0.698  0.82 0.72 | -0.0279 [-0.0442,-0.0111]
+centroid(K=4096)+1-bit residual   17.5  29.3x   0.8050   97.5% 0.727 0.868 | 0.746 0.696  0.84 0.74 | -0.0042 [-0.0198,+0.0118]
+
+decision margin m = (s_gold - s_best_other)/s_gold under float: median +0.0965, IQR [+0.0065, +0.1759]; won by < 1% of score: 3.2% of queries, < 3%: 8.3%
+  codec                            sigma (median) R@1 flips   flip rate by |m|/sigma:   <0.5     0.5-1      1-2       >2    AUC(m: kept|lost)
+  int8 (repo)                              0.0006         1     50%(  2)     -          -         0%(492)   nan
+  2-bit LM, rotated                        0.0180        25     30%( 23)   45%( 22)   15%( 41)    0%(408)   0.95
+  sign(d)  [pipeline]                      0.0324        28     36%( 39)   21%( 39)    8%( 63)    0%(353)   0.93
+  sign(d - mu)                             0.0339        36     40%( 40)   22%( 41)   11%( 66)    1%(347)   0.92
+  sign(ITQ(d - mu))                        0.0311        50     34%( 38)   34%( 35)   25%( 60)    3%(361)   0.90
+  centroid(K=4096)+1-bit residual          0.0327        36     41%( 39)   24%( 42)    9%( 64)    1%(349)   0.91
+
+optivision prune config (529 tok/pg, 0.66x fewer vectors) under each codec, retention vs float full index:
+  float32                          nDCG@5 0.8194 ( 99.2%)     0.7x
+  int8 (repo)                      nDCG@5 0.8211 ( 99.4%)     2.6x
+  2-bit LM, rotated                nDCG@5 0.8159 ( 98.8%)    10.5x
+  sign(d)  [pipeline]              nDCG@5 0.8094 ( 98.0%)    21.0x
+  sign(d - mu)                     nDCG@5 0.8051 ( 97.5%)    21.0x
+  sign(ITQ(d - mu))                nDCG@5 0.7930 ( 96.0%)    21.0x
+  centroid(K=4096)+1-bit residual  nDCG@5 0.7968 ( 96.5%)    19.2x
+
+wrote reports\ladder_colsmol_infovqa_test_subsampled.json
+(281s)

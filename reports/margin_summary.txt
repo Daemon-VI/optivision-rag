@@ -71,6 +71,15 @@
   int8              0.0005     0.431     0.444         0         1   100%( 1)    0%( 1)    0%( 6)    0%(64)
   sign(d): among 31 float winners, AUC(margin separates kept from lost) = 0.88; median margin kept +0.4236 vs lost +0.0044
 
+=== ColSmol infovqa: 500 pages x 347 tokens ===
+  float margin m (gold - best other, / gold score): all median +0.0965  IQR [+0.0065, +0.1759]   topical median +0.0965
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0324     0.767     0.743        20         8    36%(39)   21%(39)    8%(63)    0%(353)
+  sign(d-mu)        0.0339     0.767     0.735        26        10    40%(40)   22%(41)   11%(66)    1%(347)
+  2-bit             0.0179     0.767     0.753        13         6    29%(21)   26%(23)   12%(41)    0%(409)
+  int8              0.0006     0.767     0.769         0         1    50%( 2)    -        -        0%(492)
+  sign(d): among 379 float winners, AUC(margin separates kept from lost) = 0.93; median margin kept +0.1428 vs lost +0.0178
+
 === summary: median precise-query margin vs sign-codec noise (both as a fraction of the gold score) ===
 run                 margin(precise)  margin(topical)  sigma sign sigma 2-bit  sigma int8   one-bit R@1 loss on precise
 E1 tiled 1x                 -0.0005          +0.3069      0.0282      0.0149      0.0006   +0.167
@@ -81,3 +90,4 @@ tiled 0.4x                  -0.0065          +0.3176      0.0281      0.0158    
 untiled                     -0.0219          +0.2999      0.0341      0.0204      0.0008   +0.017
 ColPali generated (E3)          -0.0139          +0.4714      0.0251      0.0134      0.0005   +0.000
 ColPali 3x shifted          -0.0052          +0.4897      0.0218      0.0118      0.0005   +0.083
+ColSmol infovqa             +0.0965          +0.0965      0.0324      0.0179      0.0006   +0.024

@@ -1,0 +1,298 @@
+=== bench start 2026-08-23 22:32:17
+encoding corpus (once): 0/500
+[transformers] Model config: pad_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 128002. This may result in unexpected behavior.
+  25/500
+  50/500
+  75/500
+  100/500
+  125/500
+  150/500
+  175/500
+  200/500
+  225/500
+  250/500
+  275/500
+  300/500
+  325/500
+  350/500
+  375/500
+  400/500
+  425/500
+  450/500
+  475/500
+  500/500
+**Corpus**: 500 pages, 494 queries  
+**Encoder**: colsmol (dim 128)  
+**Tau**: rank agreement over a pool of 500 candidates, comparable across runs 
+only at a comparable pool. `Tau(k)` is the superseded top-10 shared-ids 
+statistic, kept because the paper's tables quote it  
+**Query encode**: 77.6 ms/query
+
+| Variant | Tok/pg | KB/pg | Compr. | nDCG@5 | R@1 | Hit@5 | Retain | Tau | 
+Tau(k) | q ms |
+|---|---|---|---|---|---|---|---|---|---|---|
+| baseline-float32 | 713.3 | 365.22 | 1.0x | 0.8257 | 0.7672 | 0.8725 | 100.0% 
+| 1.000 | 1.000 | 36.54 |
+| binary-only | 713.3 | 11.41 | 32.0x | 0.8091 | 0.7429 | 0.8623 | 98.0% | 
+0.745 | 0.582 | 34.25 |
+| int8-only | 713.3 | 91.31 | 4.0x | 0.8272 | 0.7692 | 0.8745 | 100.2% | 0.994 
+| 0.985 | 34.09 |
+| spatial-only | 695.7 | 356.22 | 1.0x | 0.8259 | 0.7672 | 0.8725 | 100.0% | 
+0.996 | 0.993 | 33.50 |
+| spatial+redundancy | 529.5 | 271.09 | 1.3x | 0.8194 | 0.7530 | 0.8725 | 99.2%
+| 0.953 | 0.891 | 25.74 |
+| prune+int8 | 529.5 | 67.77 | 5.4x | 0.8211 | 0.7551 | 0.8745 | 99.4% | 0.952 
+| 0.887 | 25.75 |
+| optivision | 529.5 | 8.47 | 43.1x | 0.8094 | 0.7368 | 0.8664 | 98.0% | 0.742 
+| 0.572 | 25.56 |
+| optivision-aggressive | 193.3 | 3.09 | 118.1x | 0.7218 | 0.6417 | 0.7915 | 
+87.4% | 0.634 | 0.468 | 9.66 |
+| keep-50pct | 330.3 | 5.28 | 69.1x | 0.7715 | 0.6862 | 0.8441 | 93.4% | 0.688 
+| 0.536 | 16.15 |
+| keep-40pct | 286.8 | 4.59 | 79.6x | 0.7527 | 0.6700 | 0.8239 | 91.2% | 0.670 
+| 0.512 | 15.63 |
+| keep-30pct | 242.4 | 3.88 | 94.2x | 0.7256 | 0.6457 | 0.7915 | 87.9% | 0.649 
+| 0.495 | 12.11 |
+| keep-20pct | 197.0 | 3.15 | 115.9x | 0.6954 | 0.6093 | 0.7652 | 84.2% | 0.621
+| 0.468 | 9.89 |
+| keep-10pct | 150.7 | 2.41 | 151.5x | 0.6885 | 0.5951 | 0.7652 | 83.4% | 0.585
+| 0.464 | 6.04 |
+| cb-keep-50pct | 345.5 | 5.53 | 66.1x | 0.7926 | 0.7166 | 0.8583 | 96.0% | 
+0.718 | 0.554 | 16.94 |
+| cb-random-50pct | 344.7 | 5.52 | 66.2x | 0.7874 | 0.7146 | 0.8462 | 95.4% | 
+0.714 | 0.541 | 16.94 |
+| cb-kmeans-50pct | 338.4 | 5.41 | 67.5x | 0.7654 | 0.6903 | 0.8320 | 92.7% | 
+0.700 | 0.527 | 17.03 |
+| cb-keep-30pct | 261.9 | 4.19 | 87.2x | 0.7731 | 0.6883 | 0.8462 | 93.6% | 
+0.698 | 0.526 | 13.08 |
+| cb-random-30pct | 261.2 | 4.18 | 87.4x | 0.7709 | 0.6923 | 0.8360 | 93.4% | 
+0.692 | 0.523 | 13.00 |
+| cb-kmeans-30pct | 255.7 | 4.09 | 89.3x | 0.7471 | 0.6579 | 0.8279 | 90.5% | 
+0.679 | 0.514 | 12.67 |
+| cb-keep-10pct | 160.5 | 2.57 | 142.2x | 0.7128 | 0.6032 | 0.8016 | 86.3% | 
+0.630 | 0.453 | 6.57 |
+| cb-random-10pct | 160.0 | 2.56 | 142.7x | 0.7094 | 0.6134 | 0.7874 | 85.9% | 
+0.624 | 0.466 | 6.49 |
+| cb-kmeans-10pct | 159.5 | 2.55 | 143.1x | 0.6798 | 0.5668 | 0.7794 | 82.3% | 
+0.610 | 0.422 | 6.39 |
+
+- `baseline-float32` — ColPali as published: every patch, full precision
+- `binary-only` — quantization alone (32x)
+- `int8-only` — scalar quantization alone (4x)
+- `spatial-only` — blank-patch pruning alone
+- `spatial+redundancy` — both pruning stages, full precision
+- `prune+int8` — pruning with the cheaper quantizer — the quality-first option
+- `optivision` — full pipeline: prune + binary
+- `optivision-aggressive` — fixed 25% token budget
+- `keep-50pct` — top 50% most salient patches, binary
+- `keep-40pct` — top 40% most salient patches, binary
+- `keep-30pct` — top 30% most salient patches, binary
+- `keep-20pct` — top 20% most salient patches, binary
+- `keep-10pct` — top 10% most salient patches, binary
+- `cb-keep-50pct` — top 50% by codebook wins, binary — matches keep-50pct
+- `cb-random-50pct` — control: probes drawn at random, top 50%, binary
+- `cb-kmeans-50pct` — control: probes fitted to patch density, top 50%, binary
+- `cb-keep-30pct` — top 30% by codebook wins, binary — matches keep-30pct
+- `cb-random-30pct` — control: probes drawn at random, top 30%, binary
+- `cb-kmeans-30pct` — control: probes fitted to patch density, top 30%, binary
+- `cb-keep-10pct` — top 10% by codebook wins, binary — matches keep-10pct
+- `cb-random-10pct` — control: probes drawn at random, top 10%, binary
+- `cb-kmeans-10pct` — control: probes fitted to patch density, top 10%, binary
+
+wrote reports\colsmol_infovqa_test_subsampled\benchmark.json  
+reports\colsmol_infovqa_test_subsampled\benchmark.md
+=== bench done 2026-08-24 01:24:20
+=== winner_stats 2026-08-24 01:24:20
+500 pages, 494 queries, 356,661 patches (713 per page)
+
+patches that ever win a MaxSim, over all 494 queries: 274,557 / 356,661 = 77.0%
+  per page: median 80.5%  min 50.7%  max 96.5%
+  headroom if the dead set were free to drop: 1.3x
+
+winner set fitted on 247 queries: 236,892 patches (66.4%, 1.5x smaller index)
+nDCG@5 on the 247 held-out queries
+  full index         0.8300
+  winners only       0.8310   (100.1% retained)
+
+with the one-bit codec on top
+  binary, full index   0.8104
+  binary, winners only 0.8111
+=== geometry_stats 2026-08-24 01:26:40
+ColSmol-256M on infovqa_test_subsampled: 500 pages, 356,661 patches, dim 128
+
+  rho = cos(d, sign(d))   mean 0.8008   std 0.0185
+                          p05  0.7696   p95 0.8303
+  random-unit reference   0.7979
+  above reference         57.2% of patches
+  (mass concentration sampled over 60,000 of 356,661 patches)
+  dims holding half the L1 mass   median 31 of 128
+
+  (flip rate over 64 of 494 queries)
+
+  argmax flips under one-bit codes   67.6% of 793,500 (query token, page) pairs
+  ^ this is the quantity Section VI-A's arg max argument is about
+=== probe_eval 2026-08-24 01:26:51
+(using 200 of 494 queries)
+500 pages x 256 patches, 494 queries (100 fit / 100 held out)
+
+full index        nDCG@5 0.7934
+oracle winners    nDCG@5 0.7931   55.2% of patches  <- the ceiling
+
+selector                      keep 30%              keep 10%
+                 nDCG@5  oracle recall nDCG@5  oracle recall
+------------------------------------------------------------
+pixel                   0.6137   14.7%        0.4662    5.0%
+probe:kmeans            0.5189   15.3%        0.2540    5.4%
+probe:random            0.7026   17.7%        0.4766    6.4%
+probe:farthest          0.6916   18.0%        0.3006    6.7%
+
+nDCG@5 is on held-out queries; oracle recall is of the winner set fitted on the
+other half. A proxy has to beat `pixel` here before it is worth a GPU.
+=== codec_ladder 2026-08-24 01:27:21
+ColSmol-256M, infovqa_test_subsampled (E1 encoder on real pages): 500 pages x 347 tokens, 356,661 vectors, 494 queries
+
+geometry (all tokens)
+  rho = cos(d, sign d)      0.8008   (random reference 0.7979; uninformative by construction)
+  ||mean vector||           0.324   mean pairwise cos 0.103
+  dead sign bits (H<0.5)    0 of 128   total sign entropy 121.4 bits
+  covariance                participation ratio 49.8 of 128, top-8 share 0.30
+  grid patches blank (pixel) 10.2%   pairwise cos: blank 0.173  ink 0.105
+  query tokens whose best grid match is BLANK: float 6.5%  sign 6.9%   (distractor promotion)
+
+fitting codecs ... done (41s)
+
+codec                            B/vec  compr   nDCG@5  retain   R@1 hit@5 |   tau tauAP top1= ov@5 | vs sign: diff [95% CI]
+----------------------------------------------------------------------------------------------------------------------------
+float32                          512.0   1.0x   0.8257  100.0% 0.767 0.872 | 1.000 1.000  1.00 1.00 |
+int8 (repo)                      128.0   4.0x   0.8272  100.2% 0.769 0.874 | 0.994 0.992  0.99 0.99 |
+2-bit LM, rotated                 32.0  16.0x   0.8183   99.1% 0.741 0.879 | 0.853 0.809  0.88 0.82 |
+sign(d)  [pipeline]               16.0  32.0x   0.8091   98.0% 0.743 0.862 | 0.745 0.693  0.86 0.73 |
+sign(d - mu)                      16.0  32.0x   0.8045   97.4% 0.735 0.864 | 0.737 0.681  0.83 0.71 | -0.0046 [-0.0172,+0.0079]
+sign(ITQ(d - mu))                 16.0  32.0x   0.7812   94.6% 0.694 0.848 | 0.753 0.698  0.82 0.72 | -0.0279 [-0.0442,-0.0111]
+centroid(K=4096)+1-bit residual   17.5  29.3x   0.8050   97.5% 0.727 0.868 | 0.746 0.696  0.84 0.74 | -0.0042 [-0.0198,+0.0118]
+
+decision margin m = (s_gold - s_best_other)/s_gold under float: median +0.0965, IQR [+0.0065, +0.1759]; won by < 1% of score: 3.2% of queries, < 3%: 8.3%
+  codec                            sigma (median) R@1 flips   flip rate by |m|/sigma:   <0.5     0.5-1      1-2       >2    AUC(m: kept|lost)
+  int8 (repo)                              0.0006         1     50%(  2)     -          -         0%(492)   nan
+  2-bit LM, rotated                        0.0180        25     30%( 23)   45%( 22)   15%( 41)    0%(408)   0.95
+  sign(d)  [pipeline]                      0.0324        28     36%( 39)   21%( 39)    8%( 63)    0%(353)   0.93
+  sign(d - mu)                             0.0339        36     40%( 40)   22%( 41)   11%( 66)    1%(347)   0.92
+  sign(ITQ(d - mu))                        0.0311        50     34%( 38)   34%( 35)   25%( 60)    3%(361)   0.90
+  centroid(K=4096)+1-bit residual          0.0327        36     41%( 39)   24%( 42)    9%( 64)    1%(349)   0.91
+
+optivision prune config (529 tok/pg, 0.66x fewer vectors) under each codec, retention vs float full index:
+  float32                          nDCG@5 0.8194 ( 99.2%)     0.7x
+  int8 (repo)                      nDCG@5 0.8211 ( 99.4%)     2.6x
+  2-bit LM, rotated                nDCG@5 0.8159 ( 98.8%)    10.5x
+  sign(d)  [pipeline]              nDCG@5 0.8094 ( 98.0%)    21.0x
+  sign(d - mu)                     nDCG@5 0.8051 ( 97.5%)    21.0x
+  sign(ITQ(d - mu))                nDCG@5 0.7930 ( 96.0%)    21.0x
+  centroid(K=4096)+1-bit residual  nDCG@5 0.7968 ( 96.5%)    19.2x
+
+wrote reports\ladder_colsmol_infovqa_test_subsampled.json
+(281s)
+=== margin analysis (q9) and two-tier rescoring (q11) 2026-08-24 01:32:02
+
+=== E1 tiled 1x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0005  IQR [-0.0069, +0.0085]   topical median +0.3069
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0282     0.569     0.417        13         2    32%(40)    7%(15)   14%( 7)    0%(10)
+  sign(d-mu)        0.0285     0.569     0.472        15         8    42%(40)   36%(11)   18%(11)    0%(10)
+  2-bit             0.0149     0.569     0.472        11         4    29%(28)   23%(13)   29%(14)    0%(17)
+  int8              0.0006     0.569     0.569         0         0     0%( 2)    -        0%( 2)    0%(68)
+  sign(d): among 41 float winners, AUC(margin separates kept from lost) = 0.78; median margin kept +0.0243 vs lost +0.0070
+
+=== tiled 3x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0031  IQR [-0.0099, +0.0017]   topical median +0.3083
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0270     0.444     0.389         9         5    32%(40)    6%(16)    0%( 6)    0%(10)
+  sign(d-mu)        0.0286     0.444     0.472         8        10    39%(41)    0%(12)   22%( 9)    0%(10)
+  2-bit             0.0137     0.444     0.444         7         7    41%(29)    0%( 8)    6%(16)    5%(19)
+  int8              0.0006     0.444     0.431         1         0     0%( 2)   50%( 2)    0%( 2)    0%(66)
+  sign(d): among 32 float winners, AUC(margin separates kept from lost) = 0.90; median margin kept +0.0304 vs lost +0.0021
+
+=== tiled 0.4x: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0065  IQR [-0.0195, +0.0009]   topical median +0.3176
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0281     0.403     0.347        11         7    41%(32)   29%(17)    0%(10)    0%(13)
+  sign(d-mu)        0.0297     0.403     0.347         6         2    18%(39)    0%(11)   10%(10)    0%(12)
+  2-bit             0.0158     0.403     0.389         7         6    33%(21)   40%(15)    0%(16)    0%(20)
+  int8              0.0007     0.403     0.389         2         1   100%( 2)   50%( 2)    -        0%(68)
+  sign(d): among 29 float winners, AUC(margin separates kept from lost) = 0.94; median margin kept +0.0728 vs lost +0.0080
+
+=== 3x shifted: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0018  IQR [-0.0098, +0.0054]   topical median +0.3124
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0293     0.500     0.431         7         2    19%(42)    0%(13)   17%( 6)    0%(11)
+  sign(d-mu)        0.0259     0.500     0.444        11         7    36%(42)   14%(14)   20%( 5)    0%(11)
+  2-bit             0.0148     0.500     0.417        10         4    33%(27)   24%(17)    9%(11)    0%(17)
+  int8              0.0006     0.500     0.514         0         1   100%( 1)    -        -        0%(71)
+  sign(d): among 36 float winners, AUC(margin separates kept from lost) = 0.81; median margin kept +0.0183 vs lost +0.0033
+
+=== 0.4x incl. label: 60 pages x 875 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0020  IQR [-0.0093, +0.0036]   topical median +0.3085
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0318     0.486     0.375        15         7    42%(45)   14%( 7)   20%(10)    0%(10)
+  sign(d-mu)        0.0278     0.486     0.417        15        10    44%(43)   45%(11)   12%( 8)    0%(10)
+  2-bit             0.0161     0.486     0.431        10         6    40%(25)   22%(18)    8%(12)    6%(17)
+  int8              0.0006     0.486     0.472         1         0     0%( 2)  100%( 1)    0%( 2)    0%(67)
+  sign(d): among 35 float winners, AUC(margin separates kept from lost) = 0.89; median margin kept +0.0667 vs lost +0.0061
+
+=== untiled: 60 pages x 79 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0219  IQR [-0.0459, -0.0023]   topical median +0.2999
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0341     0.333     0.306         8         6    53%(19)    0%(10)   17%(23)    0%(20)
+  sign(d-mu)        0.0417     0.333     0.319         7         6    26%(19)   20%(15)   21%(19)    5%(19)
+  2-bit             0.0204     0.333     0.306         3         1    22%( 9)   25%( 8)    0%(17)    0%(38)
+  int8              0.0008     0.333     0.333         0         0     0%( 1)    -        -        0%(71)
+  sign(d): among 24 float winners, AUC(margin separates kept from lost) = 0.95; median margin kept +0.1012 vs lost +0.0104
+
+=== ColPali generated (E3): 60 pages x 1031 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0139  IQR [-0.0261, -0.0003]   topical median +0.4714
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0251     0.375     0.375         7         7    43%(21)   21%(19)    7%(15)    0%(17)
+  sign(d-mu)        0.0259     0.375     0.389         5         6    30%(20)   17%(24)    9%(11)    0%(17)
+  2-bit             0.0134     0.375     0.361         4         3    27%(11)    0%( 9)   14%(22)    3%(30)
+  int8              0.0005     0.375     0.375         1         1   100%( 1)   50%( 2)    -        0%(69)
+  sign(d): among 27 float winners, AUC(margin separates kept from lost) = 0.86; median margin kept +0.4159 vs lost +0.0111
+
+=== ColPali 3x shifted: 60 pages x 1031 tokens ===
+  float margin m (gold - best other, / gold score): precise median -0.0052  IQR [-0.0179, +0.0026]   topical median +0.4897
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0218     0.431     0.361        10         5    40%(30)   19%(16)    0%(11)    0%(15)
+  sign(d-mu)        0.0230     0.431     0.375         9         5    35%(31)   11%(19)   14%( 7)    0%(15)
+  2-bit             0.0118     0.431     0.361        11         6    44%(25)   56%( 9)    9%(11)    0%(27)
+  int8              0.0005     0.431     0.444         0         1   100%( 1)    0%( 1)    0%( 6)    0%(64)
+  sign(d): among 31 float winners, AUC(margin separates kept from lost) = 0.88; median margin kept +0.4236 vs lost +0.0044
+
+=== ColSmol infovqa: 500 pages x 347 tokens ===
+  float margin m (gold - best other, / gold score): all median +0.0965  IQR [+0.0065, +0.1759]   topical median +0.0965
+  codec        noise sigma R@1 float R@1 codec won->lost lost->won  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2
+  sign(d)           0.0324     0.767     0.743        20         8    36%(39)   21%(39)    8%(63)    0%(353)
+  sign(d-mu)        0.0339     0.767     0.735        26        10    40%(40)   22%(41)   11%(66)    1%(347)
+  2-bit             0.0179     0.767     0.753        13         6    29%(21)   26%(23)   12%(41)    0%(409)
+  int8              0.0006     0.767     0.769         0         1    50%( 2)    -        -        0%(492)
+  sign(d): among 379 float winners, AUC(margin separates kept from lost) = 0.93; median margin kept +0.1428 vs lost +0.0178
+
+=== summary: median precise-query margin vs sign-codec noise (both as a fraction of the gold score) ===
+run                 margin(precise)  margin(topical)  sigma sign sigma 2-bit  sigma int8   one-bit R@1 loss on precise
+E1 tiled 1x                 -0.0005          +0.3069      0.0282      0.0149      0.0006   +0.167
+tiled 3x                    -0.0031          +0.3083      0.0270      0.0137      0.0006   +0.033
+tiled 0.4x                  -0.0065          +0.3176      0.0281      0.0158      0.0007   +0.050
+3x shifted                  -0.0018          +0.3124      0.0293      0.0148      0.0006   +0.067
+0.4x incl. label            -0.0020          +0.3085      0.0318      0.0161      0.0006   +0.117
+untiled                     -0.0219          +0.2999      0.0341      0.0204      0.0008   +0.017
+ColPali generated (E3)          -0.0139          +0.4714      0.0251      0.0134      0.0005   +0.000
+ColPali 3x shifted          -0.0052          +0.4897      0.0218      0.0118      0.0005   +0.083
+ColSmol infovqa             +0.0965          +0.0965      0.0324      0.0179      0.0006   +0.024
+cache                 float binary all rescored | margin-triggered: fraction rescored -> nDCG@5 (random control at same fraction)
+ColSmol 1x (E1)      0.7823 0.6875       0.7756 |  20%: 0.7108 (0.7058)  40%: 0.7326 (0.7223)  60%: 0.7559 (0.7382)
+ColSmol 3x           0.7181 0.6532       0.7030 |  20%: 0.6785 (0.6625)  40%: 0.6708 (0.6724)  60%: 0.6688 (0.6837)
+ColSmol 0.4x         0.7006 0.6335       0.6882 |  20%: 0.6377 (0.6446)  40%: 0.6465 (0.6550)  60%: 0.6475 (0.6677)
+ColPali 1x (E3)      0.6954 0.6845       0.6954 |  20%: 0.6821 (0.6862)  40%: 0.6868 (0.6896)  60%: 0.6920 (0.6911)
+ColPali 3x shifted   0.7194 0.6899       0.7208 |  20%: 0.7047 (0.6966)  40%: 0.7257 (0.7045)  60%: 0.7199 (0.7088)
+ColSmol infovqa      0.8257 0.8091       0.8246 |  20%: 0.8170 (0.8121)  40%: 0.8227 (0.8153)  60%: 0.8246 (0.8186)
+
+binary shortlist depth K=10; 'all rescored' = two-tier ceiling (every query's top-10 reordered by int8).
+A trigger that works beats the random control at the same fraction and approaches the ceiling well before 100%.
+=== all done 2026-08-24 01:37:11

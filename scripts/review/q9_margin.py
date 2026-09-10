@@ -40,6 +40,7 @@ RUNS = [
     ("ColPali generated (E3)", ROOT / "data/cache/colpali_generated.npz", ROOT / "data/corpus"),
     ("ColPali 3x shifted", ROOT / "data/cache/colpali_generated_code3x_shifted.npz", ROOT / "data/corpus"),
     ("ColPali 3x clean", ROOT / "data/cache/colpali_generated_code3x.npz", ROOT / "data/corpus"),
+    ("ColSmol infovqa", ROOT / "data/cache/colsmol_infovqa_test_subsampled.npz", ROOT / "data/vidore_infovqa_test_subsampled"),
 ]
 
 
@@ -52,7 +53,7 @@ def load(cache, corpus_dir):
     rel = [rel[t] for t in texts]
     ids = [e.ref.page_id for e in corpus.encodings]
     gold = [np.array([i for i, p in enumerate(ids) if p in set(r["relevant"])]) for r in rel]
-    return [e.embeddings for e in corpus.encodings], queries, gold, np.array([r["type"] for r in rel])
+    return [e.embeddings for e in corpus.encodings], queries, gold, np.array([r.get("type", "all") for r in rel])
 
 
 def scores(pages, q):
@@ -105,9 +106,10 @@ for label, cache, corpus_dir in RUNS:
 
     print(f"\n=== {label}: {len(pages)} pages x {pages[0].shape[0]} tokens ===")
     r = res["sign(d)"]
-    pm = family == "precise"
-    print(f"  float margin m (gold - best other, / gold score): precise median {np.median(r[pm, 0]):+.4f}  "
-          f"IQR [{np.percentile(r[pm, 0], 25):+.4f}, {np.percentile(r[pm, 0], 75):+.4f}]   topical median {np.median(r[~pm, 0]):+.4f}")
+    pm = family == "precise" if (family == "precise").any() else np.ones(len(family), bool)
+    tm = ~pm if (~pm).any() else pm
+    print(f"  float margin m (gold - best other, / gold score): {'precise' if (family == 'precise').any() else 'all'} median {np.median(r[pm, 0]):+.4f}  "
+          f"IQR [{np.percentile(r[pm, 0], 25):+.4f}, {np.percentile(r[pm, 0], 75):+.4f}]   topical median {np.median(r[tm, 0]):+.4f}")
     print(f"  {'codec':<12} {'noise sigma':>11} {'R@1 float':>9} {'R@1 codec':>9} {'won->lost':>9} {'lost->won':>9}  flip rate by |m|/sigma bin: <0.5  0.5-1  1-2  >2")
     for cname, r in res.items():
         won_f, won_c = r[:, 2] > 0, r[:, 3] > 0
@@ -133,8 +135,9 @@ for label, cache, corpus_dir in RUNS:
 print("\n=== summary: median precise-query margin vs sign-codec noise (both as a fraction of the gold score) ===")
 print(f"{'run':<18} {'margin(precise)':>16} {'margin(topical)':>16} {'sigma sign':>11} {'sigma 2-bit':>11} {'sigma int8':>11}   one-bit R@1 loss on precise")
 for label, (res, family) in summary.items():
-    pm = family == "precise"
+    pm = family == "precise" if (family == "precise").any() else np.ones(len(family), bool)
+    tm = ~pm if (~pm).any() else pm
     r = res["sign(d)"]
     loss = r[pm, 2].mean() - r[pm, 3].mean()
-    print(f"{label:<18} {np.median(r[pm, 0]):>+16.4f} {np.median(r[~pm, 0]):>+16.4f} {np.median(r[:, 1]):>11.4f} "
+    print(f"{label:<18} {np.median(r[pm, 0]):>+16.4f} {np.median(r[tm, 0]):>+16.4f} {np.median(r[:, 1]):>11.4f} "
           f"{np.median(res['2-bit'][:, 1]):>11.4f} {np.median(res['int8'][:, 1]):>11.4f}   {loss:+.3f}")
