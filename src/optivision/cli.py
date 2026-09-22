@@ -24,6 +24,24 @@ app = typer.Typer(add_completion=False, help="OptiVision RAG — extreme token c
 console = Console()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        from . import __version__
+
+        print(f"optivision-rag {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _main(
+    version: bool = typer.Option(
+        False, "--version", "-V", callback=_version_callback, is_eager=True,
+        help="Show the installed version and exit.",
+    ),
+) -> None:
+    """OptiVision RAG — extreme token compression for VLM retrieval"""
+
+
 def _load_cfg(config: str | None) -> Config:
     cfg = Config.load(config)
     return cfg

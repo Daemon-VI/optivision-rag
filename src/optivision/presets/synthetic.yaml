@@ -1,0 +1,25 @@
+# Offline configuration: no model download, no GPU.
+# Exercises the full pruning/compression/index/search path on generated pages.
+encoder:
+  backend: synthetic
+  synthetic_dim: 128
+  synthetic_grid: 32
+  synthetic_layout: data/corpus/layout.json
+pruning:
+  enabled: true
+  spatial: true
+  blank_threshold: 0.02
+  min_keep: 16
+  dilate: 1
+  redundancy: true
+  redundancy_threshold: 0.92
+  redundancy_merge: true
+compression:
+  enabled: true
+  method: binary
+  asymmetric: true
+index:
+  backend: numpy
+  path: data/index/synthetic
+search:
+  top_k: 5

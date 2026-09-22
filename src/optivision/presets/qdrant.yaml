@@ -1,0 +1,18 @@
+# Same pipeline, stored in Qdrant instead of the reference numpy index.
+# Leave qdrant_url null for embedded local mode, or point it at a server:
+#   docker run -p 6333:6333 qdrant/qdrant
+encoder:
+  backend: colsmol
+pruning:
+  enabled: true
+compression:
+  enabled: true
+  method: binary
+index:
+  backend: qdrant
+  path: data/index/qdrant_run
+  collection: optivision
+  qdrant_url: null
+  on_disk: true
+search:
+  top_k: 5

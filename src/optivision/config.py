@@ -148,9 +148,24 @@ class Config:
 
     @classmethod
     def load(cls, path: str | Path | None) -> Config:
+        """Load a YAML config file, or a bundled preset by name.
+
+        ``path`` may be a file on disk or the name of a preset shipped with the
+        package (``synthetic``, ``colsmol``, ``colpali``, ``qdrant``), so the CLI
+        works from a pip install with no repository checkout.
+        """
         if path is None:
             return cls()
-        with open(path, encoding="utf-8") as fh:
+        p = Path(path)
+        if not p.is_file():
+            preset = _preset_path(str(path))
+            if preset is None:
+                raise FileNotFoundError(
+                    f"config not found: {path!s} "
+                    f"(bundled presets: {', '.join(available_presets())})"
+                )
+            p = preset
+        with open(p, encoding="utf-8") as fh:
             return cls.from_dict(yaml.safe_load(fh))
 
     def to_dict(self) -> dict[str, Any]:
@@ -169,3 +184,17 @@ class Config:
                 raise ValueError(f"unknown config section: {name}")
             data[name].update(updates)
         return Config.from_dict(data)
+
+
+_PRESET_DIR = Path(__file__).with_name("presets")
+
+
+def available_presets() -> list[str]:
+    """Names of the config presets bundled with the package."""
+    return sorted(f.stem for f in _PRESET_DIR.glob("*.yaml"))
+
+
+def _preset_path(name: str) -> Path | None:
+    stem = Path(name).stem if name.endswith((".yaml", ".yml")) else name
+    candidate = _PRESET_DIR / f"{stem}.yaml"
+    return candidate if candidate.is_file() else None

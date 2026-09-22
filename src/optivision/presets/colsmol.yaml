@@ -1,0 +1,25 @@
+# CPU-friendly real model: ColSmol-256M (~0.5 GB download).
+# This is the default for an 8 GB laptop with no GPU.
+encoder:
+  backend: colsmol
+  device: auto
+  dtype: auto
+pruning:
+  enabled: true
+  spatial: true
+  blank_threshold: 0.02
+  min_keep: 8
+  dilate: 1
+  redundancy: true
+  redundancy_threshold: 0.92
+compression:
+  enabled: true
+  method: binary
+index:
+  backend: numpy
+  path: data/index/colsmol
+ingest:
+  dpi: 150
+  max_side: 1536
+search:
+  top_k: 5

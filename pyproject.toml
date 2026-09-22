@@ -1,13 +1,27 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "optivision-rag"
-version = "0.1.0"
+dynamic = ["version"]
 description = "OptiVision RAG: Extreme Token Compression for Vision-Language Models"
-readme = "README.md"
+readme = "PACKAGE.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["rag", "colpali", "colqwen", "late-interaction", "vision-language", "retrieval", "quantization", "token-pruning", "qdrant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Indexing",
+]
 authors = [
     { name = "T. Rithik Krishna" },
     { name = "Amgovath Navanitha" },
@@ -25,15 +39,27 @@ dependencies = [
 
 [project.optional-dependencies]
 vlm = ["torch>=2.2", "colpali-engine>=0.3.10", "transformers>=4.46"]
+corpus = ["reportlab>=4"]
 bench = ["reportlab>=4", "datasets>=2.19"]
 app = ["streamlit>=1.34"]
 dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.urls]
+Homepage = "https://github.com/Daemon-VI/optivision-rag"
+Repository = "https://github.com/Daemon-VI/optivision-rag"
+Issues = "https://github.com/Daemon-VI/optivision-rag/issues"
 
 [project.scripts]
 optivision = "optivision.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+optivision = ["presets/*.yaml"]
+
+[tool.setuptools.dynamic]
+version = { attr = "optivision.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
