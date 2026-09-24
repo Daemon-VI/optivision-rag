@@ -1,0 +1,75 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One failing cell should not hide whether the others pass.
+      fail-fast: false
+      matrix:
+        # The oldest supported Python and the newest one.
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install
+        run: python -m pip install -e ".[dev,corpus]"
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Lint
+        if: matrix.python == '3.13'
+        run: python -m ruff check src tests
+
+      - name: Build
+        if: matrix.python == '3.13'
+        run: |
+          python -m pip install build
+          python -m build
+
+  node:
+    name: npm launcher (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Build the wheel the launcher will install
+        run: |
+          python -m pip install build
+          python -m build --wheel
+
+      # The launcher pip-installs the PyPI release of its own version into a private venv.
+      # Pointing OPTIVISION_PIP_SPEC at the wheel just built tests the launcher end to end
+      # (make-corpus, index, search on the bundled synthetic preset) before anything is
+      # on PyPI.
+      - name: Launcher smoke test against the built wheel
+        shell: bash
+        working-directory: npm
+        run: |
+          wheel_uri=$(python -c "import glob, pathlib; print(pathlib.Path(glob.glob('../dist/*.whl')[0]).resolve().as_uri())")
+          OPTIVISION_PIP_SPEC="optivision-rag[corpus] @ ${wheel_uri}" npm test

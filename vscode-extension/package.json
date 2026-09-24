@@ -1,0 +1,103 @@
+{
+  "name": "optivision-rag",
+  "displayName": "OptiVision RAG — Compression Control Panel",
+  "description": "Run the optivision CLI (make-corpus, index, search, explain, bench) from a panel in VS Code. Detects or installs the Python package for you.",
+  "version": "0.1.0",
+  "publisher": "daemon-vi",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "rag",
+    "retrieval",
+    "vision-language",
+    "colpali",
+    "document-retrieval",
+    "token-compression"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Daemon-VI/optivision-rag.git",
+    "directory": "vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/Daemon-VI/optivision-rag/issues"
+  },
+  "homepage": "https://github.com/Daemon-VI/optivision-rag#readme",
+  "galleryBanner": {
+    "color": "#0F1A2B",
+    "theme": "dark"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "OptiVision RAG",
+      "properties": {
+        "optivision.command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "How to run the CLI, as a command plus fixed arguments. Leave empty to auto-detect: an installed `optivision` (on PATH), else `python -m optivision.cli` / `python3 -m optivision.cli` / `py -3 -m optivision.cli`. Example: `[\"python\", \"-m\", \"optivision.cli\"]`."
+        },
+        "optivision.configPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Default `--config` passed to `index` / `search` / `stats` / `explain` / `bench` when the panel's own Config field is left blank. Empty uses the CLI's own default config."
+        },
+        "optivision.cwd": {
+          "type": "string",
+          "default": "",
+          "description": "Working directory for the CLI. Empty means the first workspace folder, or your home folder when none is open."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "optivision.openPanel",
+        "title": "OptiVision RAG: Open Control Panel",
+        "category": "OptiVision RAG",
+        "icon": "$(layout-panel)"
+      },
+      {
+        "command": "optivision.installCli",
+        "title": "OptiVision RAG: Install via pip",
+        "category": "OptiVision RAG",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "optivision.showLog",
+        "title": "OptiVision RAG: Show Log",
+        "category": "OptiVision RAG",
+        "icon": "$(output)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/vsce": "^2.24.0",
+    "eslint": "^8.57.0",
+    "ovsx": "^0.9.0",
+    "typescript": "^5.4.0"
+  }
+}
