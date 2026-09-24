@@ -218,6 +218,29 @@ output as a demonstration result would misrepresent the project.
 
 ## Install
 
+From PyPI, as a library and the `optivision` CLI:
+
+```bash
+pip install optivision-rag             # CLI + the offline synthetic backend, no model download
+pip install "optivision-rag[corpus]"   # + make-corpus (reportlab)
+pip install "optivision-rag[vlm]"      # + the real ColSmol / ColPali / ColQwen2 encoders (torch)
+```
+
+The example configs ship inside the package as presets, so `-c synthetic`, `-c colsmol`,
+`-c colpali` and `-c qdrant` work without a clone.
+
+Without installing anything, `npx optivision-rag --help` runs the same CLI: it installs the
+matching PyPI release into a private virtualenv on first use (Python 3.10+ required; it is a
+launcher, not a JS port).
+
+A VS Code extension, `daemon-vi.optivision-rag` (Marketplace and Open VSX), puts the CLI's
+commands in a control panel. It drives whichever `optivision` is on your PATH, so install the
+package first. Its source is in [vscode-extension/](vscode-extension/).
+
+Release steps for maintainers are in [docs/RELEASING.md](docs/RELEASING.md).
+
+For development, from a clone:
+
 ```bash
 python -m venv .venv
 .venv/Scripts/activate          # Windows;  source .venv/bin/activate elsewhere
