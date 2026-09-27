@@ -64,7 +64,8 @@ _MODELS: list[ModelInfo] = [
     ModelInfo("colbert-ir/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
               UNVERIFIED, "text late interaction; loading path not exercised here"),
     ModelInfo("answerdotai/answerai-colbert-small-v1", "colbert", "text", "sentence-transformers", 96,
-              UNVERIFIED, "model card documents sentence-transformers MultiVectorEncoder"),
+              MEASURED, "BEIR SciFact (5,183 docs / 300 queries) via sentence-transformers 6.1.0 on "
+              "2026-09-27; float nDCG@10 74.56 vs 74.77 on the model card; reports/universal/text"),
     ModelInfo("lightonai/GTE-ModernColBERT-v1", "colbert", "text", "sentence-transformers", 128,
               UNVERIFIED, "PyLate / sentence-transformers model; not exercised here"),
 ]
@@ -132,13 +133,15 @@ class PageEncoderAdapter(EncoderAdapter):
 
 
 class SentenceTransformersAdapter(EncoderAdapter):
-    """sentence-transformers ``MultiVectorEncoder`` (>= 6.0). **Unverified here.**
+    """sentence-transformers ``MultiVectorEncoder`` (>= 6.0).
 
-    Written against the API the model cards document --
-    ``encode_document(inputs)`` and ``encode_query(texts)`` returning one
-    ``[n_i, d]`` tensor or array per input -- but sentence-transformers has not
-    been installed and run in this repository. Pass ``model`` to inject an
-    already-constructed encoder (that is also how the tests exercise the glue).
+    Written against the API the model cards document -- ``encode_document(inputs)``
+    and ``encode_query(texts)`` returning one ``[n_i, d]`` tensor or array per
+    input. Run for real once, with sentence-transformers 6.1.0 on text
+    (answerai-colbert-small-v1 on SciFact, whose float baseline matched the model
+    card); the image path and every other model remain unverified. Pass ``model``
+    to inject an already-constructed encoder (that is how the tests exercise the
+    glue without the library).
     """
 
     def __init__(self, model_id: str, model: Any = None, **kwargs: Any) -> None:

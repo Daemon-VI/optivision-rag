@@ -147,3 +147,35 @@ def test_lower_bound_is_the_default_rule(retrieval_task):
     assert res.safety == "lower_ci"
     if res.selected is not None:
         assert res.selected.retention_lo >= 0.9
+
+
+def test_transform_cache_gives_identical_scores(retrieval_task):
+    from optivision.calibration import score_space
+    from optivision.stages import PCAProjector
+
+    corpus, queries, _ = retrieval_task
+    def space():
+        return {"x": [Pipeline([AdaptiveMerge(radius=0.7), PCAProjector(dim=12), q()])
+                      for q in (Float16Quantizer, Int8Quantizer, BinaryQuantizer)]}
+    cached = score_space(corpus, queries, space(), cache_transforms=True)
+    plain = score_space(corpus, queries, space(), cache_transforms=False)
+    for a, b in zip(cached, plain, strict=True):
+        np.testing.assert_allclose(a.scores, b.scores, rtol=1e-5)
+        assert a.report["compression_vs_float32"] == pytest.approx(b.report["compression_vs_float32"])
+
+
+def test_recommended_space_is_ordered_and_scipy_optional():
+    from optivision.calibration import (
+        basic_search_space,
+        default_search_space,
+        recommended_search_space,
+    )
+
+    with_scipy = recommended_search_space(128, use_scipy=True)
+    without = recommended_search_space(128, use_scipy=False)
+    assert any(k.startswith("ward+") for k in with_scipy)
+    assert not any(k.startswith("ward+") for k in without)
+    for fam in with_scipy.values():  # first step of every merge family is the codec alone
+        assert fam[0].vector_stages == [] or len(fam) == 1
+    assert set(default_search_space(128)) == set(recommended_search_space(128))
+    assert "adaptive_merge+binary" in basic_search_space(128)

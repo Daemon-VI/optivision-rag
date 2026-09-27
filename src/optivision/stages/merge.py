@@ -86,6 +86,11 @@ class AdaptiveMerge(TokenReducer):
             mean) or ``"importance"`` (start from the most important rows, when
             the corpus carries an ``importance`` signal such as attention).
         n_importance_seeds: how many top-importance rows to seed with.
+        center: ``"mean"`` measures similarity after removing a fitted corpus
+            mean (pooling still uses the original vectors). Needed for
+            anisotropic encoders: the SciFact text ColBERT measured here has a
+            median nearest-neighbour cosine of 0.991 inside a document, so an
+            absolute cosine radius lumps most of a document together.
 
     At least one of ``radius`` / ``ratio`` / ``max_vectors`` must be set.
     """
@@ -102,6 +107,7 @@ class AdaptiveMerge(TokenReducer):
         representative: str = "mean",
         seeding: str = "farthest",
         n_importance_seeds: int = 0,
+        center: str | None = None,
     ) -> None:
         if radius is None and ratio is None and max_vectors is None:
             raise ValueError("set radius, ratio or max_vectors")
@@ -115,6 +121,8 @@ class AdaptiveMerge(TokenReducer):
             raise ValueError("seeding must be 'farthest' or 'importance'")
         if representative == "center" and refine:
             raise ValueError("representative='center' keeps the seed vectors; it cannot be refined")
+        if center not in (None, "mean"):
+            raise ValueError("center must be None or 'mean'")
         self.radius = radius
         self.ratio = ratio
         self.max_vectors = max_vectors
@@ -123,6 +131,20 @@ class AdaptiveMerge(TokenReducer):
         self.representative = representative
         self.seeding = seeding
         self.n_importance_seeds = n_importance_seeds
+        self.center = center
+        self.mean: np.ndarray | None = None
+
+    @property
+    def fitted(self) -> bool:
+        return self.center is None or self.mean is not None
+
+    def fit(self, corpus: Any, queries: Any = None) -> AdaptiveMerge:
+        if self.center == "mean":
+            v = np.asarray(corpus.vectors)
+            if v.shape[0] > 200_000:
+                v = v[np.sort(np.random.default_rng(0).choice(v.shape[0], 200_000, replace=False))]
+            self.mean = np.asarray(v, dtype=np.float64).mean(axis=0).astype(np.float32)
+        return self
 
     def params(self) -> dict[str, Any]:
         return {
@@ -134,6 +156,7 @@ class AdaptiveMerge(TokenReducer):
             "representative": self.representative,
             "seeding": self.seeding,
             "n_importance_seeds": self.n_importance_seeds,
+            "center": self.center,
         }
 
     def _seeds(self, u: np.ndarray, doc: DocView) -> list[int]:
@@ -147,7 +170,12 @@ class AdaptiveMerge(TokenReducer):
         n = v.shape[0]
         if n <= 1:
             return Reduction(v.copy(), np.arange(n, dtype=np.int64))
-        u = _unit(v)
+        if self.center == "mean":
+            if self.mean is None:
+                raise RuntimeError("AdaptiveMerge(center='mean') must be fit before use")
+            u = _unit(v - self.mean)
+        else:
+            u = _unit(v)
         cap = _budget(n, self.ratio, self.max_vectors, self.min_vectors)
 
         centres = self._seeds(u, doc)[:cap]

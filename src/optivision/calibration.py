@@ -31,6 +31,7 @@ assumption about the data, not a guarantee, and it can be switched off.
 
 from __future__ import annotations
 
+import json
 import time
 import warnings
 from collections.abc import Sequence
@@ -49,7 +50,15 @@ from .evaluation import (
 )
 from .representation import MultiVectorCorpus
 from .scoring import maxsim_matrix
-from .stages import AdaptiveMerge, BinaryQuantizer, Float16Quantizer, Int8Quantizer
+from .stages import (
+    AdaptiveMerge,
+    BinaryQuantizer,
+    Float16Quantizer,
+    HierarchicalMerge,
+    Int4Quantizer,
+    Int8Quantizer,
+    Quantizer,
+)
 
 #: Below this many calibration queries the held-out outcome was unreliable in
 #: the calibration study (36-query splits met the target in as few as 67% of
@@ -81,10 +90,30 @@ class ScoredCandidate:
         return 1000.0 * self.score_seconds / max(1, self.scores.shape[0])
 
 
+def _compress(pipe: Pipeline, corpus: MultiVectorCorpus, cache: dict | None) -> Any:
+    """Compress, reusing the token/dimension stages' output across candidates.
+
+    Candidates that differ only in their codec share one merge or projection:
+    the first time a stage prefix is seen it is fitted and applied, and later
+    candidates get the fitted stages and their output (so their queries are
+    projected by the same fitted map).
+    """
+    if cache is None:
+        return pipe.compress(corpus)
+    prefix = pipe.vector_stages
+    key = json.dumps([s.to_dict() for s in prefix], sort_keys=True, default=str)
+    if key not in cache:
+        fitted = Pipeline(prefix).fit(corpus)
+        cache[key] = (fitted.stages, fitted.transform(corpus))
+    stages, transformed = cache[key]
+    pipe.stages = [*stages, *[s for s in pipe.stages if isinstance(s, Quantizer)]]
+    return pipe.encode(transformed, original=corpus)
+
+
 def score_candidate(pipe: Pipeline, corpus: MultiVectorCorpus, queries: MultiVectorCorpus,
-                    family: str = "", label: str | None = None) -> ScoredCandidate:
+                    family: str = "", label: str | None = None, cache: dict | None = None) -> ScoredCandidate:
     t0 = time.perf_counter()
-    compressed = pipe.compress(corpus)
+    compressed = _compress(pipe, corpus, cache)
     t1 = time.perf_counter()
     scores = maxsim_matrix(pipe.transform_queries(queries), compressed)
     t2 = time.perf_counter()
@@ -93,12 +122,14 @@ def score_candidate(pipe: Pipeline, corpus: MultiVectorCorpus, queries: MultiVec
 
 
 def score_space(corpus: MultiVectorCorpus, queries: MultiVectorCorpus,
-                space: dict[str, Sequence[Pipeline]], progress: Any = None) -> list[ScoredCandidate]:
+                space: dict[str, Sequence[Pipeline]], progress: Any = None,
+                cache_transforms: bool = True) -> list[ScoredCandidate]:
     """Score every candidate in ``space`` (no early stopping). For experiments."""
+    cache: dict | None = {} if cache_transforms else None
     out = []
     for family, steps in space.items():
         for pipe in steps:
-            sc = score_candidate(pipe, corpus, queries, family=family)
+            sc = score_candidate(pipe, corpus, queries, family=family, cache=cache)
             out.append(sc)
             if progress is not None:
                 progress(sc)
@@ -220,11 +251,12 @@ class CalibrationResult:
         }
 
 
-def default_search_space(dim: int) -> dict[str, list[Pipeline]]:
-    """Families of pipelines, each ordered from least to most aggressive.
+def basic_search_space(dim: int) -> dict[str, list[Pipeline]]:
+    """The first search space: codecs x (uncentred) adaptive-merge radii.
 
-    Codecs x adaptive-merge radii. Dimension reduction is left out of the
-    default space until it has been measured to help (docs/UNIVERSAL.md).
+    Kept because the first calibration study (docs/UNIVERSAL.md, R7) was run
+    on it. It lacks the families that won the measured frontier, so it is no
+    longer the default.
     """
     radii = [None, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.5]
     codecs = {"float16": Float16Quantizer, "int8": Int8Quantizer, "binary": BinaryQuantizer}
@@ -236,6 +268,46 @@ def default_search_space(dim: int) -> dict[str, list[Pipeline]]:
             steps.append(Pipeline([*stages, cls()]))
         families[f"adaptive_merge+{cname}"] = steps
     return families
+
+
+def _scipy_available() -> bool:
+    try:
+        import scipy.cluster.hierarchy  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def recommended_search_space(dim: int, use_scipy: bool | None = None) -> dict[str, list[Pipeline]]:
+    """Families built from what won the measured frontier (docs/UNIVERSAL.md, R5).
+
+    Token reduction x codec, every family ordered from least to most
+    aggressive:
+
+    * Ward merging to a *fraction* of each document (needs SciPy), and
+    * adaptive merging on *centred* vectors (numpy only),
+
+    both relative to the data rather than absolute cosine thresholds, which the
+    text ColBERT showed do not transfer between encoders; each with per-vector
+    int8, int4 and binary codes, plus float16 alone as the near-lossless floor.
+    """
+    use_scipy = _scipy_available() if use_scipy is None else use_scipy
+    codecs = {"int8": lambda: Int8Quantizer("per_vector"), "int4": Int4Quantizer, "binary": BinaryQuantizer}
+    families: dict[str, list[Pipeline]] = {"float16": [Pipeline([Float16Quantizer()])]}
+    for cname, make in codecs.items():
+        if use_scipy:
+            families[f"ward+{cname}"] = [Pipeline(([HierarchicalMerge(ratio=f)] if f else []) + [make()])
+                                         for f in (None, 0.5, 0.33, 0.25, 0.15, 0.1)]
+        families[f"adaptive_centred+{cname}"] = [
+            Pipeline(([AdaptiveMerge(radius=r, center="mean")] if r else []) + [make()])
+            for r in (None, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4)
+        ]
+    return families
+
+
+def default_search_space(dim: int) -> dict[str, list[Pipeline]]:
+    """The search space ``calibrate()`` and ``optimize()`` use unless told otherwise."""
+    return recommended_search_space(dim)
 
 
 def reference_relevance(corpus: MultiVectorCorpus, queries: MultiVectorCorpus, qrels: dict[str, Any] | None,
@@ -263,6 +335,7 @@ def calibrate(
     assume_monotone: bool = True,
     n_boot: int = 1000,
     progress: Any = None,
+    cache_transforms: bool = True,
 ) -> CalibrationResult:
     """Pick the smallest pipeline meeting ``quality_target`` on calibration queries,
     then report it on held-out queries. See the module docstring.
@@ -301,11 +374,12 @@ def calibrate(
     base_hold = per_query_metrics(base_scores[hold_idx], [relevant[i] for i in hold_idx], [metric])[metric]
 
     space = search_space if search_space is not None else default_search_space(corpus.dimension)
+    cache: dict | None = {} if cache_transforms else None
     scored: list[ScoredCandidate] = []
     judged: list[Candidate] = []
     for family, steps in space.items():
         for pipe in steps:
-            sc = score_candidate(pipe, corpus, queries, family=family)
+            sc = score_candidate(pipe, corpus, queries, family=family, cache=cache)
             cand = _judge(sc, relevant, cal_idx, metric, base_cal, quality_target, safety,
                           max_bytes_per_doc, n_boot, seed)
             scored.append(sc)
