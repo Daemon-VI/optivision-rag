@@ -46,6 +46,7 @@ from .evaluation import (
     relevant_from_baseline,
     relevant_from_qrels,
     retention,
+    retention_lower_bound,
     split_queries,
 )
 from .representation import MultiVectorCorpus
@@ -161,10 +162,20 @@ class Candidate:
 
 def _judge(sc: ScoredCandidate, relevant: Sequence[np.ndarray], idx: np.ndarray, metric: str,
            base_pq: np.ndarray, target: float, safety: str, max_bytes: float | None,
-           n_boot: int, seed: int) -> Candidate:
+           n_boot: int, seed: int, confidence: float = 0.975, margin: float = 0.0) -> Candidate:
+    """Judge one candidate on the calibration queries.
+
+    ``safety="lower_ci"`` compares the one-sided ``confidence`` lower bound with
+    ``target + margin``; ``"point"`` compares the point estimate. The reported
+    ``retention_lo/hi`` stay the ordinary 95% interval.
+    """
     pq = per_query_metrics(sc.scores[idx], [relevant[i] for i in idx], [metric])[metric]
     point, lo, hi = retention(pq, base_pq, n_boot=n_boot, seed=seed)
-    score = point if safety == "point" else lo
+    if safety == "point":
+        score = point
+    else:
+        score = retention_lower_bound(pq, base_pq, confidence, n_boot=n_boot, seed=seed)
+    target = target + margin
     return Candidate(
         family=sc.family, label=sc.label, pipeline=sc.pipeline,
         bytes_per_doc=sc.bytes_per_doc,
@@ -178,13 +189,24 @@ def _judge(sc: ScoredCandidate, relevant: Sequence[np.ndarray], idx: np.ndarray,
     )
 
 
+def _per_candidate_confidence(confidence: float, multiplicity: str, n_candidates: int) -> float:
+    if multiplicity == "none":
+        return confidence
+    if multiplicity == "bonferroni":
+        return 1.0 - (1.0 - confidence) / max(1, n_candidates)
+    raise ValueError("multiplicity must be 'none' or 'bonferroni'")
+
+
 def select(scored: Sequence[ScoredCandidate], base_scores: np.ndarray, relevant: Sequence[np.ndarray],
            cal_idx: np.ndarray, hold_idx: np.ndarray, target: float, metric: str = "ndcg@5",
            safety: str = "point", max_bytes_per_doc: float | None = None, n_boot: int = 1000,
-           seed: int = 0) -> tuple[list[Candidate], Candidate | None, dict[str, Any] | None]:
+           seed: int = 0, confidence: float = 0.975, multiplicity: str = "none",
+           margin: float = 0.0) -> tuple[list[Candidate], Candidate | None, dict[str, Any] | None]:
     """Choose among already-scored candidates for one target and split."""
     base_cal = per_query_metrics(base_scores[cal_idx], [relevant[i] for i in cal_idx], [metric])[metric]
-    judged = [_judge(sc, relevant, cal_idx, metric, base_cal, target, safety, max_bytes_per_doc, n_boot, seed)
+    conf = _per_candidate_confidence(confidence, multiplicity, len(scored))
+    judged = [_judge(sc, relevant, cal_idx, metric, base_cal, target, safety, max_bytes_per_doc, n_boot, seed,
+                     confidence=conf, margin=margin)
               for sc in scored]
     feasible = [i for i, c in enumerate(judged) if c.feasible]
     if not feasible:
@@ -336,6 +358,9 @@ def calibrate(
     n_boot: int = 1000,
     progress: Any = None,
     cache_transforms: bool = True,
+    confidence: float = 0.975,
+    multiplicity: str = "none",
+    margin: float = 0.0,
 ) -> CalibrationResult:
     """Pick the smallest pipeline meeting ``quality_target`` on calibration queries,
     then report it on held-out queries. See the module docstring.
@@ -374,6 +399,7 @@ def calibrate(
     base_hold = per_query_metrics(base_scores[hold_idx], [relevant[i] for i in hold_idx], [metric])[metric]
 
     space = search_space if search_space is not None else default_search_space(corpus.dimension)
+    conf = _per_candidate_confidence(confidence, multiplicity, sum(len(v) for v in space.values()))
     cache: dict | None = {} if cache_transforms else None
     scored: list[ScoredCandidate] = []
     judged: list[Candidate] = []
@@ -381,14 +407,15 @@ def calibrate(
         for pipe in steps:
             sc = score_candidate(pipe, corpus, queries, family=family, cache=cache)
             cand = _judge(sc, relevant, cal_idx, metric, base_cal, quality_target, safety,
-                          max_bytes_per_doc, n_boot, seed)
+                          max_bytes_per_doc, n_boot, seed, confidence=conf, margin=margin)
             scored.append(sc)
             judged.append(cand)
             if progress is not None:
                 progress(cand)
-            score = cand.retention if safety == "point" else cand.retention_lo
-            if assume_monotone and score < quality_target:
-                break  # later steps in this family are more aggressive
+            if assume_monotone and not cand.feasible and (
+                max_bytes_per_doc is None or cand.bytes_per_doc <= max_bytes_per_doc
+            ):
+                break  # quality failed; later steps in this family are more aggressive
 
     feasible = [i for i, c in enumerate(judged) if c.feasible]
     selected = holdout = None
