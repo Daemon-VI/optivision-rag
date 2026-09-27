@@ -130,3 +130,18 @@ def test_centred_binary_ranks_like_decoding_with_the_mean(rng):
                                    BinaryQuantizer(center="mean")])
 def test_dict_roundtrip(stage):
     assert stage_from_dict(stage.to_dict()).params() == stage.params()
+
+
+def test_dimension_projector_delegates(rng):
+    from optivision import DimensionProjector
+
+    c, q = _corpus(rng), _queries(rng)
+    p = Pipeline([DimensionProjector(8)]).fit(c)
+    direct = Pipeline([PCAProjector(8)]).fit(c)
+    np.testing.assert_allclose(maxsim_matrix(p.transform_queries(q), p.compress(c)),
+                               maxsim_matrix(direct.transform_queries(q), direct.compress(c)), rtol=1e-5)
+    assert DimensionProjector(8, method="truncate").project(c.vectors).shape[1] == 8
+    assert stage_from_dict(DimensionProjector(6, method="random", seed=2).to_dict()).params() == {
+        "dim": 6, "method": "random", "seed": 2}
+    with pytest.raises(ValueError):
+        DimensionProjector(8, method="magic")

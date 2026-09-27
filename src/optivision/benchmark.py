@@ -25,6 +25,7 @@ from .compose import Pipeline
 from .evaluation import (
     DEFAULT_METRICS,
     measure,
+    per_query_metrics,
     relevant_from_baseline,
     relevant_from_qrels,
     retention,
@@ -120,24 +121,25 @@ def run_matrix(
     bootstrap interval over queries, and the float baseline is always row zero.
     """
     t_start = time.perf_counter()
-    base_pipe = Pipeline()
-    probe = [np.zeros(0, np.int64)] * len(dataset.queries)
-    _, base_scores = measure(base_pipe, dataset.corpus, dataset.queries, probe, metrics=metrics)
-    if reference == "labels":
-        relevant = dataset.relevant()
-    elif reference == "baseline":
-        relevant = relevant_from_baseline(base_scores, depth=baseline_depth)
-    else:
+    if reference not in {"labels", "baseline"}:
         raise ValueError("reference must be 'labels' or 'baseline'")
+    # The float baseline is scored once: its scores define the label-free
+    # reference, and its metrics are row zero and every retention denominator.
+    probe = [np.zeros(0, np.int64)] * len(dataset.queries)
+    base_m, base_scores = measure(Pipeline(), dataset.corpus, dataset.queries, probe, metrics=metrics,
+                                  label="baseline-float32")
+    relevant = (dataset.relevant() if reference == "labels"
+                else relevant_from_baseline(base_scores, depth=baseline_depth))
+    base_m.per_query = per_query_metrics(base_scores, relevant, metrics)
+    base_pq = base_m.per_query
 
     rows: list[dict[str, Any]] = []
-    base_pq: dict[str, np.ndarray] | None = None
-    for name, pipe in {"baseline-float32": base_pipe, **pipelines}.items():
-        if name == "baseline-float32" and rows:
-            continue
-        m, _ = measure(pipe, dataset.corpus, dataset.queries, relevant, metrics=metrics, label=name)
-        if base_pq is None:
-            base_pq = m.per_query
+    todo = {name: pipe for name, pipe in pipelines.items() if name != "baseline-float32"}
+    for name, pipe in {"baseline-float32": None, **todo}.items():
+        if pipe is None:
+            m = base_m
+        else:
+            m, _ = measure(pipe, dataset.corpus, dataset.queries, relevant, metrics=metrics, label=name)
         row = m.summary()
         row["pipeline"] = m.pipeline
         for metric in metrics:

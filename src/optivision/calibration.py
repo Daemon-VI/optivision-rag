@@ -32,6 +32,7 @@ assumption about the data, not a guarantee, and it can be switched off.
 from __future__ import annotations
 
 import time
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -49,6 +50,12 @@ from .evaluation import (
 from .representation import MultiVectorCorpus
 from .scoring import maxsim_matrix
 from .stages import AdaptiveMerge, BinaryQuantizer, Float16Quantizer, Int8Quantizer
+
+#: Below this many calibration queries the held-out outcome was unreliable in
+#: the calibration study (36-query splits met the target in as few as 67% of
+#: splits even with the lower-bound rule).
+MIN_RELIABLE_CALIBRATION_QUERIES = 100
+
 
 # ------------------------------------------------------------ candidates
 
@@ -251,14 +258,21 @@ def calibrate(
     seed: int = 0,
     reference: str = "auto",
     baseline_depth: int = 1,
-    safety: str = "point",
+    safety: str = "lower_ci",
     max_bytes_per_doc: float | None = None,
     assume_monotone: bool = True,
     n_boot: int = 1000,
     progress: Any = None,
 ) -> CalibrationResult:
     """Pick the smallest pipeline meeting ``quality_target`` on calibration queries,
-    then report it on held-out queries. See the module docstring."""
+    then report it on held-out queries. See the module docstring.
+
+    ``safety="lower_ci"`` (the default) requires the bootstrap lower bound of the
+    calibration retention to meet the target. Choosing by the point estimate
+    (``"point"``) is a winner's-curse selection: across 20 random splits on
+    ColPali DocVQA it met a 0.97 target on held-out queries in only 30% of
+    splits, against 90% for the lower bound (docs/UNIVERSAL.md).
+    """
     if not 0.0 < quality_target <= 1.0:
         raise ValueError("quality_target is a retention fraction in (0, 1]")
     if safety not in {"point", "lower_ci"}:
@@ -269,9 +283,19 @@ def calibrate(
         raise ValueError("reference must be 'auto', 'labels' or 'baseline'")
     if len(queries) < 4:
         raise ValueError("need at least 4 queries to split into calibration and held-out halves")
+    n_cal = round(len(queries) * calibration_fraction)
+    if n_cal < MIN_RELIABLE_CALIBRATION_QUERIES:
+        warnings.warn(
+            f"calibrating on {n_cal} queries: with fewer than {MIN_RELIABLE_CALIBRATION_QUERIES} the chosen "
+            "configuration missed its target on held-out queries in up to a third of splits even with "
+            "safety='lower_ci' (36-query splits, docs/UNIVERSAL.md); use more queries or a lower target",
+            stacklevel=2,
+        )
 
     cal_idx, hold_idx = split_queries(len(queries), calibration_fraction, seed)
+    t_base = time.perf_counter()
     base_scores = maxsim_matrix(queries, corpus)
+    base_query_ms = 1000.0 * (time.perf_counter() - t_base) / max(1, len(queries))
     relevant = reference_relevance(corpus, queries, qrels, reference, base_scores, baseline_depth)
     base_cal = per_query_metrics(base_scores[cal_idx], [relevant[i] for i in cal_idx], [metric])[metric]
     base_hold = per_query_metrics(base_scores[hold_idx], [relevant[i] for i in hold_idx], [metric])[metric]
@@ -313,6 +337,7 @@ def calibrate(
             "bytes_per_doc": corpus.num_vectors * corpus.dimension * 4 / max(1, len(corpus)),
             "vectors_per_doc": corpus.num_vectors / max(1, len(corpus)),
             "dim": corpus.dimension,
+            "query_ms": base_query_ms,
             "calibration_" + metric: float(np.nanmean(base_cal)),
             "holdout_" + metric: float(np.nanmean(base_hold)),
         },

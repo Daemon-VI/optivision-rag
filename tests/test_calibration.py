@@ -8,6 +8,8 @@ from optivision.compose import Pipeline
 from optivision.representation import MultiVectorCorpus
 from optivision.stages import AdaptiveMerge, BinaryQuantizer, Float16Quantizer, Int8Quantizer
 
+pytestmark = pytest.mark.filterwarnings("ignore:calibrating on")
+
 
 def _unit(v):
     return v / np.linalg.norm(v, axis=1, keepdims=True)
@@ -131,3 +133,17 @@ def test_pseudo_queries_are_fragments_of_their_document(retrieval_task):
     doc = corpus[corpus.ids.index(next(iter(qrels[q.ids[0]])))]
     rows = {tuple(r) for r in np.round(doc.vectors, 6)}
     assert all(tuple(r) in rows for r in np.round(q[0].vectors, 6))
+
+
+def test_small_calibration_sets_warn(retrieval_task):
+    corpus, queries, qrels = retrieval_task
+    with pytest.warns(UserWarning, match="calibrating on 20 queries"):
+        calibrate(corpus, queries, qrels, quality_target=0.9, search_space=_space(), n_boot=0)
+
+
+def test_lower_bound_is_the_default_rule(retrieval_task):
+    corpus, queries, qrels = retrieval_task
+    res = calibrate(corpus, queries, qrels, quality_target=0.9, search_space=_space(), n_boot=200)
+    assert res.safety == "lower_ci"
+    if res.selected is not None:
+        assert res.selected.retention_lo >= 0.9

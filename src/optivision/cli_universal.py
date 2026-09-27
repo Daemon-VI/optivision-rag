@@ -171,7 +171,7 @@ def calibrate(
     target: float = typer.Option(0.97, "--target", help="retention target, e.g. 0.97"),
     metric: str = typer.Option("ndcg@5", help="ndcg@k | recall@k | mrr@k | hit@k"),
     reference: str = typer.Option("auto", help="labels | baseline | auto"),
-    safety: str = typer.Option("point", help="point | lower_ci"),
+    safety: str = typer.Option("lower_ci", help="lower_ci (default, conservative) | point"),
     calibration_fraction: float = typer.Option(0.5, help="share of queries used to choose"),
     seed: int = typer.Option(0),
     out: str | None = typer.Option(None, help="write the full result as JSON"),
@@ -213,7 +213,9 @@ def calibrate(
                       f"{h['retention']:.3f} [{h['retention_ci'][0]:.3f}, {h['retention_ci'][1]:.3f}]  {ok}")
         table.add_row("RAM / storage reduction", f"{1 - s.bytes_per_doc / b['bytes_per_doc']:.1%} "
                                                  f"({_kb(s.bytes_per_doc)}/doc)")
-        table.add_row("query time (exact scan, this machine)", f"{h['query_ms']:.1f} ms/query")
+        change = h["query_ms"] / b["query_ms"] - 1.0 if b.get("query_ms") else float("nan")
+        table.add_row("query time (exact scan, this machine)",
+                      f"{b['query_ms']:.1f} -> {h['query_ms']:.1f} ms/query ({change:+.0%})")
     console.print(table)
     if out:
         Path(out).parent.mkdir(parents=True, exist_ok=True)
