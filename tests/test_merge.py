@@ -150,3 +150,22 @@ class TestHierarchicalDistanceMode:
             HierarchicalMerge(ratio=None, max_distance=None)
         s = HierarchicalMerge(ratio=None, max_distance=0.5)
         assert stage_from_dict(s.to_dict()).params() == s.params()
+
+
+class TestCentredAdaptiveMerge:
+    def test_needs_fit_and_separates_a_narrow_cone(self, rng):
+        common = _unit(rng.standard_normal((1, 32)))
+        # four topics hidden in small deviations around one dominant direction
+        topics = 0.15 * _unit(rng.standard_normal((4, 32)))
+        v = _unit(np.repeat(common + topics, 15, axis=0) + 0.002 * rng.standard_normal((60, 32))).astype(np.float32)
+        c = MultiVectorCorpus.from_arrays([v])
+        plain = AdaptiveMerge(radius=0.9).transform(c)
+        assert plain.num_vectors == 1  # absolute cosine sees one blob
+        stage = AdaptiveMerge(radius=0.9, center="mean")
+        with pytest.raises(RuntimeError):
+            stage.transform(c)
+        assert stage.fit(c).transform(c).num_vectors == 4
+
+    def test_roundtrip(self):
+        s = AdaptiveMerge(radius=0.5, center="mean")
+        assert stage_from_dict(s.to_dict()).params() == s.params()

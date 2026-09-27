@@ -168,17 +168,29 @@ class Pipeline:
             self.fit(corpus)
         elif not self.fitted:
             raise RuntimeError("pipeline has unfitted stages; call fit() first")
-        x = self.transform(corpus)
+        return self.encode(self.transform(corpus), original=corpus)
+
+    def encode(self, transformed: MultiVectorCorpus, original: MultiVectorCorpus | None = None) -> CompressedCorpus:
+        """Quantize an already-transformed corpus (the output of :meth:`transform`).
+
+        Lets callers that try many codecs on the same merged / projected vectors
+        (calibration does) run the token and dimension stages once. Byte
+        accounting is against ``original`` when given.
+        """
+        original = original if original is not None else transformed
+        x = transformed
         q = self.quantizer
+        if not q.fitted:
+            q.fit(x)
         codes = q.encode(np.asarray(x.vectors, dtype=np.float32)) if x.num_vectors else np.zeros(
             (0, q.code_bytes(x.dimension)), dtype=np.uint8
         )
         stats = {
-            "vectors_before": corpus.num_vectors,
-            "dim_before": corpus.dimension,
-            "float32_bytes_before": corpus.num_vectors * corpus.dimension * 4,
-            "native_bytes_before": corpus.nbytes,
-            "native_dtype_before": str(corpus.dtype),
+            "vectors_before": original.num_vectors,
+            "dim_before": original.dimension,
+            "float32_bytes_before": original.num_vectors * original.dimension * 4,
+            "native_bytes_before": original.nbytes,
+            "native_dtype_before": str(original.dtype),
         }
         return CompressedCorpus(codes, x.offsets, x.dimension, q, x.ids, stats=stats, pipeline=self.to_dict())
 

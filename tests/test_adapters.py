@@ -20,7 +20,7 @@ from .conftest import make_page
 def test_measured_models_are_exactly_the_benchmarked_ones():
     """The registry must not claim more than the reports support."""
     measured = {m.model_id for m in supported_models(MEASURED)}
-    assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M"}
+    assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M", "answerdotai/answerai-colbert-small-v1"}
 
 
 def test_every_entry_says_where_its_status_comes_from():
