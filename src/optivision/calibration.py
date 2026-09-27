@@ -311,10 +311,15 @@ def recommended_search_space(dim: int, use_scipy: bool | None = None) -> dict[st
 
     both relative to the data rather than absolute cosine thresholds, which the
     text ColBERT showed do not transfer between encoders; each with per-vector
-    int8, int4 and binary codes, plus float16 alone as the near-lossless floor.
+    int8, centred int4 and binary codes, plus float16 alone as the near-lossless
+    floor.
     """
     use_scipy = _scipy_available() if use_scipy is None else use_scipy
-    codecs = {"int8": lambda: Int8Quantizer("per_vector"), "int4": Int4Quantizer, "binary": BinaryQuantizer}
+    # int4 is centred: measured never worse on ColPali beyond noise and far better
+    # on the anisotropic text model (SciFact 89.7% -> 98.6%). Binary is *not*
+    # centred: that collapsed the same text model (94.1% -> 1.1%).
+    codecs = {"int8": lambda: Int8Quantizer("per_vector"), "int4": lambda: Int4Quantizer(center="mean"),
+              "binary": BinaryQuantizer}
     families: dict[str, list[Pipeline]] = {"float16": [Pipeline([Float16Quantizer()])]}
     for cname, make in codecs.items():
         if use_scipy:
@@ -358,18 +363,20 @@ def calibrate(
     n_boot: int = 1000,
     progress: Any = None,
     cache_transforms: bool = True,
-    confidence: float = 0.975,
+    confidence: float = 0.999,
     multiplicity: str = "none",
     margin: float = 0.0,
 ) -> CalibrationResult:
     """Pick the smallest pipeline meeting ``quality_target`` on calibration queries,
     then report it on held-out queries. See the module docstring.
 
-    ``safety="lower_ci"`` (the default) requires the bootstrap lower bound of the
-    calibration retention to meet the target. Choosing by the point estimate
-    (``"point"``) is a winner's-curse selection: across 20 random splits on
-    ColPali DocVQA it met a 0.97 target on held-out queries in only 30% of
-    splits, against 90% for the lower bound (docs/UNIVERSAL.md).
+    ``safety="lower_ci"`` (the default) requires the one-sided ``confidence``
+    lower bound of the calibration retention to meet the target. Choosing by
+    the point estimate (``"point"``) is a winner's-curse selection: with the
+    default search space it met a 0.97 target on held-out ColPali DocVQA queries
+    in 30% of 20 random splits. A 0.975 bound reached 80%; the 0.999 default
+    reached 95-100% on DocVQA and on the SciFact text model
+    (docs/UNIVERSAL.md, R7b). Stricter is safer and chooses less compression.
     """
     if not 0.0 < quality_target <= 1.0:
         raise ValueError("quality_target is a retention fraction in (0, 1]")

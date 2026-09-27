@@ -85,6 +85,48 @@ The three stages multiply — under E1, pruning ~3.5× × quantization 32× ≈ 
 the index. On real ViDoRe pages pruning buys less, and the product lands in the 53-60× range; both
 figures are in *Results* below.
 
+## Universal compression layer (branch `universal-core`, unreleased)
+
+The pipeline above is one fixed recipe for one family of models. The universal
+layer turns it into a **model-agnostic optimizer**: hand it any late-interaction
+retriever's vectors and a few hundred sample queries, give it a quality target,
+and it chooses token merging, projection and quantization — then reports the
+quality it *measured on queries it did not use to choose*.
+
+```python
+from optivision import MultiVectorCorpus, optimize
+
+docs = MultiVectorCorpus.from_arrays(doc_vectors)       # any model: list of [n_i, d] arrays
+queries = MultiVectorCorpus.from_arrays(query_vectors)
+result = optimize(docs, queries=queries, qrels=labels_or_None, quality_target=0.97)
+result.pipeline.label(), result.compression_ratio, result.quality_retention
+```
+
+What is **measured** (exact MaxSim, retention of nDCG vs the float32 index,
+labels; details and every caveat in [docs/UNIVERSAL.md](docs/UNIVERSAL.md)):
+
+| | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
+|---|---|---|---|
+| merging alone, ~4x fewer vectors | 98.9% (Ward) | 99.9% (Ward) | 93.9% (Ward 1/4); 99.8% at 3x |
+| smallest config whose 95% lower bound clears 97% | 14.7x · 98.9% (Ward + int8) | 69x · 99.2% (merge + int4) | 11.8x · 100.0% (Ward + int8) |
+| merged binary codes in RAM + int8 rescoring of 50 | 99.1–101% at 110–376x less RAM | 99.8–100% at 117–406x less RAM | not measured |
+
+- **Refactor is exact**: the original nine-variant table rebuilt from the new
+  stages reproduces the committed reports (36 rows, max |Δ| = 4.4e-16).
+- **Calibration is honest about itself**: choosing the smallest configuration
+  by its point estimate met the target on unseen queries in as few as 30% of
+  random splits. The default (a one-sided 0.999 lower bound) met it in 95–100%
+  of splits on DocVQA and SciFact, at the cost of choosing less compression
+  (*R7* and *R7b* of the write-up).
+- **Tested coverage is three encoders** — ColPali-v1.3, ColSmol-256M and
+  answerai-colbert-small-v1. Any other model's vectors go in through
+  `from_arrays`, but its behaviour is unmeasured until someone runs
+  `scripts/universal_study/`. Wide (2k–4k-dimensional) models, ViDoRe V2/V3 and
+  million-page corpora are **future work**, not results.
+
+Audit of the starting point: [docs/AUDIT-2026-09-27.md](docs/AUDIT-2026-09-27.md).
+CLI: `optivision inspect | compress | calibrate | benchmark | compare`.
+
 ## Results
 
 We ran the ablation twice, and the two runs disagree. That disagreement is the
@@ -326,22 +368,42 @@ src/optivision/
   corpus.py           synthetic corpus generator + ViDoRe loader
   metrics.py          nDCG / recall / MRR / Kendall tau / storage
   viz.py              keep-mask and saliency figures
+
+  # universal layer (see docs/UNIVERSAL.md)
+  representation.py   MultiVectorCorpus: any model's vectors, contiguous + offsets
+  adapters.py         model registry (measured / untested / unverified) + adapters
+  stages/             merge.py, prune.py, project.py, quantize.py — composable stages
+  compose.py          Pipeline, CompressedCorpus
+  scoring.py          exact MaxSim over any store, memory-bounded
+  evaluation.py       per-query metrics, labels or float-baseline reference, bootstrap
+  calibration.py      calibrate(): choose on some queries, report on others
+  optimize.py         optimize(): the one-call entry point
+  pareto.py           non-dominated configurations
+  storage.py          ExactIndex, TieredIndex, StorageBackend
+  benchmark.py        datasets + result matrices
+  cli_universal.py    inspect / compress / calibrate / benchmark / compare
 app/streamlit_app.py  demo UI
-docs/                 architecture, results, viva notes
+docs/                 architecture, results, viva notes, AUDIT-2026-09-27, UNIVERSAL
 notebooks/            Colab / Kaggle runner for the ColPali benchmark
+reports/universal/    every measured number of the universal layer (JSON + tables)
+scripts/universal_study/  the scripts that produced them
 ```
 
 ## Testing
 
 ```bash
-pytest              # 75 tests, no model download needed
+pytest              # 284 tests, no model download needed
 ruff check src tests app
 ```
 
 The suite covers saliency behaviour on blank/grey/inked pages, keep-mask budgets,
 redundancy clustering invariants, bit-packing round-trips, MaxSim segment maths on
 variable-length pages, index save/load, Qdrant multivector round-trips, and a full
-index→search→evaluate loop.
+index→search→evaluate loop. For the universal layer it adds: the refactored
+stages reproducing the original pipeline byte for byte, exact MaxSim against
+brute force (empty pages and queries included), merge and quantizer invariants,
+projection of queries, calibration on disjoint splits, serialisation, the CLI,
+and a guard that no model is marked *measured* without results.
 
 ## Improvements
 

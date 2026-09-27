@@ -145,3 +145,22 @@ def test_dimension_projector_delegates(rng):
         "dim": 6, "method": "random", "seed": 2}
     with pytest.raises(ValueError):
         DimensionProjector(8, method="magic")
+
+
+
+@pytest.mark.parametrize("centred", [True, False])
+def test_centred_scalar_codecs_resolve_a_narrow_cone(rng, centred):
+    common = _unit(rng.standard_normal((1, 64)))
+    v = _unit(common + 0.05 * rng.standard_normal((400, 64)))  # every vector close to one direction
+    c = MultiVectorCorpus.from_arrays([v])
+    for make in (Int4Quantizer, lambda **kw: Int8Quantizer("per_vector", **kw)):
+        plain = make()
+        cen = make(center="mean").fit(c)
+        err_plain = np.abs(plain.decode(plain.encode(v), 64) - v).mean()
+        err_cen = np.abs(cen.decode(cen.encode(v), 64) - v).mean()
+        assert err_cen < err_plain / 2
+        assert stage_from_dict(cen.to_dict()).params() == cen.params()
+        with pytest.raises(RuntimeError):
+            make(center="mean").encode(v)
+        if not centred:
+            break

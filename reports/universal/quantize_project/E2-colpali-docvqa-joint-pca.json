@@ -1,0 +1,256 @@
+{
+ "dataset": "E2-colpali-docvqa",
+ "attrs": {
+  "source": "C:\\Users\\Lenovo\\projects\\optivision-rag-v2\\data\\cache\\colpali_docvqa_test_subsampled.npz",
+  "format": "legacy-encode-cache",
+  "encoder": "colpali",
+  "model": "vidore/colpali-v1.3-merged"
+ },
+ "n_docs": 500,
+ "n_queries": 225,
+ "reference": "labels",
+ "metrics": [
+  "ndcg@5",
+  "ndcg@10",
+  "recall@5",
+  "mrr@10"
+ ],
+ "rows": [
+  {
+   "label": "baseline-float32",
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 527872.0,
+   "compression_vs_float32": 1.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.5400082654463394,
+   "ndcg@10": 0.5589516235581964,
+   "recall@5": 0.6044444444444445,
+   "mrr@10": 0.5262010582010581,
+   "compress_seconds": 8.209999941755086e-05,
+   "query_ms": 34.07079866666916,
+   "pipeline": {
+    "stages": []
+   },
+   "retention:ndcg@5": 1.0,
+   "retention_ci:ndcg@5": [
+    1.0,
+    1.0
+   ],
+   "retention:ndcg@10": 1.0,
+   "retention_ci:ndcg@10": [
+    1.0,
+    1.0
+   ],
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0
+   ],
+   "retention:mrr@10": 1.0,
+   "retention_ci:mrr@10": [
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "label": "pca-joint 64 (fit on cal queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.5288947476732501,
+   "ndcg@10": 0.5430890882737437,
+   "recall@5": 0.6044444444444445,
+   "mrr@10": 0.509225749559083,
+   "compress_seconds": 0.06348439998691902,
+   "query_ms": 25.971784444474096,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9794197265408455,
+   "retention_ci:ndcg@5": [
+    0.9547255876131876,
+    1.0039022571275198
+   ],
+   "retention:ndcg@10": 0.971620915628665,
+   "retention_ci:ndcg@10": [
+    0.9488172559499601,
+    0.9943190575667094
+   ],
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    0.97202304737516,
+    1.0289907965725165
+   ],
+   "retention:mrr@10": 0.9677398812157292,
+   "retention_ci:mrr@10": [
+    0.9383753422458597,
+    0.9955824741697892
+   ]
+  },
+  {
+   "label": "pca-docs 64 (same held-out queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.53203565588787,
+   "ndcg@10": 0.5433464488878345,
+   "recall@5": 0.6,
+   "mrr@10": 0.5139611992945327,
+   "compress_seconds": 0.4118425000051502,
+   "query_ms": 27.22554088887086,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.985236134206428,
+   "retention_ci:ndcg@5": [
+    0.9587919770829348,
+    1.0113971428268966
+   ],
+   "retention:ndcg@10": 0.9720813501336272,
+   "retention_ci:ndcg@10": [
+    0.9480171935342715,
+    0.9955419193758289
+   ],
+   "retention:recall@5": 0.9926470588235293,
+   "retention_ci:recall@5": [
+    0.9600000000000001,
+    1.023631496062992
+   ],
+   "retention:mrr@10": 0.9767391974687959,
+   "retention_ci:mrr@10": [
+    0.9461298498253138,
+    1.0052085821762822
+   ]
+  },
+  {
+   "label": "pca-joint 32 (fit on cal queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.4458823025234609,
+   "ndcg@10": 0.46895244363002714,
+   "recall@5": 0.5333333333333333,
+   "mrr@10": 0.42638095238095236,
+   "compress_seconds": 0.04751580000447575,
+   "query_ms": 29.209739999949104,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.8256953292278231,
+   "retention_ci:ndcg@5": [
+    0.7709577951955932,
+    0.8749868485336859
+   ],
+   "retention:ndcg@10": 0.8389857437836052,
+   "retention_ci:ndcg@10": [
+    0.7857440155412568,
+    0.8826427240504024
+   ],
+   "retention:recall@5": 0.8823529411764706,
+   "retention_ci:recall@5": [
+    0.8208903757076685,
+    0.9354838709677419
+   ],
+   "retention:mrr@10": 0.8103004464465271,
+   "retention_ci:mrr@10": [
+    0.7497666391292593,
+    0.8621525787153689
+   ]
+  },
+  {
+   "label": "pca-docs 32 (same held-out queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.4562774139872443,
+   "ndcg@10": 0.4830614742779201,
+   "recall@5": 0.5333333333333333,
+   "mrr@10": 0.4421128747795414,
+   "compress_seconds": 0.483575699996436,
+   "query_ms": 30.558529333340832,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.8449452409957318,
+   "retention_ci:ndcg@5": [
+    0.7884029395832097,
+    0.8981695683597163
+   ],
+   "retention:ndcg@10": 0.8642276968493772,
+   "retention_ci:ndcg@10": [
+    0.8135590491709691,
+    0.9094573933919151
+   ],
+   "retention:recall@5": 0.8823529411764706,
+   "retention_ci:recall@5": [
+    0.8230673758865249,
+    0.9420598211532532
+   ],
+   "retention:mrr@10": 0.8401976162704957,
+   "retention_ci:mrr@10": [
+    0.7811148197828002,
+    0.8925827266217735
+   ]
+  }
+ ],
+ "machine": {
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "numpy": "2.4.6"
+ },
+ "seconds": 34.30064720001246
+}
