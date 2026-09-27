@@ -29,6 +29,9 @@ from .representation import MultiVectorCorpus
 from .stages.base import DimensionReducer, Quantizer, Stage, TokenReducer, stage_from_dict
 from .stages.quantize import Float32Quantizer
 
+#: rows per quantizer call in Pipeline.encode (bounds the codec's float temporaries)
+ENCODE_BLOCK_ROWS = 65_536
+
 
 class CompressedCorpus:
     """Quantized documents plus the accounting needed to judge them.
@@ -182,9 +185,12 @@ class Pipeline:
         q = self.quantizer
         if not q.fitted:
             q.fit(x)
-        codes = q.encode(np.asarray(x.vectors, dtype=np.float32)) if x.num_vectors else np.zeros(
-            (0, q.code_bytes(x.dimension)), dtype=np.uint8
-        )
+        # Encode in row blocks into one preallocated array: a codec's float
+        # temporaries then cost one block, not a second copy of the corpus.
+        codes = np.empty((x.num_vectors, q.code_bytes(x.dimension)), dtype=np.uint8)
+        for lo in range(0, x.num_vectors, ENCODE_BLOCK_ROWS):
+            hi = min(lo + ENCODE_BLOCK_ROWS, x.num_vectors)
+            codes[lo:hi] = q.encode(np.asarray(x.vectors[lo:hi], dtype=np.float32))
         stats = {
             "vectors_before": original.num_vectors,
             "dim_before": original.dimension,

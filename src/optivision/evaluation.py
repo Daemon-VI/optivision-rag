@@ -106,6 +106,35 @@ def retention(
     return point, float(lo), float(hi)
 
 
+def retention_lower_bound(
+    compressed: np.ndarray, baseline: np.ndarray, confidence: float, n_boot: int = 1000, seed: int = 0
+) -> float:
+    """One-sided lower confidence bound on retention at level ``confidence``.
+
+    Up to 99% it is the bootstrap percentile; beyond that (multiplicity-
+    corrected levels such as 1 - 0.05 / 40) a percentile needs far more
+    resamples than is sensible, so it is the point estimate minus ``z`` times
+    the bootstrap standard error.
+    """
+    from statistics import NormalDist
+
+    ok = np.isfinite(compressed) & np.isfinite(baseline)
+    c, b = compressed[ok], baseline[ok]
+    if c.size == 0 or b.mean() == 0:
+        return float("nan")
+    point = float(c.mean() / b.mean())
+    if n_boot <= 0:
+        return point
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, c.size, size=(n_boot, c.size))
+    bm = b[idx].mean(axis=1)
+    ratios = np.where(bm > 0, c[idx].mean(axis=1) / np.where(bm > 0, bm, 1.0), np.nan)
+    if confidence <= 0.99:
+        return float(np.nanquantile(ratios, 1.0 - confidence))
+    z = NormalDist().inv_cdf(confidence)
+    return point - z * float(np.nanstd(ratios))
+
+
 def split_queries(n: int, calibration_fraction: float = 0.5, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """Disjoint calibration / held-out query indices (both sorted)."""
     if not 0.0 < calibration_fraction < 1.0:

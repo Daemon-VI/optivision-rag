@@ -179,3 +179,30 @@ def test_recommended_space_is_ordered_and_scipy_optional():
         assert fam[0].vector_stages == [] or len(fam) == 1
     assert set(default_search_space(128)) == set(recommended_search_space(128))
     assert "adaptive_merge+binary" in basic_search_space(128)
+
+
+def test_stricter_rules_never_choose_larger_savings(retrieval_task):
+    from optivision.calibration import score_space, select
+    from optivision.evaluation import relevant_from_qrels, split_queries
+    from optivision.scoring import maxsim_matrix
+
+    corpus, queries, qrels = retrieval_task
+    scored = score_space(corpus, queries, _space())
+    base = maxsim_matrix(queries, corpus)
+    rel = relevant_from_qrels(qrels, queries.ids, corpus.ids)
+    cal, hold = split_queries(len(queries), 0.5, 1)
+    def size(**kw):
+        _, chosen, _ = select(scored, base, rel, cal, hold, 0.8, safety="lower_ci", n_boot=300, **kw)
+        return chosen.bytes_per_doc if chosen else float("inf")
+    loose, strict, bonf, margin = size(), size(confidence=0.999), size(multiplicity="bonferroni"), size(margin=0.05)
+    assert strict >= loose and bonf >= loose and margin >= loose
+
+
+def test_lower_bound_helper(rng):
+    from optivision.evaluation import retention_lower_bound
+
+    b = rng.random(300) + 0.5
+    c = b * 0.97 + 0.02 * rng.standard_normal(300)
+    lo_975 = retention_lower_bound(c, b, 0.975, n_boot=500)
+    lo_999 = retention_lower_bound(c, b, 0.999, n_boot=500)
+    assert lo_999 < lo_975 < float(c.mean() / b.mean())
