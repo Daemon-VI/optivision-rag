@@ -78,16 +78,26 @@ def tiered_table(path: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render(path: Path) -> str | None:
+    """Pick the renderer from the file's own shape; None for formats shown elsewhere."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "study" in data:
+        return study_table(path)
+    rows = data.get("rows") or []
+    if rows and "hot" in rows[0]:
+        return tiered_table(path)
+    if rows and "retention:ndcg@5" in rows[0] and "label" in rows[0] and "reference" in data:
+        return matrix_table(path)
+    return None  # frontier / centred-codec / performance files: see docs/UNIVERSAL.md
+
+
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else "reports/universal")
-    for sub, render in (("merge", matrix_table), ("quantize_project", matrix_table), ("calibration", study_table),
-                        ("tiered", tiered_table), ("text", matrix_table)):
-        d = root / sub
-        if not d.is_dir():
-            continue
-        print(f"## {sub}\n")
-        for path in sorted(d.glob("*.json")):
-            print(render(path))
+    for d in sorted(p for p in root.iterdir() if p.is_dir()):
+        blocks = [b for b in (render(f) for f in sorted(d.glob("*.json"))) if b]
+        if blocks:
+            print(f"## {d.name}\n")
+            print("\n".join(blocks))
     return 0
 
 

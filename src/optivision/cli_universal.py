@@ -172,6 +172,9 @@ def calibrate(
     metric: str = typer.Option("ndcg@5", help="ndcg@k | recall@k | mrr@k | hit@k"),
     reference: str = typer.Option("auto", help="labels | baseline | auto"),
     safety: str = typer.Option("lower_ci", help="lower_ci (default, conservative) | point"),
+    confidence: float | None = typer.Option(None, help="one-sided level of the lower bound (default 0.999)"),
+    multiplicity: str | None = typer.Option(None, help="none | bonferroni (library default if unset)"),
+    margin: float = typer.Option(0.0, help="require the bound to clear target + margin"),
     calibration_fraction: float = typer.Option(0.5, help="share of queries used to choose"),
     seed: int = typer.Option(0),
     out: str | None = typer.Option(None, help="write the full result as JSON"),
@@ -188,8 +191,14 @@ def calibrate(
         console.print(f"  {mark} {c.label:44s} {_kb(c.bytes_per_doc):>12s}/doc  retention {c.retention:.3f}")
 
     console.print(f"[bold]calibrating[/] {len(docs)} docs, {len(qs)} queries, target {metric} >= {target:.3f}")
+    rule: dict = {"margin": margin}
+    if confidence is not None:
+        rule["confidence"] = confidence
+    if multiplicity is not None:
+        rule["multiplicity"] = multiplicity
     res = run_calibration(docs, qs, labels, quality_target=target, metric=metric, reference=reference,
-                          safety=safety, calibration_fraction=calibration_fraction, seed=seed, progress=progress)
+                          safety=safety, calibration_fraction=calibration_fraction, seed=seed, progress=progress,
+                          **rule)
     b = res.baseline
     table = Table(title="calibration result", show_header=False)
     table.add_row("[bold]Baseline[/]", "")

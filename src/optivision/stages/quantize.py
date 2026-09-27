@@ -86,6 +86,13 @@ class BinaryQuantizer(Quantizer):
     back would shift every query token's score by the same constant across
     documents, so MaxSim rankings are identical either way. ``mu`` is counted
     as stored overhead because appending new documents needs it.
+
+    **Measured hazard:** centring helps on ColPali InfoVQA (97.4% -> 98.5%) but
+    collapses a text ColBERT whose queries share one dominant direction
+    (SciFact: 94.1% -> 1.1%): the query's common component multiplies the
+    sign code's large error on each small residual and drowns the relevance
+    signal. Scalar codecs do not have this problem because they decode the
+    residual accurately and add ``mu`` back. Measure before using it.
     """
 
     name: ClassVar[str] = "binary"
@@ -145,27 +152,40 @@ class Int8Quantizer(Quantizer):
 
     name: ClassVar[str] = "int8"
 
-    def __init__(self, scale: str = "fixed") -> None:
+    def __init__(self, scale: str = "fixed", center: str | None = None) -> None:
         if scale not in {"fixed", "per_vector", "per_dimension"}:
             raise ValueError(f"unknown int8 scale mode {scale!r}")
+        if center not in (None, "mean"):
+            raise ValueError("center must be None or 'mean'")
         self.scale = scale
+        self.center = center
         self.ranges: np.ndarray | None = None
+        self.mean: np.ndarray | None = None
 
     def params(self) -> dict[str, Any]:
-        return {"scale": self.scale}
+        return {"scale": self.scale, **({"center": self.center} if self.center else {})}
 
     @property
     def fitted(self) -> bool:
-        return self.scale != "per_dimension" or self.ranges is not None
+        return (self.scale != "per_dimension" or self.ranges is not None) and (
+            self.center is None or self.mean is not None
+        )
 
     def fit(self, corpus: MultiVectorCorpus, queries: MultiVectorCorpus | None = None) -> Int8Quantizer:
+        sample = _fit_sample(corpus.vectors)
+        if self.center == "mean":
+            self.mean = sample.mean(axis=0).astype(np.float32)
+            sample = sample - self.mean
         if self.scale == "per_dimension":
-            sample = np.abs(_fit_sample(corpus.vectors))
-            self.ranges = np.maximum(np.percentile(sample, 99.99, axis=0), 1e-8).astype(np.float32)
+            self.ranges = np.maximum(np.percentile(np.abs(sample), 99.99, axis=0), 1e-8).astype(np.float32)
         return self
 
     def encode(self, vectors: np.ndarray) -> np.ndarray:
         v = np.asarray(vectors, dtype=np.float32)
+        if self.center == "mean":
+            if self.mean is None:
+                raise RuntimeError("Int8Quantizer(center='mean') must be fit before use")
+            v = v - self.mean
         if self.scale == "fixed":
             return _legacy_int8_codes(v)
         if self.scale == "per_dimension":
@@ -181,21 +201,24 @@ class Int8Quantizer(Quantizer):
     def decode(self, codes: np.ndarray, dim: int) -> np.ndarray:
         c = np.ascontiguousarray(codes)
         if self.scale == "fixed":
-            return decode_int8(c, dim)
-        if self.scale == "per_dimension":
+            out = decode_int8(c, dim)
+        elif self.scale == "per_dimension":
             out = c.view(np.int8).reshape(-1, dim).astype(np.float32)
             out *= self.ranges / 127.0
-            return out
-        q = np.ascontiguousarray(c[:, :dim]).view(np.int8).astype(np.float32)
-        scale = np.ascontiguousarray(c[:, dim : dim + 2]).view(np.float16).astype(np.float32)
-        q *= scale / 127.0
-        return q
+        else:
+            out = np.ascontiguousarray(c[:, :dim]).view(np.int8).astype(np.float32)
+            scale = np.ascontiguousarray(c[:, dim : dim + 2]).view(np.float16).astype(np.float32)
+            out *= scale / 127.0
+        if self.center == "mean":
+            out += self.mean
+        return out
 
     def code_bytes(self, dim: int) -> int:
         return dim + (2 if self.scale == "per_vector" else 0)
 
     def overhead_bytes(self) -> int:
-        return int(self.ranges.nbytes) if self.ranges is not None else 0
+        n = int(self.ranges.nbytes) if self.ranges is not None else 0
+        return n + (int(self.mean.nbytes) if self.mean is not None else 0)
 
     @property
     def full_scale(self) -> float:
@@ -211,11 +234,33 @@ class Int4Quantizer(Quantizer):
 
     name: ClassVar[str] = "int4"
 
+    def __init__(self, center: str | None = None) -> None:
+        if center not in (None, "mean"):
+            raise ValueError("center must be None or 'mean'")
+        self.center = center
+        self.mean: np.ndarray | None = None
+
     def params(self) -> dict[str, Any]:
-        return {}
+        return {"center": self.center} if self.center else {}
+
+    @property
+    def fitted(self) -> bool:
+        return self.center is None or self.mean is not None
+
+    def fit(self, corpus: MultiVectorCorpus, queries: MultiVectorCorpus | None = None) -> Int4Quantizer:
+        if self.center == "mean":
+            self.mean = _fit_sample(corpus.vectors).mean(axis=0).astype(np.float32)
+        return self
+
+    def overhead_bytes(self) -> int:
+        return int(self.mean.nbytes) if self.mean is not None else 0
 
     def encode(self, vectors: np.ndarray) -> np.ndarray:
         v = np.asarray(vectors, dtype=np.float32)
+        if self.center == "mean":
+            if self.mean is None:
+                raise RuntimeError("Int4Quantizer(center='mean') must be fit before use")
+            v = v - self.mean
         n, dim = v.shape
         amax = np.maximum(np.abs(v).max(axis=1), 1e-12).astype(np.float16).astype(np.float32)
         q = (np.clip(np.round(v / amax[:, None] * 7.0), -7, 7) + 8).astype(np.uint8)  # 1..15
@@ -234,6 +279,8 @@ class Int4Quantizer(Quantizer):
         scale = np.ascontiguousarray(c[:, nb : nb + 2]).view(np.float16).astype(np.float32)
         out = out[:, :dim]
         out *= scale / 7.0
+        if self.center == "mean":
+            out += self.mean
         return out
 
     def code_bytes(self, dim: int) -> int:

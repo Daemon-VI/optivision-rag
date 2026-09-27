@@ -1,0 +1,256 @@
+{
+ "dataset": "E2-colpali-infovqa",
+ "attrs": {
+  "source": "C:\\Users\\Lenovo\\projects\\optivision-rag-v2\\data\\cache\\colpali_infovqa_test_subsampled.npz",
+  "format": "legacy-encode-cache",
+  "encoder": "colpali",
+  "model": "vidore/colpali-v1.3-merged"
+ },
+ "n_docs": 500,
+ "n_queries": 247,
+ "reference": "labels",
+ "metrics": [
+  "ndcg@5",
+  "ndcg@10",
+  "recall@5",
+  "mrr@10"
+ ],
+ "rows": [
+  {
+   "label": "baseline-float32",
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 527872.0,
+   "compression_vs_float32": 1.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.8581391018232166,
+   "ndcg@10": 0.8645043907521004,
+   "recall@5": 0.902834008097166,
+   "mrr@10": 0.8455674442516548,
+   "compress_seconds": 0.0001357000001007691,
+   "query_ms": 37.87434048582338,
+   "pipeline": {
+    "stages": []
+   },
+   "retention:ndcg@5": 1.0,
+   "retention_ci:ndcg@5": [
+    1.0,
+    1.0
+   ],
+   "retention:ndcg@10": 1.0,
+   "retention_ci:ndcg@10": [
+    1.0,
+    1.0
+   ],
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0
+   ],
+   "retention:mrr@10": 1.0,
+   "retention_ci:mrr@10": [
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "label": "pca-joint 64 (fit on cal queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.836305946921539,
+   "ndcg@10": 0.845318214017816,
+   "recall@5": 0.8825910931174089,
+   "mrr@10": 0.8244087783561468,
+   "compress_seconds": 0.09681279999495018,
+   "query_ms": 30.31648744939523,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9745575573292365,
+   "retention_ci:ndcg@5": [
+    0.955260503416412,
+    0.9916884033505655
+   ],
+   "retention:ndcg@10": 0.9778067330374195,
+   "retention_ci:ndcg@10": [
+    0.9616707224905466,
+    0.9927315839982562
+   ],
+   "retention:recall@5": 0.9775784753363229,
+   "retention_ci:recall@5": [
+    0.9557522123893806,
+    0.9954337899543378
+   ],
+   "retention:mrr@10": 0.9749769624654437,
+   "retention_ci:mrr@10": [
+    0.9566014750756248,
+    0.9927221865806479
+   ]
+  },
+  {
+   "label": "pca-docs 64 (same held-out queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.8311398425077086,
+   "ndcg@10": 0.8443616310577531,
+   "recall@5": 0.8785425101214575,
+   "mrr@10": 0.8205851166377481,
+   "compress_seconds": 0.5809508000093047,
+   "query_ms": 29.2218137651598,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9685374326165246,
+   "retention_ci:ndcg@5": [
+    0.9482922001355059,
+    0.9870569575985809
+   ],
+   "retention:ndcg@10": 0.9767002227983786,
+   "retention_ci:ndcg@10": [
+    0.9603392449707129,
+    0.9915862240737788
+   ],
+   "retention:recall@5": 0.9730941704035875,
+   "retention_ci:recall@5": [
+    0.9500000000000001,
+    0.9911894273127754
+   ],
+   "retention:mrr@10": 0.9704549556824335,
+   "retention_ci:mrr@10": [
+    0.951088431199673,
+    0.9883864598376726
+   ]
+  },
+  {
+   "label": "pca-joint 32 (fit on cal queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.7453736428660327,
+   "ndcg@10": 0.7627369960923606,
+   "recall@5": 0.8178137651821862,
+   "mrr@10": 0.7282758177495019,
+   "compress_seconds": 0.044706100001349114,
+   "query_ms": 26.300719838074752,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.8685930302935729,
+   "retention_ci:ndcg@5": [
+    0.8289832385061144,
+    0.9056751821891135
+   ],
+   "retention:ndcg@10": 0.8822823854356548,
+   "retention_ci:ndcg@10": [
+    0.8468197005646559,
+    0.9180497731810798
+   ],
+   "retention:recall@5": 0.905829596412556,
+   "retention_ci:recall@5": [
+    0.8654557023391105,
+    0.9417040358744395
+   ],
+   "retention:mrr@10": 0.8612864919297378,
+   "retention_ci:mrr@10": [
+    0.8187279391526622,
+    0.9033521794712321
+   ]
+  },
+  {
+   "label": "pca-docs 32 (same held-out queries)",
+   "vectors_per_doc": 1031.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.774243803811666,
+   "ndcg@10": 0.7863195643542243,
+   "recall@5": 0.8421052631578947,
+   "mrr@10": 0.7564311419574579,
+   "compress_seconds": 0.4729654999973718,
+   "query_ms": 27.400487854259996,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9022357822486993,
+   "retention_ci:ndcg@5": [
+    0.8648157685779438,
+    0.9373016572152083
+   ],
+   "retention:ndcg@10": 0.9095610997072474,
+   "retention_ci:ndcg@10": [
+    0.8761971811342936,
+    0.9419763660572508
+   ],
+   "retention:recall@5": 0.9327354260089686,
+   "retention_ci:recall@5": [
+    0.8977548579970104,
+    0.9647615735373677
+   ],
+   "retention:mrr@10": 0.894584041876063,
+   "retention_ci:mrr@10": [
+    0.8537554225769325,
+    0.9329090015439655
+   ]
+  }
+ ],
+ "machine": {
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "numpy": "2.4.6"
+ },
+ "seconds": 38.84553830001096
+}
