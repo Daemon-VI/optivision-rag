@@ -10,6 +10,7 @@ Quick start::
     print(rag.search("office memorandum on fire safety audit").hits[0].ref.page_id)
 """
 
+from .calibration import CalibrationResult, calibrate
 from .compose import CompressedCorpus, Pipeline
 from .config import (
     CompressionConfig,
@@ -20,6 +21,7 @@ from .config import (
     PruningConfig,
     SearchConfig,
 )
+from .optimize import OptimizationResult, optimize
 from .pipeline import IndexReport, OptiVisionRAG
 from .representation import MultiVectorCorpus, MultiVectorRepresentation
 from .scoring import maxsim_matrix
@@ -42,6 +44,7 @@ __version__ = "0.1.1"
 __all__ = [
     "AdaptiveMerge",
     "BinaryQuantizer",
+    "CalibrationResult",
     "CompressedCorpus",
     "CompressedPage",
     "CompressionConfig",
@@ -58,6 +61,7 @@ __all__ = [
     "MultiVectorCorpus",
     "MultiVectorRepresentation",
     "OptiVisionRAG",
+    "OptimizationResult",
     "PageEncoding",
     "PageRef",
     "Pipeline",
@@ -70,5 +74,7 @@ __all__ = [
     "SearchResult",
     "SpatialPruner",
     "__version__",
+    "calibrate",
     "maxsim_matrix",
+    "optimize",
 ]
