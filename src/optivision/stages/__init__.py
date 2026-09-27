@@ -14,7 +14,7 @@ from .base import (
     stage_from_dict,
 )
 from .merge import AdaptiveMerge, HierarchicalMerge, RandomPruner
-from .project import PCAProjector, RandomProjector, TruncateProjector
+from .project import DimensionProjector, PCAProjector, RandomProjector, TruncateProjector
 from .prune import RedundancyPruner, SpatialPruner
 from .quantize import (
     BinaryQuantizer,
@@ -29,6 +29,7 @@ __all__ = [
     "STAGES",
     "AdaptiveMerge",
     "BinaryQuantizer",
+    "DimensionProjector",
     "DimensionReducer",
     "DocView",
     "Float16Quantizer",

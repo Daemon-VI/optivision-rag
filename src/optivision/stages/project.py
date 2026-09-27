@@ -147,6 +147,47 @@ class RandomProjector(DimensionReducer):
 
 
 @register
+class DimensionProjector(DimensionReducer):
+    """``DimensionProjector(128, method="pca")`` -- one entry point for any projection.
+
+    Delegates to :class:`PCAProjector` (default), :class:`RandomProjector` or
+    :class:`TruncateProjector`; extra keyword arguments go to the chosen one.
+    Future learned or Matryoshka-aware projections plug in here by name.
+    """
+
+    name: ClassVar[str] = "project"
+
+    def __init__(self, dim: int = 128, method: str = "pca", **options: Any) -> None:
+        methods = {"pca": PCAProjector, "random": RandomProjector, "truncate": TruncateProjector}
+        if method not in methods:
+            raise ValueError(f"unknown projection method {method!r}; choose from {sorted(methods)}")
+        self.dim = dim
+        self.method = method
+        self.options = options
+        self.inner = methods[method](dim=dim, **options)
+
+    def params(self) -> dict[str, Any]:
+        return {"dim": self.dim, "method": self.method, **self.options}
+
+    @property
+    def fitted(self) -> bool:
+        return self.inner.fitted
+
+    def fit(self, corpus: MultiVectorCorpus, queries: MultiVectorCorpus | None = None) -> DimensionProjector:
+        self.inner.fit(corpus, queries)
+        return self
+
+    def output_dim(self, input_dim: int) -> int:
+        return self.inner.output_dim(input_dim)
+
+    def project(self, vectors: np.ndarray) -> np.ndarray:
+        return self.inner.project(vectors)
+
+    def transform_queries(self, queries: MultiVectorCorpus) -> MultiVectorCorpus:
+        return self.inner.transform_queries(queries)
+
+
+@register
 class TruncateProjector(DimensionReducer):
     name: ClassVar[str] = "truncate"
 

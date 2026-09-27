@@ -10,6 +10,8 @@ from optivision.cli import app
 from optivision.cli_universal import parse_pipeline
 from optivision.representation import MultiVectorCorpus
 
+pytestmark = pytest.mark.filterwarnings("ignore:calibrating on")
+
 runner = CliRunner()
 
 

@@ -128,3 +128,25 @@ class TestRandomPruner:
         assert a.counts.tolist() == [10, 10]
         np.testing.assert_array_equal(a.vectors, b.vectors)
         assert not np.array_equal(a[0].vectors, a[1].vectors)  # per-document draws differ
+
+
+class TestHierarchicalDistanceMode:
+    def test_count_adapts_per_document(self, rng):
+        pytest.importorskip("scipy")
+        few = _clustered(rng, n_clusters=2, per=20)
+        many = _clustered(rng, n_clusters=8, per=5)
+        stage = HierarchicalMerge(ratio=None, max_distance=0.6)
+        assert stage.reduce(_view(few)).vectors.shape[0] == 2
+        assert stage.reduce(_view(many)).vectors.shape[0] == 8
+
+    def test_ratio_caps_the_distance_cut(self, rng):
+        pytest.importorskip("scipy")
+        v = _unit(rng.standard_normal((50, 16))).astype(np.float32)
+        red = HierarchicalMerge(ratio=0.1, max_distance=0.01).reduce(_view(v))
+        assert red.vectors.shape[0] <= 5
+
+    def test_validation_and_roundtrip(self):
+        with pytest.raises(ValueError):
+            HierarchicalMerge(ratio=None, max_distance=None)
+        s = HierarchicalMerge(ratio=None, max_distance=0.5)
+        assert stage_from_dict(s.to_dict()).params() == s.params()

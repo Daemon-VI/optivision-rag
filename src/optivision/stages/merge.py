@@ -189,34 +189,53 @@ class AdaptiveMerge(TokenReducer):
 
 @register
 class HierarchicalMerge(TokenReducer):
-    """Ward agglomerative clustering to ``ratio`` of the vectors (needs SciPy).
+    """Ward agglomerative clustering of each document's vectors (needs SciPy).
 
-    ``ratio=0.5`` is Clavie et al.'s pool factor 2, ``1/3`` pool factor 3.
+    Two ways to decide where to cut the tree:
+
+    ``ratio``         a fixed fraction of the vectors per document. ``0.5`` is
+                      Clavie et al.'s pool factor 2, ``1/3`` pool factor 3.
+    ``max_distance``  a Ward merge height, so the count adapts per document.
+                      For two single unit vectors the height is their Euclidean
+                      distance ``sqrt(2 * (1 - cos))`` -- 0.447 at cosine 0.9 --
+                      and it grows with cluster size. When both are set,
+                      ``ratio`` caps the count.
     """
 
     name: ClassVar[str] = "hierarchical_merge"
 
-    def __init__(self, ratio: float = 0.5, min_vectors: int = 1) -> None:
-        if not 0.0 < ratio <= 1.0:
+    def __init__(self, ratio: float | None = 0.5, max_distance: float | None = None, min_vectors: int = 1) -> None:
+        if ratio is None and max_distance is None:
+            raise ValueError("set ratio, max_distance or both")
+        if ratio is not None and not 0.0 < ratio <= 1.0:
             raise ValueError("ratio must be in (0, 1]")
+        if max_distance is not None and max_distance <= 0:
+            raise ValueError("max_distance must be positive")
         self.ratio = ratio
+        self.max_distance = max_distance
         self.min_vectors = min_vectors
 
     def params(self) -> dict[str, Any]:
-        return {"ratio": self.ratio, "min_vectors": self.min_vectors}
+        return {"ratio": self.ratio, "max_distance": self.max_distance, "min_vectors": self.min_vectors}
 
     def reduce(self, doc: DocView) -> Reduction:
         v = doc.vectors
         n = v.shape[0]
         k = _budget(n, self.ratio, None, self.min_vectors)
-        if n <= 1 or k >= n:
+        if n <= 1 or (self.max_distance is None and k >= n):
             return Reduction(v.copy(), np.arange(n, dtype=np.int64))
         try:
             from scipy.cluster.hierarchy import fcluster, linkage
         except ImportError as exc:  # pragma: no cover - depends on the environment
             raise ImportError("HierarchicalMerge needs SciPy: pip install 'optivision-rag[merge]'") from exc
         z = linkage(_unit(v).astype(np.float64), method="ward")
-        raw = fcluster(z, t=k, criterion="maxclust")
+        if self.max_distance is not None:
+            raw = fcluster(z, t=self.max_distance, criterion="distance")
+            n_clusters = int(raw.max())
+            if n_clusters > k or n_clusters < min(self.min_vectors, n):
+                raw = fcluster(z, t=min(max(n_clusters, self.min_vectors), k), criterion="maxclust")
+        else:
+            raw = fcluster(z, t=k, criterion="maxclust")
         _, labels = np.unique(raw, return_inverse=True)
         labels = labels.astype(np.int64)
         return Reduction(_pool(v, labels, int(labels.max()) + 1, doc.weights), labels)
