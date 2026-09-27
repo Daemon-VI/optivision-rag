@@ -20,6 +20,8 @@ from .config import (
     SearchConfig,
 )
 from .pipeline import IndexReport, OptiVisionRAG
+from .representation import MultiVectorCorpus, MultiVectorRepresentation
+from .scoring import maxsim_matrix
 from .types import CompressedPage, PageEncoding, PageRef, PrunedPage, SearchHit, SearchResult
 
 __version__ = "0.1.1"
@@ -32,6 +34,8 @@ __all__ = [
     "IndexConfig",
     "IndexReport",
     "IngestConfig",
+    "MultiVectorCorpus",
+    "MultiVectorRepresentation",
     "OptiVisionRAG",
     "PageEncoding",
     "PageRef",
@@ -41,4 +45,5 @@ __all__ = [
     "SearchHit",
     "SearchResult",
     "__version__",
+    "maxsim_matrix",
 ]
