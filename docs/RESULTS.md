@@ -334,6 +334,12 @@ Codec ladder, retention of float nDCG@5 (`scripts/review/codec_ladder.py`,
 | sign(ITQ(d - mu)) | 16 | 93.6-94.3% | 98.3% (+0.7 [-0.6, +2.0]) | 95.9% (-0.2 [-2.0, +1.6]) | 99.3% |
 | centroid K=4096 + 1-bit residual | 17.5 | 92-100% (seed-dependent) | 98.8% (+1.2 [-0.1, +2.5]) | **89.1% (-4.2 [-6.5, -2.1])** | 97.7% |
 
+> **Unresolved (release audit, 2026-09-27):** the 2-bit DocVQA figure above
+> (97.0%) is not reproduced by the benchmark pipeline, which measures
+> 95.2–95.5% across three rotation seeds (`optivision bench` and
+> `docs/UNIVERSAL.md`, R3). The two scripts fit the codec differently. Treat
+> the 2-bit DocVQA number as uncertain by about two points.
+
 What holds everywhere: int8 is lossless at 4x; 2-bit recovers about half the sign
 loss at 16x; the sign code costs 2.6-3.7 points on ViDoRe and changes the top-1 page
 of 11% of infovqa queries (top-1 agreement 0.89, top-5 overlap 0.77). What does not

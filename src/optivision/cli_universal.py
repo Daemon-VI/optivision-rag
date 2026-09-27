@@ -44,25 +44,41 @@ def _is_compressed(path: Path) -> bool:
         return json.loads(bytes(data["header"]).decode("utf-8")).get("format") == "optivision-compressed"
 
 
-def load_corpus(path: str | Path, with_images: bool = False):
+TRUST_PICKLE_HELP = ("allow loading a legacy encode cache (optivision bench --cache), whose metadata is a "
+                     "pickle: loading one runs code from the file, so only pass this for files you created")
+
+
+def _refuse_untrusted(path: Path, trust_pickle: bool) -> None:
+    if not trust_pickle:
+        raise typer.BadParameter(
+            f"{path} is a legacy encode cache; its metadata is a pickle, and unpickling a file runs code from it. "
+            "Pass --trust-pickle if you created this file yourself, or convert it once with "
+            "MultiVectorCorpus.from_legacy_cache(...).save(...) to the pickle-free format."
+        )
+
+
+def load_corpus(path: str | Path, with_images: bool = False, trust_pickle: bool = False):
     from .representation import MultiVectorCorpus
 
     p = Path(path)
     if _is_legacy_cache(p):
+        _refuse_untrusted(p, trust_pickle)
         return MultiVectorCorpus.from_legacy_cache(p, with_images=with_images)
     return MultiVectorCorpus.load(p)
 
 
-def load_task(corpus_path: str, queries: str | None, qrels: str | None, with_images: bool = False):
+def load_task(corpus_path: str, queries: str | None, qrels: str | None, with_images: bool = False,
+              trust_pickle: bool = False):
     """(corpus, queries or None, qrels or None) from command-line paths."""
     from .benchmark import load_legacy_dataset
     from .representation import MultiVectorCorpus
 
     cp = Path(corpus_path)
     if queries is not None and queries.endswith(".json") and _is_legacy_cache(cp):
+        _refuse_untrusted(cp, trust_pickle)
         ds = load_legacy_dataset(cp, queries, with_images=with_images)
         return ds.corpus, ds.queries, ds.qrels
-    corpus = load_corpus(cp, with_images=with_images)
+    corpus = load_corpus(cp, with_images=with_images, trust_pickle=trust_pickle)
     if queries is None:
         return corpus, None, None
     qc = MultiVectorCorpus.load(queries)
@@ -124,7 +140,10 @@ def _kb(x: float) -> str:
 # ------------------------------------------------------------------ commands
 
 
-def inspect(path: str = typer.Argument(..., help="corpus .npz, legacy encode cache, or compressed .npz")) -> None:
+def inspect(
+    path: str = typer.Argument(..., help="corpus .npz, legacy encode cache, or compressed .npz"),
+    trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
+) -> None:
     """Describe a vector file: documents, vectors, dimension, dtype, bytes."""
     from .compose import load_compressed
 
@@ -133,7 +152,7 @@ def inspect(path: str = typer.Argument(..., help="corpus .npz, legacy encode cac
         report = load_compressed(p).report()
         title = f"compressed corpus @ {p}"
     else:
-        report = load_corpus(p).summary()
+        report = load_corpus(p, trust_pickle=trust_pickle).summary()
         title = f"{'legacy encode cache' if _is_legacy_cache(p) else 'multi-vector corpus'} @ {p}"
     table = Table(title=title, show_header=False)
     for key, value in report.items():
@@ -149,13 +168,14 @@ def compress(
     corpus: str = typer.Argument(..., help="corpus .npz or legacy encode cache"),
     pipeline: str = typer.Option(..., "--pipeline", "-p", help="JSON, a .json file, or shorthand"),
     out: str = typer.Option(..., "--out", "-o", help="where to write the compressed .npz"),
+    trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
 ) -> None:
     """Compress a corpus with an explicit pipeline and write the codes."""
     from .compose import save_compressed
 
     pipe = parse_pipeline(pipeline)
     needs_images = any(s.name == "spatial" for s in pipe.stages)
-    docs = load_corpus(corpus, with_images=needs_images)
+    docs = load_corpus(corpus, with_images=needs_images, trust_pickle=trust_pickle)
     compressed = pipe.compress(docs)
     path = save_compressed(compressed, out)
     r = compressed.report()
@@ -178,11 +198,12 @@ def calibrate(
     calibration_fraction: float = typer.Option(0.5, help="share of queries used to choose"),
     seed: int = typer.Option(0),
     out: str | None = typer.Option(None, help="write the full result as JSON"),
+    trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
 ) -> None:
     """Choose the smallest configuration meeting a retention target; report it on held-out queries."""
     from .calibration import calibrate as run_calibration
 
-    docs, qs, labels = load_task(corpus, queries, qrels)
+    docs, qs, labels = load_task(corpus, queries, qrels, trust_pickle=trust_pickle)
     if reference == "labels" and labels is None:
         raise typer.BadParameter("reference=labels needs labels (--qrels or a legacy queries.json)")
 
@@ -282,12 +303,13 @@ def benchmark(
     suite: str = typer.Option("merge", help=f"one of {', '.join(SUITES)}"),
     reference: str = typer.Option("labels", help="labels | baseline"),
     out: str = typer.Option("reports/universal", help="output directory"),
+    trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
 ) -> None:
     """Measure a suite of pipelines against the float baseline (exact MaxSim)."""
     from .benchmark import Dataset, run_matrix, save_result, to_markdown
 
     pipes = _suite(suite)
-    docs, qs, labels = load_task(corpus, queries, qrels, with_images=suite == "legacy")
+    docs, qs, labels = load_task(corpus, queries, qrels, with_images=suite == "legacy", trust_pickle=trust_pickle)
     ds = Dataset(Path(corpus).stem, docs, qs, labels)
     res = run_matrix(ds, pipes, reference=reference,
                      progress=lambda name, row: console.print(f"  {name:28s} retention "
@@ -303,13 +325,14 @@ def compare(
     pipeline: list[str] = typer.Option(..., "--pipeline", "-p", help="repeat for each pipeline to compare"),  # noqa: B008
     qrels: str | None = typer.Option(None),
     reference: str = typer.Option("labels", help="labels | baseline"),
+    trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
 ) -> None:
     """Side-by-side retention / size of explicit pipelines."""
     from .benchmark import Dataset, run_matrix, to_markdown
 
     pipes = {p: parse_pipeline(p) for p in pipeline}
     needs_images = any(s.name == "spatial" for pp in pipes.values() for s in pp.stages)
-    docs, qs, labels = load_task(corpus, queries, qrels, with_images=needs_images)
+    docs, qs, labels = load_task(corpus, queries, qrels, with_images=needs_images, trust_pickle=trust_pickle)
     res = run_matrix(Dataset(Path(corpus).stem, docs, qs, labels), pipes, reference=reference, n_boot=500)
     console.print(to_markdown(res))
 

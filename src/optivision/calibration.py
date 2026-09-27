@@ -388,15 +388,6 @@ def calibrate(
         raise ValueError("reference must be 'auto', 'labels' or 'baseline'")
     if len(queries) < 4:
         raise ValueError("need at least 4 queries to split into calibration and held-out halves")
-    n_cal = round(len(queries) * calibration_fraction)
-    if n_cal < MIN_RELIABLE_CALIBRATION_QUERIES:
-        warnings.warn(
-            f"calibrating on {n_cal} queries: with fewer than {MIN_RELIABLE_CALIBRATION_QUERIES} the chosen "
-            "configuration missed its target on held-out queries in up to a third of splits even with "
-            "safety='lower_ci' (36-query splits, docs/UNIVERSAL.md); use more queries or a lower target",
-            stacklevel=2,
-        )
-
     cal_idx, hold_idx = split_queries(len(queries), calibration_fraction, seed)
     t_base = time.perf_counter()
     base_scores = maxsim_matrix(queries, corpus)
@@ -404,7 +395,25 @@ def calibrate(
     relevant = reference_relevance(corpus, queries, qrels, reference, base_scores, baseline_depth)
     base_cal = per_query_metrics(base_scores[cal_idx], [relevant[i] for i in cal_idx], [metric])[metric]
     base_hold = per_query_metrics(base_scores[hold_idx], [relevant[i] for i in hold_idx], [metric])[metric]
+    # Only queries the float index scores above zero say anything about retention (0 / 0 drops out of the
+    # ratio), and the bootstrap cannot see a failure no calibration query happened to show.
+    n_informative = int(np.sum(np.nan_to_num(base_cal) > 0))
+    if n_informative < MIN_RELIABLE_CALIBRATION_QUERIES:
+        warnings.warn(
+            f"calibrating on {len(cal_idx)} queries ({n_informative} with a nonzero baseline {metric}, the only "
+            f"ones that carry information): with fewer than {MIN_RELIABLE_CALIBRATION_QUERIES} the chosen "
+            "configuration missed its target on held-out queries in up to a third of splits even with "
+            "safety='lower_ci' (36-query splits, docs/UNIVERSAL.md); use more queries or a lower target",
+            stacklevel=2,
+        )
 
+    if search_space is None and not _scipy_available():
+        warnings.warn(
+            "SciPy is not installed, so the default search space has no Ward merging families. The measured "
+            "behaviour of the default (docs/UNIVERSAL.md, R7b) is for the full space: "
+            "pip install 'optivision-rag[merge]'",
+            stacklevel=2,
+        )
     space = search_space if search_space is not None else default_search_space(corpus.dimension)
     conf = _per_candidate_confidence(confidence, multiplicity, sum(len(v) for v in space.values()))
     cache: dict | None = {} if cache_transforms else None
@@ -447,6 +456,8 @@ def calibrate(
             "dim": corpus.dimension,
             "query_ms": base_query_ms,
             "calibration_" + metric: float(np.nanmean(base_cal)),
+            "informative_calibration_queries": n_informative,
+            "per_candidate_confidence": conf if safety == "lower_ci" else None,
             "holdout_" + metric: float(np.nanmean(base_hold)),
         },
     )

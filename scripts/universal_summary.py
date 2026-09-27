@@ -99,8 +99,8 @@ def frontier(root: Path) -> str:
         ci_key = key.replace("retention:", "ci:")
         metric = key.split(":")[1]
         out.append(f"**{r['dataset']}** — {r['n_docs']} docs, {r['n_queries']} queries, retention of {metric}\n")
-        header = ("| target | smallest config (point estimate) | x float32 | retention [95% CI] | "
-                  "smallest config (CI lower bound) | x float32 | retention [95% CI] |")
+        header = ("| target | smallest config, point estimate (in-sample) | x float32 | retention [95% CI] | "
+                  "smallest config, 95% CI lower end (in-sample) | x float32 | retention [95% CI] |")
         lines = [header, "|---|---|---|---|---|---|---|"]
         for target in (0.99, 0.97, 0.95, 0.90):
             cells = []
@@ -120,6 +120,62 @@ def frontier(root: Path) -> str:
             f"{lab} ({rows[lab]['compression']:.0f}x, {pct(rows[lab][key])})" for lab in r["frontier"])]
         out.append(front[0] + "\n")
     return "\n".join(out)
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson interval for k successes in n trials."""
+    if n == 0:
+        return float("nan"), float("nan")
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return max(0.0, c - h), min(1.0, c + h)
+
+
+SELECTION = [("E2-colpali-docvqa", "DocVQA"), ("E2-colpali-infovqa", "InfoVQA"),
+             ("text-answerai-colbert-small-v1-scifact", "SciFact")]
+
+
+def selection_rules(root: Path) -> str:
+    """R7b: the shipped default (calibrate() replayed exactly) and the alternative rules."""
+    data = {}
+    for name, title in SELECTION:
+        path = root / "selection_rules" / f"{name}.json"
+        if path.exists():
+            data[title] = json.loads(path.read_text(encoding="utf-8"))
+    out = [("`calibrate()` with its defaults, labels as the reference, 20 random half/half splits. "
+            "*met* = share of splits whose choice reached the target on the held-out half (95% Wilson "
+            "interval over the 20 splits); *x* = median compression chosen; *held-out* = mean and worst "
+            "held-out retention of the choice.\n"),
+           "| dataset | queries | target | met [95% interval] | median x | held-out mean · worst |",
+           "|---|---|---|---|---|---|"]
+    for title, d in data.items():
+        rows = {(r["reference"], r["rule"], r["target"]): r for r in d["results"]}
+        for target in (0.99, 0.97, 0.95):
+            r = rows.get(("labels", "calibrate() default", target))
+            if r is None or r["met"] is None:
+                continue
+            ok = [o for o in r["outcomes"] if o["selected"]]
+            k = sum(o["holdout"] >= target for o in ok)
+            lo, hi = wilson(k, len(ok))
+            out.append(f"| {title} | {d['n_queries']} | {target:.2f} | {k}/{len(ok)} [{pct(lo)}, {pct(hi)}] | "
+                       f"{r['compression_median']:.1f}x | {pct(r['holdout_mean'])} · {pct(r['holdout_min'])} |")
+    out.append("")
+    rules = ["calibrate() default", "point", "lower 0.975", "lower 0.99", "lower 0.999", "bonferroni 0.975",
+             "lower 0.975 + margin 0.01"]
+    cols = [(t, x) for t in data for x in (0.99, 0.97, 0.95)]
+    out.append("All rules (labels): met · median x.\n")
+    out.append("| rule | " + " | ".join(f"{t} {x:.2f}" for t, x in cols) + " |")
+    out.append("|" + "---|" * (len(cols) + 1))
+    for rule in rules:
+        cells = []
+        for t, x in cols:
+            r = {(q["reference"], q["rule"], q["target"]): q for q in data[t]["results"]}.get(("labels", rule, x))
+            cells.append("-" if r is None or r["met"] is None else
+                         f"{100 * r['met']:.0f}% · x{r['compression_median']:.1f}")
+        out.append(f"| {rule} | " + " | ".join(cells) + " |")
+    return "\n".join(out) + "\n"
 
 
 def main() -> int:
@@ -160,6 +216,9 @@ def main() -> int:
     print("Share of splits whose chosen configuration met the target on the held-out half, "
           "and the median compression chosen.\n")
     print(calibration(root))
+    if (root / "selection_rules").is_dir():
+        print("### Selection rules with the default search space (R7b)\n")
+        print(selection_rules(root))
     return 0
 
 

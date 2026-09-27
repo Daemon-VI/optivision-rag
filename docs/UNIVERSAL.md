@@ -17,6 +17,19 @@ This document separates three kinds of statement and never mixes them:
 Everything under *Results* is MEASURED. Tested model coverage is exactly the
 models listed as measured below — nothing else is claimed.
 
+A MEASURED number is one of three kinds, and they are not interchangeable. Each
+results section says which kind it holds:
+
+| kind | what it is | how to read it | where |
+|---|---|---|---|
+| **fixed configuration** | one named pipeline, scored on every query | an unbiased estimate for that pipeline *if you had picked it in advance*; reading the best row off a table of many is itself a selection | R1–R4, R5, R6, R8, R9 |
+| **in-sample selection** | the best of many configurations, chosen and reported **on the same queries** | optimistic by construction (winner's curse); an upper reference, not a prediction | R5b |
+| **out-of-sample** | chosen on calibration queries, reported on **disjoint held-out** queries, over 20 random splits | what `calibrate()` / `optimize()` will do for you | R7, R7b, R10 |
+
+For planning, use the **out-of-sample** numbers. The release audit
+([RELEASE-AUDIT-2026-09-27.md](RELEASE-AUDIT-2026-09-27.md)) traces every
+headline figure to its experiment.
+
 ## Architecture
 
 ```
@@ -124,9 +137,19 @@ the vector files on a GPU machine.
 - **Two references.** *labels*: the dataset's qrels. *baseline@1*: the float
   index's own top result is the relevant document — no labels needed, and
   stricter, because it also counts a changed answer that happens to be right.
-- **No tuning on the reported queries.** Calibration chooses on one part of the
-  queries and reports on the disjoint rest; the calibration study repeats that
-  over 20 random splits and reports how often the held-out figure met the target.
+- **No tuning on the reported queries — for out-of-sample results.**
+  Calibration chooses on one part of the queries and reports on the disjoint
+  rest; the calibration study repeats that over 20 random splits and reports how
+  often the held-out figure met the target. The fixed-configuration tables do
+  not choose anything, and R5b is in-sample on purpose (see the table above).
+- **Ties.** Rankings break exact score ties by document index. Placing a tied
+  relevant document first or last instead changes no reported retention
+  (checked on binary, merged-binary and merged-int4 codes on all three real
+  corpora in the release audit): float queries scored against quantized
+  documents give essentially no exact ties.
+- **The compressed index and the baseline are scored identically**: the same
+  queries (changed only by a fitted projection stage, applied to both sides),
+  every document a candidate, the same exact MaxSim, descending rank.
 - **Bytes** are stored bytes per document including per-vector scales and shared
   codec state, against a float32 baseline (the repository's convention). Divide
   by 2 for a bf16/fp16 baseline.
@@ -156,11 +179,15 @@ points; read them as sanity checks. The ViDoRe splits carry the conclusions.
 
 ### R1 · The refactor preserves retrieval exactly
 
+*Fixed configurations.*
+
 The original nine-variant table rebuilt from stages reproduces the committed
 reports on all four caches: 36 rows, maximum |Δ nDCG@5 / @10| = 4.4e-16
 (`reports/universal/equivalence/`). Identity pipelines reproduce float scores.
 
 ### R2 · Token reduction: merge, don't drop
+
+*Fixed configurations, all queries.*
 
 | method | ColPali · ViDoRe InfoVQA | ColPali · ViDoRe DocVQA | ColPali · generated | ColSmol · generated |
 |---|---|---|---|---|
@@ -211,6 +238,8 @@ Ward with a per-page count gives the best DocVQA points measured (3.7x at 99.1%,
 
 ### R3 · Codecs
 
+*Fixed configurations, all queries.*
+
 | codec | ColPali · ViDoRe InfoVQA | ColPali · ViDoRe DocVQA | ColPali · generated | ColSmol · generated |
 |---|---|---|---|---|
 | float16 | 2x · 100.0% [100.0%, 100.0%] | 2x · 100.0% [99.8%, 100.0%] | 2x · 99.7% [99.2%, 100.0%] | 2x · 100.0% [100.0%, 100.0%] |
@@ -233,6 +262,8 @@ Ward with a per-page count gives the best DocVQA points measured (3.7x at 99.1%,
 
 ### R3b · Centring the codecs
 
+*Fixed configurations, all queries.*
+
 Removing a fitted corpus mean before quantizing (and adding it back on decode):
 
 | configuration | x float32 | ColPali · InfoVQA (nDCG@5) | ColPali · DocVQA (nDCG@5) | ColBERT-small · SciFact (nDCG@10) |
@@ -253,10 +284,13 @@ Removing a fitted corpus mean before quantizing (and adding it back on decode):
   search space uses it.
 - **Centred binary is a hazard.** It helps InfoVQA a little and collapses the
   text model to 1.1%: the queries' shared direction multiplies the sign code's
-  error on each small residual. Plain binary stays in the default space and the
-  option carries a measured warning.
+  error on each small residual (confirmed by the geometry diagnostic under R8).
+  Plain binary stays in the default space and the option carries a measured
+  warning. All of this is one text model on one corpus.
 
 ### R4 · Dimension reduction (128-d vectors)
+
+*Fixed configurations, all queries (the joint-PCA comparison is on a held-out half).*
 
 | projection | ColPali · ViDoRe InfoVQA | ColPali · ViDoRe DocVQA | ColPali · generated | ColSmol · generated |
 |---|---|---|---|---|
@@ -278,6 +312,8 @@ only at 64 d). ColPali is not Matryoshka-trained, so truncation is a control.
 
 ### R5 · Combinations
 
+*Fixed configurations, all queries.*
+
 | pipeline | ColPali · ViDoRe InfoVQA | ColPali · ViDoRe DocVQA | ColPali · generated | ColSmol · generated |
 |---|---|---|---|---|
 | merge 0.6 > int8 per-vector | 116 vec · 35x · 99.4% [98.1%, 100.6%] | 122 vec · 33x · 95.9% [93.2%, 98.6%] | 82 vec · 49x · 101.6% [93.6%, 110.9%] | 148 vec · 23x · 86.6% [78.7%, 94.4%] |
@@ -293,6 +329,8 @@ Merging and a 4–8-bit codec compose almost additively on InfoVQA (35x at 99.4%
 merging drop to 89–97%, and PCA-64 on top of merging costs another 2–3 points.
 
 ### R5b · The token-stage × codec frontier
+
+*In-sample selection: the best of 60, chosen and reported on the same queries.*
 
 Every token stage (none; Ward cut at a height or to a fraction; adaptive merge)
 crossed with every codec (float32, float16, per-vector int8, int4, binary),
@@ -322,15 +360,18 @@ Pareto frontier (bytes/doc vs retention): ward d=2.0 > binary (454x, 87.8%), war
 
 Pareto frontier (bytes/doc vs retention): ward d=2.0 > binary (506x, 94.5%), ward d=1.6 > binary (355x, 95.8%), adaptive r=0.6 > binary (285x, 96.6%), adaptive r=0.7 > binary (192x, 97.5%), adaptive r=0.5 > int4 (98x, 97.7%), ward d=1.6 > int4 (86x, 98.3%), adaptive r=0.6 > int4 (69x, 99.2%), ward d=1.3 > int4 (63x, 99.3%), adaptive r=0.7 > int4 (46x, 100.0%), ward ratio=0.25 > int4 (30x, 100.1%), ward d=0.8 > float16 (8x, 100.1%)
 
-Read the left column as an optimistic, in-sample number: it is chosen on the
-same queries it is scored on, which is exactly the selection bias R7 measures.
-The right column, and the held-out calibration study, are the ones to plan with.
-On the hardest split (DocVQA) the lower-bound column still gives **14.7x at
-98.9%** (Ward + int8) and **23x at 98.4%** (Ward + int4); on InfoVQA **69x at
-99.2%** (adaptive merge + int4).
+**Both columns are in-sample selections**: the best of 60 configurations,
+chosen and reported on the same queries. The right column only requires the
+lower end of each configuration's 95% interval (a one-sided 97.5% bound, not
+corrected for choosing among 60) to clear the target. That makes it less
+optimistic than the left column, not unbiased. The table shows what the grid
+contains, not what calibration will choose: the out-of-sample default (R7b)
+chose a median of 3.9x at the 0.97 target on DocVQA where this table shows 14.7x.
 
 
 ### R6 · Two tiers: tiny codes in RAM, int8 on disk
+
+*Fixed configurations, all queries.*
 
 The hot tier (binary codes, optionally of merged vectors) scores every page and
 keeps a shortlist; the cold tier rescores only the shortlist. RAM figures are
@@ -364,6 +405,8 @@ DocVQA's (InfoVQA is within 10%); float32 is 527.9 KB/page.
   pages); it is not a latency claim.
 
 ### R7 · Can calibration be trusted on unseen queries?
+
+*Out-of-sample: 20 random calibration / held-out splits.*
 
 For every cell below, the query set was split in half 20 times at random; the
 calibrator chose on one half, and the chosen configuration was scored on the
@@ -447,6 +490,8 @@ available in the API and on the CLI.
 
 ### R8 · A text late-interaction model
 
+*Fixed configurations, all queries.*
+
 `answerdotai/answerai-colbert-small-v1` (33M parameters, 96-dimensional tokens),
 encoded through the package's sentence-transformers adapter on BEIR SciFact:
 5,183 abstracts (1.22 M vectors, 236 per document), 300 test queries, float
@@ -495,7 +540,30 @@ nDCG@10 0.7456 (the model card reports 0.7477). Retention of nDCG@10.
 - This is why the default search space uses relative budgets, and why the layer
   measures instead of assuming.
 
+**Geometry, measured** (`s3c_centred_codecs.py --geometry`, 300 sampled
+documents; `reports/universal/geometry/`):
+
+| | ColPali · DocVQA | ColPali · InfoVQA | ColBERT-small · SciFact |
+|---|---|---|---|
+| median cosine of each vector's nearest neighbour in its own document | 0.927 | 0.934 | 0.989 |
+| norm of the corpus mean (unit-norm tokens) | 0.25 | 0.23 | 0.90 |
+| median cosine of a query token to the corpus mean | 0.13 | 0.10 | 0.94 |
+| centred binary | 95.2% | 98.5% | 1.1% |
+| centred binary, query component along the mean removed | 94.7% | 98.3% | 96.9% [94.4%, 99.2%] |
+
+**How far this generalises.** It is *one* text model on *one* corpus (SciFact,
+300 queries). Within it the effects are large and reproducible: the centred-int4
+gain and the centred-binary collapse are far outside their intervals, and the
+last row confirms the mechanism (the collapse comes from the queries' shared
+direction; removing it recovers the codec). Whether other text ColBERTs are this
+anisotropic is **not measured**. What is supported is the narrower statement
+that *some* encoders are, that absolute thresholds and centred sign codes then
+fail, and that the default search space therefore avoids both. Scoring queries
+with the mean direction removed is a diagnostic here, not a package feature.
+
 ### R9 · Cost of compressing
+
+*Fixed configurations; one laptop.*
 
 ColPali InfoVQA, 500 pages, 264 MB of float32 input, one process on the
 laptop in *Methodology* while other benchmark jobs shared the CPU (so treat times
@@ -526,37 +594,136 @@ via `tracemalloc`.
   the float32 original on the same machine.
 
 
-## What is not claimed
+### R10 · What the lower bound does and does not guarantee
+
+*Out-of-sample and simulation; release audit (`s10_bound_audit.py`,
+`s12_corpus_size.py`, `s11_ties.py`; `reports/universal/audit/`).*
+
+The bound is `R − 3.09·sd*` at 0.999, where `R = Σc/Σb` over the calibration
+queries and `sd*` is its bootstrap standard error. It is an approximate bound
+on **one** configuration's retention, for queries drawn like the calibration
+queries, on **this** corpus.
+
+**Coverage for one configuration.** Treat DocVQA's 451 per-query results for a
+real configuration as the population, and draw calibration sets from it (400
+draws per cell, four configurations):
+
+| calibration queries | nominal 0.975 | nominal 0.999 |
+|---|---|---|
+| 25 | 77–90% | 87–97% |
+| 50 | 90–96% | 97–99.5% |
+| 100 | 94.5–97% | 99–99.5% |
+| 225 | 95–97% | 99.5–100% |
+
+Close to nominal from about 100 queries. `calibrate()` warns below 100
+calibration queries *with a nonzero baseline score*: only those carry
+information, and a handful of queries that happen to agree exactly give a
+zero-width interval (10 such queries passed a 0.97 target in 40% of draws when
+the true retention was 90.9%).
+
+**Choosing among many configurations.** The per-configuration level is not the
+confidence of the choice. In a synthetic worst case — `K` independent
+configurations, each truly 0.5–1 point *below* the target, each losing whole
+queries at random — the probability that at least one passes, and is therefore
+chosen:
+
+| truth vs target | K = 1 at 0.999 | K = 10 at 0.999 | K = 40 at 0.999 | K = 40, Bonferroni (0.975 / K) |
+|---|---|---|---|---|
+| 0.960 vs 0.97 | 0.3% | 9.7% | 34% | 35% |
+| 0.965 vs 0.97 | 2.0% | 21% | 55% | — |
+| 0.940 vs 0.95 | — | 7.3% | 26% | 25% |
+
+Bonferroni does not rescue this regime because the per-configuration bound
+under-covers when losses are rare and large. Real configurations share merges
+and codecs, so they are strongly correlated and the measured held-out rates
+(R7b) are far better. The worst case exists all the same, and the error grows
+with the size of the search space.
+
+**The corpus changes the answer.** Retention of fixed configurations, with each
+draw's queries held fixed while random distractor pages are added (5 draws):
+
+| configuration | DocVQA 100 → 500 pages | InfoVQA 100 → 500 pages |
+|---|---|---|
+| binary | 98.6% → 97.5% | 99.3% → 97.4% |
+| int4 | 99.2% → 97.7% | 99.6% → 99.6% |
+| centred adaptive merge r=0.6 + int8 | 97.4% → 95.6% | 99.8% → 99.0% |
+| adaptive merge r=0.6 + binary | 91.7% → 90.3% | 99.8% → 96.7% |
+
+Lossier configurations lose more as the corpus grows. Calibrating on a sample of
+a corpus overstates retention on the whole of it, and nothing here measures
+corpora beyond 5,183 documents.
+
+**Ties do not flatter any number.** Placing tied relevant documents first or
+last instead of by index leaves every tested retention unchanged to four
+decimals (binary, merged binary and merged int4 on DocVQA, InfoVQA and SciFact).
+
+**What would be needed for a real guarantee** (not implemented): a bound that
+is valid for the *selected* configuration (for example, a held-out test
+of the chosen configuration alone, which the result already reports, or
+conformal / union-bound methods sized to the number of configurations
+actually judged), plus calibration queries drawn from the deployment
+distribution against the deployment-sized corpus.
+
+## Limits of what is measured
 
 - **Model coverage is three encoders**, all measured on this laptop: ColPali-v1.3
-  (two ViDoRe V1 splits and the generated corpus), ColSmol-256M (generated
-  corpus) and one text ColBERT (SciFact). Nothing here says how ColQwen2/2.5,
-  ColNomic, Jina v4, NVIDIA ColEmbed, ColQwen3 or any 2k–4k-dimensional model
-  behaves. Their adapters are *untested* or *unverified* in `adapters.py`.
-- **Corpora are small.** 60 to 5,183 documents. At a million pages each query
-  faces far more near-duplicates, so the same compression may retain less.
-  ViDoRe V2/V3, long documents, multilingual and non-document images are
-  unmeasured.
+  (two ViDoRe V1 splits and the generated corpus), ColSmol-256M (the 60-page
+  generated corpus only, so a sanity check rather than evidence) and one text
+  ColBERT (SciFact).
+- **Calibration does not guarantee the target, and nothing in this package is a
+  distribution-free guarantee.** The 0.999 lower bound is an approximate
+  bootstrap bound for *one* configuration, for *the query distribution the
+  calibration queries were drawn from*, on *this* corpus. It does not account
+  for choosing among many configurations, for queries unlike the calibration
+  set, or for a corpus that grows or changes (R10). What is measured is how
+  often the choice met the target on held-out queries (R7b).
+- **Corpora are small**: 60 to 5,183 documents, and retention measurably falls
+  as distractors are added (R10). At a million pages each query faces far more
+  near-duplicates.
 - **Dimension reduction was only measured on 128- and 96-dimensional vectors**,
-  where there is little to remove. Wide embeddings are where it should matter
-  most, and that is untested.
-- **Attention-guided merging is an interface, not a result.** `AdaptiveMerge`
-  can seed on an `importance` signal, but no encoder here exposed attention, so
-  nothing was measured.
-- **Learned components are future work**: trained merging networks
-  (MarginMerge-style), Matryoshka or distilled projections, per-model adapters.
-  External papers report strong numbers for them; none were reproduced here.
-- **Calibration does not guarantee the target.** It reports how often the chosen
-  configuration met the target on unseen queries: 95–100% of splits with the
-  default 0.999 bound on DocVQA and SciFact (R7b), lower with looser rules, and
-  as low as 67% with only 36 calibration queries (R7).
+  where there is little to remove.
+- **The text-model findings are one model on one corpus** (R8).
 - **Document fragments are not a substitute for real queries.** Calibrating on
   them chose configurations that lost 6–18% on real queries while reporting
   97–100% (R7), so `optimize()` refuses to run without sample queries.
 - **Latency is a relative, single-machine number** from an exact numpy scan, not
   an ANN index or a database.
-- **Database backends.** Only the original numpy and Qdrant paths are wired, via
-  `to_legacy_pages`, and only for float32, plain binary and fixed int8 codes.
-  Milvus, Weaviate, Vespa, Elasticsearch/OpenSearch and LanceDB are future work
-  behind the `StorageBackend` interface.
-- **Not released.** This is branch work; the PyPI and npm packages are still 0.1.1.
+
+## External evidence (reported elsewhere, not reproduced here)
+
+- The text ColBERT's model card reports SciFact nDCG@10 0.7477. We measured
+  0.7456 with the float index, which is the only external figure we checked.
+- Ward token pooling for ColBERT-style indexes is from Clavie et al. (2024).
+  Their compression / quality figures were not reproduced; ours are in R2.
+- Trained merging networks (MarginMerge-style), attention-guided merging
+  (AnchorFold) and trained projection heads report stronger compression than
+  anything here. None were reproduced, and none of their numbers appear in this
+  document. `docs/AUDIT-2026-09-27.md` §4 lists them with their status.
+
+## Unvalidated: in the code, not benchmarked
+
+- Adapters for ColSmol-500M and ColQwen2 (*untested*: the loader exists) and for
+  ColQwen2.5, ColNomic, ColBERTv2 and GTE-ModernColBERT (*unverified*: written,
+  never run). `optivision.adapters.supported_models()` returns the status of
+  each.
+- Attention-guided merging: `AdaptiveMerge` can seed on an `importance`
+  signal, but no encoder here exposed attention.
+- The default search space without SciPy (no Ward families); `calibrate()` warns.
+- `Lloyd2Quantizer` and `PCAProjector` inside `optimize()`: available for
+  explicit pipelines, but not in the default search space.
+- The Qdrant bridge for new codecs: only float32, plain binary and fixed int8
+  codes map onto the original numpy / Qdrant backends (`to_legacy_pages`).
+
+## Future work
+
+- ColQwen2/2.5, ColNomic, Jina v4, NVIDIA ColEmbed and other 2k–4k-dimensional
+  models, where dimension reduction should matter most.
+- ViDoRe V2/V3, long documents, multilingual and non-document images.
+- Million-page corpora, and calibration against a deployment-sized corpus.
+- Database connectors behind `StorageBackend`: Milvus, Weaviate, Vespa,
+  Elasticsearch/OpenSearch, LanceDB.
+- A selection rule with a guarantee for the *selected* configuration (R10).
+- Learned components: trained merging, Matryoshka or distilled projections,
+  per-model adapters.
+
+**Release status:** branch work. The PyPI and npm packages are still 0.1.1.
