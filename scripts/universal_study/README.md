@@ -33,8 +33,32 @@ export OPTIVISION_OUT=reports/universal/raw  # where each script writes its JSON
 | `s8_tiered.py` | hot binary shortlist + cold rescoring | ~30 min |
 | `s9_encode_scifact.py`, `s9_text_study.py` | the same measurements on a text ColBERT | ~15 min encode, ~60 min study |
 | `s16_performance.py` | compression time, peak traced memory, scan time | ~10 min |
+| `s3c_centred_codecs.py` | centred int8 / int4 / binary (R3b); `--geometry` for the anisotropy diagnostics (R8) | ~20 min |
+| `s7b_selection_rules.py` | every selection rule, including `calibrate()`'s own default path, on the default search space (R7b) | ~35 min per ViDoRe split, longer for SciFact |
+| `s10_bound_audit.py` | coverage of the lower bound, many-candidate and degenerate cases (R10, release audit) | ~30 min |
+| `s11_ties.py` | whether index tie-breaking changes retention (release audit) | ~15 min |
+| `s12_corpus_size.py` | retention as distractors are added (release audit) | ~10 min |
 
 Timings were taken with several jobs sharing four cores; alone they run faster.
+
+Each script writes under `$OPTIVISION_OUT` in the folder it was first run with;
+copy the JSON to the matching folder of `reports/universal/`:
+
+| script | writes | committed as |
+|---|---|---|
+| `s2` | `phase2/legacy_equiv/` | `equivalence/` |
+| `s3` | `phase3/results/` | `merge/` |
+| `s3b` | `centred/results/` | `centred/` |
+| `s3c` | `centred_codecs/`, `geometry/` | same |
+| `s4` | `phase4/results/` | `calibration/` |
+| `s5` | `frontier/results/` | `frontier/` |
+| `s6` | `phase67/results/` | `quantize_project/` |
+| `s7b` | `selection_rules/` | same |
+| `s8` | `phase8/results/` | `tiered/` |
+| `s9` | `phase9/results/` | `text/` |
+| `s10` | the path given as its argument | `audit/bound_audit.json` |
+| `s11`, `s12` | `audit/` | same |
+| `s16` | `perf/results.json` | `performance/` |
 
 Then render the tables:
 

@@ -10,7 +10,7 @@ from optivision.cli import app
 from optivision.cli_universal import parse_pipeline
 from optivision.representation import MultiVectorCorpus
 
-pytestmark = pytest.mark.filterwarnings("ignore:calibrating on")
+pytestmark = [pytest.mark.filterwarnings("ignore:calibrating on"), pytest.mark.filterwarnings("ignore:Int8Quantizer")]
 
 runner = CliRunner()
 
@@ -82,3 +82,29 @@ def test_compare_and_benchmark(files):
                             "--out", str(tmp / "bench")])
     assert r.exit_code == 0, r.output
     assert list((tmp / "bench").glob("*.json"))
+
+
+class _Marker:
+    """Unpickling this touches a file: proof that the CLI ran code from the input."""
+
+    def __init__(self, path):
+        self.path = path
+
+    def __reduce__(self):
+        from pathlib import Path
+
+        return (Path.touch, (Path(self.path),))
+
+
+@pytest.mark.parametrize("command", ["inspect", "compress"])
+def test_legacy_pickle_needs_explicit_trust(tmp_path, command):
+    marker = tmp_path / "unpickled"
+    meta = np.empty(1, dtype=object)
+    meta[0] = _Marker(str(marker))
+    bad = tmp_path / "crafted.npz"
+    np.savez(bad, meta=meta, vectors=np.zeros((1, 4), np.float32))
+    args = [command, str(bad)] + (["-p", "binary", "-o", str(tmp_path / "out.npz")] if command == "compress" else [])
+    result = runner.invoke(app, args)
+    assert result.exit_code != 0
+    assert "--trust-pickle" in result.output
+    assert not marker.exists()

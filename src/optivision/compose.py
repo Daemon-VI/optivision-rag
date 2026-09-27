@@ -33,6 +33,18 @@ from .stages.quantize import Float32Quantizer
 ENCODE_BLOCK_ROWS = 65_536
 
 
+def _require_finite(corpus: MultiVectorCorpus, what: str) -> None:
+    """Refuse NaN / inf vectors. A single one would otherwise leak into fitted
+    state (corpus means, ranges, PCA) and corrupt every other document's codes."""
+    v = corpus.vectors
+    for lo in range(0, corpus.num_vectors, ENCODE_BLOCK_ROWS):
+        block = np.asarray(v[lo : lo + ENCODE_BLOCK_ROWS])
+        if not np.isfinite(block).all():
+            row = lo + int(np.argmin(np.isfinite(block).all(axis=1)))
+            doc = int(np.searchsorted(corpus.offsets, row, side="right")) - 1
+            raise ValueError(f"{what} contain non-finite values (first at vector {row}, document {doc})")
+
+
 class CompressedCorpus:
     """Quantized documents plus the accounting needed to judge them.
 
@@ -141,6 +153,11 @@ class Pipeline:
 
     def fit(self, corpus: MultiVectorCorpus, queries: MultiVectorCorpus | None = None) -> Pipeline:
         """Fit every stage on the output of the stages before it."""
+        if corpus.num_vectors == 0:
+            raise ValueError("cannot fit a pipeline on a corpus with no vectors")
+        _require_finite(corpus, "documents")
+        if queries is not None:
+            _require_finite(queries, "queries")
         x, q = corpus, queries
         for stage in self.vector_stages:
             stage.fit(x, q)
@@ -158,6 +175,7 @@ class Pipeline:
         return x
 
     def transform_queries(self, queries: MultiVectorCorpus) -> MultiVectorCorpus:
+        _require_finite(queries, "queries")
         q = queries
         for stage in self.vector_stages:
             if isinstance(stage, DimensionReducer):
@@ -168,9 +186,11 @@ class Pipeline:
         """Run every stage. Stages with unfitted state are fit on ``corpus`` unless
         ``fit=False``, in which case an unfitted stage is an error."""
         if fit or (fit is None and not self.fitted):
-            self.fit(corpus)
+            self.fit(corpus)  # checks the input
         elif not self.fitted:
             raise RuntimeError("pipeline has unfitted stages; call fit() first")
+        else:
+            _require_finite(corpus, "documents")
         return self.encode(self.transform(corpus), original=corpus)
 
     def encode(self, transformed: MultiVectorCorpus, original: MultiVectorCorpus | None = None) -> CompressedCorpus:
@@ -184,13 +204,18 @@ class Pipeline:
         x = transformed
         q = self.quantizer
         if not q.fitted:
+            if x.num_vectors == 0:
+                raise ValueError(f"cannot fit {q.name} on a corpus with no vectors")
             q.fit(x)
         # Encode in row blocks into one preallocated array: a codec's float
         # temporaries then cost one block, not a second copy of the corpus.
         codes = np.empty((x.num_vectors, q.code_bytes(x.dimension)), dtype=np.uint8)
         for lo in range(0, x.num_vectors, ENCODE_BLOCK_ROWS):
             hi = min(lo + ENCODE_BLOCK_ROWS, x.num_vectors)
-            codes[lo:hi] = q.encode(np.asarray(x.vectors[lo:hi], dtype=np.float32))
+            block = np.asarray(x.vectors[lo:hi], dtype=np.float32)
+            if not np.isfinite(block).all():
+                raise ValueError(f"documents contain non-finite values (vectors {lo}..{hi - 1} after transform)")
+            codes[lo:hi] = q.encode(block)
         stats = {
             "vectors_before": original.num_vectors,
             "dim_before": original.dimension,

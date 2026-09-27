@@ -8,7 +8,7 @@ from optivision.compose import Pipeline
 from optivision.pareto import choose, dominates, pareto_front
 from optivision.stages import AdaptiveMerge, BinaryQuantizer, Float16Quantizer, Int8Quantizer
 
-pytestmark = pytest.mark.filterwarnings("ignore:calibrating on")
+pytestmark = [pytest.mark.filterwarnings("ignore:calibrating on"), pytest.mark.filterwarnings("ignore:Int8Quantizer")]
 
 
 def _rows():

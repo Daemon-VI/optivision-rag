@@ -10,6 +10,7 @@ functions the original ``Compressor`` uses, so their codes are byte-identical.
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, ClassVar
 
 import numpy as np
@@ -68,6 +69,13 @@ class Float16Quantizer(Quantizer):
 
     def code_bytes(self, dim: int) -> int:
         return 2 * dim
+
+
+#: Smallest normal float16. Per-vector scales are stored as float16, so a floor
+#: below this (the old 1e-12) rounds to 0 for an all-zero vector and the codes
+#: become NaN cast to int. Only vectors whose largest |component| is below it
+#: are affected, which no normalised embedding has.
+_MIN_SCALE = float(np.finfo(np.float16).tiny)
 
 
 def _fit_sample(vectors: np.ndarray, n: int = 200_000, seed: int = 0) -> np.ndarray:
@@ -187,13 +195,19 @@ class Int8Quantizer(Quantizer):
                 raise RuntimeError("Int8Quantizer(center='mean') must be fit before use")
             v = v - self.mean
         if self.scale == "fixed":
+            if v.size and float(np.abs(v).max()) > INT8_SCALE:
+                warnings.warn(
+                    f"Int8Quantizer(scale='fixed') clips components beyond +/-{INT8_SCALE}; it was tuned for "
+                    "unit-norm 128-d vectors. Use scale='per_vector' for other embeddings.",
+                    stacklevel=3,
+                )
             return _legacy_int8_codes(v)
         if self.scale == "per_dimension":
             if self.ranges is None:
                 raise RuntimeError("Int8Quantizer(scale='per_dimension') must be fit before use")
             q = np.clip(np.round(v / self.ranges * 127.0), -127, 127).astype(np.int8)
             return q.view(np.uint8)
-        amax = np.maximum(np.abs(v).max(axis=1), 1e-12).astype(np.float16).astype(np.float32)
+        amax = np.maximum(np.abs(v).max(axis=1), _MIN_SCALE).astype(np.float16).astype(np.float32)
         q = np.clip(np.round(v / amax[:, None] * 127.0), -127, 127).astype(np.int8)
         scales = amax.astype(np.float16).view(np.uint8).reshape(-1, 2)
         return np.concatenate([q.view(np.uint8), scales], axis=1)
@@ -262,7 +276,7 @@ class Int4Quantizer(Quantizer):
                 raise RuntimeError("Int4Quantizer(center='mean') must be fit before use")
             v = v - self.mean
         n, dim = v.shape
-        amax = np.maximum(np.abs(v).max(axis=1), 1e-12).astype(np.float16).astype(np.float32)
+        amax = np.maximum(np.abs(v).max(axis=1), _MIN_SCALE).astype(np.float16).astype(np.float32)
         q = (np.clip(np.round(v / amax[:, None] * 7.0), -7, 7) + 8).astype(np.uint8)  # 1..15
         if dim % 2:
             q = np.concatenate([q, np.full((n, 1), 8, np.uint8)], axis=1)
