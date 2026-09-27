@@ -1,0 +1,353 @@
+"""Quality-aware selection: the smallest configuration that meets a retention target.
+
+    result = calibrate(corpus, queries, qrels, quality_target=0.97, metric="ndcg@5")
+
+1. Queries are split once into a *calibration* part and a *held-out* part.
+2. Every candidate pipeline is measured on the calibration queries, as retention
+   against the float baseline on the same queries (labels if given, else the
+   baseline's own top results).
+3. The feasible candidates are those whose calibration retention meets the
+   target (``safety="point"``) or whose bootstrap lower bound does
+   (``safety="lower_ci"``). The smallest feasible one wins (bytes per document,
+   then query time).
+4. The winner -- and only the winner -- is reported with its retention on the
+   held-out queries, which played no part in choosing it.
+
+Step 4 is the point. A configuration chosen because it scored well on some
+queries is optimistically biased on those queries; the held-out figure is the
+honest estimate, and it can miss the target. The result says so when it does.
+
+Each candidate is scored once against *all* queries and its score matrix is
+kept (queries x documents float32 -- about 1 MB for 500 x 500), so the held-out
+number costs nothing extra and :func:`select` can re-run the choice for any
+target, metric, reference or split without re-scoring (see
+:func:`score_space`, used by the benchmark scripts to repeat splits).
+
+Candidates are grouped into *families* ordered from least to most aggressive
+(one token-reduction knob swept at a fixed codec). Within a family the search
+stops at the first infeasible step when ``assume_monotone=True``; that is an
+assumption about the data, not a guarantee, and it can be switched off.
+"""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any
+
+import numpy as np
+
+from .compose import Pipeline
+from .evaluation import (
+    per_query_metrics,
+    relevant_from_baseline,
+    relevant_from_qrels,
+    retention,
+    split_queries,
+)
+from .representation import MultiVectorCorpus
+from .scoring import maxsim_matrix
+from .stages import AdaptiveMerge, BinaryQuantizer, Float16Quantizer, Int8Quantizer
+
+# ------------------------------------------------------------ candidates
+
+
+@dataclass
+class ScoredCandidate:
+    """One pipeline, compressed once and scored against every query."""
+
+    family: str
+    label: str
+    pipeline: dict[str, Any]
+    report: dict[str, Any]
+    scores: np.ndarray  # float32 [n_queries, n_docs]
+    compress_seconds: float
+    score_seconds: float
+
+    @property
+    def bytes_per_doc(self) -> float:
+        return float(self.report["bytes_per_doc"])
+
+    @property
+    def query_ms(self) -> float:
+        return 1000.0 * self.score_seconds / max(1, self.scores.shape[0])
+
+
+def score_candidate(pipe: Pipeline, corpus: MultiVectorCorpus, queries: MultiVectorCorpus,
+                    family: str = "", label: str | None = None) -> ScoredCandidate:
+    t0 = time.perf_counter()
+    compressed = pipe.compress(corpus)
+    t1 = time.perf_counter()
+    scores = maxsim_matrix(pipe.transform_queries(queries), compressed)
+    t2 = time.perf_counter()
+    return ScoredCandidate(family, label or pipe.label(), pipe.to_dict(), compressed.report(),
+                           scores, t1 - t0, t2 - t1)
+
+
+def score_space(corpus: MultiVectorCorpus, queries: MultiVectorCorpus,
+                space: dict[str, Sequence[Pipeline]], progress: Any = None) -> list[ScoredCandidate]:
+    """Score every candidate in ``space`` (no early stopping). For experiments."""
+    out = []
+    for family, steps in space.items():
+        for pipe in steps:
+            sc = score_candidate(pipe, corpus, queries, family=family)
+            out.append(sc)
+            if progress is not None:
+                progress(sc)
+    return out
+
+
+@dataclass
+class Candidate:
+    """A scored candidate's standing on the calibration split."""
+
+    family: str
+    label: str
+    pipeline: dict[str, Any]
+    bytes_per_doc: float
+    vectors_per_doc: float
+    dim: int
+    bits_per_dim: float
+    compression_vs_float32: float
+    retention: float
+    retention_lo: float
+    retention_hi: float
+    query_ms: float
+    compress_seconds: float
+    feasible: bool = False
+
+    def row(self) -> dict[str, Any]:
+        return dict(self.__dict__)
+
+
+def _judge(sc: ScoredCandidate, relevant: Sequence[np.ndarray], idx: np.ndarray, metric: str,
+           base_pq: np.ndarray, target: float, safety: str, max_bytes: float | None,
+           n_boot: int, seed: int) -> Candidate:
+    pq = per_query_metrics(sc.scores[idx], [relevant[i] for i in idx], [metric])[metric]
+    point, lo, hi = retention(pq, base_pq, n_boot=n_boot, seed=seed)
+    score = point if safety == "point" else lo
+    return Candidate(
+        family=sc.family, label=sc.label, pipeline=sc.pipeline,
+        bytes_per_doc=sc.bytes_per_doc,
+        vectors_per_doc=float(sc.report["vectors_per_doc"]),
+        dim=int(sc.report["dim"]),
+        bits_per_dim=float(sc.report["bits_per_dim"]),
+        compression_vs_float32=float(sc.report["compression_vs_float32"]),
+        retention=point, retention_lo=lo, retention_hi=hi,
+        query_ms=sc.query_ms, compress_seconds=sc.compress_seconds,
+        feasible=bool(score >= target) and (max_bytes is None or sc.bytes_per_doc <= max_bytes),
+    )
+
+
+def select(scored: Sequence[ScoredCandidate], base_scores: np.ndarray, relevant: Sequence[np.ndarray],
+           cal_idx: np.ndarray, hold_idx: np.ndarray, target: float, metric: str = "ndcg@5",
+           safety: str = "point", max_bytes_per_doc: float | None = None, n_boot: int = 1000,
+           seed: int = 0) -> tuple[list[Candidate], Candidate | None, dict[str, Any] | None]:
+    """Choose among already-scored candidates for one target and split."""
+    base_cal = per_query_metrics(base_scores[cal_idx], [relevant[i] for i in cal_idx], [metric])[metric]
+    judged = [_judge(sc, relevant, cal_idx, metric, base_cal, target, safety, max_bytes_per_doc, n_boot, seed)
+              for sc in scored]
+    feasible = [i for i, c in enumerate(judged) if c.feasible]
+    if not feasible:
+        return judged, None, None
+    best = min(feasible, key=lambda i: (judged[i].bytes_per_doc, judged[i].query_ms))
+    return judged, judged[best], _holdout(scored[best], base_scores, relevant, hold_idx, metric, n_boot, seed)
+
+
+def _holdout(sc: ScoredCandidate, base_scores: np.ndarray, relevant: Sequence[np.ndarray],
+             hold_idx: np.ndarray, metric: str, n_boot: int, seed: int) -> dict[str, Any]:
+    rel = [relevant[i] for i in hold_idx]
+    base = per_query_metrics(base_scores[hold_idx], rel, [metric])[metric]
+    pq = per_query_metrics(sc.scores[hold_idx], rel, [metric])[metric]
+    point, lo, hi = retention(pq, base, n_boot=n_boot, seed=seed)
+    return {
+        "retention": point,
+        "retention_ci": [lo, hi],
+        metric: float(np.nanmean(pq)),
+        "baseline_" + metric: float(np.nanmean(base)),
+        "bytes_per_doc": sc.bytes_per_doc,
+        "query_ms": sc.query_ms,
+    }
+
+
+# ----------------------------------------------------------- the one call
+
+
+@dataclass
+class CalibrationResult:
+    target: float
+    metric: str
+    reference: str
+    safety: str
+    n_calibration_queries: int
+    n_holdout_queries: int
+    selected: Candidate | None
+    holdout: dict[str, Any] | None
+    candidates: list[Candidate] = field(default_factory=list)
+    baseline: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def met_target_on_holdout(self) -> bool | None:
+        if self.holdout is None:
+            return None
+        return bool(self.holdout["retention"] >= self.target)
+
+    @property
+    def pipeline(self) -> Pipeline | None:
+        return None if self.selected is None else Pipeline.from_dict(self.selected.pipeline)
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "target": self.target,
+            "metric": self.metric,
+            "reference": self.reference,
+            "safety": self.safety,
+            "n_calibration_queries": self.n_calibration_queries,
+            "n_holdout_queries": self.n_holdout_queries,
+            "baseline": self.baseline,
+            "selected": None if self.selected is None else self.selected.row(),
+            "holdout": self.holdout,
+            "met_target_on_holdout": self.met_target_on_holdout,
+            "n_candidates_evaluated": len(self.candidates),
+        }
+
+
+def default_search_space(dim: int) -> dict[str, list[Pipeline]]:
+    """Families of pipelines, each ordered from least to most aggressive.
+
+    Codecs x adaptive-merge radii. Dimension reduction is left out of the
+    default space until it has been measured to help (docs/UNIVERSAL.md).
+    """
+    radii = [None, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.5]
+    codecs = {"float16": Float16Quantizer, "int8": Int8Quantizer, "binary": BinaryQuantizer}
+    families: dict[str, list[Pipeline]] = {}
+    for cname, cls in codecs.items():
+        steps = []
+        for r in radii:
+            stages = [] if r is None else [AdaptiveMerge(radius=r)]
+            steps.append(Pipeline([*stages, cls()]))
+        families[f"adaptive_merge+{cname}"] = steps
+    return families
+
+
+def reference_relevance(corpus: MultiVectorCorpus, queries: MultiVectorCorpus, qrels: dict[str, Any] | None,
+                        reference: str, base_scores: np.ndarray, baseline_depth: int = 1) -> list[np.ndarray]:
+    if reference == "labels":
+        if qrels is None:
+            raise ValueError("reference='labels' needs qrels")
+        return relevant_from_qrels(qrels, queries.ids, corpus.ids)
+    return relevant_from_baseline(base_scores, depth=baseline_depth)
+
+
+def calibrate(
+    corpus: MultiVectorCorpus,
+    queries: MultiVectorCorpus,
+    qrels: dict[str, Any] | None = None,
+    quality_target: float = 0.97,
+    metric: str = "ndcg@5",
+    search_space: dict[str, Sequence[Pipeline]] | None = None,
+    calibration_fraction: float = 0.5,
+    seed: int = 0,
+    reference: str = "auto",
+    baseline_depth: int = 1,
+    safety: str = "point",
+    max_bytes_per_doc: float | None = None,
+    assume_monotone: bool = True,
+    n_boot: int = 1000,
+    progress: Any = None,
+) -> CalibrationResult:
+    """Pick the smallest pipeline meeting ``quality_target`` on calibration queries,
+    then report it on held-out queries. See the module docstring."""
+    if not 0.0 < quality_target <= 1.0:
+        raise ValueError("quality_target is a retention fraction in (0, 1]")
+    if safety not in {"point", "lower_ci"}:
+        raise ValueError("safety must be 'point' or 'lower_ci'")
+    if reference == "auto":
+        reference = "labels" if qrels is not None else "baseline"
+    if reference not in {"labels", "baseline"}:
+        raise ValueError("reference must be 'auto', 'labels' or 'baseline'")
+    if len(queries) < 4:
+        raise ValueError("need at least 4 queries to split into calibration and held-out halves")
+
+    cal_idx, hold_idx = split_queries(len(queries), calibration_fraction, seed)
+    base_scores = maxsim_matrix(queries, corpus)
+    relevant = reference_relevance(corpus, queries, qrels, reference, base_scores, baseline_depth)
+    base_cal = per_query_metrics(base_scores[cal_idx], [relevant[i] for i in cal_idx], [metric])[metric]
+    base_hold = per_query_metrics(base_scores[hold_idx], [relevant[i] for i in hold_idx], [metric])[metric]
+
+    space = search_space if search_space is not None else default_search_space(corpus.dimension)
+    scored: list[ScoredCandidate] = []
+    judged: list[Candidate] = []
+    for family, steps in space.items():
+        for pipe in steps:
+            sc = score_candidate(pipe, corpus, queries, family=family)
+            cand = _judge(sc, relevant, cal_idx, metric, base_cal, quality_target, safety,
+                          max_bytes_per_doc, n_boot, seed)
+            scored.append(sc)
+            judged.append(cand)
+            if progress is not None:
+                progress(cand)
+            score = cand.retention if safety == "point" else cand.retention_lo
+            if assume_monotone and score < quality_target:
+                break  # later steps in this family are more aggressive
+
+    feasible = [i for i, c in enumerate(judged) if c.feasible]
+    selected = holdout = None
+    if feasible:
+        best = min(feasible, key=lambda i: (judged[i].bytes_per_doc, judged[i].query_ms))
+        selected = judged[best]
+        holdout = _holdout(scored[best], base_scores, relevant, hold_idx, metric, n_boot, seed)
+
+    return CalibrationResult(
+        target=quality_target,
+        metric=metric,
+        reference=reference if reference == "labels" else f"baseline@{baseline_depth}",
+        safety=safety,
+        n_calibration_queries=len(cal_idx),
+        n_holdout_queries=len(hold_idx),
+        selected=selected,
+        holdout=holdout,
+        candidates=judged,
+        baseline={
+            "bytes_per_doc": corpus.num_vectors * corpus.dimension * 4 / max(1, len(corpus)),
+            "vectors_per_doc": corpus.num_vectors / max(1, len(corpus)),
+            "dim": corpus.dimension,
+            "calibration_" + metric: float(np.nanmean(base_cal)),
+            "holdout_" + metric: float(np.nanmean(base_hold)),
+        },
+    )
+
+
+# ----------------------------------------------------- proxy queries (experimental)
+
+
+def pseudo_queries(corpus: MultiVectorCorpus, n_queries: int = 200, tokens: int = 20, noise: float = 0.0,
+                   seed: int = 0) -> tuple[MultiVectorCorpus, dict[str, set[str]]]:
+    """EXPERIMENTAL: fragments of documents used as stand-in queries.
+
+    Each pseudo-query is ``tokens`` random non-protected vectors of one random
+    document (plus optional Gaussian noise), labelled relevant to that document.
+    Whether calibrating on these predicts quality on real queries is an open
+    empirical question -- document vectors are not query vectors -- and it has
+    to be measured before it is trusted (see docs/UNIVERSAL.md).
+    """
+    rng = np.random.default_rng(seed)
+    eligible = [i for i in range(len(corpus)) if corpus.counts[i] > 0]
+    picks = rng.choice(eligible, size=min(n_queries, len(eligible)), replace=len(eligible) < n_queries)
+    arrays, ids, qrels = [], [], {}
+    for j, i in enumerate(picks):
+        doc = corpus[int(i)]
+        rows = np.arange(doc.num_vectors)
+        if doc.protected is not None and (~doc.protected).any():
+            rows = rows[~doc.protected]
+        take = rng.choice(rows, size=min(tokens, rows.size), replace=False)
+        v = np.asarray(doc.vectors[take], dtype=np.float32)
+        if noise > 0:
+            v = v + noise * rng.standard_normal(v.shape).astype(np.float32) / np.sqrt(v.shape[1])
+            v /= np.maximum(np.linalg.norm(v, axis=1, keepdims=True), 1e-12)
+        qid = f"pseudo{j:05d}"
+        arrays.append(v)
+        ids.append(qid)
+        qrels[qid] = {corpus.ids[int(i)]}
+    return MultiVectorCorpus.from_arrays(arrays, ids=ids, attrs={"pseudo_queries": True}), qrels
