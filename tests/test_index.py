@@ -6,7 +6,7 @@ import pytest
 from optivision.compression import Compressor, fit_lloyd2, maxsim_asymmetric
 from optivision.config import CompressionConfig
 from optivision.index.numpy_index import NumpyIndex
-from optivision.types import PageRef, PatchGrid, PrunedPage
+from optivision.types import CompressedPage, PageRef, PatchGrid, PrunedPage
 
 
 def _unit(rng, n, d=32):
@@ -204,3 +204,20 @@ class TestLloyd2Index:
         s = idx.stats()
         # 4 pages x 10 vectors x 8 bytes/vector (2 bits x 32 dims) + shared mu/sigma
         assert s["index_bytes"] == 4 * 10 * 8 + codec.overhead_bytes
+
+
+def test_trailing_empty_page_does_not_truncate_the_page_before_it(tmp_path):
+    """Regression: clamping reduceat starts dropped the last row of the previous page."""
+    dim = 4
+    a = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=np.float32)
+    pages = [
+        CompressedPage(ref=PageRef("a", 1), codes=a.view(np.uint8).reshape(3, dim * 4), dim=dim,
+                       n_tokens_before=3, n_tokens_after=3),
+        CompressedPage(ref=PageRef("b", 1), codes=np.zeros((0, dim * 4), np.uint8), dim=dim,
+                       n_tokens_before=0, n_tokens_after=0),
+    ]
+    idx = NumpyIndex(tmp_path, dim=dim, method="none")
+    idx.add(pages)
+    scores = idx.score_all(np.array([[0, 0, 0, 1]], dtype=np.float32))
+    assert scores[0] == pytest.approx(1.0)
+    assert scores[1] == -np.inf
