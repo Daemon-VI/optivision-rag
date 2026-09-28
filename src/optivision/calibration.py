@@ -374,9 +374,13 @@ def calibrate(
     lower bound of the calibration retention to meet the target. Choosing by
     the point estimate (``"point"``) is a winner's-curse selection: with the
     default search space it met a 0.97 target on held-out ColPali DocVQA queries
-    in 30% of 20 random splits. A 0.975 bound reached 80%; the 0.999 default
-    reached 95-100% on DocVQA and on the SciFact text model
+    in 20% of 20 random splits, against 19 of 20 for the defaults
     (docs/UNIVERSAL.md, R7b). Stricter is safer and chooses less compression.
+
+    The bound is approximate (bootstrap standard error) and holds per
+    configuration, not for the one chosen among many; it assumes future queries
+    and the corpus look like the ones given here. Nothing guarantees the target
+    (docs/UNIVERSAL.md, R10): the held-out figure in the result is the check.
     """
     if not 0.0 < quality_target <= 1.0:
         raise ValueError("quality_target is a retention fraction in (0, 1]")

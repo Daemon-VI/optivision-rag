@@ -126,7 +126,32 @@ path: the 0.999 bound, early stopping per family, n_boot = 1000 and the default
 search space (40 candidates). It uses 20 random half/half splits per cell and
 labels as the reference.
 
-{{R7B_DEFAULT_TABLE}}
+`calibrate()` with its defaults, labels as the reference, 20 random half/half splits. *met* = share of splits whose choice reached the target on the held-out half (95% Wilson interval over the 20 splits); *x* = median compression chosen; *held-out* = mean and worst held-out retention of the choice.
+
+| dataset | queries | target | met [95% interval] | median x | held-out mean · worst |
+|---|---|---|---|---|---|
+| DocVQA | 451 | 0.99 | 20/20 [83.9%, 100.0%] | 3.9x | 100.1% · 99.7% |
+| DocVQA | 451 | 0.97 | 19/20 [76.4%, 99.1%] | 3.9x | 99.7% · 96.5% |
+| DocVQA | 451 | 0.95 | 20/20 [83.9%, 100.0%] | 11.8x | 98.6% · 95.2% |
+| InfoVQA | 494 | 0.99 | 20/20 [83.9%, 100.0%] | 3.9x | 99.9% · 99.3% |
+| InfoVQA | 494 | 0.97 | 20/20 [83.9%, 100.0%] | 43.4x | 99.6% · 97.8% |
+| InfoVQA | 494 | 0.95 | 20/20 [83.9%, 100.0%] | 72.7x | 98.9% · 96.2% |
+| SciFact | 300 | 0.99 | 14/14 [78.5%, 100.0%] | 3.9x | 99.9% · 99.6% |
+| SciFact | 300 | 0.97 | 20/20 [83.9%, 100.0%] | 8.0x | 99.4% · 97.2% |
+| SciFact | 300 | 0.95 | 20/20 [83.9%, 100.0%] | 12.4x | 98.7% · 96.2% |
+
+All rules (labels): met · median x.
+
+| rule | DocVQA 0.99 | DocVQA 0.97 | DocVQA 0.95 | InfoVQA 0.99 | InfoVQA 0.97 | InfoVQA 0.95 | SciFact 0.99 | SciFact 0.97 | SciFact 0.95 |
+|---|---|---|---|---|---|---|---|---|---|
+| calibrate() default | 100% · x3.9 | 95% · x3.9 | 100% · x11.8 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x8.0 | 100% · x12.4 |
+| point | 25% · x23.2 | 20% · x66.9 | 50% · x125.4 | 70% · x57.0 | 55% · x178.9 | 80% · x299.9 | 40% · x21.0 | 85% · x23.1 | 50% · x29.0 |
+| lower 0.975 | 90% · x3.9 | 75% · x7.8 | 70% · x30.4 | 95% · x11.6 | 85% · x64.3 | 100% · x178.9 | 85% · x6.6 | 90% · x21.0 | 95% · x23.1 |
+| lower 0.99 | 90% · x3.9 | 75% · x7.8 | 75% · x24.1 | 90% · x7.8 | 95% · x49.7 | 100% · x117.5 | 89% · x6.6 | 95% · x11.8 | 100% · x23.1 |
+| lower 0.999 | 100% · x3.9 | 95% · x3.9 | 95% · x14.5 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x11.8 | 100% · x21.0 |
+| bonferroni 0.975 | 100% · x3.9 | 95% · x3.9 | 100% · x11.8 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x9.4 | 100% · x21.0 |
+| lower 0.975 + margin 0.01 | 100% · x2.0 | 80% · x3.9 | 80% · x23.2 | 100% · x3.9 | 100% · x43.4 | 95% · x81.7 | 100% · x2.0 | 100% · x11.8 | 100% · x22.1 |
+
 
 ## 4. In-sample vs unseen queries
 
@@ -204,7 +229,7 @@ decoding of DocVQA query text is covered by `rebuild_vidore_qrels.py --check`.
   tied relevant documents first and last. On binary, merged-binary and
   merged-int4 codes on DocVQA, InfoVQA and SciFact, all three policies give
   identical retention to four decimals; at most 0.3% of queries have any tie
-  in the top k + 1 (`reports/universal/audit/ties.log`). No inflation.
+  in the top k + 1 (`reports/universal/audit/ties.json`). No inflation.
 - **What could still flatter the numbers** (documented, not bugs):
   1. **Corpus size.** Measured on 500–5,183 documents. `s12_corpus_size.py`
      shows retention falling as distractors are added (DocVQA, 100 → 500 pages,
@@ -305,12 +330,106 @@ recipe's section is kept below as the v0.1 story.
 
 ## 12. Release checklist
 
-{{CHECKLIST}}
+Status after the fixes in §13. "At `06b94c1`" is the status before them.
+
+| area | status | at `06b94c1` | evidence / what remains |
+|---|---|---|---|
+| correctness | **PASS** | FAIL | a NaN or inf in one document corrupted other documents' codes; an all-zero vector hit an undefined int cast. Both fixed, with 131 edge-case tests |
+| tests | **PASS** | PASS | 421 passed (288 before); `ruff check src tests scripts/universal_*` clean |
+| reproducibility | **PASS**, with a WARNING | FAIL | every result now has its script in `scripts/universal_study/` and its JSON in `reports/universal/`. R7b was not reproducible (no script, and a stale search space) and was re-measured. WARNING: the encoded vectors are not in the repository (about 1 GB); the scripts document how to regenerate them, and SciFact needs sentence-transformers ≥ 6 |
+| statistical methodology | **WARNING** | FAIL (as documented) | the implementation is a sound approximate bootstrap and the train / calibration / held-out separation is correct. It is not a guarantee for the selected configuration (R10); the docs now say so instead of overstating it. A selection-valid rule is future work |
+| API stability | **PASS** | PASS | additive over 0.1.1; the new API is 0.x and has no deprecation policy yet |
+| model generality | **WARNING** | WARNING | the architecture takes any `[n_i, d]` vectors, and no hidden ColPali assumption remains (§5). The evidence is three encoders, all 96–128-d, one of them on 60 synthetic pages only |
+| documentation | **PASS** | FAIL | the README headline was in-sample; R5b and R7b made unsupported statements. Fixed: result kinds are tagged, the README leads with out-of-sample numbers, and Measured / External / Unvalidated / Future work are separated |
+| benchmarks | **WARNING** | WARNING | methodology is sound (same scorer, all candidates, ties verified). Corpora are 500–5,183 documents and retention falls with corpus size (§7); ViDoRe V2/V3 and wide models are unmeasured |
+| packaging | **PASS**, with a WARNING | WARNING | version bumped to 0.2.0 in `__version__` and `npm/package.json`; the 0.2.0 sdist and wheel build, and a clean install (with `[merge]`) exposes `optivision` and all five new commands, with no data, local paths or secrets bundled. WARNING: the publish workflow and the npm launcher against a published 0.2.0 are **NOT TESTED** until a release is cut from `main` |
+| security | **PASS** | FAIL | the new CLI commands unpickled any file with a `meta` key, so a crafted `.npz` could run code on `optivision inspect`. Now gated behind `--trust-pickle`, with a regression test that shows the payload does not run. The original `bench --cache` still unpickles its own caches, as documented in 0.1 |
+| performance | **WARNING** | WARNING | measured on one contended laptop only: merging 19–96 ms/page, PCA fit peak 410 MB. **NOT TESTED** at scale, on GPU, or through a database |
+
 
 ## 13. Changes made in this pass
 
-{{CHANGES}}
+All on `universal-core`, after the state in §1 was reproduced.
+
+**Code (bugs and release quality)**
+
+- `compose.py`: `Pipeline.fit`, `compress`, `encode` and `transform_queries`
+  refuse non-finite vectors and name the first offending document. Fitting on a
+  corpus with no vectors raises a clear error.
+- `stages/quantize.py`: the per-vector scale floor is now the smallest normal
+  float16 (int8 per-vector, int4). Fixed-scale int8 warns when it clips.
+- `cli_universal.py`: legacy (pickled) caches load only with `--trust-pickle`.
+- `calibration.py`: the small-sample warning counts informative queries (those
+  with a nonzero baseline metric). New warning when SciPy is missing and the
+  default space is used. The result summary records the per-candidate
+  confidence and the informative-query count. The docstring no longer overstates
+  the bound.
+
+**Tests**: `tests/test_edge_cases.py` (131 cases) and a pickle-gate test in
+`tests/test_cli_universal.py`. Expected warnings are filtered in three test
+modules.
+
+**Scripts** (`scripts/universal_study/`): `s3c_centred_codecs.py` (R3b plus
+geometry), `s7b_selection_rules.py` (R7b, including an exact replay of
+`calibrate()`), `s10_bound_audit.py`, `s11_ties.py`, `s12_corpus_size.py`; a
+script → report-folder map in the README; a selection-rules renderer in
+`universal_summary.py`.
+
+**Re-measured**
+
+| what | result | files |
+|---|---|---|
+| R7b on the shipped default, DocVQA / InfoVQA / SciFact, all rules | default met the target in 173 of 174 choices; replaces the stale table and the partial SciFact file | `selection_rules/*.json` |
+| geometry of the three corpora, centred binary with the query mean removed | mechanism confirmed; nearest-neighbour cosine re-measured at 0.989 (was quoted as 0.991 with no file) | `geometry/*.json` |
+| coverage of the bound, many-candidate and degenerate cases | §8 | `audit/bound_audit.*` |
+| tie policies | no effect | `audit/ties.json` |
+| retention against corpus size | falls by 0–3 points from 100 to 500 pages | `audit/corpus_size.*` |
+
+No previously reported fixed-configuration number changed: the code fixes leave
+every measured code byte-identical (the smallest real scale is 0.033, far above
+the new floor, and no measured vector reaches the ±0.5 clip).
+
+**Documentation**: README (new positioning and lead section; ColQwen2 no longer
+presented as working; `[merge]` extra), `PACKAGE.md` (same), `docs/UNIVERSAL.md`
+(result kinds; R5b, R7b and R8 corrected; R10 added; the closing sections split
+into limits / external / unvalidated / future work), `docs/RESULTS.md`
+(unresolved 2-bit figure flagged) and this report.
+
+**Not done, deliberately**: no new models, codecs or selection rules; version
+not bumped; nothing published, tagged or pushed.
+
 
 ## 14. Recommendation
 
-{{RECOMMENDATION}}
+**2. RELEASE AFTER FIXES.**
+
+At `06b94c1` the branch was **not** releasable as it stood, for four reasons:
+
+- the README's headline compression figures were in-sample selections;
+- the documented reliability of the default selection rule came from a search
+  space that no longer shipped, and could not be reproduced from the repository;
+- one non-finite vector silently corrupted other documents;
+- the new CLI would execute code from a crafted file.
+
+None of these is a design flaw. The architecture, the exact-scoring methodology
+and the calibration / held-out separation held up under audit, and the
+refactor's exactness was confirmed.
+
+The fixes are implemented in this pass (§13). Re-measured on the shipped
+default, `calibrate()` met its target on held-out queries in 173 of 174 choices
+across three corpora and two encoder families. The documentation now claims only
+that, with its limits (R10).
+
+What remains before tagging v0.2.0 is release mechanics:
+
+1. review and commit this pass;
+2. bump both version strings to 0.2.0;
+3. let CI run on the merge;
+4. follow `docs/RELEASING.md`.
+
+Nothing in the remaining WARNING rows (model coverage, corpus scale, the bound
+not being a guarantee for the selected configuration) blocks a 0.x release,
+because each one is now stated where a reader will see it. They do block any
+claim of universal support or guaranteed quality, and the docs make no such
+claim.
+

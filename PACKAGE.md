@@ -19,13 +19,26 @@ result = optimize(docs, queries=queries, qrels=labels_or_None, quality_target=0.
 
 Measured on held-out queries with default settings (20 random splits, labels):
 
-{{PACKAGE_HELDOUT_TABLE}}
+| target | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
+|---|---|---|---|
+| 0.99 | 3.9x · met 20/20 · held-out 100.1% | 3.9x · met 20/20 · held-out 99.9% | 3.9x · met 14/14 · held-out 99.9% |
+| 0.97 | 3.9x · met 19/20 · held-out 99.7% | 43.4x · met 20/20 · held-out 99.6% | 8.0x · met 20/20 · held-out 99.4% |
+| 0.95 | 11.8x · met 20/20 · held-out 98.6% | 72.7x · met 20/20 · held-out 98.9% | 12.4x · met 20/20 · held-out 98.7% |
+
+Each cell: median compression chosen (vs float32) · splits whose choice met the target on the held-out half · mean held-out retention. At SciFact 0.99 no configuration qualified in 6 of 20 splits.
 
 Tested coverage is exactly three encoders: ColPali-v1.3 (ViDoRe V1 DocVQA and
 InfoVQA, 500 pages each), ColSmol-256M (a 60-page generated corpus only) and
 answerai-colbert-small-v1 (BEIR SciFact). Other models' vectors are accepted,
-but their compression behaviour is unmeasured. There is no guarantee that a
-target is met. The measurements, their limits and a release audit are in the
+but their compression behaviour is unmeasured. ColQwen, 2k–4k-dimensional
+models, ViDoRe V2/V3, million-page corpora and database connectors beyond
+numpy/Qdrant are not validated.
+
+There is no guarantee that a target is met. The confidence bound applies to each
+configuration individually; choosing among many configurations is a
+multiple-testing problem that it does not correct for. Measured corpora have
+500–5,183 documents, and retention falls as a corpus grows. The measurements,
+their limits and a release audit are in the
 [repository](https://github.com/Daemon-VI/optivision-rag).
 
 ## The original recipe: pruning and binary codes for page images

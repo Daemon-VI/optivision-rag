@@ -45,11 +45,19 @@ repeated over 20 random calibration / held-out splits of each query set. This is
 what you should expect when you run it
 ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R7b):
 
-{{README_HELDOUT_TABLE}}
+| target | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
+|---|---|---|---|
+| 0.99 | 3.9x · met 20/20 · held-out 100.1% | 3.9x · met 20/20 · held-out 99.9% | 3.9x · met 14/14 · held-out 99.9% |
+| 0.97 | 3.9x · met 19/20 · held-out 99.7% | 43.4x · met 20/20 · held-out 99.6% | 8.0x · met 20/20 · held-out 99.4% |
+| 0.95 | 11.8x · met 20/20 · held-out 98.6% | 72.7x · met 20/20 · held-out 98.9% | 12.4x · met 20/20 · held-out 98.7% |
 
-It trades compression for reliability on purpose. Choosing by the point
-estimate instead picked 7–17x more compression and missed the target on
-held-out queries in most splits (R7, R7b).
+Each cell: median compression chosen (vs float32) · splits whose choice met the target on the held-out half · mean held-out retention.
+
+At SciFact 0.99 no configuration qualified in 6 of 20 splits; `optimize()` then
+returns the float corpus and says so. The default trades compression for
+reliability on purpose: choosing by the point estimate instead picked 2.3–17x
+more compression and met the target in only 20–85% of splits (R7b). Twenty
+splits cannot pin down a rate near 95%, and none of this is a guarantee (R10).
 
 ### Fixed configurations, measured on all queries
 
