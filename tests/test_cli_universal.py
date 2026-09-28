@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import numpy as np
 import pytest
@@ -105,6 +106,8 @@ def test_legacy_pickle_needs_explicit_trust(tmp_path, command):
     np.savez(bad, meta=meta, vectors=np.zeros((1, 4), np.float32))
     args = [command, str(bad)] + (["-p", "binary", "-o", str(tmp_path / "out.npz")] if command == "compress" else [])
     result = runner.invoke(app, args)
+    assert not marker.exists()  # the payload never ran
     assert result.exit_code != 0
-    assert "--trust-pickle" in result.output
-    assert not marker.exists()
+    # rich may colour and wrap the message inside a box (it does on CI): compare the bare text
+    plain = re.sub(r"\x1b\[[0-9;]*m|[\s\u2500-\u257f]", "", result.output)
+    assert "--trust-pickle" in plain
