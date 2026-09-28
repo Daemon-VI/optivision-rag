@@ -460,33 +460,66 @@ Share of splits whose chosen configuration met the target on the held-out half, 
   `adaptive_merge(0.5) > binary` and reported ~100%; real queries got 81.6–93.7%
   on three of four corpora. `optimize()` therefore requires real queries.
 
-### R7b · Choosing the selection rule for the default search space
+### R7b · The shipped default, out of sample
 
-R7 used a small search space. With the default space (Ward and centred adaptive
-merging × per-vector int8, centred int4 and binary; 40 candidates) many more
-candidates sit just above the target, and a per-candidate bound no longer covers
-the choice among them. Share of 20 random splits whose choice met the target on
-held-out queries (labels), and the median compression chosen:
+*Out-of-sample: 20 random calibration / held-out splits per cell
+(`s7b_selection_rules.py`; `reports/universal/selection_rules/`).*
 
-| rule | DocVQA 0.99 | DocVQA 0.97 | DocVQA 0.95 | SciFact 0.99 | SciFact 0.97 | SciFact 0.95 |
-|---|---|---|---|---|---|---|
-| point | 35% · x23.2 | 30% · x48.5 | 50% · x125.4 | 80% · x11.8 | 70% · x13.3 | 40% · x25.8 |
-| lower 0.975 | 90% · x3.9 | 80% · x7.8 | 70% · x25.0 | 85% · x6.6 | 85% · x11.8 | 95% · x13.3 |
-| lower 0.99 | 90% · x3.9 | 80% · x7.3 | 80% · x23.2 | 95% · x6.6 | 100% · x11.8 | 95% · x12.6 |
-| lower 0.999 | 100% · x3.9 | 100% · x3.9 | 95% · x9.8 | 100% · x3.9 | - | - |
-| bonferroni 0.975 | 100% · x3.9 | 100% · x3.9 | 95% · x7.8 | - | - | - |
-| lower 0.975 + margin 0.01 | 100% · x2.0 | 90% · x3.9 | 90% · x15.4 | - | - | - |
+The default search space has 40 candidates: Ward and centred adaptive merging,
+each combined with per-vector int8, centred int4 or binary codes, plus float16.
+Many of them sit just above any target, so how the winner is chosen matters. The
+row `calibrate() default` replays `calibrate()` exactly: the one-sided 0.999
+bound, each family stopped at its first infeasible step, and n_boot = 1000. The
+other rows judge every candidate with n_boot = 500.
 
-The SciFact run stopped part-way when the session ended; its rows were recovered
-from the run log and the empty cells were never measured. InfoVQA was not re-run
-under these rules.
+`calibrate()` with its defaults, labels as the reference, 20 random half/half splits. *met* = share of splits whose choice reached the target on the held-out half (95% Wilson interval over the 20 splits); *x* = median compression chosen; *held-out* = mean and worst held-out retention of the choice.
 
-**`calibrate()` now defaults to a one-sided 0.999 lower bound** — the only rule
-that met the target in at least 95% of splits in every measured cell, and one
-that does not depend on how large the search space is. The price is compression:
-on DocVQA it settles around 4–10x where the in-sample frontier (R5b) shows 15–23x
-at similar quality. `confidence`, `multiplicity="bonferroni"` and `margin` stay
-available in the API and on the CLI.
+| dataset | queries | target | met [95% interval] | median x | held-out mean · worst |
+|---|---|---|---|---|---|
+| DocVQA | 451 | 0.99 | 20/20 [83.9%, 100.0%] | 3.9x | 100.1% · 99.7% |
+| DocVQA | 451 | 0.97 | 19/20 [76.4%, 99.1%] | 3.9x | 99.7% · 96.5% |
+| DocVQA | 451 | 0.95 | 20/20 [83.9%, 100.0%] | 11.8x | 98.6% · 95.2% |
+| InfoVQA | 494 | 0.99 | 20/20 [83.9%, 100.0%] | 3.9x | 99.9% · 99.3% |
+| InfoVQA | 494 | 0.97 | 20/20 [83.9%, 100.0%] | 43.4x | 99.6% · 97.8% |
+| InfoVQA | 494 | 0.95 | 20/20 [83.9%, 100.0%] | 72.7x | 98.9% · 96.2% |
+| SciFact | 300 | 0.99 | 14/14 [78.5%, 100.0%] | 3.9x | 99.9% · 99.6% |
+| SciFact | 300 | 0.97 | 20/20 [83.9%, 100.0%] | 8.0x | 99.4% · 97.2% |
+| SciFact | 300 | 0.95 | 20/20 [83.9%, 100.0%] | 12.4x | 98.7% · 96.2% |
+
+All rules (labels): met · median x.
+
+| rule | DocVQA 0.99 | DocVQA 0.97 | DocVQA 0.95 | InfoVQA 0.99 | InfoVQA 0.97 | InfoVQA 0.95 | SciFact 0.99 | SciFact 0.97 | SciFact 0.95 |
+|---|---|---|---|---|---|---|---|---|---|
+| calibrate() default | 100% · x3.9 | 95% · x3.9 | 100% · x11.8 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x8.0 | 100% · x12.4 |
+| point | 25% · x23.2 | 20% · x66.9 | 50% · x125.4 | 70% · x57.0 | 55% · x178.9 | 80% · x299.9 | 40% · x21.0 | 85% · x23.1 | 50% · x29.0 |
+| lower 0.975 | 90% · x3.9 | 75% · x7.8 | 70% · x30.4 | 95% · x11.6 | 85% · x64.3 | 100% · x178.9 | 85% · x6.6 | 90% · x21.0 | 95% · x23.1 |
+| lower 0.99 | 90% · x3.9 | 75% · x7.8 | 75% · x24.1 | 90% · x7.8 | 95% · x49.7 | 100% · x117.5 | 89% · x6.6 | 95% · x11.8 | 100% · x23.1 |
+| lower 0.999 | 100% · x3.9 | 95% · x3.9 | 95% · x14.5 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x11.8 | 100% · x21.0 |
+| bonferroni 0.975 | 100% · x3.9 | 95% · x3.9 | 100% · x11.8 | 100% · x3.9 | 100% · x43.4 | 100% · x72.7 | 100% · x3.9 | 100% · x9.4 | 100% · x21.0 |
+| lower 0.975 + margin 0.01 | 100% · x2.0 | 80% · x3.9 | 80% · x23.2 | 100% · x3.9 | 100% · x43.4 | 95% · x81.7 | 100% · x2.0 | 100% · x11.8 | 100% · x22.1 |
+
+Read the "met" column with its interval: 20 splits of one query pool cannot pin
+a rate near 95% (19/20 is consistent with anything from 76% to 99%). Each "met"
+also compares a held-out *point estimate* (150–250 queries, noisy by 1–2 points)
+with the target.
+
+- **The default met the target in 173 of 174 split × target cells that chose a
+  configuration** across the three corpora. The worst held-out retention of any
+  choice was 96.5% against a 0.97 target (DocVQA). At SciFact 0.99, no
+  configuration qualified in 6 of 20 splits; `optimize()` then returns the float
+  corpus and says the target was not met.
+- **Compression follows the data.** At a 0.97 target the default chose a median
+  of 3.9x on DocVQA, 8.0x on SciFact and 43x on InfoVQA.
+- **Choosing by the point estimate is unreliable**: it met the target in only
+  20–85% of splits, while choosing 2.3–17x more compression than the default.
+  Looser bounds (0.975, 0.99) sit in between.
+- **An earlier version of this table was measured on a different search space**
+  (uncentred int4) and was never re-run after the default changed. The release
+  audit found this; the table above is the shipped default.
+
+`confidence`, `multiplicity="bonferroni"` and `margin` stay available in the API
+and on the CLI. Why the 0.999 level is not the confidence of the *choice* is
+explained in R10.
 
 ### R8 · A text late-interaction model
 
@@ -529,7 +562,7 @@ nDCG@10 0.7456 (the model card reports 0.7477). Retention of nDCG@10.
 - **What did not:** text tokens compress less (about 3x at 99.8%, against 9x on
   ColPali pages), and two ColPali defaults break. This model's vectors sit in a
   narrow cone -- the median nearest neighbour inside a document is at cosine
-  0.991 -- so an absolute cosine radius or an absolute Ward height lumps whole
+  0.989 (0.93 for ColPali; table below) -- so an absolute cosine radius or an absolute Ward height lumps whole
   documents together (uncentred radius 0.8 leaves 9 vectors and 76% retention;
   the radius-0.95 row scoring below radius 0.9 is the same instability).
   Removing the corpus mean first (`center="mean"`) makes the adaptive merge
@@ -726,4 +759,4 @@ distribution against the deployment-sized corpus.
 - Learned components: trained merging, Matryoshka or distilled projections,
   per-model adapters.
 
-**Release status:** branch work. The PyPI and npm packages are still 0.1.1.
+**Release status:** prepared as v0.2.0; not yet published (PyPI and npm are at 0.1.1 until the release).

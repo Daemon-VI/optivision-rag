@@ -81,9 +81,13 @@ def tiered_table(path: Path) -> str:
 def render(path: Path) -> str | None:
     """Pick the renderer from the file's own shape; None for formats shown elsewhere."""
     data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return None  # audit files are JSON lists; see docs/RELEASE-AUDIT-2026-09-27.md
     if "study" in data:
         return study_table(path)
     rows = data.get("rows") or []
+    if not isinstance(rows, list):
+        return None  # geometry files keep a dict of rows; shown in docs/UNIVERSAL.md (R8)
     if rows and "hot" in rows[0]:
         return tiered_table(path)
     if rows and "retention:ndcg@5" in rows[0] and "label" in rows[0] and "reference" in data:
