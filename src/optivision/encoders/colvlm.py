@@ -245,6 +245,7 @@ class ColVLMEncoder(BaseEncoder):
         device: str = "auto",
         dtype: str = "auto",
         query_batch_size: int = 16,
+        multi_gpu: bool = False,
     ) -> None:
         if backend not in BACKENDS:
             raise ValueError(f"unknown backend {backend!r}; choose from {sorted(BACKENDS)}")
@@ -282,12 +283,46 @@ class ColVLMEncoder(BaseEncoder):
                 "model, so encoding would return meaningless vectors. If this is an "
                 "adapter-only repo, point --model at the merged checkpoint instead."
             )
-        self.model = model.to(self.device).eval()
+        self.model = self._place(model, multi_gpu).eval()
         self.processor = proc_cls.from_pretrained(checkpoint)
         self._dim: int | None = None
         self._image_token_id = self._find_image_token_id()
 
     # ------------------------------------------------------------- internals
+
+    def _place(self, model, multi_gpu: bool):
+        """Move the model to its device, or spread it over every visible GPU.
+
+        ``multi_gpu`` keeps float32 for models too large for one 16 GB card
+        (ColQwen2.5 is ~15 GB in float32): whole decoder layers and vision blocks
+        are assigned to GPUs in order, and accelerate moves activations between
+        them. The arithmetic is the same as on one device. Inputs go to the first
+        GPU, which holds the vision tower, so it gets less room for weights.
+        """
+        torch = self._torch
+        if not (multi_gpu and self.device.startswith("cuda") and torch.cuda.device_count() > 1):
+            self.placement = {"devices": [self.device]}
+            return model.to(self.device)
+        from accelerate import dispatch_model, infer_auto_device_map
+
+        n = torch.cuda.device_count()
+        total = [torch.cuda.get_device_properties(i).total_memory for i in range(n)]
+        # leave headroom for activations: more on GPU 0, which also runs the vision tower
+        max_memory = {i: int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)}
+        device_map = infer_auto_device_map(
+            model, max_memory=max_memory, no_split_module_classes=getattr(model, "_no_split_modules", None)
+        )
+        # The Col* forward multiplies the projected vectors by the attention mask,
+        # which arrives on GPU 0; keep the (small) projection there so they meet.
+        for key in [k for k in device_map if k == "custom_text_proj" or k.startswith("custom_text_proj.")]:
+            device_map[key] = 0
+        if any(d in ("cpu", "disk") for d in device_map.values()):
+            raise RuntimeError(f"{self.checkpoint}: does not fit on {n} GPUs in {self.torch_dtype}")
+        model = dispatch_model(model, device_map=device_map)
+        self.device = "cuda:0"
+        used = sorted({str(d) for d in device_map.values()})
+        self.placement = {"devices": used, "max_memory_bytes": max_memory}
+        return model
 
     def _find_image_token_id(self) -> int | None:
         proc: Any = self.processor

@@ -41,11 +41,13 @@ from optivision.scoring import maxsim_matrix
 from optivision.types import PageRef
 
 
-def encode(model: str, backend: str, dtype: str, rows: list) -> tuple[MultiVectorCorpus, MultiVectorCorpus, dict]:
+def encode(model: str, backend: str, dtype: str, rows: list,
+           multi_gpu: bool = False) -> tuple[MultiVectorCorpus, MultiVectorCorpus, dict]:
     t0 = time.perf_counter()
-    enc = ColVLMEncoder(backend=backend, model_name=model, dtype=dtype)
+    enc = ColVLMEncoder(backend=backend, model_name=model, dtype=dtype, multi_gpu=multi_gpu)
     info = {"model": model, "device": enc.device, "dtype": str(enc.torch_dtype),
             "adapter_merge_check": enc.adapter_merge_check, "loading_report": enc.loading_report,
+            "placement": getattr(enc, "placement", None),
             "load_seconds": time.perf_counter() - t0}
     pages, page_s = [], []
     for i, row in enumerate(rows):
@@ -103,6 +105,7 @@ def main() -> int:
     ap.add_argument("--dataset", default="vidore/docvqa_test_subsampled")
     ap.add_argument("--pages", type=int, default=6)
     ap.add_argument("--dtype", default="auto")
+    ap.add_argument("--multi-gpu", action="store_true")
     ap.add_argument("--dim", type=int, default=128)
     ap.add_argument("--out", type=Path, default=None)
     a = ap.parse_args()
@@ -119,11 +122,11 @@ def main() -> int:
         if len(rows) == a.pages:
             break
 
-    docs, queries, info = encode(a.model, a.backend, a.dtype, rows)
+    docs, queries, info = encode(a.model, a.backend, a.dtype, rows, a.multi_gpu)
     report = {"backend": a.backend, "dataset": a.dataset, "pages": len(rows), **info, **check(docs, queries, a.dim)}
     ok = report["dimension_ok"] and report["finite"] and report["unit_norm_max_error"] < 1e-3
     if a.compare_model:
-        docs2, queries2, info2 = encode(a.compare_model, a.backend, a.dtype, rows)
+        docs2, queries2, info2 = encode(a.compare_model, a.backend, a.dtype, rows, a.multi_gpu)
         report["compare"] = {**info2, **{k: v for k, v in check(docs2, queries2, a.dim).items() if k != "scores"},
                              "pages": agreement(docs, docs2), "queries": agreement(queries, queries2)}
         agree = report["compare"]["pages"].get("cosine_median", 0) > 0.99 and \

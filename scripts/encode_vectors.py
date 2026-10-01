@@ -43,6 +43,8 @@ def main() -> int:
                     help="colpali-engine backend (e.g. colqwen2, colqwen2.5) to load MODEL with directly, "
                          "for checkpoints not in the registry such as vidore/colqwen2-v1.0-merged")
     ap.add_argument("--dtype", default="auto", help="auto | float32 | bfloat16 | float16")
+    ap.add_argument("--multi-gpu", action="store_true",
+                    help="spread the model over all visible GPUs (keeps float32 for models too big for one card)")
     a = ap.parse_args()
 
     from datasets import load_dataset
@@ -55,7 +57,8 @@ def main() -> int:
     if a.backend:
         from optivision.encoders.colvlm import ColVLMEncoder
 
-        adapter = PageEncoderAdapter(ColVLMEncoder(backend=a.backend, model_name=a.model, dtype=a.dtype), info=info)
+        adapter = PageEncoderAdapter(
+            ColVLMEncoder(backend=a.backend, model_name=a.model, dtype=a.dtype, multi_gpu=a.multi_gpu), info=info)
     else:
         adapter = load_adapter(a.model, dtype=a.dtype) if info and info.loader.startswith("colpali-engine:")             else load_adapter(a.model)
     encoder = getattr(adapter, "encoder", None)
@@ -64,6 +67,7 @@ def main() -> int:
         "dtype": str(getattr(encoder, "torch_dtype", a.dtype)),
         "adapter_merge_check": getattr(encoder, "adapter_merge_check", None),
         "loading_report": getattr(encoder, "loading_report", None),
+        "placement": getattr(encoder, "placement", None),
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 
