@@ -38,7 +38,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from .base import DocView, Reduction, TokenReducer, register
+from .base import DocView, Reduction, TokenReducer, fit_sample_rows, register
 
 
 def _unit(v: np.ndarray) -> np.ndarray:
@@ -141,8 +141,9 @@ class AdaptiveMerge(TokenReducer):
     def fit(self, corpus: Any, queries: Any = None) -> AdaptiveMerge:
         if self.center == "mean":
             v = np.asarray(corpus.vectors)
-            if v.shape[0] > 200_000:
-                v = v[np.sort(np.random.default_rng(0).choice(v.shape[0], 200_000, replace=False))]
+            rows = fit_sample_rows(v.shape[1], 8)
+            if v.shape[0] > rows:
+                v = v[np.sort(np.random.default_rng(0).choice(v.shape[0], rows, replace=False))]
             self.mean = np.asarray(v, dtype=np.float64).mean(axis=0).astype(np.float32)
         return self
 
@@ -256,7 +257,7 @@ class HierarchicalMerge(TokenReducer):
             from scipy.cluster.hierarchy import fcluster, linkage
         except ImportError as exc:  # pragma: no cover - depends on the environment
             raise ImportError("HierarchicalMerge needs SciPy: pip install 'optivision-rag[merge]'") from exc
-        z = linkage(_unit(v).astype(np.float64), method="ward")
+        z = linkage(_ward_input(_unit(v).astype(np.float64)), method="ward")
         if self.max_distance is not None:
             raw = fcluster(z, t=self.max_distance, criterion="distance")
             n_clusters = int(raw.max())
@@ -268,6 +269,24 @@ class HierarchicalMerge(TokenReducer):
         labels = labels.astype(np.int64)
         return Reduction(_pool(v, labels, int(labels.max()) + 1, doc.weights), labels)
 
+
+
+#: From this width up, pairwise distances come from one matrix product instead
+#: of SciPy's pair-by-pair loop (35 min -> ~1 min per 500 ViDoRe pages at 2,560-d).
+#: Below it the original call is kept, so every measured 96-128-d result is unchanged.
+WIDE_DIM = 512
+
+
+def _ward_input(x: np.ndarray) -> np.ndarray:
+    """What ``linkage(..., "ward")`` gets: the vectors, or for wide unit vectors
+    their condensed Euclidean distances, ||a - b|| = sqrt(2 - 2 a.b)."""
+    if x.shape[1] < WIDE_DIM:
+        return x
+    from scipy.spatial.distance import squareform
+
+    d2 = 2.0 - 2.0 * (x @ x.T)
+    np.fill_diagonal(d2, 0.0)
+    return squareform(np.sqrt(np.clip(d2, 0.0, None)), checks=False)
 
 @register
 class RandomPruner(TokenReducer):

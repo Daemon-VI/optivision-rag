@@ -29,7 +29,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from ..representation import MultiVectorCorpus
-from .base import DimensionReducer, register
+from .base import DimensionReducer, fit_sample_rows, register
 
 
 def _sample_rows(v: np.ndarray, n: int, seed: int) -> np.ndarray:
@@ -78,14 +78,15 @@ class PCAProjector(DimensionReducer):
         return min(self.dim, input_dim)
 
     def fit(self, corpus: MultiVectorCorpus, queries: MultiVectorCorpus | None = None) -> PCAProjector:
-        x = _sample_rows(corpus.vectors, self.sample, self.seed).astype(np.float64)
+        rows = fit_sample_rows(corpus.dimension, 8, rows=self.sample)
+        x = _sample_rows(corpus.vectors, rows, self.seed).astype(np.float64)
         self.mean = x.mean(axis=0) if self.center else np.zeros(x.shape[1])
         xc = x - self.mean
         m = xc.T @ xc / max(1, xc.shape[0])
         if self.basis == "joint":
             if queries is None or queries.num_vectors == 0:
                 raise ValueError("basis='joint' needs sample queries at fit time")
-            q = _sample_rows(queries.vectors, self.sample, self.seed + 1).astype(np.float64)
+            q = _sample_rows(queries.vectors, rows, self.seed + 1).astype(np.float64)
             mq = q.T @ q / max(1, q.shape[0])
             m = (1.0 - self.query_weight) * m + self.query_weight * mq
         vals, vecs = np.linalg.eigh(m)

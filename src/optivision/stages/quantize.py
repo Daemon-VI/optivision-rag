@@ -28,7 +28,7 @@ from ..compression import (
 )
 from ..compression import _int8_codes as _legacy_int8_codes
 from ..representation import MultiVectorCorpus
-from .base import Quantizer, register
+from .base import Quantizer, fit_sample_rows, register
 
 
 @register
@@ -78,8 +78,10 @@ class Float16Quantizer(Quantizer):
 _MIN_SCALE = float(np.finfo(np.float16).tiny)
 
 
-def _fit_sample(vectors: np.ndarray, n: int = 200_000, seed: int = 0) -> np.ndarray:
+def _fit_sample(vectors: np.ndarray, n: int | None = None, seed: int = 0) -> np.ndarray:
     v = np.asarray(vectors)
+    if n is None:
+        n = fit_sample_rows(v.shape[1] if v.ndim == 2 else 1, 4)
     if v.shape[0] > n:
         v = v[np.sort(np.random.default_rng(seed).choice(v.shape[0], n, replace=False))]
     return np.asarray(v, dtype=np.float32)

@@ -15,6 +15,7 @@ matrix alive at any moment is at most one block by one chunk.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Protocol
 
 import numpy as np
@@ -76,6 +77,25 @@ def segment_reduce(values: np.ndarray, offsets: np.ndarray, ufunc: Any, axis: in
     return out
 
 
+def _to_device(qv: np.ndarray, device: str | None) -> Any:
+    if device is None:
+        return None
+    import torch
+
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    return torch.from_numpy(qv).to(device)
+
+
+def _similarities(qv: np.ndarray, qv_dev: Any, block: np.ndarray, device: str | None) -> np.ndarray:
+    if device is None:
+        return qv @ block.T
+    import torch
+
+    with torch.no_grad():
+        return (qv_dev @ torch.from_numpy(block).to(device).T).cpu().numpy()
+
+
 def maxsim_matrix(
     queries: VectorStore,
     docs: VectorStore,
@@ -94,7 +114,14 @@ def maxsim_matrix(
 
     Empty documents score ``-inf`` (they can never be retrieved); an empty query
     scores 0 against everything.
+
+    With ``OPTIVISION_SCORE_DEVICE`` set to a torch device (``cuda``), only the
+    query x document products run there, in float32 with TF32 disabled; the
+    per-page max and per-query sum stay here. Results match the numpy path to
+    float32 rounding (~1e-6). Used for 2,560-4,096-d vectors, where the product
+    is the cost.
     """
+    device = os.environ.get("OPTIVISION_SCORE_DEVICE") or None
     n_q, n_d = len(queries), len(docs)
     out = np.zeros((n_q, n_d), dtype=np.float32)
     if n_q == 0 or n_d == 0:
@@ -120,6 +147,7 @@ def maxsim_matrix(
         if query_transform is not None:
             qv = np.ascontiguousarray(query_transform(qv), dtype=np.float32)
         local_q = q_off[q0 : q1 + 1] - t0
+        qv_dev = _to_device(qv, device)
         rows_per_block = max(1, max_block_bytes // (4 * qv.shape[0] + 4 * qv.shape[1] + 1))
         for d0, d1 in _page_blocks(d_off, rows_per_block):
             lo, hi = int(d_off[d0]), int(d_off[d1])
@@ -127,7 +155,7 @@ def maxsim_matrix(
                 out[q0:q1, d0:d1] = -np.inf
                 continue
             block = docs.decode_rows(lo, hi)
-            sims = qv @ np.ascontiguousarray(block, dtype=np.float32).T  # [tokens, rows]
+            sims = _similarities(qv, qv_dev, np.ascontiguousarray(block, dtype=np.float32), device)  # [tokens, rows]
             local_d = d_off[d0 : d1 + 1] - lo
             # per query token, best document vector within each page
             per_token = segment_reduce(sims, local_d, np.maximum, axis=1, fill=-np.inf)

@@ -32,6 +32,7 @@ assumption about the data, not a guarantee, and it can be switched off.
 from __future__ import annotations
 
 import json
+import os
 import time
 import warnings
 from collections.abc import Sequence
@@ -54,6 +55,7 @@ from .scoring import maxsim_matrix
 from .stages import (
     AdaptiveMerge,
     BinaryQuantizer,
+    DimensionProjector,
     Float16Quantizer,
     HierarchicalMerge,
     Int4Quantizer,
@@ -91,6 +93,23 @@ class ScoredCandidate:
         return 1000.0 * self.score_seconds / max(1, self.scores.shape[0])
 
 
+#: Byte budget for the transform cache. Each entry is a whole transformed corpus:
+#: negligible at 128-d, but ~10 GB for one 2,560-d split of ViDoRe pages.
+TRANSFORM_CACHE_BYTES = int(os.environ.get("OPTIVISION_CACHE_BYTES", str(4 * 1024**3)))
+
+
+def _cache_put(cache: dict, key: str, value: tuple) -> None:
+    """Insert, then evict least-recently used entries beyond the byte budget.
+
+    Every stage is deterministic, so an evicted prefix recomputes to the same output.
+    """
+    cache[key] = value
+    total = sum(v[1].vectors.nbytes for v in cache.values())
+    while total > TRANSFORM_CACHE_BYTES and len(cache) > 1:
+        oldest = next(iter(cache))
+        total -= cache.pop(oldest)[1].vectors.nbytes
+
+
 def _compress(pipe: Pipeline, corpus: MultiVectorCorpus, cache: dict | None) -> Any:
     """Compress, reusing the token/dimension stages' output across candidates.
 
@@ -103,9 +122,11 @@ def _compress(pipe: Pipeline, corpus: MultiVectorCorpus, cache: dict | None) -> 
         return pipe.compress(corpus)
     prefix = pipe.vector_stages
     key = json.dumps([s.to_dict() for s in prefix], sort_keys=True, default=str)
-    if key not in cache:
+    if key in cache:
+        cache[key] = cache.pop(key)  # mark as most recently used
+    else:
         fitted = Pipeline(prefix).fit(corpus)
-        cache[key] = (fitted.stages, fitted.transform(corpus))
+        _cache_put(cache, key, (fitted.stages, fitted.transform(corpus)))
     stages, transformed = cache[key]
     pipe.stages = [*stages, *[s for s in pipe.stages if isinstance(s, Quantizer)]]
     return pipe.encode(transformed, original=corpus)
@@ -330,6 +351,41 @@ def recommended_search_space(dim: int, use_scipy: bool | None = None) -> dict[st
             for r in (None, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4)
         ]
     return families
+
+
+def projection_targets(dim: int) -> list[int]:
+    """Widths to project to, widest first: d/2, d/4, d/8, d/16 and 128 (each kept if < d)."""
+    targets = {dim // 2, dim // 4, dim // 8, dim // 16, 128}
+    return sorted((t for t in targets if 64 <= t < dim), reverse=True)
+
+
+def projection_search_space(dim: int, use_scipy: bool | None = None) -> dict[str, list[Pipeline]]:
+    """EXPERIMENTAL, opt-in: families that also reduce the vector width (PCA fitted on
+    the documents; queries are projected with the same map). Not part of the default:
+    it was added for the 2,560-4,096-d study and has no measured history yet.
+
+    Each family varies the width from none to the narrowest target at a fixed codec
+    and token stage, least aggressive first, like the default families.
+    """
+    use_scipy = _scipy_available() if use_scipy is None else use_scipy
+    widths = [None, *projection_targets(dim)]
+    codecs = {"int8": lambda: Int8Quantizer("per_vector"), "int4": lambda: Int4Quantizer(center="mean"),
+              "binary": BinaryQuantizer}
+    families: dict[str, list[Pipeline]] = {}
+    for cname, make in codecs.items():
+        families[f"pca+{cname}"] = [Pipeline(([DimensionProjector(w)] if w else []) + [make()]) for w in widths]
+    if use_scipy:
+        for ratio in (0.33, 0.25):
+            for cname in ("int8", "int4"):
+                families[f"ward{ratio}+pca+{cname}"] = [
+                    Pipeline([HierarchicalMerge(ratio=ratio), *([DimensionProjector(w)] if w else []), codecs[cname]()])
+                    for w in widths]
+    return families
+
+
+def wide_search_space(dim: int, use_scipy: bool | None = None) -> dict[str, list[Pipeline]]:
+    """EXPERIMENTAL: the default space plus :func:`projection_search_space`."""
+    return {**recommended_search_space(dim, use_scipy), **projection_search_space(dim, use_scipy)}
 
 
 def default_search_space(dim: int) -> dict[str, list[Pipeline]]:

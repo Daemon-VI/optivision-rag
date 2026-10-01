@@ -136,14 +136,14 @@ def _key_mapping(model_cls) -> dict[str, str] | None:
     return mapping
 
 
-def _from_pretrained(model_cls, checkpoint: str, dtype):
+def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
     """Load and refuse any weight that the checkpoint did not provide.
 
     transformers fills a weight it finds no tensor for with random values and only
     logs it. For a retrieval encoder that yields complete, plausible, meaningless
     vectors, so a missing weight is an error here.
     """
-    kwargs: dict[str, Any] = {"output_loading_info": True}
+    kwargs: dict[str, Any] = {"output_loading_info": True, **extra}
     mapping = _key_mapping(model_cls)
     if mapping is not None:
         kwargs["key_mapping"] = mapping
@@ -262,13 +262,20 @@ def layer_device_map(model, budgets: list[int]) -> dict[str, int]:
 
     device_map: dict[str, int] = {}
     used = [0] * len(budgets)
-    # everything outside the decoder stack's parent: whole, on GPU 0
-    for name, child in model.named_children():
-        full = name
-        if parent_name and (parent_name == full or parent_name.startswith(full + ".")):
-            continue
-        device_map[full] = 0
-        used[0] += nbytes(child)
+    # everything off the path from the root to the stack's parent (vision tower,
+    # heads, wrappers' other children), at every level: whole, on GPU 0
+    path = parent_name.split(".") if parent_name else []
+    for depth in range(len(path) + 1):
+        prefix = ".".join(path[:depth])
+        level = model.get_submodule(prefix) if prefix else model
+        if depth == len(path):
+            break  # the parent's own children are handled below
+        for name, child in level.named_children():
+            if name == path[depth]:
+                continue
+            full = f"{prefix}.{name}" if prefix else name
+            device_map[full] = 0
+            used[0] += nbytes(child)
     # the parent's own children: before the stack -> GPU 0, the stack -> split, after -> last layer's GPU
     gpu, after = 0, False
     for name, child in parent.named_children():
@@ -298,6 +305,32 @@ def layer_device_map(model, budgets: list[int]) -> dict[str, int]:
             raise RuntimeError(f"parameter {name} was not assigned a device")
     return device_map
 
+
+def place_model(model, device: str, multi_gpu: bool) -> tuple[Any, str, dict[str, Any]]:
+    """Move ``model`` to ``device``, or spread it over every visible GPU.
+
+    ``multi_gpu`` keeps float32 for models too large for one 16 GB card. The split
+    is only ever *between* whole decoder layers (see :func:`layer_device_map`);
+    accelerate moves the hidden state from one GPU to the next, so the arithmetic is
+    the same as on one device. Returns ``(model, input_device, placement_report)``.
+    """
+    import torch
+
+    if not (multi_gpu and device.startswith("cuda") and torch.cuda.device_count() > 1):
+        return model.to(device), device, {"devices": [device]}
+    from accelerate import dispatch_model
+
+    n = torch.cuda.device_count()
+    total = [torch.cuda.get_device_properties(i).total_memory for i in range(n)]
+    # GPU 0 also holds the inputs and the vision activations: give it less room for weights
+    budgets = [int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)]
+    device_map = layer_device_map(model, budgets)
+    model = dispatch_model(model, device_map=device_map)
+    layers = [d for k, d in device_map.items() if k.rsplit(".", 1)[-1].isdigit()]
+    placement = {"devices": sorted({str(d) for d in device_map.values()}),
+                 "decoder_layers_per_device": {str(d): layers.count(d) for d in sorted(set(layers))},
+                 "budget_bytes": budgets}
+    return model, "cuda:0", placement
 
 class ColVLMEncoder(BaseEncoder):
     def __init__(
@@ -353,30 +386,7 @@ class ColVLMEncoder(BaseEncoder):
     # ------------------------------------------------------------- internals
 
     def _place(self, model, multi_gpu: bool):
-        """Move the model to its device, or spread it over every visible GPU.
-
-        ``multi_gpu`` keeps float32 for models too large for one 16 GB card
-        (ColQwen2.5 is 14 GiB in float32). The split is only ever *between* whole
-        decoder layers (see :func:`layer_device_map`); accelerate moves the hidden
-        state from one GPU to the next. The arithmetic is the same as on one device.
-        """
-        torch = self._torch
-        if not (multi_gpu and self.device.startswith("cuda") and torch.cuda.device_count() > 1):
-            self.placement = {"devices": [self.device]}
-            return model.to(self.device)
-        from accelerate import dispatch_model
-
-        n = torch.cuda.device_count()
-        total = [torch.cuda.get_device_properties(i).total_memory for i in range(n)]
-        # GPU 0 also holds the inputs and the vision activations: give it less room for weights
-        budgets = [int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)]
-        device_map = layer_device_map(model, budgets)
-        model = dispatch_model(model, device_map=device_map)
-        self.device = "cuda:0"
-        layers = [d for k, d in device_map.items() if k.rsplit(".", 1)[-1].isdigit()]
-        self.placement = {"devices": sorted({str(d) for d in device_map.values()}),
-                          "decoder_layers_per_device": {str(d): layers.count(d) for d in sorted(set(layers))},
-                          "budget_bytes": budgets}
+        model, self.device, self.placement = place_model(model, self.device, multi_gpu)
         return model
 
     def _find_image_token_id(self) -> int | None:
