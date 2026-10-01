@@ -210,6 +210,14 @@ def _judge(sc: ScoredCandidate, relevant: Sequence[np.ndarray], idx: np.ndarray,
     )
 
 
+def _rank_key(c: Candidate, position: int) -> tuple:
+    """Smallest stored size wins; exact ties go to fewer vectors, then to the
+    earlier (less aggressive) candidate. Measured scan time is not used: it is
+    timing noise, and it made the choice between byte-identical candidates (a
+    stage that changed nothing) differ from run to run."""
+    return (c.bytes_per_doc, c.vectors_per_doc, position)
+
+
 def _per_candidate_confidence(confidence: float, multiplicity: str, n_candidates: int) -> float:
     if multiplicity == "none":
         return confidence
@@ -232,7 +240,7 @@ def select(scored: Sequence[ScoredCandidate], base_scores: np.ndarray, relevant:
     feasible = [i for i, c in enumerate(judged) if c.feasible]
     if not feasible:
         return judged, None, None
-    best = min(feasible, key=lambda i: (judged[i].bytes_per_doc, judged[i].query_ms))
+    best = min(feasible, key=lambda i: _rank_key(judged[i], i))
     return judged, judged[best], _holdout(scored[best], base_scores, relevant, hold_idx, metric, n_boot, seed)
 
 
@@ -496,7 +504,7 @@ def calibrate(
     feasible = [i for i, c in enumerate(judged) if c.feasible]
     selected = holdout = None
     if feasible:
-        best = min(feasible, key=lambda i: (judged[i].bytes_per_doc, judged[i].query_ms))
+        best = min(feasible, key=lambda i: _rank_key(judged[i], i))
         selected = judged[best]
         holdout = _holdout(scored[best], base_scores, relevant, hold_idx, metric, n_boot, seed)
 
