@@ -99,6 +99,30 @@ Table I; run it locally against the extracted archive.
 Commit `reports/colpali_*/` to the repo. The paper claims the benchmark is
 reproducible, so a reviewer who clones should find the numbers printed in it.
 
+## ColQwen2 / ColQwen2.5 vectors on a free Kaggle GPU
+
+`notebooks/kaggle_colqwen_encode.ipynb` produced the vectors behind
+`docs/UNIVERSAL.md`, R11. It needs a Kaggle account with phone verification,
+**Accelerator: GPU T4 x2** and **Internet: On**. It runs in about 2 hours and
+stops at the first failed check:
+
+1. Install from the `colqwen-validation` branch, pinning `colpali-engine==0.3.17`,
+   and remove Kaggle's preinstalled `torchao`: peft 0.19 refuses to apply LoRA
+   adapters while an incompatible version is importable.
+2. Smoke-test ColQwen2 twice: pre-merged checkpoint against loader-merged
+   adapter. They must agree (median cosine > 0.99), and each query must retrieve
+   its own page.
+3. Encode ViDoRe V1 DocVQA and InfoVQA (500 pages each) with ColQwen2, in float32,
+   at about 2.3 s/page on a T4.
+4. Smoke-test and encode ColQwen2.5 with `--multi-gpu`. At 14 GiB in float32 it is
+   split across both T4s at a decoder-layer boundary.
+5. Zip `vectors/` with `pip freeze`, the GPU name and the commit.
+
+If the zip is too slow to download, **Save Version → Quick Save** keeps the
+outputs on Kaggle. Then put the `*_docs.npz`, `*_queries.npz` and `*_qrels.json`
+files in `data/vectors/` and run the studies as
+`vec:<name>` datasets (see `scripts/universal_study/README.md`).
+
 ## Review follow-ups in one Kaggle cell
 
 The three runs `docs/REVIEW-2026-08-21.md` asks for, in one `%%bash` cell. Needs a GPU

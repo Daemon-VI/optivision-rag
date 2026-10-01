@@ -133,8 +133,12 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return max(0.0, c - h), min(1.0, c + h)
 
 
-SELECTION = [("E2-colpali-docvqa", "DocVQA"), ("E2-colpali-infovqa", "InfoVQA"),
-             ("text-answerai-colbert-small-v1-scifact", "SciFact")]
+SELECTION = [("E2-colpali-docvqa", "ColPali DocVQA"), ("E2-colpali-infovqa", "ColPali InfoVQA"),
+             ("text-answerai-colbert-small-v1-scifact", "ColBERT SciFact"),
+             ("colqwen2-v1.0-merged_docvqa_test_subsampled", "ColQwen2 DocVQA"),
+             ("colqwen2-v1.0-merged_infovqa_test_subsampled", "ColQwen2 InfoVQA"),
+             ("colqwen2.5-v0.2_docvqa_test_subsampled", "ColQwen2.5 DocVQA"),
+             ("colqwen2.5-v0.2_infovqa_test_subsampled", "ColQwen2.5 InfoVQA")]
 
 
 def selection_rules(root: Path) -> str:

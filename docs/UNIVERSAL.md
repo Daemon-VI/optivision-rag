@@ -22,9 +22,9 @@ results section says which kind it holds:
 
 | kind | what it is | how to read it | where |
 |---|---|---|---|
-| **fixed configuration** | one named pipeline, scored on every query | an unbiased estimate for that pipeline *if you had picked it in advance*; reading the best row off a table of many is itself a selection | R1–R4, R5, R6, R8, R9 |
+| **fixed configuration** | one named pipeline, scored on every query | an unbiased estimate for that pipeline *if you had picked it in advance*; reading the best row off a table of many is itself a selection | R1–R4, R5, R6, R8, R9, R11 |
 | **in-sample selection** | the best of many configurations, chosen and reported **on the same queries** | optimistic by construction (winner's curse); an upper reference, not a prediction | R5b |
-| **out-of-sample** | chosen on calibration queries, reported on **disjoint held-out** queries, over 20 random splits | what `calibrate()` / `optimize()` will do for you | R7, R7b, R10 |
+| **out-of-sample** | chosen on calibration queries, reported on **disjoint held-out** queries, over 20 random splits | what `calibrate()` / `optimize()` will do for you | R7, R7b, R10, R11 |
 
 For planning, use the **out-of-sample** numbers. The release audit
 ([RELEASE-AUDIT-2026-09-27.md](RELEASE-AUDIT-2026-09-27.md)) traces every
@@ -98,8 +98,11 @@ file does; pass the cache's `queries.json` as `-q`.
 | `vidore/colpali-v1.3-merged` | page images | 128 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each), generated corpus (60 pages) |
 | `vidore/colSmol-256M` | page images | 128 | **MEASURED** | generated corpus (60 pages) |
 | `answerdotai/answerai-colbert-small-v1` | text | 96 | **MEASURED** | BEIR SciFact (5,183 abstracts, 300 queries) via sentence-transformers 6.1.0; float nDCG@10 74.56 vs 74.77 on the model card |
-| `vidore/colSmol-500M`, `vidore/colqwen2-v1.0` | page images | 128 | untested — loader exists | — |
-| `vidore/colqwen2.5-v0.2`, `nomic-ai/colnomic-embed-multimodal-7b`, `colbert-ir/colbertv2.0`, `lightonai/GTE-ModernColBERT-v1` | | | unverified — adapter written, never run | — |
+| `vidore/colqwen2-v1.0-merged` | page images | 128 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each); float nDCG@5 within 0.8 points of the published scores (R11) |
+| `vidore/colqwen2-v1.0` | page images | 128 | **MEASURED** | the adapter-only repo, merged on load; same vectors as the merged checkpoint (median cosine 0.99999, R11) |
+| `vidore/colqwen2.5-v0.2` | page images | 128 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each); DocVQA float nDCG@5 1.8 points below the published score (R11) |
+| `vidore/colSmol-500M` | page images | 128 | untested — loader exists | — |
+| `nomic-ai/colnomic-embed-multimodal-7b`, `colbert-ir/colbertv2.0`, `lightonai/GTE-ModernColBERT-v1` | | | unverified — adapter written, never run | — |
 | anything else | any | any | vectors in via `from_arrays`; compression behaviour unmeasured | — |
 
 `optivision.adapters.supported_models()` returns this table; a test pins the
@@ -173,6 +176,10 @@ paired bootstrap interval; labels = the dataset's qrels. Full per-row tables:
 | generated office pages (E3) | ColPali-v1.3 | 60 pages | 72 | 0.6954 |
 | generated office pages (E1) | ColSmol-256M | 60 pages | 72 | 0.7823 |
 | BEIR SciFact | answerai-colbert-small-v1 (text) | 5,183 abstracts | 300 | 0.7308 (nDCG@10 0.7456) |
+| ViDoRe InfoVQA (test, subsampled) | ColQwen2-v1.0 | 500 pages | 494 | 0.9197 |
+| ViDoRe DocVQA (test, subsampled) | ColQwen2-v1.0 | 500 pages | 451 | 0.6065 |
+| ViDoRe InfoVQA (test, subsampled) | ColQwen2.5-v0.2 | 500 pages | 494 | 0.9169 |
+| ViDoRe DocVQA (test, subsampled) | ColQwen2.5-v0.2 | 500 pages | 451 | 0.6180 |
 
 The two generated corpora have 72 queries, so their intervals are about ±6
 points; read them as sanity checks. The ViDoRe splits carry the conclusions.
@@ -697,12 +704,136 @@ conformal / union-bound methods sized to the number of configurations
 actually judged), plus calibration queries drawn from the deployment
 distribution against the deployment-sized corpus.
 
+### R11 · ColQwen2 and ColQwen2.5
+
+*Encoder check, fixed configurations, and out-of-sample (20 splits); the same
+scripts and the same 451 / 494 labelled queries as ColPali
+(`reports/universal/*/colqwen2*`).*
+
+**Encoding.** `notebooks/kaggle_colqwen_encode.ipynb` on a Kaggle Tesla T4 in
+float32: torch 2.10, transformers 5.18, colpali-engine 0.3.17, peft 0.19,
+commit `46adfd9`.
+
+- **ColQwen2.** Encoded from the authors' pre-merged
+  `vidore/colqwen2-v1.0-merged`. The adapter-only `vidore/colqwen2-v1.0`, merged
+  by our loader, gives the same vectors: median cosine 0.99999, minimum 0.9986
+  on 6 pages, and at least 0.99998 on their queries.
+- **ColQwen2.5.** It has no pre-merged release, so its 253 LoRA modules were
+  merged explicitly over `vidore/colqwen2.5-base`. At 14 GiB in float32 it was
+  split across both T4s at a decoder-layer boundary (22 / 14 layers).
+- **Labels and token counts.** Every page and query label is identical to the
+  ColPali files'. The two encoders produce the same number of vectors per page
+  (same image processing), but their vectors are unrelated (median cosine about 0).
+
+**A loading bug caught before any encoding.** Under transformers 5,
+colpali-engine 0.3.17 maps the checkpoint's `model.layers.*` onto
+`language_model.layers.*` but not `model.embed_tokens` or `model.norm`.
+transformers then fills those two weights with random values and only logs it:
+queries found their own page at chance level, and two loads of one checkpoint
+disagreed. The smoke test stopped the run. The loader now supplies the complete
+key mapping, and it refuses any load that leaves a weight uninitialised (only a
+tied `lm_head` is exempt). Every vector file records an empty loading report.
+
+**Float baselines against the published scores** (EXTERNAL: MTEB results,
+mteb 1.38.34):
+
+| encoder | DocVQA nDCG@5, ours / published | InfoVQA nDCG@5, ours / published |
+|---|---|---|
+| ColPali-v1.3 | 0.5841 / 0.5837 | 0.8458 / 0.8553 |
+| ColQwen2-v1.0 | 0.6065 / 0.6148 | 0.9197 / 0.9251 |
+| ColQwen2.5-v0.2 | 0.6180 / 0.6363 | 0.9169 / 0.9252 |
+
+- **The ordering matches, and every encoder is within 1.8 points.** ColPali,
+  validated earlier, sits 1.0 point low on InfoVQA as well, which points to the
+  evaluation protocol: here each distinct query has exactly one labelled page.
+- **ColQwen2.5 on DocVQA has the largest gap (−1.8) and is not explained.**
+  Candidate causes are float32 here against the authors' precision, or a
+  different image-resolution cap. Retention below is always measured against our
+  own float index, so the gap does not enter it.
+
+**Fixed configurations** (each pipeline scored on every query; retention of
+nDCG@5 against that encoder's float32 index):
+
+| pipeline | ColPali · DocVQA | ColPali · InfoVQA | ColQwen2 · DocVQA | ColQwen2 · InfoVQA | ColQwen2.5 · DocVQA | ColQwen2.5 · InfoVQA |
+|---|---|---|---|---|---|---|
+| int8 per-vector | 4x · 100.0% | 4x · 100.0% | 4x · 100.1% | 4x · 100.0% | 4x · 99.8% | 4x · 100.0% |
+| Ward 1/3 + int8 per-vector | 12x · 99.2% | 12x · 99.4% | 12x · 99.7% | 12x · 99.5% | 12x · 99.4% | 12x · 99.9% |
+| Ward 1/3 + int4 | 23x · 98.4% | 23x · 99.1% | 23x · 100.3% | 23x · 99.5% | 23x · 98.8% | 23x · 100.0% |
+| binary | 32x · 96.3% | 32x · 97.4% | 32x · 97.2% | 32x · 99.0% | 32x · 99.5% | 32x · 99.1% |
+| Ward 1/4 + binary | 125x · 95.4% | 125x · 97.5% | 123x · 96.1% | 122x · 97.6% | 123x · 98.0% | 122x · 98.2% |
+| adaptive r=0.6 + int4 | 65x · 95.0% | 69x · 99.2% | 34x · 98.9% | 30x · 99.3% | 38x · 96.5% | 29x · 99.3% |
+
+- **Relative budgets transfer.** Ward to a third of the tokens plus int8 keeps
+  99.4–99.9% on every ColQwen split, as it did on ColPali.
+- **ColQwen is more robust to sign codes:** binary keeps 97.2–99.5% against
+  96.3–97.4% for ColPali, and Ward 1/4 + binary keeps 96.1–98.2% at about 122x.
+- **An absolute merge radius does not transfer.** The same cosine radius (0.6)
+  merges about half as much on ColQwen as on ColPali (29–38x against 65–69x),
+  because neighbouring ColQwen vectors on a page are less alike (below). This is
+  the third encoder where an absolute threshold behaves differently, and it is
+  why the default search space uses per-page budgets.
+
+**Geometry** (`s3c_centred_codecs.py --geometry`):
+
+| | ColQwen2 · DocVQA | ColQwen2 · InfoVQA | ColQwen2.5 · DocVQA | ColQwen2.5 · InfoVQA |
+|---|---|---|---|---|
+| median nearest-neighbour cosine within a page | 0.886 | 0.873 | 0.904 | 0.863 |
+| norm of the corpus mean | 0.28 | 0.22 | 0.31 | 0.23 |
+| median query-token cosine to the corpus mean | −0.02 | 0.02 | 0.06 | 0.03 |
+| centred binary | 96.5% | 99.3% | 98.6% | 99.1% |
+
+ColQwen sits with ColPali (corpus-mean norm 0.23–0.25, NN cosine 0.93) and far
+from the anisotropic text ColBERT (0.90 and 0.99). Its queries share no dominant
+direction, and centred binary works, as the R8 mechanism predicts.
+
+**What `calibrate()` / `optimize()` chose, out of sample** (defaults, labels, 20
+random half/half splits; median compression · splits whose choice met the target
+on the held-out half · worst held-out retention):
+
+| encoder · split | target 0.99 | target 0.97 | target 0.95 | point-estimate rule met (0.99 / 0.97 / 0.95) |
+|---|---|---|---|---|
+| ColQwen2 · DocVQA | 3.9x · 18/20 · worst 97.4% | 5.9x · 20/20 · worst 98.6% | 20.7x · 20/20 · worst 97.3% | 45% / 10% / 85% |
+| ColQwen2 · InfoVQA | 7.8x · 20/20 · worst 99.1% | 29.8x · 19/20 · worst 96.2% | 114.1x · 20/20 · worst 95.8% | 30% / 55% / 85% |
+| ColQwen2.5 · DocVQA | 3.9x · 20/20 · worst 99.6% | 7.8x · 20/20 · worst 98.5% | 22.8x · 20/20 · worst 95.6% | 20% / 25% / 60% |
+| ColQwen2.5 · InfoVQA | 9.6x · 19/20 · worst 98.7% | 47.5x · 20/20 · worst 97.0% | 122.3x · 20/20 · worst 95.6% | 55% / 40% / 100% |
+
+- **The default met its target in 236 of 240 ColQwen choices.** Including the
+  ColPali and SciFact cells (R7b), it met the target in 355 of 360 choices. The
+  splits share one query pool per corpus, so that count is a summary, not a rate
+  with a confidence interval; per-cell intervals are in
+  `reports/universal/TABLES.md` and R7b.
+- **The misses are small.** The worst was ColQwen2 DocVQA at a 0.99 target,
+  97.4%. This is the multiple-configuration limitation of R10 at work, not a
+  new failure.
+- **The point-estimate rule fails here as it did on ColPali,** meeting the
+  target in 10–100% of splits.
+- **The label-free reference** chose less (2–30x) and met the label-based target
+  in every split.
+- **InfoVQA compresses further on ColQwen than on ColPali:** 114–122x against
+  73x at a 0.95 target. DocVQA stays at 4–23x for every encoder.
+
+**Corpus size** (`s12_corpus_size.py`, 100 → 500 pages with fixed queries,
+`reports/universal/audit/colqwen_corpus_size.*`). int4 stays at about 100%. The
+lossiest pipeline, adaptive merge + binary, loses 0–2 points (for example
+ColQwen2.5 DocVQA 93.6% → 91.7%, ColQwen2 InfoVQA 99.8% → 98.1%), and binary
+alone is noisy rather than clearly declining. The trend is weaker than on
+ColPali, and the caution in R10 stands.
+
+**Scope.** These results are two ViDoRe V1 splits of 500 pages each, encoded once
+in float32 on one GPU type. Nothing here covers ViDoRe V2/V3, other resolutions
+or precisions, ColQwen3, ColNomic or 2k–4k-dimensional models.
+
 ## Limits of what is measured
 
-- **Model coverage is three encoders**, all measured on this laptop: ColPali-v1.3
-  (two ViDoRe V1 splits and the generated corpus), ColSmol-256M (the 60-page
-  generated corpus only, so a sanity check rather than evidence) and one text
-  ColBERT (SciFact).
+- **Model coverage is five encoders in three families**:
+  - the PaliGemma family: ColPali-v1.3 (two ViDoRe V1 splits and the generated
+    corpus) and ColSmol-256M (the 60-page generated corpus only, so a sanity
+    check rather than evidence);
+  - the Qwen-VL family: ColQwen2-v1.0 and ColQwen2.5-v0.2 (the same two ViDoRe V1
+    splits, encoded on a Kaggle T4, R11);
+  - one text ColBERT (SciFact).
+
+  All of them are 96–128-dimensional.
 - **Calibration does not guarantee the target, and nothing in this package is a
   distribution-free guarantee.** The 0.999 lower bound is an approximate
   bootstrap bound for *one* configuration, for *the query distribution the
@@ -735,9 +866,8 @@ distribution against the deployment-sized corpus.
 
 ## Unvalidated: in the code, not benchmarked
 
-- Adapters for ColSmol-500M and ColQwen2 (*untested*: the loader exists) and for
-  ColQwen2.5, ColNomic, ColBERTv2 and GTE-ModernColBERT (*unverified*: written,
-  never run). `optivision.adapters.supported_models()` returns the status of
+- Adapters for ColSmol-500M (*untested*: the loader exists) and for ColNomic,
+  ColBERTv2 and GTE-ModernColBERT (*unverified*: written, never run). `optivision.adapters.supported_models()` returns the status of
   each.
 - Attention-guided merging: `AdaptiveMerge` can seed on an `importance`
   signal, but no encoder here exposed attention.
@@ -749,8 +879,10 @@ distribution against the deployment-sized corpus.
 
 ## Future work
 
-- ColQwen2/2.5, ColNomic, Jina v4, NVIDIA ColEmbed and other 2k–4k-dimensional
-  models, where dimension reduction should matter most.
+- ColQwen3, ColNomic, Jina v4, NVIDIA ColEmbed and other 2k–4k-dimensional models,
+  where dimension reduction should matter most.
+- ColQwen2/2.5 beyond ViDoRe V1 DocVQA and InfoVQA, at other precisions or image
+  resolutions, and an explanation of ColQwen2.5's 1.8-point DocVQA baseline gap.
 - ViDoRe V2/V3, long documents, multilingual and non-document images.
 - Million-page corpora, and calibration against a deployment-sized corpus.
 - Database connectors behind `StorageBackend`: Milvus, Weaviate, Vespa,

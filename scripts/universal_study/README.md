@@ -19,6 +19,9 @@ export OPTIVISION_OUT=reports/universal/raw  # where each script writes its JSON
 | `data/vidore_infovqa/queries.json`, `data/vidore_docvqa_test_subsampled/queries.json` | `scripts/rebuild_vidore_qrels.py <split> --out ... --check <cache>.queries.npz` |
 | `data/scifact/{corpus,queries}.json`, `qrels_test.tsv` | BEIR SciFact from `BeIR/scifact` and `BeIR/scifact-qrels` on Hugging Face |
 | `data/vectors/scifact_*` | `s9_encode_scifact.py` in an environment with `sentence-transformers>=6` |
+| `data/vectors/colqwen2*_{docs,queries}.npz`, `_qrels.json` | `notebooks/kaggle_colqwen_encode.ipynb` (Kaggle T4, `docs/GPU_RUN.md`) or `scripts/encode_vectors.py` on any GPU |
+
+Files written by `scripts/encode_vectors.py` are passed to `s3c`, `s5`, `s7b` and `s12` as `vec:<prefix>`, for example `vec:colqwen2.5-v0.2_docvqa_test_subsampled` (`optivision.benchmark.load_vector_dataset`).
 
 ## Order
 
