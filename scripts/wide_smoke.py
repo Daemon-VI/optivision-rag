@@ -38,13 +38,19 @@ from optivision.representation import MultiVectorCorpus
 from optivision.scoring import maxsim_matrix
 
 
-def free(enc) -> None:
+def release_gpu() -> list[float]:
+    """Collect and empty the CUDA cache; returns GiB still allocated per GPU.
+
+    The caller must drop its own references to the encoder first: deleting a
+    function argument only removes the function's name for it.
+    """
     import torch
 
-    del enc
     gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    if not torch.cuda.is_available():
+        return []
+    torch.cuda.empty_cache()
+    return [round(torch.cuda.memory_allocated(i) / 2**30, 2) for i in range(torch.cuda.device_count())]
 
 
 def encode(model: str, dtype: str, multi_gpu: bool, rows: list) -> tuple[list, list, dict, object]:
@@ -114,13 +120,15 @@ def main() -> int:
     report = {"dataset": a.dataset, "pages": len(rows), **info, **c,
               "scorer_check": {"max_abs_diff": float(np.abs(ours - theirs).max()),
                                "query_tokens_with_negative_best_similarity": neg}}
-    free(enc)
+    del enc  # the only reference to the float32 model: it must go before a second model loads
+    report["gpu_gib_allocated_after_release"] = release_gpu()
     ok = (report["dimension_ok"] and report["finite"] and report["unit_norm_max_error"] < 1e-3
           and (report["scorer_check"]["max_abs_diff"] < 1e-3 or neg > 0))
 
     if a.compare_fp16:
         pages16, queries16, info16, enc16 = encode(a.model, "float16", False, rows)
-        free(enc16)
+        del enc16
+        release_gpu()
         c16 = checks(pages16, queries16, dim)
         s16 = c16.pop("scores")
         same_counts = [p.shape[0] for p in pages] == [p.shape[0] for p in pages16]
