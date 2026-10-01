@@ -21,6 +21,7 @@ from pathlib import Path
 import numpy as np
 
 from ..compression import Lloyd2Codec, decode
+from ..scoring import segment_reduce
 from ..types import CompressedPage, PageRef, SearchHit
 from .base import BaseIndex
 
@@ -163,16 +164,12 @@ class NumpyIndex(BaseIndex):
         if doc.shape[0] == 0:
             return np.full(n_pages, -np.inf, dtype=np.float32)
         sims = query @ doc.T  # [n_query_tokens, n_vectors_in_block]
-        starts = offsets[:-1].astype(np.intp)
-        widths = np.diff(offsets)
-        # reduceat rejects an index equal to the row length and emits a garbage
-        # column for a zero-width segment, so clamp first and mask afterwards.
-        safe = np.minimum(starts, doc.shape[0] - 1)
-        per_token_max = np.maximum.reduceat(sims, safe, axis=1)
+        # Reduce over non-empty pages only. The previous clamp-and-mask version
+        # (clamp a start equal to the row count down to the last row) silently
+        # dropped the last vector of the page *before* a trailing empty page.
+        per_token_max = segment_reduce(sims, offsets, np.maximum, axis=1, fill=-np.inf)
         scores = per_token_max.sum(axis=0).astype(np.float32)
-        empty = np.flatnonzero(widths == 0)
-        if empty.size:
-            scores[empty] = -np.inf
+        scores[np.diff(offsets) == 0] = -np.inf
         return scores
 
     def score_all(self, query: np.ndarray) -> np.ndarray:

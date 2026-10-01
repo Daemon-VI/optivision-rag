@@ -1,0 +1,256 @@
+{
+ "dataset": "E1-colsmol-generated",
+ "attrs": {
+  "source": "C:\\Users\\Lenovo\\projects\\optivision-rag-v2\\data\\cache\\colsmol.npz",
+  "format": "legacy-encode-cache",
+  "encoder": "colsmol",
+  "model": "vidore/colSmol-256M"
+ },
+ "n_docs": 60,
+ "n_queries": 36,
+ "reference": "labels",
+ "metrics": [
+  "ndcg@5",
+  "ndcg@10",
+  "recall@5",
+  "mrr@10"
+ ],
+ "rows": [
+  {
+   "label": "baseline-float32",
+   "vectors_per_doc": 875.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 448000.0,
+   "compression_vs_float32": 1.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.7751423196112841,
+   "ndcg@10": 0.7875419511415953,
+   "recall@5": 0.9666666666666666,
+   "mrr@10": 0.7201719576719577,
+   "compress_seconds": 8.769999840296805e-05,
+   "query_ms": 4.376658333058003,
+   "pipeline": {
+    "stages": []
+   },
+   "retention:ndcg@5": 1.0,
+   "retention_ci:ndcg@5": [
+    1.0,
+    1.0
+   ],
+   "retention:ndcg@10": 1.0,
+   "retention_ci:ndcg@10": [
+    1.0,
+    1.0
+   ],
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0
+   ],
+   "retention:mrr@10": 1.0,
+   "retention_ci:mrr@10": [
+    1.0,
+    1.0
+   ]
+  },
+  {
+   "label": "pca-joint 64 (fit on cal queries)",
+   "vectors_per_doc": 875.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 224000.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.7624631092473386,
+   "ndcg@10": 0.7780502694806746,
+   "recall@5": 0.9611111111111111,
+   "mrr@10": 0.7076719576719577,
+   "compress_seconds": 0.00737469999876339,
+   "query_ms": 3.415105555581653,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9836427323819659,
+   "retention_ci:ndcg@5": [
+    0.9361086663675547,
+    1.0311396308947258
+   ],
+   "retention:ndcg@10": 0.987947712947657,
+   "retention_ci:ndcg@10": [
+    0.9432157621958438,
+    1.0349862672205015
+   ],
+   "retention:recall@5": 0.9942528735632186,
+   "retention_ci:recall@5": [
+    0.9820359281437125,
+    1.0
+   ],
+   "retention:mrr@10": 0.9826430342547524,
+   "retention_ci:mrr@10": [
+    0.9180830375855265,
+    1.0520804512721889
+   ]
+  },
+  {
+   "label": "pca-docs 64 (same held-out queries)",
+   "vectors_per_doc": 875.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 224000.0,
+   "compression_vs_float32": 2.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.7486236836029477,
+   "ndcg@10": 0.7706371104527601,
+   "recall@5": 0.9333333333333333,
+   "mrr@10": 0.7034722222222222,
+   "compress_seconds": 0.09288650000235066,
+   "query_ms": 3.790636110756572,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 64,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9657886876546299,
+   "retention_ci:ndcg@5": [
+    0.891461002765238,
+    1.0337061422089642
+   ],
+   "retention:ndcg@10": 0.9785346791185784,
+   "retention_ci:ndcg@10": [
+    0.9149346528741832,
+    1.0388275443440032
+   ],
+   "retention:recall@5": 0.9655172413793105,
+   "retention_ci:recall@5": [
+    0.8951873385012922,
+    1.0
+   ],
+   "retention:mrr@10": 0.9768114611075396,
+   "retention_ci:mrr@10": [
+    0.8870749371735202,
+    1.063823430991855
+   ]
+  },
+  {
+   "label": "pca-joint 32 (fit on cal queries)",
+   "vectors_per_doc": 875.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 112000.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.6225316512489147,
+   "ndcg@10": 0.6536549152002284,
+   "recall@5": 0.8888888888888888,
+   "mrr@10": 0.5491512345679013,
+   "compress_seconds": 0.0058535999996820465,
+   "query_ms": 3.018763888879524,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "joint",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.8031191634087272,
+   "retention_ci:ndcg@5": [
+    0.6832032509347961,
+    0.9124169533922462
+   ],
+   "retention:ndcg@10": 0.829993772716122,
+   "retention_ci:ndcg@10": [
+    0.7313356868965021,
+    0.9260748834059833
+   ],
+   "retention:recall@5": 0.9195402298850576,
+   "retention_ci:recall@5": [
+    0.8238552807486631,
+    1.0
+   ],
+   "retention:mrr@10": 0.7625279333884348,
+   "retention_ci:mrr@10": [
+    0.6294805554558339,
+    0.8935050961184009
+   ]
+  },
+  {
+   "label": "pca-docs 32 (same held-out queries)",
+   "vectors_per_doc": 875.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 112000.0,
+   "compression_vs_float32": 4.0,
+   "vector_reduction": 1.0,
+   "ndcg@5": 0.709765750156002,
+   "ndcg@10": 0.735416532248091,
+   "recall@5": 0.8888888888888888,
+   "mrr@10": 0.6598324514991182,
+   "compress_seconds": 0.0868761000019731,
+   "query_ms": 3.286111110759925,
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "pca",
+      "dim": 32,
+      "center": false,
+      "basis": "documents",
+      "query_weight": 0.5,
+      "sample": 200000,
+      "seed": 0
+     }
+    ]
+   },
+   "retention:ndcg@5": 0.9156586244858016,
+   "retention_ci:ndcg@5": [
+    0.8001318669307967,
+    1.0135252030652315
+   ],
+   "retention:ndcg@10": 0.933812517773885,
+   "retention_ci:ndcg@10": [
+    0.8259583180457645,
+    1.0289471058219308
+   ],
+   "retention:recall@5": 0.9195402298850576,
+   "retention_ci:recall@5": [
+    0.8192090395480227,
+    1.0
+   ],
+   "retention:mrr@10": 0.91621514066183,
+   "retention_ci:mrr@10": [
+    0.769404683192701,
+    1.0570872948190746
+   ]
+  }
+ ],
+ "machine": {
+  "python": "3.11.9",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "numpy": "2.4.6"
+ },
+ "seconds": 0.875229199999012
+}

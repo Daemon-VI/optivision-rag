@@ -340,5 +340,14 @@ def init_config(
     console.print(f"[green]wrote[/] {out}")
 
 
+
+# The universal-layer commands (inspect, compress, calibrate, benchmark, compare)
+# live in their own module. Registered explicitly on *this* module's app, so they
+# exist under ``python -m optivision.cli`` as well as the installed entry point.
+from .cli_universal import register as _register_universal
+
+_register_universal(app)
+
+
 if __name__ == "__main__":  # pragma: no cover
     app()

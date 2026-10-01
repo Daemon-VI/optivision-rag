@@ -14,7 +14,7 @@ short_description: Visual-token pruning and binary quantization for document ret
 
 # OptiVision RAG
 
-**Extreme token compression for vision-language document retrieval.**
+**Quality-constrained, model-agnostic multi-vector compression.**
 
 > The YAML block above is Hugging Face Space metadata. It is ignored by GitHub
 > and by every tool in this repo; see [docs/DEPLOY.md](docs/DEPLOY.md) for how
@@ -22,7 +22,104 @@ short_description: Visual-token pruning and binary quantization for document ret
 
 ---
 
-## The problem
+OptiVision compresses the index of a late-interaction (multi-vector, MaxSim)
+retriever — ColPali-style page encoders or ColBERT-style text encoders — **to a
+quality target you set**. Give it the vectors your encoder produced and a few
+hundred real sample queries. It chooses token merging, dimension reduction and
+quantization, and reports the retention it measured **on queries that played no
+part in the choice**. The model and the query path are unchanged.
+
+```python
+from optivision import MultiVectorCorpus, optimize
+
+docs = MultiVectorCorpus.from_arrays(doc_vectors)       # your encoder's output: a list of [n_i, d] arrays
+queries = MultiVectorCorpus.from_arrays(query_vectors)  # a few hundred real queries (required)
+result = optimize(docs, queries=queries, qrels=labels_or_None, quality_target=0.97)
+result.pipeline.label(), result.compression_ratio, result.quality_retention
+```
+
+### What the optimizer chose, measured on held-out queries
+
+`calibrate()` / `optimize()` with default settings, labels as the reference,
+repeated over 20 random calibration / held-out splits of each query set. This is
+what you should expect when you run it
+([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R7b):
+
+| target | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
+|---|---|---|---|
+| 0.99 | 3.9x · met 20/20 · held-out 100.1% | 3.9x · met 20/20 · held-out 99.9% | 3.9x · met 14/14 · held-out 99.9% |
+| 0.97 | 3.9x · met 19/20 · held-out 99.7% | 43.4x · met 20/20 · held-out 99.6% | 8.0x · met 20/20 · held-out 99.4% |
+| 0.95 | 11.8x · met 20/20 · held-out 98.6% | 72.7x · met 20/20 · held-out 98.9% | 12.4x · met 20/20 · held-out 98.7% |
+
+Each cell: median compression chosen (vs float32) · splits whose choice met the target on the held-out half · mean held-out retention.
+
+At SciFact 0.99 no configuration qualified in 6 of 20 splits; `optimize()` then
+returns the float corpus and says so. The default trades compression for
+reliability on purpose: choosing by the point estimate instead picked 2.3–17x
+more compression and met the target in only 20–85% of splits (R7b). Twenty
+splits cannot pin down a rate near 95%, and none of this is a guarantee (R10).
+
+### Fixed configurations, measured on all queries
+
+One named pipeline each, scored on every query, with no choice made from these
+queries. They are only unbiased for a pipeline you pick *in advance*, and
+reading the best row off the table is itself a selection:
+
+| pipeline | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
+|---|---|---|---|
+| int8 per-vector (3.9x) | 100.0% | 100.0% | 100.1% |
+| Ward merge to 1/3 of the tokens + int8 per-vector (11.8x) | 99.2% [97.2, 101.1] | 99.4% [98.6, 100.2] | 100.0% [98.5, 101.6] |
+| binary codes (32x) | 96.3% | 97.4% | 94.1% |
+| adaptive merge r=0.6 + int4 (65–69x on ColPali) | 95.0% | 99.2% | **7.2%**: the absolute radius collapses this encoder |
+| merged binary codes in RAM + int8 rescoring of 50 | 99.1–101%, RAM 110–376x smaller | 99.8–100%, RAM 117–406x smaller | not measured |
+
+Retention = nDCG@5 (ColPali) or nDCG@10 (SciFact) of the compressed index ÷ the
+float32 index, exact MaxSim, with 95% bootstrap intervals over queries. The
+two-tier row saves **RAM**: its disk tier keeps int8 codes of every vector, so
+total storage is about 3.9x smaller, not 110x. The same pipeline can be nearly
+free on one corpus and costly on another (row 4). That is why the package
+measures instead of prescribing.
+
+### Tested coverage
+
+Exactly three encoders have been measured:
+
+- **ColPali-v1.3**: ViDoRe V1 DocVQA and InfoVQA (500 pages each, 451 and 494
+  queries) and a generated corpus (60 pages).
+- **ColSmol-256M**: the generated corpus only (60 pages, 72 queries, about ±6
+  points); a sanity check, not evidence.
+- **answerai-colbert-small-v1** (text): BEIR SciFact (5,183 abstracts, 300 queries).
+
+Any other model's vectors go in through `from_arrays`, but how they compress is
+**unmeasured** until someone runs `scripts/universal_study/`. Corpora so far
+have 500–5,183 documents, and retention measurably falls as distractors are
+added (release audit, §7). ColQwen, 2k–4k-dimensional models, ViDoRe V2/V3,
+million-page corpora and database connectors beyond numpy/Qdrant are **future
+work**, not results.
+
+### What is not claimed
+
+- No guarantee that the target is met: the 0.999 lower bound is an approximate
+  bootstrap bound for one configuration, and it does not cover choosing among
+  many, queries unlike your sample, or a corpus that grows. The held-out
+  numbers above are the evidence.
+- No distribution-free or model-independent result. Every figure is for the
+  encoder, corpus and queries named next to it.
+- The largest ratios in the write-up (R5b) are **in-sample**: the best of 60
+  configurations, chosen and scored on the same queries. They are upper
+  references, not predictions.
+
+Write-up with every table: [docs/UNIVERSAL.md](docs/UNIVERSAL.md). Release audit:
+[docs/RELEASE-AUDIT-2026-09-27.md](docs/RELEASE-AUDIT-2026-09-27.md). CLI:
+`optivision inspect | compress | calibrate | benchmark | compare`.
+
+## The original recipe (v0.1): pruning and binary codes for ColPali pages
+
+Everything below this point describes the first release: one fixed recipe for
+page-image encoders. It still ships unchanged, and the universal layer wraps its
+stages.
+
+### The problem
 
 ColPali-style models search scanned documents *as images* — no OCR, so they work on
 old copies, seals, stamps and handwriting that text pipelines fail on. They do it by
@@ -40,7 +137,7 @@ Half a terabyte of RAM-resident vector index for a corpus that a records office
 would consider small. The accuracy is excellent; the storage is what stops it
 being deployable.
 
-## What this project does
+### What this project does
 
 OptiVision RAG shrinks the **index**, not the model. The published checkpoint runs
 unmodified, the query path is untouched, and the retrieval is still late-interaction
@@ -85,7 +182,7 @@ The three stages multiply — under E1, pruning ~3.5× × quantization 32× ≈ 
 the index. On real ViDoRe pages pruning buys less, and the product lands in the 53-60× range; both
 figures are in *Results* below.
 
-## Results
+## Results of the original recipe
 
 We ran the ablation twice, and the two runs disagree. That disagreement is the
 result — read both tables before drawing a conclusion from either.
@@ -223,7 +320,8 @@ From PyPI, as a library and the `optivision` CLI:
 ```bash
 pip install optivision-rag             # CLI + the offline synthetic backend, no model download
 pip install "optivision-rag[corpus]"   # + make-corpus (reportlab)
-pip install "optivision-rag[vlm]"      # + the real ColSmol / ColPali / ColQwen2 encoders (torch)
+pip install "optivision-rag[vlm]"      # + the real ColSmol / ColPali encoders (torch; the ColQwen2 loader is untested)
+pip install "optivision-rag[merge]"    # + Ward merging (SciPy): the measured default search space of optimize()
 ```
 
 The example configs ship inside the package as presets, so `-c synthetic`, `-c colsmol`,
@@ -291,7 +389,7 @@ whole benchmark, which is less trouble than the free tiers' quotas.
 |---|---|---|---|
 | `configs/synthetic.yaml` | hashed stand-in | nothing | tests, CI, first smoke run |
 | `configs/colsmol.yaml` | ColSmol-256M | ~0.5 GB download, CPU ok | **default** — real results on a laptop |
-| `configs/colqwen2.yaml`* | ColQwen2-2B | GPU | stronger quality |
+| `configs/colqwen2.yaml`* | ColQwen2-2B | GPU | never run here; stronger per its model card (external) |
 | `configs/colpali.yaml` | ColPali-v1.3 | GPU (~6 GB) | reference model from the paper |
 | `configs/qdrant.yaml` | ColSmol + Qdrant | optional server | deployment-shaped storage |
 
@@ -326,22 +424,42 @@ src/optivision/
   corpus.py           synthetic corpus generator + ViDoRe loader
   metrics.py          nDCG / recall / MRR / Kendall tau / storage
   viz.py              keep-mask and saliency figures
+
+  # universal layer (see docs/UNIVERSAL.md)
+  representation.py   MultiVectorCorpus: any model's vectors, contiguous + offsets
+  adapters.py         model registry (measured / untested / unverified) + adapters
+  stages/             merge.py, prune.py, project.py, quantize.py — composable stages
+  compose.py          Pipeline, CompressedCorpus
+  scoring.py          exact MaxSim over any store, memory-bounded
+  evaluation.py       per-query metrics, labels or float-baseline reference, bootstrap
+  calibration.py      calibrate(): choose on some queries, report on others
+  optimize.py         optimize(): the one-call entry point
+  pareto.py           non-dominated configurations
+  storage.py          ExactIndex, TieredIndex, StorageBackend
+  benchmark.py        datasets + result matrices
+  cli_universal.py    inspect / compress / calibrate / benchmark / compare
 app/streamlit_app.py  demo UI
-docs/                 architecture, results, viva notes
+docs/                 architecture, results, viva notes, AUDIT-2026-09-27, UNIVERSAL
 notebooks/            Colab / Kaggle runner for the ColPali benchmark
+reports/universal/    every measured number of the universal layer (JSON + tables)
+scripts/universal_study/  the scripts that produced them
 ```
 
 ## Testing
 
 ```bash
-pytest              # 75 tests, no model download needed
+pytest              # 284 tests, no model download needed
 ruff check src tests app
 ```
 
 The suite covers saliency behaviour on blank/grey/inked pages, keep-mask budgets,
 redundancy clustering invariants, bit-packing round-trips, MaxSim segment maths on
 variable-length pages, index save/load, Qdrant multivector round-trips, and a full
-index→search→evaluate loop.
+index→search→evaluate loop. For the universal layer it adds: the refactored
+stages reproducing the original pipeline byte for byte, exact MaxSim against
+brute force (empty pages and queries included), merge and quantizer invariants,
+projection of queries, calibration on disjoint splits, serialisation, the CLI,
+and a guard that no model is marked *measured* without results.
 
 ## Improvements
 
