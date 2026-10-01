@@ -63,6 +63,7 @@ def main() -> int:
         "device": getattr(encoder, "device", None),
         "dtype": str(getattr(encoder, "torch_dtype", a.dtype)),
         "adapter_merge_check": getattr(encoder, "adapter_merge_check", None),
+        "loading_report": getattr(encoder, "loading_report", None),
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 

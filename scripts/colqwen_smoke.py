@@ -45,7 +45,8 @@ def encode(model: str, backend: str, dtype: str, rows: list) -> tuple[MultiVecto
     t0 = time.perf_counter()
     enc = ColVLMEncoder(backend=backend, model_name=model, dtype=dtype)
     info = {"model": model, "device": enc.device, "dtype": str(enc.torch_dtype),
-            "adapter_merge_check": enc.adapter_merge_check, "load_seconds": time.perf_counter() - t0}
+            "adapter_merge_check": enc.adapter_merge_check, "loading_report": enc.loading_report,
+            "load_seconds": time.perf_counter() - t0}
     pages, page_s = [], []
     for i, row in enumerate(rows):
         t = time.perf_counter()

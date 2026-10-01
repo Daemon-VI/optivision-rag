@@ -18,6 +18,7 @@ between backends; only absolute quality moves.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -30,8 +31,10 @@ from .base import BaseEncoder, l2_normalise
 # backend -> (default checkpoint, model class name, processor class name)
 #
 # Several of these checkpoints are published *adapter-only*: `vidore/colpali-v1.3`,
-# `vidore/colqwen2-v1.0` and `vidore/colqwen2.5-v0.2` hold `adapter_model.safetensors`
-# and a pointer to a base model. Loading such a repo through `from_pretrained` makes
+# `vidore/colSmol-256M`, `vidore/colqwen2-v1.0` and `vidore/colqwen2.5-v0.2` hold
+# `adapter_model.safetensors` and a pointer to a base model. (For ColSmol-256M the
+# injected and the explicitly merged adapter give identical vectors, checked
+# 2026-10-01 with transformers 5.15 / peft 0.19.) Loading such a repo through `from_pretrained` makes
 # transformers inject the LoRA adapter itself, which is brittle across
 # transformers/peft releases — when the checkpoint's key prefixes do not match what
 # the installed build expects, the LoRA weights are silently left uninitialised
@@ -92,20 +95,74 @@ def _adapter_base(checkpoint: str) -> str | None:
             return None
         with open(cfg, encoding="utf-8") as f:
             return json.load(f).get("base_model_name_or_path")
-    from huggingface_hub import file_exists, hf_hub_download
+    from huggingface_hub import file_exists, hf_hub_download, try_to_load_from_cache
 
-    if not file_exists(checkpoint, "adapter_config.json") or file_exists(checkpoint, "config.json"):
+    try:
+        has_adapter = file_exists(checkpoint, "adapter_config.json")
+        has_config = file_exists(checkpoint, "config.json")
+    except Exception:  # noqa: BLE001 -- offline or Hub unreachable (error types vary by hub version): use the cache
+        has_adapter = isinstance(try_to_load_from_cache(checkpoint, "adapter_config.json"), str)
+        has_config = isinstance(try_to_load_from_cache(checkpoint, "config.json"), str)
+    if not has_adapter or has_config:
         return None
     with open(hf_hub_download(checkpoint, "adapter_config.json"), encoding="utf-8") as f:
         return json.load(f).get("base_model_name_or_path")
 
 
+# colpali-engine 0.3.17's ColQwen2 / ColQwen2.5 rename `model.layers.*` to the
+# transformers-5 name `language_model.layers.*` but not `model.embed_tokens` and
+# `model.norm`. Those two then load as *newly initialised random* weights, with
+# only a log line to say so: the text embedding table and the final norm of the
+# language model. Measured on a Kaggle T4 (transformers 5.18): queries retrieved
+# their own page at chance level and two loads of one checkpoint disagreed.
+_EXTRA_KEY_MAPPING: dict[str, dict[str, str]] = {
+    name: {r"^model\.embed_tokens\.": "language_model.embed_tokens.", r"^model\.norm\.": "language_model.norm."}
+    for name in ("ColQwen2", "ColQwen2_5")
+}
+
+# Missing weights that are legitimately absent from a checkpoint: an output head
+# tied to the input embeddings (re-tied after loading, never used for retrieval).
+_ALLOWED_MISSING = re.compile(r"(^|\.)lm_head\.weight$")
+
+
+def _key_mapping(model_cls) -> dict[str, str] | None:
+    extra = _EXTRA_KEY_MAPPING.get(model_cls.__name__)
+    if not extra:
+        return None
+    mapping: dict[str, str] = {}
+    for klass in reversed(model_cls.__mro__):
+        mapping.update(getattr(klass, "_checkpoint_conversion_mapping", None) or {})
+    mapping.update(extra)
+    return mapping
+
+
 def _from_pretrained(model_cls, checkpoint: str, dtype):
+    """Load and refuse any weight that the checkpoint did not provide.
+
+    transformers fills a weight it finds no tensor for with random values and only
+    logs it. For a retrieval encoder that yields complete, plausible, meaningless
+    vectors, so a missing weight is an error here.
+    """
+    kwargs: dict[str, Any] = {"output_loading_info": True}
+    mapping = _key_mapping(model_cls)
+    if mapping is not None:
+        kwargs["key_mapping"] = mapping
     # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
     try:
-        return model_cls.from_pretrained(checkpoint, dtype=dtype)
+        model, info = model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
     except TypeError:
-        return model_cls.from_pretrained(checkpoint, torch_dtype=dtype)
+        model, info = model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+    missing = [k for k in info.get("missing_keys", []) if not _ALLOWED_MISSING.search(k)]
+    unexpected = list(info.get("unexpected_keys", []))
+    if missing:
+        raise RuntimeError(
+            f"{checkpoint}: {len(missing)} weights were not in the checkpoint and would be random "
+            f"(e.g. {missing[:3]}); checkpoint tensors that matched nothing: {unexpected[:3]}. "
+            "The checkpoint's key names do not map onto this model under the installed "
+            "transformers / colpali-engine versions."
+        )
+    model.loading_report = {"missing_allowed": list(info.get("missing_keys", [])), "unexpected": unexpected}
+    return model
 
 
 def _load_model(model_cls, checkpoint: str, dtype):
@@ -116,19 +173,27 @@ def _load_model(model_cls, checkpoint: str, dtype):
     from peft import PeftModel
 
     base = _from_pretrained(model_cls, base_id, dtype)
-    # Snapshot one weight the adapter targets, to prove the merge did something.
-    probe = next((n for n, _ in base.named_parameters() if n.endswith("q_proj.weight")), None)
-    before = None if probe is None else base.get_parameter(probe).detach().clone()
-    model = PeftModel.from_pretrained(base, checkpoint).merge_and_unload()
-    if probe is None or before is None:
-        raise RuntimeError(f"{checkpoint}: no q_proj weight found to verify the adapter merge")
-    changed = float((model.get_parameter(probe).detach().float() - before.float()).abs().max())
-    if changed == 0.0:
+    peft_model = PeftModel.from_pretrained(base, checkpoint)
+    # LoRA initialises every B matrix to zero, so a B still at zero was never loaded.
+    lora_b = {n: prm for n, prm in peft_model.named_parameters() if ".lora_B." in n}
+    if not lora_b:
+        raise RuntimeError(f"{checkpoint}: the adapter matched no module of {base_id}")
+    unloaded = [n for n, prm in lora_b.items() if float(prm.detach().abs().max()) == 0.0]
+    if unloaded:
         raise RuntimeError(
-            f"{checkpoint}: applying the adapter to {base_id} left {probe} unchanged, so the "
-            "LoRA weights were not loaded and encoding would use the base model."
+            f"{checkpoint}: {len(unloaded)} of {len(lora_b)} LoRA B matrices are still zero after loading "
+            f"(e.g. {unloaded[0]}), so those adapter weights were not loaded."
         )
-    model.adapter_merge_check = {"base": base_id, "probe": probe, "max_abs_change": changed}
+    # One module the adapter really targets: its base weight must change on merge.
+    module = next(iter(lora_b)).split(".lora_B.")[0]
+    inner = module.removeprefix("base_model.model.")
+    before = peft_model.get_parameter(f"{module}.base_layer.weight").detach().float().clone()
+    model = peft_model.merge_and_unload()
+    changed = float((model.get_parameter(f"{inner}.weight").detach().float() - before).abs().max())
+    if changed == 0.0:
+        raise RuntimeError(f"{checkpoint}: merging the adapter left {inner}.weight unchanged")
+    model.adapter_merge_check = {"base": base_id, "lora_modules": len(lora_b), "probe": f"{inner}.weight",
+                                 "max_abs_change": changed}
     return model
 
 
@@ -200,6 +265,7 @@ class ColVLMEncoder(BaseEncoder):
 
         model = _load_model(model_cls, checkpoint, self.torch_dtype)
         self.adapter_merge_check = getattr(model, "adapter_merge_check", None)
+        self.loading_report = getattr(model, "loading_report", None)
         _retie_output_embeddings(model)
 
         # A parameter still on the meta device never received weights. That happens
