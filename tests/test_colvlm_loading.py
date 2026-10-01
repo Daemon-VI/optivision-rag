@@ -63,3 +63,26 @@ def test_loader_maps_every_tensor_and_refuses_partial_loads(tmp_path):
     (broken / "config.json").write_text((tmp_path / "config.json").read_text())
     with pytest.raises(RuntimeError, match="would be random"):
         _from_pretrained(colpali_models.ColQwen2, str(broken), torch.float32)
+
+
+def test_multi_gpu_map_never_splits_a_decoder_layer(tmp_path):
+    from optivision.encoders.colvlm import layer_device_map
+
+    _tiny_colqwen2_checkpoint(tmp_path)
+    model = _from_pretrained(colpali_models.ColQwen2, str(tmp_path), torch.float32)
+    sizes = {n: sum(t.numel() * t.element_size() for t in m.parameters())
+             for n, m in model.named_modules() if n.startswith("language_model.layers.") and n.count(".") == 2}
+    total = sum(t.numel() * t.element_size() for t in model.parameters())
+    # GPU 0 can take everything except about one decoder layer
+    budgets = [total - max(sizes.values()) // 2, total]
+    dm = layer_device_map(model, budgets)
+    layer_keys = sorted((k for k in dm if k.startswith("language_model.layers.")), key=lambda k: int(k.rsplit(".", 1)[1]))
+    assert layer_keys == [f"language_model.layers.{i}" for i in range(len(sizes))]  # whole layers only
+    devices = [dm[k] for k in layer_keys]
+    assert devices == sorted(devices) and devices[-1] == 1  # in order, and the split happened
+    assert dm["custom_text_proj"] == 0 and dm["visual"] == 0 and dm["language_model.embed_tokens"] == 0
+    assert dm["language_model.norm"] == devices[-1] and dm["language_model.rotary_emb"] == 0
+    for name, _ in model.named_parameters():
+        assert any(name == k or name.startswith(k + ".") for k in dm), name
+    with pytest.raises(RuntimeError, match="does not fit"):
+        layer_device_map(model, [total // 4, total // 4])

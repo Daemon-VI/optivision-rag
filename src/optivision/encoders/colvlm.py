@@ -237,6 +237,68 @@ def _retie_output_embeddings(model) -> None:
                 head.weight = embeddings.weight
 
 
+def layer_device_map(model, budgets: list[int]) -> dict[str, int]:
+    """Assign whole modules to GPUs, splitting only between decoder layers.
+
+    The decoder stack is the largest ``nn.ModuleList`` in the model. Its layers are
+    filled onto GPU 0, then GPU 1, ... in order, each layer kept whole, against
+    ``budgets`` (bytes per GPU). Every other module stays whole on GPU 0 (vision
+    tower, embeddings, rotary tables, the output projection, which the Col*
+    forward multiplies by the attention mask held on GPU 0), except the modules
+    that come *after* the decoder stack inside its parent (the final norm), which
+    follow the last layer. Raises if the model does not fit.
+    """
+    import torch
+
+    def nbytes(module) -> int:
+        return sum(t.numel() * t.element_size() for t in [*module.parameters(), *module.buffers()])
+
+    stacks = [(name, mod) for name, mod in model.named_modules() if isinstance(mod, torch.nn.ModuleList)]
+    if not stacks:
+        raise RuntimeError("no decoder layer stack (nn.ModuleList) found to split")
+    stack_name, stack = max(stacks, key=lambda nm: nbytes(nm[1]))
+    parent_name = stack_name.rsplit(".", 1)[0] if "." in stack_name else ""
+    parent = model.get_submodule(parent_name) if parent_name else model
+
+    device_map: dict[str, int] = {}
+    used = [0] * len(budgets)
+    # everything outside the decoder stack's parent: whole, on GPU 0
+    for name, child in model.named_children():
+        full = name
+        if parent_name and (parent_name == full or parent_name.startswith(full + ".")):
+            continue
+        device_map[full] = 0
+        used[0] += nbytes(child)
+    # the parent's own children: before the stack -> GPU 0, the stack -> split, after -> last layer's GPU
+    gpu, after = 0, False
+    for name, child in parent.named_children():
+        full = f"{parent_name}.{name}" if parent_name else name
+        if child is stack:
+            for i, layer in enumerate(stack):
+                size = nbytes(layer)
+                while used[gpu] + size > budgets[gpu]:
+                    gpu += 1
+                    if gpu == len(budgets):
+                        raise RuntimeError(f"model does not fit on {len(budgets)} GPUs within {budgets} bytes")
+                device_map[f"{full}.{i}"] = gpu
+                used[gpu] += size
+            after = True
+            continue
+        # weight-free helpers (rotary tables) are computed before the layers: GPU 0
+        target = gpu if after and any(True for _ in child.parameters()) else 0
+        device_map[full] = target
+        used[target] += nbytes(child)
+    over = [i for i, (u, b) in enumerate(zip(used, budgets, strict=True)) if u > b]
+    if over:
+        raise RuntimeError(f"model does not fit: GPU {over[0]} needs {used[over[0]]} bytes, budget {budgets[over[0]]}")
+    # modules between the root and the stack's parent (e.g. a wrapper) must also be covered
+    covered = set(device_map)
+    for name, param in model.named_parameters():
+        if not any(name == k or name.startswith(k + ".") for k in covered):
+            raise RuntimeError(f"parameter {name} was not assigned a device")
+    return device_map
+
+
 class ColVLMEncoder(BaseEncoder):
     def __init__(
         self,
@@ -294,34 +356,27 @@ class ColVLMEncoder(BaseEncoder):
         """Move the model to its device, or spread it over every visible GPU.
 
         ``multi_gpu`` keeps float32 for models too large for one 16 GB card
-        (ColQwen2.5 is ~15 GB in float32): whole decoder layers and vision blocks
-        are assigned to GPUs in order, and accelerate moves activations between
-        them. The arithmetic is the same as on one device. Inputs go to the first
-        GPU, which holds the vision tower, so it gets less room for weights.
+        (ColQwen2.5 is 14 GiB in float32). The split is only ever *between* whole
+        decoder layers (see :func:`layer_device_map`); accelerate moves the hidden
+        state from one GPU to the next. The arithmetic is the same as on one device.
         """
         torch = self._torch
         if not (multi_gpu and self.device.startswith("cuda") and torch.cuda.device_count() > 1):
             self.placement = {"devices": [self.device]}
             return model.to(self.device)
-        from accelerate import dispatch_model, infer_auto_device_map
+        from accelerate import dispatch_model
 
         n = torch.cuda.device_count()
         total = [torch.cuda.get_device_properties(i).total_memory for i in range(n)]
-        # leave headroom for activations: more on GPU 0, which also runs the vision tower
-        max_memory = {i: int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)}
-        device_map = infer_auto_device_map(
-            model, max_memory=max_memory, no_split_module_classes=getattr(model, "_no_split_modules", None)
-        )
-        # The Col* forward multiplies the projected vectors by the attention mask,
-        # which arrives on GPU 0; keep the (small) projection there so they meet.
-        for key in [k for k in device_map if k == "custom_text_proj" or k.startswith("custom_text_proj.")]:
-            device_map[key] = 0
-        if any(d in ("cpu", "disk") for d in device_map.values()):
-            raise RuntimeError(f"{self.checkpoint}: does not fit on {n} GPUs in {self.torch_dtype}")
+        # GPU 0 also holds the inputs and the vision activations: give it less room for weights
+        budgets = [int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)]
+        device_map = layer_device_map(model, budgets)
         model = dispatch_model(model, device_map=device_map)
         self.device = "cuda:0"
-        used = sorted({str(d) for d in device_map.values()})
-        self.placement = {"devices": used, "max_memory_bytes": max_memory}
+        layers = [d for k, d in device_map.items() if k.rsplit(".", 1)[-1].isdigit()]
+        self.placement = {"devices": sorted({str(d) for d in device_map.values()}),
+                          "decoder_layers_per_device": {str(d): layers.count(d) for d in sorted(set(layers))},
+                          "budget_bytes": budgets}
         return model
 
     def _find_image_token_id(self) -> int | None:
