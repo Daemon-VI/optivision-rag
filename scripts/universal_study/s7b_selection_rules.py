@@ -20,7 +20,7 @@ import time
 
 import numpy as np
 
-from optivision.benchmark import Dataset, load_legacy_dataset
+from optivision.benchmark import Dataset, load_legacy_dataset, load_vector_dataset
 from optivision.calibration import _judge, recommended_search_space, score_space, select
 from optivision.evaluation import (
     per_query_metrics,
@@ -52,6 +52,8 @@ SPLITS = 20
 
 
 def dataset(name):
+    if name.startswith("vec:"):  # files written by scripts/encode_vectors.py
+        return load_vector_dataset(f"{D}/vectors/{name[4:]}", name=name[4:]), "ndcg@5"
     if name == "text-scifact":
         tag = "answerai-colbert-small-v1"
         docs = MultiVectorCorpus.load(f"{D}/vectors/scifact_{tag}_docs.npz")

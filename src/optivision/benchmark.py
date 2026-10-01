@@ -61,6 +61,22 @@ class Dataset:
         return Dataset(self.name, self.corpus, q, qrels, dict(self.attrs))
 
 
+def load_vector_dataset(prefix: str | Path, name: str | None = None) -> Dataset:
+    """Vector files written by ``scripts/encode_vectors.py``.
+
+    ``prefix`` is the shared path stem: ``<prefix>_docs.npz``, ``<prefix>_queries.npz``
+    and ``<prefix>_qrels.json`` (``{qid: [doc ids]}``). All three are pickle-free.
+    """
+    prefix = Path(prefix)
+    corpus = MultiVectorCorpus.load(f"{prefix}_docs.npz")
+    queries = MultiVectorCorpus.load(f"{prefix}_queries.npz")
+    qrels = {k: set(v) for k, v in json.loads(Path(f"{prefix}_qrels.json").read_text(encoding="utf-8")).items()}
+    missing = sorted(q for q in qrels if q not in set(queries.ids))
+    if missing:
+        raise ValueError(f"{prefix}: {len(missing)} labelled queries have no vectors (e.g. {missing[0]})")
+    return Dataset(name or prefix.name, corpus, queries, qrels, attrs=dict(corpus.attrs))
+
+
 def load_legacy_dataset(cache: str | Path, queries_json: str | Path, name: str | None = None,
                         with_images: bool = True) -> Dataset:
     """An encode cache from ``optivision bench --cache`` plus its ``queries.json``.
