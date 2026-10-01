@@ -39,6 +39,10 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=Path("data/vectors"))
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--split", default="test")
+    ap.add_argument("--backend", default=None,
+                    help="colpali-engine backend (e.g. colqwen2, colqwen2.5) to load MODEL with directly, "
+                         "for checkpoints not in the registry such as vidore/colqwen2-v1.0-merged")
+    ap.add_argument("--dtype", default="auto", help="auto | float32 | bfloat16 | float16")
     a = ap.parse_args()
 
     from datasets import load_dataset
@@ -48,7 +52,19 @@ def main() -> int:
     ds = load_dataset(a.dataset, split=a.split)
     if a.limit:
         ds = ds.select(range(min(a.limit, len(ds))))
-    adapter = load_adapter(a.model)
+    if a.backend:
+        from optivision.encoders.colvlm import ColVLMEncoder
+
+        adapter = PageEncoderAdapter(ColVLMEncoder(backend=a.backend, model_name=a.model, dtype=a.dtype), info=info)
+    else:
+        adapter = load_adapter(a.model, dtype=a.dtype) if info and info.loader.startswith("colpali-engine:")             else load_adapter(a.model)
+    encoder = getattr(adapter, "encoder", None)
+    run_info = {
+        "device": getattr(encoder, "device", None),
+        "dtype": str(getattr(encoder, "torch_dtype", a.dtype)),
+        "adapter_merge_check": getattr(encoder, "adapter_merge_check", None),
+    }
+    print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 
     images, ids, queries, qrels, seen = [], [], [], {}, set()
     for i, row in enumerate(ds):
@@ -73,12 +89,13 @@ def main() -> int:
 
     tag = f"{a.model.split('/')[-1]}_{a.dataset.split('/')[-1]}"
     a.out.mkdir(parents=True, exist_ok=True)
-    docs.attrs.update({"model": a.model, "dataset": a.dataset, "encode_seconds": t1 - t0})
+    docs.attrs.update({"model": a.model, "dataset": a.dataset, "encode_seconds": t1 - t0, **run_info})
     docs.save(a.out / f"{tag}_docs.npz")
     qs.save(a.out / f"{tag}_queries.npz")
     (a.out / f"{tag}_qrels.json").write_text(json.dumps(qrels), encoding="utf-8")
     print(json.dumps({"tag": tag, "docs": len(docs), "vectors": docs.num_vectors, "dim": docs.dimension,
-                      "queries": len(qs), "doc_seconds": round(t1 - t0, 1), "query_seconds": round(t2 - t1, 1)}))
+                      "queries": len(qs), "doc_seconds": round(t1 - t0, 1), "query_seconds": round(t2 - t1, 1),
+                      **run_info}))
     return 0
 
 

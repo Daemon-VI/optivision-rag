@@ -8,6 +8,7 @@ Backend choice is a hardware decision:
 
     colsmol   256M params, ~0.5 GB   runs on CPU / 8 GB laptops   (default)
     colqwen2    2B params, ~4 GB     needs a GPU for sane latency
+    colqwen2.5  3B params, ~6 GB     needs a GPU; adapter-only checkpoint (merged on load)
     colpali     3B params, ~6 GB     reference model from the paper
 
 The pruning and quantization stages never touch the model, so results transfer
@@ -28,20 +29,22 @@ from .base import BaseEncoder, l2_normalise
 
 # backend -> (default checkpoint, model class name, processor class name)
 #
-# ColPali is the one checkpoint here published *adapter-only*: `vidore/colpali-v1.3`
-# holds `adapter_model.safetensors` and no `config.json`, so loading it makes
-# transformers inject a LoRA adapter over the PaliGemma base. The ColSmol and
-# ColQwen2 repos ship full weights alongside their adapter files, which is why only
-# this backend ever hit the problem. Adapter injection is brittle across
+# Several of these checkpoints are published *adapter-only*: `vidore/colpali-v1.3`,
+# `vidore/colqwen2-v1.0` and `vidore/colqwen2.5-v0.2` hold `adapter_model.safetensors`
+# and a pointer to a base model. Loading such a repo through `from_pretrained` makes
+# transformers inject the LoRA adapter itself, which is brittle across
 # transformers/peft releases — when the checkpoint's key prefixes do not match what
 # the installed build expects, the LoRA weights are silently left uninitialised
-# rather than loaded. We use the pre-merged weights instead: same model, no
-# injection step, nothing to get wrong.
+# rather than loaded. Where a pre-merged checkpoint exists we use it (same model, no
+# injection step). Where none exists (ColQwen2.5), `_load_model` loads the base,
+# applies the adapter with peft explicitly, merges it, and refuses to continue
+# unless the merge actually changed the weights it targets.
 BACKENDS: dict[str, tuple[str, str, str]] = {
     "colsmol": ("vidore/colSmol-256M", "ColIdefics3", "ColIdefics3Processor"),
     "colsmol-500m": ("vidore/colSmol-500M", "ColIdefics3", "ColIdefics3Processor"),
     "colpali": ("vidore/colpali-v1.3-merged", "ColPali", "ColPaliProcessor"),
-    "colqwen2": ("vidore/colqwen2-v1.0", "ColQwen2", "ColQwen2Processor"),
+    "colqwen2": ("vidore/colqwen2-v1.0-merged", "ColQwen2", "ColQwen2Processor"),
+    "colqwen2.5": ("vidore/colqwen2.5-v0.2", "ColQwen2_5", "ColQwen2_5_Processor"),
 }
 
 
@@ -64,7 +67,69 @@ def _resolve_dtype(dtype: str, device: str):
         return getattr(torch, dtype)
     # bfloat16 on CPU is slower than float32 for these sizes and can be unstable
     # on older CPUs; float16 has no fast CPU kernels at all.
-    return torch.float32 if device == "cpu" else torch.bfloat16
+    if device == "cpu":
+        return torch.float32
+    # GPUs without native bfloat16 (T4, P100 -- the free Kaggle/Colab cards) only
+    # emulate it, slowly. float16 is not a safe substitute: Qwen2-VL activations can
+    # overflow it. float32 fits a 2-3B model on a 16 GB card.
+    if device == "cuda":
+        try:
+            native = torch.cuda.is_bf16_supported(including_emulation=False)
+        except TypeError:  # older torch has no including_emulation argument
+            native = torch.cuda.get_device_capability()[0] >= 8
+        return torch.bfloat16 if native else torch.float32
+    return torch.bfloat16
+
+
+def _adapter_base(checkpoint: str) -> str | None:
+    """The base model of an adapter-only checkpoint, or None for full weights."""
+    import json
+    import os
+
+    if os.path.isdir(checkpoint):
+        cfg = os.path.join(checkpoint, "adapter_config.json")
+        if not os.path.isfile(cfg) or os.path.isfile(os.path.join(checkpoint, "config.json")):
+            return None
+        with open(cfg, encoding="utf-8") as f:
+            return json.load(f).get("base_model_name_or_path")
+    from huggingface_hub import file_exists, hf_hub_download
+
+    if not file_exists(checkpoint, "adapter_config.json") or file_exists(checkpoint, "config.json"):
+        return None
+    with open(hf_hub_download(checkpoint, "adapter_config.json"), encoding="utf-8") as f:
+        return json.load(f).get("base_model_name_or_path")
+
+
+def _from_pretrained(model_cls, checkpoint: str, dtype):
+    # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
+    try:
+        return model_cls.from_pretrained(checkpoint, dtype=dtype)
+    except TypeError:
+        return model_cls.from_pretrained(checkpoint, torch_dtype=dtype)
+
+
+def _load_model(model_cls, checkpoint: str, dtype):
+    """Full checkpoints load directly; adapter-only ones are merged explicitly."""
+    base_id = _adapter_base(checkpoint)
+    if base_id is None:
+        return _from_pretrained(model_cls, checkpoint, dtype)
+    from peft import PeftModel
+
+    base = _from_pretrained(model_cls, base_id, dtype)
+    # Snapshot one weight the adapter targets, to prove the merge did something.
+    probe = next((n for n, _ in base.named_parameters() if n.endswith("q_proj.weight")), None)
+    before = None if probe is None else base.get_parameter(probe).detach().clone()
+    model = PeftModel.from_pretrained(base, checkpoint).merge_and_unload()
+    if probe is None or before is None:
+        raise RuntimeError(f"{checkpoint}: no q_proj weight found to verify the adapter merge")
+    changed = float((model.get_parameter(probe).detach().float() - before.float()).abs().max())
+    if changed == 0.0:
+        raise RuntimeError(
+            f"{checkpoint}: applying the adapter to {base_id} left {probe} unchanged, so the "
+            "LoRA weights were not loaded and encoding would use the base model."
+        )
+    model.adapter_merge_check = {"base": base_id, "probe": probe, "max_abs_change": changed}
+    return model
 
 
 def _retie_output_embeddings(model) -> None:
@@ -133,11 +198,8 @@ class ColVLMEncoder(BaseEncoder):
         self.torch_dtype = _resolve_dtype(dtype, self.device)
         self._torch = torch
 
-        # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
-        try:
-            model = model_cls.from_pretrained(checkpoint, dtype=self.torch_dtype)
-        except TypeError:
-            model = model_cls.from_pretrained(checkpoint, torch_dtype=self.torch_dtype)
+        model = _load_model(model_cls, checkpoint, self.torch_dtype)
+        self.adapter_merge_check = getattr(model, "adapter_merge_check", None)
         _retie_output_embeddings(model)
 
         # A parameter still on the meta device never received weights. That happens

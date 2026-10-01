@@ -56,9 +56,11 @@ _MODELS: list[ModelInfo] = [
     ModelInfo("vidore/colSmol-500M", "colsmol", "image", "colpali-engine:colsmol-500m", 128,
               UNTESTED, "same colpali-engine class as ColSmol-256M; never encoded here"),
     ModelInfo("vidore/colqwen2-v1.0", "colqwen", "image", "colpali-engine:colqwen2", 128,
-              UNTESTED, "backend exists in encoders/colvlm.py; never encoded here"),
-    ModelInfo("vidore/colqwen2.5-v0.2", "colqwen", "image", "sentence-transformers", 128,
-              UNVERIFIED, "model card documents sentence-transformers MultiVectorEncoder"),
+              UNTESTED, "adapter-only repo, merged explicitly on load; vidore/colqwen2-v1.0-merged is "
+              "the same model pre-merged (the colqwen2 backend default); validation in progress"),
+    ModelInfo("vidore/colqwen2.5-v0.2", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
+              UNTESTED, "adapter-only repo over vidore/colqwen2.5-base, merged explicitly on load "
+              "with a check that the merge changed the weights; validation in progress"),
     ModelInfo("nomic-ai/colnomic-embed-multimodal-7b", "colqwen", "image", "sentence-transformers", 128,
               UNVERIFIED, "Qwen2.5-VL based; loading path not exercised here"),
     ModelInfo("colbert-ir/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
