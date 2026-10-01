@@ -51,7 +51,7 @@ def encode(model: str, backend: str, dtype: str, rows: list) -> tuple[MultiVecto
         t = time.perf_counter()
         pages.extend(enc.encode_pages([row["image"]], [PageRef(doc_id=f"{i:05d}", page_no=1)]))
         page_s.append(time.perf_counter() - t)
-        print(f"  {model}: page {i} {pages[-1].vectors.shape} in {page_s[-1]:.2f}s", flush=True)
+        print(f"  {model}: page {i} {pages[-1].embeddings.shape} in {page_s[-1]:.2f}s", flush=True)
     t = time.perf_counter()
     qvecs = enc.encode_queries([r["query"] for r in rows])
     info["seconds_per_page"] = float(np.median(page_s))
