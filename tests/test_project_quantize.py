@@ -164,3 +164,12 @@ def test_centred_scalar_codecs_resolve_a_narrow_cone(rng, centred):
             make(center="mean").encode(v)
         if not centred:
             break
+
+
+def test_projection_labels_name_the_method():
+    from optivision.stages import DimensionProjector
+
+    assert Pipeline([DimensionProjector(640)]).label() == "project(640)"
+    assert Pipeline([DimensionProjector(640, "random")]).label() == "project(640, random)"
+    assert Pipeline([DimensionProjector(64, "truncate"), Int8Quantizer("per_vector")]).label() == \
+        "project(64, truncate) > int8(per_vector)"

@@ -22,9 +22,9 @@ results section says which kind it holds:
 
 | kind | what it is | how to read it | where |
 |---|---|---|---|
-| **fixed configuration** | one named pipeline, scored on every query | an unbiased estimate for that pipeline *if you had picked it in advance*; reading the best row off a table of many is itself a selection | R1–R4, R5, R6, R8, R9, R11 |
+| **fixed configuration** | one named pipeline, scored on every query | an unbiased estimate for that pipeline *if you had picked it in advance*; reading the best row off a table of many is itself a selection | R1–R4, R5, R6, R8, R9, R11, R12 |
 | **in-sample selection** | the best of many configurations, chosen and reported **on the same queries** | optimistic by construction (winner's curse); an upper reference, not a prediction | R5b |
-| **out-of-sample** | chosen on calibration queries, reported on **disjoint held-out** queries, over 20 random splits | what `calibrate()` / `optimize()` will do for you | R7, R7b, R10, R11 |
+| **out-of-sample** | chosen on calibration queries, reported on **disjoint held-out** queries, over 20 random splits | what `calibrate()` / `optimize()` will do for you | R7, R7b, R10, R11, R12 |
 
 For planning, use the **out-of-sample** numbers. The release audit
 ([RELEASE-AUDIT-2026-09-27.md](RELEASE-AUDIT-2026-09-27.md)) traces every
@@ -101,6 +101,8 @@ file does; pass the cache's `queries.json` as `-q`.
 | `vidore/colqwen2-v1.0-merged` | page images | 128 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each); float nDCG@5 within 0.8 points of the published scores (R11) |
 | `vidore/colqwen2-v1.0` | page images | 128 | **MEASURED** | the adapter-only repo, merged on load; same vectors as the merged checkpoint (median cosine 0.99999, R11) |
 | `vidore/colqwen2.5-v0.2` | page images | 128 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each); DocVQA float nDCG@5 1.8 points below the published score (R11) |
+| `nvidia/nemotron-colembed-vl-4b-v2` | page images | 2560 | **MEASURED** | ViDoRe InfoVQA and DocVQA (500 pages each, ~750 vectors/page); float nDCG@5 0.9 points below the published DocVQA score (R12); CC-BY-NC-4.0 |
+| `nvidia/nemotron-colembed-vl-8b-v2` | page images | 4096 | untested — loader exists (pinned revision) | — |
 | `vidore/colSmol-500M` | page images | 128 | untested — loader exists | — |
 | `nomic-ai/colnomic-embed-multimodal-7b`, `colbert-ir/colbertv2.0`, `lightonai/GTE-ModernColBERT-v1` | | | unverified — adapter written, never run | — |
 | anything else | any | any | vectors in via `from_arrays`; compression behaviour unmeasured | — |
@@ -823,6 +825,241 @@ ColPali, and the caution in R10 stands.
 in float32 on one GPU type. Nothing here covers ViDoRe V2/V3, other resolutions
 or precisions, ColQwen3, ColNomic or 2k–4k-dimensional models.
 
+### R12 · A 2,560-dimensional encoder: NVIDIA Nemotron ColEmbed 4B
+
+*Encoder check, fixed configurations, out-of-sample (20 splits); the same 451 /
+494 labelled queries and 500-page corpora as ColPali and ColQwen
+(`reports/universal/wide/`, `reports/universal/selection_rules*/nemotron-*`).*
+
+**Why this model.** `nvidia/nemotron-colembed-vl-4b-v2` (Qwen3-VL-4B) returns, for
+every token, the last decoder layer's hidden state, masked and L2-normalised, at
+the full **2,560** dimensions, with no 128-d projection head. That makes it a
+genuine wide late-interaction encoder.
+- **Licence:** CC-BY-NC-4.0, research use. Weights were only downloaded inside
+  Kaggle sessions, and only metrics are committed.
+- **Pinned revision:** `0ed152d9`. Its modelling code is remote and executes on
+  load.
+
+The NVIDIA Llama-based ColEmbed models (2,048 / 3,072-d) need transformers 4.45
+remote code and were not tried. The 8B sibling (4,096-d) is R12's open question.
+
+**Encoding.** `notebooks/kaggle_wide_model.ipynb` on two Kaggle Tesla T4s:
+- float32, the 36 decoder layers split 15 / 21 at a layer boundary;
+- `sdpa` attention (flash-attention 2 does not run on T4s);
+- torch 2.10, transformers 5.0.0, commit `ec36937`.
+
+The encoder refuses to load unless the checkpoint is a `qwen3_vl_nemotron_embed`
+ColBERT-pooling model of width 2,560, with every weight provided. Every vector
+file records an empty loading report.
+
+Two deliberate differences from the authors' pipeline: float32 instead of their
+bfloat16 autocast (T4s have no native bfloat16), and `sdpa` instead of
+flash-attention.
+
+The smoke test on 6 DocVQA pages:
+- each query found its own page **6/6**;
+- our exact MaxSim matched the model's own `colbert_score` to **5.7e-6**;
+- float16 against float32: median vector cosine 0.999998, but **minimum 0.923**,
+  with identical rankings on those pages. That minimum is the reason a float16-only
+  run of the 8B would need its own check.
+
+**Pages are about 750 vectors, not 2,300.** The model card describes 8 tiles + 1
+thumbnail x 256 tokens. The released processor resizes pages the Qwen-VL way
+instead, giving **758** (DocVQA) and **738** (InfoVQA) vectors per page, about the
+same count as ColQwen, each 20x wider.
+
+**Float baselines against the published scores** (EXTERNAL: the model card,
+ViDoRe V1 nDCG@5): DocVQA **0.6645** here against 67.39 published; InfoVQA
+**0.9344** against 93.31. Same ordering. DocVQA sits 0.9 points low, the offset
+ColPali and ColQwen show under this repository's one-labelled-page-per-query
+protocol.
+
+| | DocVQA | InfoVQA |
+|---|---|---|
+| nDCG@5 | 0.6645 | 0.9344 |
+| nDCG@10 | 0.6853 | 0.9392 |
+| Recall@1 | 0.5831 | 0.8947 |
+| Recall@5 | 0.7361 | 0.9656 |
+| vectors per page | 758 | 738 |
+| float32 bytes per page | 7,765,094 | 7,556,792 |
+| float16 bytes per page | 3,882,547 | 3,778,396 |
+| exact scan, ms per query (T4) | 52 | 62 |
+| encode time for 500 pages, s | 1587 | 1546 |
+
+**What one page costs.** 7.6–7.8 MB in float32 (3.8–3.9 MB in float16): 15x
+ColPali's 0.53 MB and 20x ColQwen's, for the same number of vectors. A
+million-page float32 index would be about 7.7 TB. Encoding took 3.1 s per page on
+two T4s.
+
+**Fixed configurations** (retention of nDCG@5 against this encoder's float32
+index, 95% bootstrap intervals; bytes are the stored codes, scales and shared
+state):
+
+*Codec only (all vectors, 2,560-d)*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| float16 | 3,883 | 2x · 100.0% [99.8%, 100.3%] | 2x · 100.1% [100.0%, 100.2%] |
+| int8(per_vector) | 1,943 | 4x · 99.7% [98.6%, 100.8%] | 4x · 100.2% [99.9%, 100.7%] |
+| int4 | 972 | 8x · 0.9% [0.1%, 1.8%] | 8x · 0.4% [0.1%, 0.8%] |
+| int4(mean) | 972 | 8x · 99.7% [98.5%, 100.9%] | 8x · 100.2% [99.8%, 100.7%] |
+| lloyd2(7) | 485 | 16x · 98.7% [97.2%, 100.4%] | 16x · 100.0% [99.4%, 100.6%] |
+| binary | 243 | 32x · 98.9% [97.1%, 100.6%] | 32x · 99.8% [99.2%, 100.4%] |
+
+*Token reduction only (float32)*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| hierarchical_merge(0.5) | 3,883 | 2x · 99.5% [98.3%, 100.6%] | 2x · 100.0% [99.6%, 100.4%] |
+| hierarchical_merge(0.33) | 2,571 | 3x · 99.1% [97.9%, 100.3%] | 3x · 99.6% [99.1%, 100.0%] |
+| hierarchical_merge(0.25) | 1,946 | 4x · 98.8% [97.5%, 100.1%] | 4x · 99.5% [98.9%, 100.0%] |
+| hierarchical_merge(0.1) | 781 | 10x · 98.4% [96.3%, 100.2%] | 10x · 99.6% [98.9%, 100.3%] |
+| adaptive_merge(0.6) | 756 | 10x · 97.9% [95.9%, 99.8%] | 7x · 99.3% [98.5%, 100.1%] |
+
+*Dimension reduction only (float32)*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| project(1280) | 3,883 | 2x · 100.2% [99.7%, 100.7%] | 2x · 99.9% [99.5%, 100.4%] |
+| project(640) | 1,941 | 4x · 99.3% [98.1%, 100.4%] | 4x · 99.6% [99.0%, 100.2%] |
+| project(320) | 971 | 8x · 99.1% [97.7%, 100.5%] | 8x · 99.4% [98.6%, 100.3%] |
+| project(160) | 485 | 16x · 96.7% [94.4%, 98.8%] | 16x · 98.8% [97.7%, 99.8%] |
+| project(128) | 388 | 20x · 95.2% [92.7%, 97.7%] | 20x · 97.5% [96.3%, 98.7%] |
+| project(640) (random projection, control) | 1,941 | 4x · 87.6% [84.4%, 91.0%] | 4x · 97.9% [96.5%, 99.3%] |
+
+*Token + codec*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| hierarchical_merge(0.33) > int8(per_vector) | 643 | 12x · 99.2% [97.7%, 100.7%] | 12x · 99.4% [98.8%, 100.1%] |
+| hierarchical_merge(0.25) > int4 | 244 | 32x · 0.7% [0.0%, 1.6%] | 32x · 0.5% [0.1%, 1.1%] |
+| hierarchical_merge(0.25) > int4(mean) | 244 | 32x · 98.6% [96.9%, 100.2%] | 32x · 99.6% [98.9%, 100.2%] |
+| hierarchical_merge(0.25) > lloyd2(7) | 122 | 64x · 97.3% [95.5%, 99.1%] | 64x · 99.6% [98.7%, 100.6%] |
+| hierarchical_merge(0.25) > binary | 61 | 128x · 97.4% [95.3%, 99.1%] | 128x · 99.3% [98.7%, 99.9%] |
+
+*Dimension + codec*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| project(1280) > int8(per_vector) | 972 | 8x · 100.4% [99.3%, 101.5%] | 8x · 100.0% [99.7%, 100.3%] |
+| project(640) > int8(per_vector) | 487 | 16x · 100.1% [98.8%, 101.3%] | 16x · 99.6% [99.1%, 100.1%] |
+| project(640) > int4(mean) | 244 | 32x · 99.6% [97.2%, 102.1%] | 32x · 99.5% [98.8%, 100.2%] |
+| project(320) > int4(mean) | 123 | 63x · 98.2% [95.6%, 100.7%] | 63x · 99.2% [98.4%, 100.2%] |
+| project(640) > binary | 61 | 128x · 94.7% [92.6%, 97.0%] | 128x · 99.9% [99.0%, 100.8%] |
+| project(320) > binary | 30 | 256x · 92.8% [90.4%, 95.4%] | 256x · 99.2% [98.2%, 100.0%] |
+| project(128) > binary | 12 | 640x · 90.4% [87.7%, 93.3%] | 640x · 98.1% [97.0%, 99.2%] |
+
+*Token + dimension (float32)*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| hierarchical_merge(0.33) > project(640) | 643 | 12x · 98.5% [97.0%, 99.8%] | 12x · 99.3% [98.6%, 99.8%] |
+| hierarchical_merge(0.33) > project(320) | 321 | 24x · 97.3% [95.5%, 99.0%] | 24x · 98.5% [97.4%, 99.3%] |
+| hierarchical_merge(0.25) > project(128) | 97 | 80x · 92.5% [89.7%, 95.0%] | 80x · 96.2% [94.8%, 97.5%] |
+
+*Token + dimension + codec*
+
+| pipeline | KB/page | DocVQA | InfoVQA |
+|---|---|---|---|
+| hierarchical_merge(0.33) > project(640) > int8(per_vector) | 161 | 48x · 97.8% [96.3%, 99.4%] | 48x · 99.2% [98.5%, 99.8%] |
+| hierarchical_merge(0.33) > project(640) > int4(mean) | 81 | 96x · 95.7% [92.8%, 98.3%] | 96x · 98.4% [97.4%, 99.4%] |
+| hierarchical_merge(0.33) > project(640) > binary | 20 | 387x · 95.9% [93.6%, 98.4%] | 387x · 99.6% [98.4%, 100.6%] |
+| hierarchical_merge(0.33) > project(320) > binary | 10 | 773x · 94.7% [92.2%, 97.2%] | 774x · 98.4% [97.3%, 99.3%] |
+| hierarchical_merge(0.25) > project(128) > binary | 3 | 2553x · 91.1% [87.9%, 94.0%] | 2554x · 97.8% [96.6%, 98.9%] |
+
+**Pareto frontier** (stored bytes per page against nDCG@5 retention, over all 74
+fixed configurations):
+
+- **DocVQA:** hierarchical_merge(0.25) > project(128) > binary (2553x, 91.1%), hierarchical_merge(0.33) > project(128) > binary (1933x, 91.2%), hierarchical_merge(0.25) > project(320) > binary (1021x, 93.6%), hierarchical_merge(0.33) > project(320) > binary (773x, 94.7%), hierarchical_merge(0.25) > project(640) > binary (511x, 94.9%), hierarchical_merge(0.33) > project(640) > binary (387x, 95.9%), hierarchical_merge(0.25) > binary (128x, 97.4%), project(320) > int4(mean) (63x, 98.2%), binary (32x, 98.9%), project(640) > int4(mean) (32x, 99.6%), project(640) > int8(per_vector) (16x, 100.1%), project(1280) > int8(per_vector) (8x, 100.4%)
+- **InfoVQA:** hierarchical_merge(0.25) > project(128) > binary (2554x, 97.8%), hierarchical_merge(0.33) > project(128) > binary (1934x, 98.3%), hierarchical_merge(0.25) > project(320) > binary (1022x, 99.0%), hierarchical_merge(0.25) > project(640) > binary (511x, 99.0%), hierarchical_merge(0.33) > project(640) > binary (387x, 99.6%), project(640) > binary (128x, 99.9%), project(1280) > binary (64x, 100.1%), int4(mean) (8x, 100.2%), int8(per_vector) (4x, 100.2%)
+
+**Two tiers** (binary codes searched in RAM, a 50-page shortlist rescored from
+per-vector int8 codes of every vector on disk):
+
+| RAM tier | RAM KB/page | RAM vs float32 | disk KB/page | disk vs float32 | DocVQA | InfoVQA | rescore ms/query |
+|---|---|---|---|---|---|---|---|
+| binary + int8 rescoring of 50 | 243 | 32x | 2,185 | 3.6x | 99.7% | 100.2% | 343 / 351 |
+| ward 1/4 > binary + int8 rescoring of 50 | 61 | 128x | 2,004 | 3.9x | 99.7% | 100.2% | 346 / 349 |
+
+**Latency** (exact scan on a T4 through `OPTIVISION_SCORE_DEVICE=cuda`; the
+per-page max and per-query sum run on the CPU):
+- The float32 scan takes 46–56 ms per query.
+- Merging to a quarter of the vectors cuts it to 12–14 ms; PCA to 320 dims only to
+  35–42 ms. Scan time follows the number of vectors more than their width.
+- Codes are decoded back to floats before the product, so **binary codes are not
+  faster** here (55–62 ms). A bit-level Hamming search would be; that is not what
+  is measured.
+- Compression of 500 pages: Ward merging about 106 s (0.2 s/page, with the matrix
+  -product distances of the wide path); PCA fit and projection 6–25 s; any codec
+  under 15 s, except the 2-bit codec (about 40 s).
+- The two-tier rescoring took about 350 ms per query, an unoptimised Python loop
+  over 50 pages x 750 vectors x 2,560 dims, so not a latency claim.
+
+**What `calibrate()` / `optimize()` chose, out of sample** (defaults, labels, 20
+random half/half splits; median compression · splits meeting the target ·
+worst held-out retention). Both spaces were judged from one scoring of the 82
+candidates; the default space is its 40-candidate subset:
+
+| space · split | target 0.99 | target 0.97 | target 0.95 | point-estimate rule met (0.99 / 0.97 / 0.95) |
+|---|---|---|---|---|
+| default (40) · DocVQA | 2.0x · 20/20 · worst 99.8% | 8.7x · 19/20 · worst 96.9% | 32.0x · 20/20 · worst 95.8% | 25% / 60% / 55% |
+| default (40) · InfoVQA | 8.0x · 20/20 · worst 99.2% | 277.7x · 20/20 · worst 98.3% | 354.8x · 20/20 · worst 96.6% | 35% / 85% / 100% |
+| with projection (82) · DocVQA | 2.0x · 20/20 · worst 99.8% | 9.4x · 19/20 · worst 96.9% | 32.0x · 19/20 · worst 94.8% | 10% / 60% / 55% |
+| with projection (82) · InfoVQA | 8.0x · 20/20 · worst 99.2% | 287.0x · 20/20 · worst 97.0% | 640.0x · 20/20 · worst 97.0% | 30% / 100% / 100% |
+
+**Findings**
+
+1. **Merging still works at 2,560-d.** Ward to a quarter of the vectors keeps
+   98.8% / 99.5%, and to a tenth 98.4% / 99.6%. That is as good as on ColPali and
+   ColQwen.
+2. **Projection works, and it needs a learned basis.**
+   - PCA to 320 dimensions (8x) keeps 99.1% / 99.4%.
+   - It degrades below that: 160 keeps 96.7% / 98.8%, 128 keeps 95.2% / 97.5%.
+     128 dimensions are not enough for this model on DocVQA.
+   - A random projection to 640 keeps only 87.6% on DocVQA, against 99.3% for PCA.
+3. **Quantization works, with one new failure.**
+   - Per-vector int8 and centred int4 are lossless (99.7–100.2%).
+   - Binary keeps 98.9% / 99.8% at 32x, better than ColPali (96.3% / 97.4%).
+   - **Plain (uncentred) int4 collapses to 0.4–0.9%**, alone and after merging.
+4. **Which axis matters most depends on what is being saved.**
+   - *Storage:* width is the most efficient axis at moderate compression. PCA to
+     320 reaches 8x at 99.1%, where merging needs 10x for 98.4%. PCA + codec owns
+     the frontier from 8x to 63x on DocVQA (`project(640) > int8` 16x at 100.1%,
+     `project(320) > int4(mean)` 63x at 98.2%).
+   - *Beyond about 100x:* all three axes together (Ward + PCA + binary: 387x at
+     95.9% / 99.6%; about 2,550x at 91.1% / 97.8%).
+   - *Scan time:* token reduction is what cuts it.
+   - Treating token count and width as separate axes pays off: the two-axis and
+     three-axis pipelines dominate the frontier.
+5. **`optimize()` stays reliable and conservative.**
+   - It met the target in **119 of 120** choices with the default space and
+     **118 of 120** with projection families added (worst miss 94.8% against 0.95,
+     DocVQA).
+   - It adapts to the split: on InfoVQA it chose **278–355x** (default) and up to
+     **640x** (with projection) at 0.97 / 0.95, all 20 splits meeting the target.
+   - On DocVQA it stayed at 2–32x, where the frontier offers 16–63x at ≥98%.
+     The 0.999 bound on about 225 calibration queries is too wide to certify those.
+   - Adding projection changed DocVQA little and raised InfoVQA's 0.95 choice from
+     355x to 640x, at the cost of one more miss on DocVQA.
+   - The point-estimate rule again failed often (10–100% of splits).
+   - These are empirical held-out counts, not a guarantee (R10).
+6. **New failure modes at this width.**
+   - **Plain int4 collapse (above).** *Hypothesis, not verified:* LLM hidden
+     states carry a few very large dimensions, so the per-vector max-abs scale
+     leaves 7 levels too coarse for everything else. It fits the evidence (int8,
+     with 127 levels, and centring both fix it; binary ignores magnitudes).
+     Checking it needs the raw vectors, which were not kept. The default search
+     space uses only centred int4, so `optimize()` never picked it.
+   - **Size:** 7.7 MB per page in float32 and 3 s per page to encode; the raw index
+     is the bottleneck, and compression is not optional at this width.
+   - **float16 encoding is not free** (minimum vector cosine 0.923).
+   - **The model card overstated vectors per page** (2,304 vs about 750 measured).
+
+**Scope.** One 2,560-d model, two ViDoRe V1 splits of 500 pages each, encoded
+once in float32 on T4s. Not measured: the 4,096-d 8B sibling, the 2,048 / 3,072-d
+Llama-based ColEmbed models, ViDoRe V2/V3, larger corpora, and a bit-level binary
+search kernel.
+
 ## Limits of what is measured
 
 - **Model coverage is five encoders in three families**:
@@ -833,7 +1070,8 @@ or precisions, ColQwen3, ColNomic or 2k–4k-dimensional models.
     splits, encoded on a Kaggle T4, R11);
   - one text ColBERT (SciFact).
 
-  All of them are 96–128-dimensional.
+  All of these are 96–128-dimensional. One wide encoder, Nemotron ColEmbed 4B at
+  2,560 dimensions, is measured on the same two splits (R12).
 - **Calibration does not guarantee the target, and nothing in this package is a
   distribution-free guarantee.** The 0.999 lower bound is an approximate
   bootstrap bound for *one* configuration, for *the query distribution the
@@ -844,8 +1082,8 @@ or precisions, ColQwen3, ColNomic or 2k–4k-dimensional models.
 - **Corpora are small**: 60 to 5,183 documents, and retention measurably falls
   as distractors are added (R10). At a million pages each query faces far more
   near-duplicates.
-- **Dimension reduction was only measured on 128- and 96-dimensional vectors**,
-  where there is little to remove.
+- **Dimension reduction was measured on 96–128-d vectors and on one 2,560-d model**
+  (R12); nothing at 4,096-d.
 - **The text-model findings are one model on one corpus** (R8).
 - **Document fragments are not a substitute for real queries.** Calibrating on
   them chose configurations that lost 6–18% on real queries while reporting
@@ -879,8 +1117,9 @@ or precisions, ColQwen3, ColNomic or 2k–4k-dimensional models.
 
 ## Future work
 
-- ColQwen3, ColNomic, Jina v4, NVIDIA ColEmbed and other 2k–4k-dimensional models,
-  where dimension reduction should matter most.
+- 4,096-d (nemotron-colembed-vl-8b-v2, float16 only on two T4s), the Llama-based
+  NVIDIA ColEmbed models (2,048 / 3,072-d), ColQwen3, ColNomic and Jina v4.
+- Verifying the plain-int4 collapse mechanism on wide hidden states (R12).
 - ColQwen2/2.5 beyond ViDoRe V1 DocVQA and InfoVQA, at other precisions or image
   resolutions, and an explanation of ColQwen2.5's 1.8-point DocVQA baseline gap.
 - ViDoRe V2/V3, long documents, multilingual and non-document images.

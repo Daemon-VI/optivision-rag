@@ -41,6 +41,7 @@ Files written by `scripts/encode_vectors.py` are passed to `s3c`, `s5`, `s7b` an
 | `s10_bound_audit.py` | coverage of the lower bound, many-candidate and degenerate cases (R10, release audit) | ~30 min |
 | `s11_ties.py` | whether index tie-breaking changes retention (release audit) | ~15 min |
 | `s12_corpus_size.py` | retention as distractors are added (release audit) | ~10 min |
+| `s13_wide_study.py` | wide encoders: baseline, 74 fixed codec / token / dimension pipelines, two tiers, Pareto, latency (R12) | ~50 min per split on a T4 (`OPTIVISION_SCORE_DEVICE=cuda`) |
 
 Timings were taken with several jobs sharing four cores; alone they run faster.
 
@@ -57,6 +58,8 @@ copy the JSON to the matching folder of `reports/universal/`:
 | `s5` | `frontier/results/` | `frontier/` |
 | `s6` | `phase67/results/` | `quantize_project/` |
 | `s7b` | `selection_rules/` | same |
+| `s7b --space=both` / `--space=wide` | also `selection_rules_wide/` | same |
+| `s13` | `wide/` | same |
 | `s8` | `phase8/results/` | `tiered/` |
 | `s9` | `phase9/results/` | `text/` |
 | `s10` | the path given as its argument | `audit/bound_audit.json` |

@@ -34,8 +34,9 @@ Tested coverage is exactly five encoders:
 - answerai-colbert-small-v1 (BEIR SciFact).
 
 Other models' vectors are accepted, but their compression behaviour is
-unmeasured. ColQwen3, ColNomic, 2k–4k-dimensional models, ViDoRe V2/V3,
-million-page corpora and database connectors beyond numpy/Qdrant are not
+unmeasured. One 2,560-d encoder (NVIDIA Nemotron ColEmbed 4B, research licence)
+is measured on the same two splits. ColQwen3, ColNomic, 4,096-d models, ViDoRe
+V2/V3, million-page corpora and database connectors beyond numpy/Qdrant are not
 validated.
 
 There is no guarantee that a target is met. The confidence bound applies to each

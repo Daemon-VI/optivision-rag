@@ -66,8 +66,9 @@ _MODELS: list[ModelInfo] = [
               "vidore/colqwen2.5-base, float32 split over two T4s, 2026-10-01; "
               "reports/universal/*/colqwen2.5-v0.2_* (docs/UNIVERSAL.md, R11)"),
     ModelInfo("nvidia/nemotron-colembed-vl-4b-v2", "nemotron-colembed", "image", "nemotron", 2560,
-              UNTESTED, "Qwen3-VL-4B, full-width hidden states (no projection head), up to 2,304 vectors "
-              "per page; CC-BY-NC-4.0; pinned revision 0ed152d9; encoders/nemotron.py; validation in progress"),
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~750 vectors/page), float32 over two "
+              "Kaggle T4s, pinned revision 0ed152d9, 2026-10-02; reports/universal/wide (docs/UNIVERSAL.md, R12); "
+              "CC-BY-NC-4.0"),
     ModelInfo("nvidia/nemotron-colembed-vl-8b-v2", "nemotron-colembed", "image", "nemotron", 4096,
               UNTESTED, "Qwen3-VL-8B, same code as the 4B, 4,096-d; CC-BY-NC-4.0; pinned revision 34b64061; "
               "not encoded here"),

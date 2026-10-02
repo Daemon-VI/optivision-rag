@@ -243,6 +243,10 @@ class Pipeline:
         for s in self.stages:
             p = s.params()
             key = next(iter(p.values()), None) if p else None
+            if s.name == "project" and p.get("method", "pca") != "pca":
+                # name non-PCA projections: "project(640)" alone would hide a random control
+                parts.append(f"{s.name}({key}, {p['method']})")
+                continue
             parts.append(f"{s.name}({key})" if key is not None and not isinstance(key, bool) else s.name)
         return " > ".join(parts) if parts else "float32"
 
