@@ -189,9 +189,11 @@ def summarise(prob: Problem, res: dict, n: int) -> list[dict]:
 
 # ------------------------------------------------------------------ real data
 
-def real(name: str) -> None:
-    if name not in E.DATASETS:
+def real(name: str, out_dir: str = "real") -> None:
+    if out_dir == "real" and name not in E.DATASETS:
         raise SystemExit(f"{name} is not a development dataset (confirmation sets are held back)")
+    if out_dir == "confirm" and (name not in E.CONFIRMATION or not E.FREEZE.exists()):
+        raise SystemExit("confirmation runs need a confirmation dataset and the E1.2 freeze record")
     d = E.load_store(name)
     st = E.Store(d, "labels")
     if not (np.isfinite(st.pq).all() and np.isfinite(st.base).all()):
@@ -220,9 +222,9 @@ def real(name: str) -> None:
             for m in METHODS:
                 sels[f"n{n}_T{T}_{m}"] = res["sel"][T][m]
         print(f"{name} n={n} done in {time.time() - t0:.0f}s", flush=True)
-    (E.E1 / "real").mkdir(parents=True, exist_ok=True)
-    (E.E1 / "real" / f"{name}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
-    np.savez_compressed(E.E1 / "real" / f"{name}_selections.npz", **sels)
+    (E.E1 / out_dir).mkdir(parents=True, exist_ok=True)
+    (E.E1 / out_dir / f"{name}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+    np.savez_compressed(E.E1 / out_dir / f"{name}_selections.npz", **sels)
 
 
 # ------------------------------------------------------------------ synthetic
@@ -326,5 +328,7 @@ def synth(K: int, scenario: str, dependence: str) -> None:
 if __name__ == "__main__":
     if sys.argv[1] == "real":
         real(sys.argv[2])
+    elif sys.argv[1] == "confirm":
+        real(sys.argv[2], out_dir="confirm")
     else:
         synth(int(sys.argv[2]), sys.argv[3], sys.argv[4])

@@ -41,6 +41,18 @@ CONFIRMATION = {
     "scifact": "text-scifact",
 }
 COMMITTED = ROOT / "reports" / "universal" / "selection_rules"
+FREEZE = E1 / "E1_2_FREEZE.md"
+
+
+def dataset_arg(name: str) -> str:
+    """s7b argument for a store name. Confirmation sets only once E1.2 is frozen."""
+    if name in DATASETS:
+        return DATASETS[name]
+    if name in CONFIRMATION:
+        if not FREEZE.exists():
+            raise SystemExit(f"{name} is a held-back confirmation set; freeze E1.2 first ({FREEZE})")
+        return CONFIRMATION[name]
+    raise SystemExit(f"unknown dataset {name}")
 
 
 def load_s7b():

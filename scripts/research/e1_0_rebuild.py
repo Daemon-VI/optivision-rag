@@ -37,7 +37,7 @@ FIELDS = ("selected", "judged", "compression", "calibration", "holdout", "holdou
 
 def build(name: str, s7b) -> tuple:
     t0 = time.time()
-    ds, metric = s7b.dataset(E.DATASETS[name])
+    ds, metric = s7b.dataset(E.dataset_arg(name))
     corpus, queries = ds.corpus, ds.queries
     base = maxsim_matrix(queries, corpus)
     rel_labels = ds.relevant()
@@ -54,7 +54,7 @@ def build(name: str, s7b) -> tuple:
     }
     n_rel = [int(len(r)) for r in rel_labels]
     meta = {
-        "dataset": ds.name, "s7b_argument": E.DATASETS[name], "metric": metric,
+        "dataset": ds.name, "s7b_argument": E.dataset_arg(name), "metric": metric,
         "n_docs": len(corpus), "n_queries": len(queries), "dim": corpus.dimension,
         "relevant_per_query": {str(k): n_rel.count(k) for k in sorted(set(n_rel))},
         "candidates": [{"position": i, "family": sc.family, "label": sc.label, "pipeline": sc.pipeline,
@@ -133,18 +133,22 @@ def compare(old: dict, new: dict) -> dict:
             "selected_identical": all(m.get("field") != "selected" and "problem" not in m for m in mism)}
 
 
-def main(name: str) -> int:
+def main(name: str, replay_only: bool = False) -> int:
+    """replay_only (E1.2 confirmation stores): skip re-running s7b's rules from fresh
+    scores; the store replay is still compared with every committed outcome."""
     s7b = load = E.load_s7b()
     global RULES, TARGETS, SPLITS
     RULES, TARGETS, SPLITS = s7b.RULES, s7b.TARGETS, s7b.SPLITS
     t0 = time.time()
     ds, metric, base, rel_labels, rel_base, scored = build(name, load)
     t_build = time.time() - t0
-    s7b.evaluate(ds, metric, base, rel_labels, rel_base, scored, "e1_rerun", time.time())
-    rerun_path = os.path.join(s7b.S, "e1_rerun", f"{ds.name}.json")
-    t_rerun = time.time() - t0 - t_build
     committed, cdoc = outcomes(E.COMMITTED / f"{ds.name}.json")
-    rerun, rdoc = outcomes(rerun_path)
+    if replay_only:
+        rerun = committed
+    else:
+        s7b.evaluate(ds, metric, base, rel_labels, rel_base, scored, "e1_rerun", time.time())
+        rerun, _ = outcomes(os.path.join(s7b.S, "e1_rerun", f"{ds.name}.json"))
+    t_rerun = time.time() - t0 - t_build
     t1 = time.time()
     rep = replay(name)
     t_replay = time.time() - t1
@@ -156,14 +160,14 @@ def main(name: str) -> int:
         "environment": E.environment(),
         "candidates_identical_to_committed": cand_ok,
         "n_candidates": len(scored),
-        "committed_vs_rerun": compare(committed, rerun),
+        "committed_vs_rerun": "skipped (replay_only)" if replay_only else compare(committed, rerun),
         "committed_vs_store_replay": compare(committed, rep),
         "store_files": {f: hashlib.sha256((E.STORE / f).read_bytes()).hexdigest()
                         for f in (f"{name}.npz", f"{name}.json")},
         "seconds": {"build": t_build, "rerun_rules": t_rerun, "replay_from_store": t_replay},
     }
     (E.E1 / f"e1_0_{name}.json").write_text(json.dumps(report, indent=1, default=float), encoding="utf-8")
-    ok = (cand_ok and not report["committed_vs_rerun"]["mismatches"]
+    ok = (cand_ok and (replay_only or not report["committed_vs_rerun"]["mismatches"])
           and not report["committed_vs_store_replay"]["mismatches"])
     print(json.dumps({k: (v if not isinstance(v, dict) or "mismatches" not in v else
                           {**v, "mismatches": v["mismatches"][:5], "n_mismatches": len(v["mismatches"])})
@@ -173,4 +177,4 @@ def main(name: str) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1]))
+    raise SystemExit(main(sys.argv[1], replay_only="--replay-only" in sys.argv))
