@@ -10,7 +10,26 @@ Labels used in every table:
 - **INFERENCE**: our reading of measured evidence, not itself measured.
 
 Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
-on held-back data passed its frozen criterion. Nothing else has been started.
+on held-back data passed its frozen criterion. **Q3 done, awaiting review**
+(`reports/research/Q3/REPORT.md`). Nothing else has been started.
+
+### Q3 summary (DocVQA against InfoVQA)
+
+- The optimizer's difference comes mostly from **certification difficulty**, not
+  from retention.
+  - For the same pipeline, pool retention is lower on DocVQA by 0–2 points, mostly
+    within the intervals.
+  - The n = 225 certification SE is about 2.1–2.6x larger on DocVQA, on ColPali,
+    ColQwen2 and ColQwen2.5 (MEASURED).
+- That SE gap splits about evenly into a lower mean baseline nDCG and a larger
+  per-query spread. The spread comes from near-boundary queries that both lose and
+  gain under compression.
+- **Reweighting InfoVQA to DocVQA's relevance-margin distribution** closes 61–81%
+  of the SE gap and 61–74% of the current rule's selection gap (observational
+  matching).
+- The pre-stated reading is **partial; both contribute (H3d)**. "Intrinsically
+  less compressible" (H3a) is not supported as the main explanation. A residual
+  remains unexplained.
 
 ### E1 summary (details: `reports/research/E1/RESULTS.md`; design: `E1/DESIGN.md`)
 
