@@ -42,10 +42,10 @@ import time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-import e1_common as E  # noqa: E402
-import e1_stats as S  # noqa: E402
+import e1_common as E
+import e1_stats as S
 
-from optivision.evaluation import retention, retention_lower_bound, split_queries  # noqa: E402
+from optivision.evaluation import retention, retention_lower_bound, split_queries
 
 SEEDS = 2000
 NS = (50, 100, 225)
@@ -164,7 +164,7 @@ def summarise(prob: Problem, res: dict, n: int) -> list[dict]:
                 "truth_retention_mean_deployed": float(r[dep].mean()) if dep.any() else None,
                 "excess_over_target_median_deployed": float(np.median(r[dep] - T)) if dep.any() else None,
                 "success_rate": float((dep & (r >= T)).mean()),
-                "most_common_selection": (lambda v: [int(x) for x in v])(np.bincount(np.maximum(k, -1) + 1).argsort()[::-1][:3] - 1),
+                "most_common_selection": [int(x) for x in np.bincount(k + 1).argsort()[::-1][:3] - 1],
                 "seconds_per_selection": res["seconds_per_selection"][m],
             }
             if delta is not None:
@@ -201,8 +201,11 @@ def real(name: str) -> None:
     sels = {}
     for n in NS:
         t0 = time.time()
-        res = run_cell(prob, lambda s: (lambda idx: (st.pq[:, idx], st.base[idx]))(
-            np.random.default_rng(s).integers(0, N, size=n)), n, "library")
+        def draw(seed, n=n):
+            idx = np.random.default_rng(seed).integers(0, N, size=n)
+            return st.pq[:, idx], st.base[idx]
+
+        res = run_cell(prob, draw, n, "library")
         out["rows"] += summarise(prob, res, n)
         for T in TARGETS:
             for m in METHODS:

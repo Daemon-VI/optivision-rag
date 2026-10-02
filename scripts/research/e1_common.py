@@ -142,8 +142,8 @@ def environment() -> dict:
 
     import scipy
 
-    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"], capture_output=True, text=True).stdout
+    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
+    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"], capture_output=True, text=True, check=False).stdout
     return {"commit": commit, "dirty_tree": bool(dirty.strip()), "python": sys.version.split()[0],
             "numpy": np.__version__, "scipy": scipy.__version__, "platform": platform.platform(),
             "processor": platform.processor(), "cpu_count": os.cpu_count()}
