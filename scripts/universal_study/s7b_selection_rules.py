@@ -20,8 +20,14 @@ import time
 
 import numpy as np
 
-from optivision.benchmark import Dataset, load_legacy_dataset
-from optivision.calibration import _judge, recommended_search_space, score_space, select
+from optivision.benchmark import Dataset, load_legacy_dataset, load_vector_dataset
+from optivision.calibration import (
+    _judge,
+    recommended_search_space,
+    score_space,
+    select,
+    wide_search_space,
+)
 from optivision.evaluation import (
     per_query_metrics,
     relevant_from_baseline,
@@ -52,6 +58,8 @@ SPLITS = 20
 
 
 def dataset(name):
+    if name.startswith("vec:"):  # files written by scripts/encode_vectors.py
+        return load_vector_dataset(f"{D}/vectors/{name[4:]}", name=name[4:]), "ndcg@5"
     if name == "text-scifact":
         tag = "answerai-colbert-small-v1"
         docs = MultiVectorCorpus.load(f"{D}/vectors/scifact_{tag}_docs.npz")
@@ -77,7 +85,7 @@ def calibrate_default(scored, base, rel, cal, hold, target, metric, seed):
     feasible = [(sc, c) for sc, c in judged if c.feasible]
     if not feasible:
         return None, None, len(judged)
-    sc, c = min(feasible, key=lambda t: (t[1].bytes_per_doc, t[1].query_ms))
+    sc, c = min(feasible, key=lambda t: (t[1].bytes_per_doc, t[1].vectors_per_doc, judged.index(t)))
     r = [rel[i] for i in hold]
     ho = retention(per_query_metrics(sc.scores[hold], r, [metric])[metric],
                    per_query_metrics(base[hold], r, [metric])[metric], n_boot=0)[0]
@@ -92,10 +100,24 @@ def run(name):
     base = maxsim_matrix(queries, corpus)
     rel_labels = ds.relevant()
     rel_base = relevant_from_baseline(base, 1)
-    space = recommended_search_space(corpus.dimension)
-    scored = score_space(corpus, queries, space, progress=lambda sc: print(
+    space = (wide_search_space if SPACE in ("wide", "both") else recommended_search_space)(corpus.dimension)
+    scored_all = score_space(corpus, queries, space, progress=lambda sc: print(
         f"  scored {sc.label:48s} x{sc.report['compression_vs_float32']:7.1f}  "
         f"{sc.compress_seconds + sc.score_seconds:5.1f}s", flush=True))
+    if SPACE == "both":
+        # the default space is a subset of the wide one: score once, select twice
+        default_families = set(recommended_search_space(corpus.dimension))
+        evaluate(ds, metric, base, rel_labels, rel_base, [sc for sc in scored_all if sc.family in default_families],
+                 "selection_rules", t0)
+        evaluate(ds, metric, base, rel_labels, rel_base, scored_all, "selection_rules_wide", t0)
+    else:
+        evaluate(ds, metric, base, rel_labels, rel_base, scored_all,
+                 "selection_rules_wide" if SPACE == "wide" else "selection_rules", t0)
+
+
+def evaluate(ds, metric, base, rel_labels, rel_base, scored, out_name, t0):
+    queries = ds.queries
+    corpus = ds.corpus
     by_label = {sc.label: sc for sc in scored}
 
     def ret_on(sc, rel, idx):
@@ -145,12 +167,18 @@ def run(name):
                            "retention_labels_all": ret_on(sc, rel_labels, np.arange(len(queries)))}
                           for sc in scored],
            "seconds": time.time() - t0}
-    out_dir = pathlib.Path(S) / "selection_rules"
+    out_dir = pathlib.Path(S) / out_name
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"{ds.name}.json").write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
-    print(f"== {ds.name} done in {time.time() - t0:.0f}s", flush=True)
+    print(f"== {ds.name} [{out_name}] done in {time.time() - t0:.0f}s", flush=True)
 
+
+#: --space wide adds the EXPERIMENTAL projection families (calibration.wide_search_space);
+#: the replayed calibrate() default then judges that larger space with the same rule.
+#: --space both scores the wide space once and evaluates the default subset and the
+#: whole wide space from the same scores.
+SPACE = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--space=")), "default")
 
 if __name__ == "__main__":
-    for n in sys.argv[1:]:
+    for n in [a for a in sys.argv[1:] if not a.startswith("--")]:
         run(n)

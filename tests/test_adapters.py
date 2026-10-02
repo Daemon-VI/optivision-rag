@@ -20,7 +20,9 @@ from .conftest import make_page
 def test_measured_models_are_exactly_the_benchmarked_ones():
     """The registry must not claim more than the reports support."""
     measured = {m.model_id for m in supported_models(MEASURED)}
-    assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M", "answerdotai/answerai-colbert-small-v1"}
+    assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M", "answerdotai/answerai-colbert-small-v1",
+                        "vidore/colqwen2-v1.0-merged", "vidore/colqwen2-v1.0", "vidore/colqwen2.5-v0.2",
+                        "nvidia/nemotron-colembed-vl-4b-v2"}
 
 
 def test_every_entry_says_where_its_status_comes_from():
@@ -60,3 +62,37 @@ def test_sentence_transformers_glue_warns_and_converts():
     assert docs.ids == ["x", "y"] and docs.counts.tolist() == [2, 5]
     assert docs.attrs["model_status"] == UNVERIFIED
     assert adapter.encode_queries(["q"]).counts.tolist() == [3]
+
+
+def test_colqwen_models_load_through_colpali_engine():
+    from optivision.adapters import MODELS
+    from optivision.encoders.colvlm import BACKENDS
+
+    for model_id, backend in (("vidore/colqwen2-v1.0", "colqwen2"), ("vidore/colqwen2-v1.0-merged", "colqwen2"),
+                              ("vidore/colqwen2.5-v0.2", "colqwen2.5")):
+        assert MODELS[model_id].loader == f"colpali-engine:{backend}"
+        assert backend in BACKENDS
+    # the colqwen2 default is the pre-merged checkpoint, never the adapter-only repo
+    assert BACKENDS["colqwen2"][0] == "vidore/colqwen2-v1.0-merged"
+
+
+def test_adapter_only_checkpoints_are_detected(tmp_path):
+    import json
+
+    from optivision.encoders.colvlm import _adapter_base
+
+    adapter = tmp_path / "adapter"
+    adapter.mkdir()
+    (adapter / "adapter_config.json").write_text(json.dumps({"base_model_name_or_path": "org/base"}))
+    assert _adapter_base(str(adapter)) == "org/base"
+
+    full = tmp_path / "full"
+    full.mkdir()
+    (full / "adapter_config.json").write_text(json.dumps({"base_model_name_or_path": "org/base"}))
+    (full / "config.json").write_text("{}")
+    assert _adapter_base(str(full)) is None  # ships full weights: load directly
+
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    (plain / "config.json").write_text("{}")
+    assert _adapter_base(str(plain)) is None

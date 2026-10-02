@@ -8,6 +8,7 @@ Backend choice is a hardware decision:
 
     colsmol   256M params, ~0.5 GB   runs on CPU / 8 GB laptops   (default)
     colqwen2    2B params, ~4 GB     needs a GPU for sane latency
+    colqwen2.5  3B params, ~6 GB     needs a GPU; adapter-only checkpoint (merged on load)
     colpali     3B params, ~6 GB     reference model from the paper
 
 The pruning and quantization stages never touch the model, so results transfer
@@ -17,6 +18,7 @@ between backends; only absolute quality moves.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -28,20 +30,24 @@ from .base import BaseEncoder, l2_normalise
 
 # backend -> (default checkpoint, model class name, processor class name)
 #
-# ColPali is the one checkpoint here published *adapter-only*: `vidore/colpali-v1.3`
-# holds `adapter_model.safetensors` and no `config.json`, so loading it makes
-# transformers inject a LoRA adapter over the PaliGemma base. The ColSmol and
-# ColQwen2 repos ship full weights alongside their adapter files, which is why only
-# this backend ever hit the problem. Adapter injection is brittle across
+# Several of these checkpoints are published *adapter-only*: `vidore/colpali-v1.3`,
+# `vidore/colSmol-256M`, `vidore/colqwen2-v1.0` and `vidore/colqwen2.5-v0.2` hold
+# `adapter_model.safetensors` and a pointer to a base model. (For ColSmol-256M the
+# injected and the explicitly merged adapter give identical vectors, checked
+# 2026-10-01 with transformers 5.15 / peft 0.19.) Loading such a repo through `from_pretrained` makes
+# transformers inject the LoRA adapter itself, which is brittle across
 # transformers/peft releases — when the checkpoint's key prefixes do not match what
 # the installed build expects, the LoRA weights are silently left uninitialised
-# rather than loaded. We use the pre-merged weights instead: same model, no
-# injection step, nothing to get wrong.
+# rather than loaded. Where a pre-merged checkpoint exists we use it (same model, no
+# injection step). Where none exists (ColQwen2.5), `_load_model` loads the base,
+# applies the adapter with peft explicitly, merges it, and refuses to continue
+# unless the merge actually changed the weights it targets.
 BACKENDS: dict[str, tuple[str, str, str]] = {
     "colsmol": ("vidore/colSmol-256M", "ColIdefics3", "ColIdefics3Processor"),
     "colsmol-500m": ("vidore/colSmol-500M", "ColIdefics3", "ColIdefics3Processor"),
     "colpali": ("vidore/colpali-v1.3-merged", "ColPali", "ColPaliProcessor"),
-    "colqwen2": ("vidore/colqwen2-v1.0", "ColQwen2", "ColQwen2Processor"),
+    "colqwen2": ("vidore/colqwen2-v1.0-merged", "ColQwen2", "ColQwen2Processor"),
+    "colqwen2.5": ("vidore/colqwen2.5-v0.2", "ColQwen2_5", "ColQwen2_5_Processor"),
 }
 
 
@@ -64,7 +70,131 @@ def _resolve_dtype(dtype: str, device: str):
         return getattr(torch, dtype)
     # bfloat16 on CPU is slower than float32 for these sizes and can be unstable
     # on older CPUs; float16 has no fast CPU kernels at all.
-    return torch.float32 if device == "cpu" else torch.bfloat16
+    if device == "cpu":
+        return torch.float32
+    # GPUs without native bfloat16 (T4, P100 -- the free Kaggle/Colab cards) only
+    # emulate it, slowly. float16 is not a safe substitute: Qwen2-VL activations can
+    # overflow it. float32 fits a 2-3B model on a 16 GB card.
+    if device == "cuda":
+        try:
+            native = torch.cuda.is_bf16_supported(including_emulation=False)
+        except TypeError:  # older torch has no including_emulation argument
+            native = torch.cuda.get_device_capability()[0] >= 8
+        return torch.bfloat16 if native else torch.float32
+    return torch.bfloat16
+
+
+def _adapter_base(checkpoint: str) -> str | None:
+    """The base model of an adapter-only checkpoint, or None for full weights."""
+    import json
+    import os
+
+    if os.path.isdir(checkpoint):
+        cfg = os.path.join(checkpoint, "adapter_config.json")
+        if not os.path.isfile(cfg) or os.path.isfile(os.path.join(checkpoint, "config.json")):
+            return None
+        with open(cfg, encoding="utf-8") as f:
+            return json.load(f).get("base_model_name_or_path")
+    from huggingface_hub import file_exists, hf_hub_download, try_to_load_from_cache
+
+    try:
+        has_adapter = file_exists(checkpoint, "adapter_config.json")
+        has_config = file_exists(checkpoint, "config.json")
+    except Exception:  # noqa: BLE001 -- offline or Hub unreachable (error types vary by hub version): use the cache
+        has_adapter = isinstance(try_to_load_from_cache(checkpoint, "adapter_config.json"), str)
+        has_config = isinstance(try_to_load_from_cache(checkpoint, "config.json"), str)
+    if not has_adapter or has_config:
+        return None
+    with open(hf_hub_download(checkpoint, "adapter_config.json"), encoding="utf-8") as f:
+        return json.load(f).get("base_model_name_or_path")
+
+
+# colpali-engine 0.3.17's ColQwen2 / ColQwen2.5 rename `model.layers.*` to the
+# transformers-5 name `language_model.layers.*` but not `model.embed_tokens` and
+# `model.norm`. Those two then load as *newly initialised random* weights, with
+# only a log line to say so: the text embedding table and the final norm of the
+# language model. Measured on a Kaggle T4 (transformers 5.18): queries retrieved
+# their own page at chance level and two loads of one checkpoint disagreed.
+_EXTRA_KEY_MAPPING: dict[str, dict[str, str]] = {
+    name: {r"^model\.embed_tokens\.": "language_model.embed_tokens.", r"^model\.norm\.": "language_model.norm."}
+    for name in ("ColQwen2", "ColQwen2_5")
+}
+
+# Missing weights that are legitimately absent from a checkpoint: an output head
+# tied to the input embeddings (re-tied after loading, never used for retrieval).
+_ALLOWED_MISSING = re.compile(r"(^|\.)lm_head\.weight$")
+
+
+def _key_mapping(model_cls) -> dict[str, str] | None:
+    extra = _EXTRA_KEY_MAPPING.get(model_cls.__name__)
+    if not extra:
+        return None
+    mapping: dict[str, str] = {}
+    for klass in reversed(model_cls.__mro__):
+        mapping.update(getattr(klass, "_checkpoint_conversion_mapping", None) or {})
+    mapping.update(extra)
+    return mapping
+
+
+def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
+    """Load and refuse any weight that the checkpoint did not provide.
+
+    transformers fills a weight it finds no tensor for with random values and only
+    logs it. For a retrieval encoder that yields complete, plausible, meaningless
+    vectors, so a missing weight is an error here.
+    """
+    kwargs: dict[str, Any] = {"output_loading_info": True, **extra}
+    mapping = _key_mapping(model_cls)
+    if mapping is not None:
+        kwargs["key_mapping"] = mapping
+    # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
+    try:
+        model, info = model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+    except TypeError:
+        model, info = model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+    missing = [k for k in info.get("missing_keys", []) if not _ALLOWED_MISSING.search(k)]
+    unexpected = list(info.get("unexpected_keys", []))
+    if missing:
+        raise RuntimeError(
+            f"{checkpoint}: {len(missing)} weights were not in the checkpoint and would be random "
+            f"(e.g. {missing[:3]}); checkpoint tensors that matched nothing: {unexpected[:3]}. "
+            "The checkpoint's key names do not map onto this model under the installed "
+            "transformers / colpali-engine versions."
+        )
+    model.loading_report = {"missing_allowed": list(info.get("missing_keys", [])), "unexpected": unexpected}
+    return model
+
+
+def _load_model(model_cls, checkpoint: str, dtype):
+    """Full checkpoints load directly; adapter-only ones are merged explicitly."""
+    base_id = _adapter_base(checkpoint)
+    if base_id is None:
+        return _from_pretrained(model_cls, checkpoint, dtype)
+    from peft import PeftModel
+
+    base = _from_pretrained(model_cls, base_id, dtype)
+    peft_model = PeftModel.from_pretrained(base, checkpoint)
+    # LoRA initialises every B matrix to zero, so a B still at zero was never loaded.
+    lora_b = {n: prm for n, prm in peft_model.named_parameters() if ".lora_B." in n}
+    if not lora_b:
+        raise RuntimeError(f"{checkpoint}: the adapter matched no module of {base_id}")
+    unloaded = [n for n, prm in lora_b.items() if float(prm.detach().abs().max()) == 0.0]
+    if unloaded:
+        raise RuntimeError(
+            f"{checkpoint}: {len(unloaded)} of {len(lora_b)} LoRA B matrices are still zero after loading "
+            f"(e.g. {unloaded[0]}), so those adapter weights were not loaded."
+        )
+    # One module the adapter really targets: its base weight must change on merge.
+    module = next(iter(lora_b)).split(".lora_B.")[0]
+    inner = module.removeprefix("base_model.model.")
+    before = peft_model.get_parameter(f"{module}.base_layer.weight").detach().float().clone()
+    model = peft_model.merge_and_unload()
+    changed = float((model.get_parameter(f"{inner}.weight").detach().float() - before).abs().max())
+    if changed == 0.0:
+        raise RuntimeError(f"{checkpoint}: merging the adapter left {inner}.weight unchanged")
+    model.adapter_merge_check = {"base": base_id, "lora_modules": len(lora_b), "probe": f"{inner}.weight",
+                                 "max_abs_change": changed}
+    return model
 
 
 def _retie_output_embeddings(model) -> None:
@@ -107,6 +237,101 @@ def _retie_output_embeddings(model) -> None:
                 head.weight = embeddings.weight
 
 
+def layer_device_map(model, budgets: list[int]) -> dict[str, int]:
+    """Assign whole modules to GPUs, splitting only between decoder layers.
+
+    The decoder stack is the largest ``nn.ModuleList`` in the model. Its layers are
+    filled onto GPU 0, then GPU 1, ... in order, each layer kept whole, against
+    ``budgets`` (bytes per GPU). Every other module stays whole on GPU 0 (vision
+    tower, embeddings, rotary tables, the output projection, which the Col*
+    forward multiplies by the attention mask held on GPU 0), except the modules
+    that come *after* the decoder stack inside its parent (the final norm), which
+    follow the last layer. Raises if the model does not fit.
+    """
+    import torch
+
+    def nbytes(module) -> int:
+        return sum(t.numel() * t.element_size() for t in [*module.parameters(), *module.buffers()])
+
+    stacks = [(name, mod) for name, mod in model.named_modules() if isinstance(mod, torch.nn.ModuleList)]
+    if not stacks:
+        raise RuntimeError("no decoder layer stack (nn.ModuleList) found to split")
+    stack_name, stack = max(stacks, key=lambda nm: nbytes(nm[1]))
+    parent_name = stack_name.rsplit(".", 1)[0] if "." in stack_name else ""
+    parent = model.get_submodule(parent_name) if parent_name else model
+
+    device_map: dict[str, int] = {}
+    used = [0] * len(budgets)
+    # everything off the path from the root to the stack's parent (vision tower,
+    # heads, wrappers' other children), at every level: whole, on GPU 0
+    path = parent_name.split(".") if parent_name else []
+    for depth in range(len(path) + 1):
+        prefix = ".".join(path[:depth])
+        level = model.get_submodule(prefix) if prefix else model
+        if depth == len(path):
+            break  # the parent's own children are handled below
+        for name, child in level.named_children():
+            if name == path[depth]:
+                continue
+            full = f"{prefix}.{name}" if prefix else name
+            device_map[full] = 0
+            used[0] += nbytes(child)
+    # the parent's own children: before the stack -> GPU 0, the stack -> split, after -> last layer's GPU
+    gpu, after = 0, False
+    for name, child in parent.named_children():
+        full = f"{parent_name}.{name}" if parent_name else name
+        if child is stack:
+            for i, layer in enumerate(stack):
+                size = nbytes(layer)
+                while used[gpu] + size > budgets[gpu]:
+                    gpu += 1
+                    if gpu == len(budgets):
+                        raise RuntimeError(f"model does not fit on {len(budgets)} GPUs within {budgets} bytes")
+                device_map[f"{full}.{i}"] = gpu
+                used[gpu] += size
+            after = True
+            continue
+        # weight-free helpers (rotary tables) are computed before the layers: GPU 0
+        target = gpu if after and any(True for _ in child.parameters()) else 0
+        device_map[full] = target
+        used[target] += nbytes(child)
+    over = [i for i, (u, b) in enumerate(zip(used, budgets, strict=True)) if u > b]
+    if over:
+        raise RuntimeError(f"model does not fit: GPU {over[0]} needs {used[over[0]]} bytes, budget {budgets[over[0]]}")
+    # modules between the root and the stack's parent (e.g. a wrapper) must also be covered
+    covered = set(device_map)
+    for name, param in model.named_parameters():
+        if not any(name == k or name.startswith(k + ".") for k in covered):
+            raise RuntimeError(f"parameter {name} was not assigned a device")
+    return device_map
+
+
+def place_model(model, device: str, multi_gpu: bool) -> tuple[Any, str, dict[str, Any]]:
+    """Move ``model`` to ``device``, or spread it over every visible GPU.
+
+    ``multi_gpu`` keeps float32 for models too large for one 16 GB card. The split
+    is only ever *between* whole decoder layers (see :func:`layer_device_map`);
+    accelerate moves the hidden state from one GPU to the next, so the arithmetic is
+    the same as on one device. Returns ``(model, input_device, placement_report)``.
+    """
+    import torch
+
+    if not (multi_gpu and device.startswith("cuda") and torch.cuda.device_count() > 1):
+        return model.to(device), device, {"devices": [device]}
+    from accelerate import dispatch_model
+
+    n = torch.cuda.device_count()
+    total = [torch.cuda.get_device_properties(i).total_memory for i in range(n)]
+    # GPU 0 also holds the inputs and the vision activations: give it less room for weights
+    budgets = [int(total[i] * (0.70 if i == 0 else 0.85)) for i in range(n)]
+    device_map = layer_device_map(model, budgets)
+    model = dispatch_model(model, device_map=device_map)
+    layers = [d for k, d in device_map.items() if k.rsplit(".", 1)[-1].isdigit()]
+    placement = {"devices": sorted({str(d) for d in device_map.values()}),
+                 "decoder_layers_per_device": {str(d): layers.count(d) for d in sorted(set(layers))},
+                 "budget_bytes": budgets}
+    return model, "cuda:0", placement
+
 class ColVLMEncoder(BaseEncoder):
     def __init__(
         self,
@@ -115,6 +340,7 @@ class ColVLMEncoder(BaseEncoder):
         device: str = "auto",
         dtype: str = "auto",
         query_batch_size: int = 16,
+        multi_gpu: bool = False,
     ) -> None:
         if backend not in BACKENDS:
             raise ValueError(f"unknown backend {backend!r}; choose from {sorted(BACKENDS)}")
@@ -133,11 +359,9 @@ class ColVLMEncoder(BaseEncoder):
         self.torch_dtype = _resolve_dtype(dtype, self.device)
         self._torch = torch
 
-        # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
-        try:
-            model = model_cls.from_pretrained(checkpoint, dtype=self.torch_dtype)
-        except TypeError:
-            model = model_cls.from_pretrained(checkpoint, torch_dtype=self.torch_dtype)
+        model = _load_model(model_cls, checkpoint, self.torch_dtype)
+        self.adapter_merge_check = getattr(model, "adapter_merge_check", None)
+        self.loading_report = getattr(model, "loading_report", None)
         _retie_output_embeddings(model)
 
         # A parameter still on the meta device never received weights. That happens
@@ -154,12 +378,16 @@ class ColVLMEncoder(BaseEncoder):
                 "model, so encoding would return meaningless vectors. If this is an "
                 "adapter-only repo, point --model at the merged checkpoint instead."
             )
-        self.model = model.to(self.device).eval()
+        self.model = self._place(model, multi_gpu).eval()
         self.processor = proc_cls.from_pretrained(checkpoint)
         self._dim: int | None = None
         self._image_token_id = self._find_image_token_id()
 
     # ------------------------------------------------------------- internals
+
+    def _place(self, model, multi_gpu: bool):
+        model, self.device, self.placement = place_model(model, self.device, multi_gpu)
+        return model
 
     def _find_image_token_id(self) -> int | None:
         proc: Any = self.processor

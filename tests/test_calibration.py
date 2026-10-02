@@ -206,3 +206,18 @@ def test_lower_bound_helper(rng):
     lo_975 = retention_lower_bound(c, b, 0.975, n_boot=500)
     lo_999 = retention_lower_bound(c, b, 0.999, n_boot=500)
     assert lo_999 < lo_975 < float(c.mean() / b.mean())
+
+
+def test_byte_identical_candidates_are_chosen_deterministically():
+    from optivision.calibration import Candidate, _rank_key
+
+    def cand(label, nbytes, vectors, ms):
+        return Candidate(family="f", label=label, pipeline={}, bytes_per_doc=nbytes, vectors_per_doc=vectors, dim=8,
+                         bits_per_dim=8.0, compression_vs_float32=4.0, retention=1.0, retention_lo=1.0,
+                         retention_hi=1.0, query_ms=ms, compress_seconds=0.0, feasible=True)
+
+    # a stage that changed nothing: same bytes and vectors, timing noise must not decide
+    a, b = cand("int8", 100.0, 10.0, ms=5.0), cand("merge(0.9) > int8", 100.0, 10.0, ms=1.0)
+    assert min(enumerate([a, b]), key=lambda t: _rank_key(t[1], t[0]))[1] is a
+    smaller = cand("ward > int8", 60.0, 6.0, ms=9.0)
+    assert min(enumerate([a, b, smaller]), key=lambda t: _rank_key(t[1], t[0]))[1] is smaller

@@ -82,10 +82,22 @@ measures instead of prescribing.
 
 ### Tested coverage
 
-Exactly three encoders have been measured:
+Exactly six encoders have been measured:
 
 - **ColPali-v1.3**: ViDoRe V1 DocVQA and InfoVQA (500 pages each, 451 and 494
   queries) and a generated corpus (60 pages).
+- **ColQwen2-v1.0** and **ColQwen2.5-v0.2**: the same two ViDoRe V1 splits, on the
+  same queries. Their float baselines are within 0.5–1.8 points of the published
+  ViDoRe scores. Out of sample, the default met its target in 236 of 240 choices,
+  for example 114–122x at a 0.95 target on InfoVQA
+  ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R11).
+- **NVIDIA Nemotron ColEmbed 4B** (2,560-d, licensed CC-BY-NC-4.0, so
+  non-commercial use only): the same two ViDoRe V1 splits. The default met its
+  target in 119 of 120 held-out choices
+  ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R12). OptiVision has thus been
+  evaluated empirically on a 2,560-dimensional multi-vector retrieval model, and
+  its model-agnostic compression and optimization machinery kept working at that
+  width. That is one model on two 500-page splits; nothing wider is measured.
 - **ColSmol-256M**: the generated corpus only (60 pages, 72 queries, about ±6
   points); a sanity check, not evidence.
 - **answerai-colbert-small-v1** (text): BEIR SciFact (5,183 abstracts, 300 queries).
@@ -93,9 +105,9 @@ Exactly three encoders have been measured:
 Any other model's vectors go in through `from_arrays`, but how they compress is
 **unmeasured** until someone runs `scripts/universal_study/`. Corpora so far
 have 500–5,183 documents, and retention measurably falls as distractors are
-added (release audit, §7). ColQwen, 2k–4k-dimensional models, ViDoRe V2/V3,
-million-page corpora and database connectors beyond numpy/Qdrant are **future
-work**, not results.
+added (release audit, §7). ColQwen3, ColNomic, 4,096-d models (the 8B ColEmbed
+loader exists but was not benchmarked), ViDoRe V2/V3, million-page corpora and
+database connectors beyond numpy/Qdrant are **future work**, not results.
 
 ### What is not claimed
 
@@ -320,7 +332,7 @@ From PyPI, as a library and the `optivision` CLI:
 ```bash
 pip install optivision-rag             # CLI + the offline synthetic backend, no model download
 pip install "optivision-rag[corpus]"   # + make-corpus (reportlab)
-pip install "optivision-rag[vlm]"      # + the real ColSmol / ColPali encoders (torch; the ColQwen2 loader is untested)
+pip install "optivision-rag[vlm]"      # + the real ColSmol / ColPali / ColQwen2 / ColQwen2.5 encoders (torch)
 pip install "optivision-rag[merge]"    # + Ward merging (SciPy): the measured default search space of optimize()
 ```
 
@@ -389,7 +401,7 @@ whole benchmark, which is less trouble than the free tiers' quotas.
 |---|---|---|---|
 | `configs/synthetic.yaml` | hashed stand-in | nothing | tests, CI, first smoke run |
 | `configs/colsmol.yaml` | ColSmol-256M | ~0.5 GB download, CPU ok | **default** — real results on a laptop |
-| `configs/colqwen2.yaml`* | ColQwen2-2B | GPU | never run here; stronger per its model card (external) |
+| `configs/colqwen2.yaml`* | ColQwen2-2B | GPU | encoder measured in the universal layer (R11); this config's index/search path not run here |
 | `configs/colpali.yaml` | ColPali-v1.3 | GPU (~6 GB) | reference model from the paper |
 | `configs/qdrant.yaml` | ColSmol + Qdrant | optional server | deployment-shaped storage |
 
@@ -408,7 +420,7 @@ src/optivision/
   types.py            PageEncoding → PrunedPage → CompressedPage
   config.py           every experimental knob, YAML-loadable
   encoders/
-    colvlm.py         ColPali / ColQwen2 / ColSmol via colpali-engine
+    colvlm.py         ColPali / ColQwen2 / ColQwen2.5 / ColSmol via colpali-engine
     synthetic.py      offline stand-in (tests only)
   pruning/
     saliency.py       ink density + edge energy per patch

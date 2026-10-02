@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from optivision.benchmark import Dataset, load_legacy_dataset
+from optivision.benchmark import Dataset, load_legacy_dataset, load_vector_dataset
 from optivision.compose import Pipeline
 from optivision.evaluation import per_query_metrics, retention
 from optivision.pareto import pareto_front
@@ -37,6 +37,8 @@ METRICS = ["ndcg@5", "ndcg@10"]
 
 
 def dataset(name):
+    if name.startswith("vec:"):  # files written by scripts/encode_vectors.py
+        return load_vector_dataset(f"{D}/vectors/{name[4:]}", name=name[4:])
     if name == "text-scifact":
         docs = MultiVectorCorpus.load(f"{D}/vectors/scifact_answerai-colbert-small-v1_docs.npz")
         qs = MultiVectorCorpus.load(f"{D}/vectors/scifact_answerai-colbert-small-v1_queries.npz")

@@ -79,3 +79,26 @@ def test_measure_float_baseline_is_self_consistent(rng):
     binary, _ = measure(Pipeline([BinaryQuantizer()]), corpus, queries, rel, metrics=["ndcg@1"])
     assert binary.report["compression_vs_float32"] == pytest.approx(32.0)
     assert base.summary()["query_ms"] >= 0
+
+
+def test_vector_dataset_round_trip(tmp_path):
+    import json
+
+    from optivision.benchmark import load_vector_dataset
+    from optivision.representation import MultiVectorCorpus
+
+    rng = np.random.default_rng(0)
+    docs = MultiVectorCorpus.from_arrays([rng.standard_normal((5, 8)).astype(np.float32) for _ in range(3)],
+                                         ids=["00000::p1", "00001::p1", "00002::p1"], attrs={"model": "m"})
+    queries = MultiVectorCorpus.from_arrays([rng.standard_normal((2, 8)).astype(np.float32) for _ in range(2)],
+                                            ids=["q0000", "q0001"])
+    docs.save(tmp_path / "t_docs.npz")
+    queries.save(tmp_path / "t_queries.npz")
+    (tmp_path / "t_qrels.json").write_text(json.dumps({"q0000": ["00002::p1"], "q0001": ["00000::p1"]}))
+    ds = load_vector_dataset(tmp_path / "t")
+    assert ds.name == "t" and ds.attrs["model"] == "m"
+    assert [r.tolist() for r in ds.relevant()] == [[2], [0]]
+
+    (tmp_path / "t_qrels.json").write_text(json.dumps({"q9999": ["00000::p1"]}))
+    with pytest.raises(ValueError, match="no vectors"):
+        load_vector_dataset(tmp_path / "t")

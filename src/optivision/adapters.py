@@ -55,10 +55,23 @@ _MODELS: list[ModelInfo] = [
               MEASURED, "E1/E4: reports/colsmol*; replayed 2026-09-27"),
     ModelInfo("vidore/colSmol-500M", "colsmol", "image", "colpali-engine:colsmol-500m", 128,
               UNTESTED, "same colpali-engine class as ColSmol-256M; never encoded here"),
+    ModelInfo("vidore/colqwen2-v1.0-merged", "colqwen", "image", "colpali-engine:colqwen2", 128,
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each), encoded 2026-10-01 on a Kaggle T4 in "
+              "float32; reports/universal/*/colqwen2-v1.0-merged_* (docs/UNIVERSAL.md, R11)"),
     ModelInfo("vidore/colqwen2-v1.0", "colqwen", "image", "colpali-engine:colqwen2", 128,
-              UNTESTED, "backend exists in encoders/colvlm.py; never encoded here"),
-    ModelInfo("vidore/colqwen2.5-v0.2", "colqwen", "image", "sentence-transformers", 128,
-              UNVERIFIED, "model card documents sentence-transformers MultiVectorEncoder"),
+              MEASURED, "adapter-only repo, merged explicitly on load; gives the same vectors as the "
+              "benchmarked vidore/colqwen2-v1.0-merged (median cosine 0.99999 on 6 pages, R11)"),
+    ModelInfo("vidore/colqwen2.5-v0.2", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each), adapter merged explicitly over "
+              "vidore/colqwen2.5-base, float32 split over two T4s, 2026-10-01; "
+              "reports/universal/*/colqwen2.5-v0.2_* (docs/UNIVERSAL.md, R11)"),
+    ModelInfo("nvidia/nemotron-colembed-vl-4b-v2", "nemotron-colembed", "image", "nemotron", 2560,
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~750 vectors/page), float32 over two "
+              "Kaggle T4s, pinned revision 0ed152d9, 2026-10-02; reports/universal/wide (docs/UNIVERSAL.md, R12); "
+              "CC-BY-NC-4.0"),
+    ModelInfo("nvidia/nemotron-colembed-vl-8b-v2", "nemotron-colembed", "image", "nemotron", 4096,
+              UNTESTED, "Qwen3-VL-8B, same code as the 4B, 4,096-d; CC-BY-NC-4.0; pinned revision 34b64061; "
+              "not encoded here"),
     ModelInfo("nomic-ai/colnomic-embed-multimodal-7b", "colqwen", "image", "sentence-transformers", 128,
               UNVERIFIED, "Qwen2.5-VL based; loading path not exercised here"),
     ModelInfo("colbert-ir/colbertv2.0", "colbert", "text", "sentence-transformers", 128,

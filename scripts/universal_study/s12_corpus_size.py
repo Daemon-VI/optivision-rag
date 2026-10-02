@@ -16,7 +16,7 @@ import sys
 
 import numpy as np
 
-from optivision.benchmark import load_legacy_dataset
+from optivision.benchmark import load_legacy_dataset, load_vector_dataset
 from optivision.compose import Pipeline
 from optivision.evaluation import per_query_metrics, relevant_from_qrels, retention
 from optivision.scoring import maxsim_matrix
@@ -39,8 +39,11 @@ DRAWS = 5
 def main(names):
     rows = []
     for name in names:
-        cache, qdir = LEGACY[name]
-        ds = load_legacy_dataset(f"{D}/cache/{cache}.npz", f"{D}/{qdir}/queries.json", name=name, with_images=False)
+        if name.startswith("vec:"):  # files written by scripts/encode_vectors.py
+            ds = load_vector_dataset(f"{D}/vectors/{name[4:]}", name=name[4:])
+        else:
+            cache, qdir = LEGACY[name]
+            ds = load_legacy_dataset(f"{D}/cache/{cache}.npz", f"{D}/{qdir}/queries.json", name=name, with_images=False)
         corpus, queries = ds.corpus, ds.queries
         full_rel = ds.relevant()
         base_full = maxsim_matrix(queries, corpus)

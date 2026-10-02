@@ -71,6 +71,20 @@ class Stage(abc.ABC):
 # ------------------------------------------------------------ token stages
 
 
+
+#: Fitting samples are capped in rows *and* bytes. 200,000 rows was sized for
+#: 128-d vectors; at 2,560-4,096 dimensions the same rows in float64 are 4-7 GB.
+#: The byte cap leaves every <=160-d sample exactly as before.
+FIT_SAMPLE_ROWS = 200_000
+FIT_SAMPLE_BYTES = 256 * 1024 * 1024
+
+
+def fit_sample_rows(dim: int, itemsize: int, rows: int = FIT_SAMPLE_ROWS,
+                    budget: int = FIT_SAMPLE_BYTES) -> int:
+    """Rows to sample for fitting: ``rows``, or fewer if they exceed ``budget`` bytes."""
+    return int(min(rows, max(2048, budget // max(1, dim * itemsize))))
+
+
 @dataclass
 class DocView:
     """What a token reducer may look at for one document.

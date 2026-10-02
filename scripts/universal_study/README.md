@@ -19,6 +19,9 @@ export OPTIVISION_OUT=reports/universal/raw  # where each script writes its JSON
 | `data/vidore_infovqa/queries.json`, `data/vidore_docvqa_test_subsampled/queries.json` | `scripts/rebuild_vidore_qrels.py <split> --out ... --check <cache>.queries.npz` |
 | `data/scifact/{corpus,queries}.json`, `qrels_test.tsv` | BEIR SciFact from `BeIR/scifact` and `BeIR/scifact-qrels` on Hugging Face |
 | `data/vectors/scifact_*` | `s9_encode_scifact.py` in an environment with `sentence-transformers>=6` |
+| `data/vectors/colqwen2*_{docs,queries}.npz`, `_qrels.json` | `notebooks/kaggle_colqwen_encode.ipynb` (Kaggle T4, `docs/GPU_RUN.md`) or `scripts/encode_vectors.py` on any GPU |
+
+Files written by `scripts/encode_vectors.py` are passed to `s3c`, `s5`, `s7b` and `s12` as `vec:<prefix>`, for example `vec:colqwen2.5-v0.2_docvqa_test_subsampled` (`optivision.benchmark.load_vector_dataset`).
 
 ## Order
 
@@ -38,6 +41,7 @@ export OPTIVISION_OUT=reports/universal/raw  # where each script writes its JSON
 | `s10_bound_audit.py` | coverage of the lower bound, many-candidate and degenerate cases (R10, release audit) | ~30 min |
 | `s11_ties.py` | whether index tie-breaking changes retention (release audit) | ~15 min |
 | `s12_corpus_size.py` | retention as distractors are added (release audit) | ~10 min |
+| `s13_wide_study.py` | wide encoders: baseline, 74 fixed codec / token / dimension pipelines, two tiers, Pareto, latency (R12) | ~50 min per split on a T4 (`OPTIVISION_SCORE_DEVICE=cuda`) |
 
 Timings were taken with several jobs sharing four cores; alone they run faster.
 
@@ -54,6 +58,8 @@ copy the JSON to the matching folder of `reports/universal/`:
 | `s5` | `frontier/results/` | `frontier/` |
 | `s6` | `phase67/results/` | `quantize_project/` |
 | `s7b` | `selection_rules/` | same |
+| `s7b --space=both` / `--space=wide` | also `selection_rules_wide/` | same |
+| `s13` | `wide/` | same |
 | `s8` | `phase8/results/` | `tiered/` |
 | `s9` | `phase9/results/` | `text/` |
 | `s10` | the path given as its argument | `audit/bound_audit.json` |

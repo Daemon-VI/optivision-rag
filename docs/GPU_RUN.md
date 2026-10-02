@@ -99,6 +99,60 @@ Table I; run it locally against the extracted archive.
 Commit `reports/colpali_*/` to the repo. The paper claims the benchmark is
 reproducible, so a reviewer who clones should find the numbers printed in it.
 
+## ColQwen2 / ColQwen2.5 vectors on a free Kaggle GPU
+
+`notebooks/kaggle_colqwen_encode.ipynb` produced the vectors behind
+`docs/UNIVERSAL.md`, R11. It needs a Kaggle account with phone verification,
+**Accelerator: GPU T4 x2** and **Internet: On**. It runs in about 2 hours and
+stops at the first failed check:
+
+1. Install from `main` (R11 ran at commit `46adfd9`), pinning `colpali-engine==0.3.17`,
+   and remove Kaggle's preinstalled `torchao`: peft 0.19 refuses to apply LoRA
+   adapters while an incompatible version is importable.
+2. Smoke-test ColQwen2 twice: pre-merged checkpoint against loader-merged
+   adapter. They must agree (median cosine > 0.99), and each query must retrieve
+   its own page.
+3. Encode ViDoRe V1 DocVQA and InfoVQA (500 pages each) with ColQwen2, in float32,
+   at about 2.3 s/page on a T4.
+4. Smoke-test and encode ColQwen2.5 with `--multi-gpu`. At 14 GiB in float32 it is
+   split across both T4s at a decoder-layer boundary.
+5. Zip `vectors/` with `pip freeze`, the GPU name and the commit.
+
+If the zip is too slow to download, **Save Version → Quick Save** keeps the
+outputs on Kaggle. Then put the `*_docs.npz`, `*_queries.npz` and `*_qrels.json`
+files in `data/vectors/` and run the studies as
+`vec:<name>` datasets (see `scripts/universal_study/README.md`).
+
+## A wide (2,560-d) encoder on Kaggle: encode and analyse in one session
+
+`notebooks/kaggle_wide_model.ipynb` produced `docs/UNIVERSAL.md`, R12, for
+`nvidia/nemotron-colembed-vl-4b-v2` (CC-BY-NC-4.0, non-commercial use only;
+pinned revision `0ed152d9`). One split is about 3.8 GB of float32 vectors, too large to download
+at home-connection speeds. Each session therefore encodes **and** analyses, and
+exports only a few MB.
+
+1. One notebook per split. Settings: **GPU T4 x2**, **Internet On**. Parameters:
+   `SPLIT = "docvqa"` or `"infovqa"`; `RUN_SMOKE = True` in the first session only.
+   Two accounts can run the two splits at the same time.
+2. Run the smoke cell interactively first (about 5 minutes after install). It must
+   report:
+   - width 2560;
+   - 6/6 own-page retrieval;
+   - a `scorer_check` difference around 1e-5;
+   - near-zero GPU memory after release.
+
+   It also measures float16 against float32 encodings.
+3. Then **Save Version -> Save & Run All (Commit)** with `RUN_SMOKE = False`. It
+   needs no open tab or awake laptop. Measured on two T4s:
+   - encoding: about 26 min (3.1 s/page, float32, layers split 15/21);
+   - `s13_wide_study.py`: 46–52 min;
+   - `s7b_selection_rules.py --space=both`: about 2.2 h.
+4. Download `wide_results_<split>.zip` from the version's Output tab. Its JSON goes
+   to `reports/universal/wide/`, `selection_rules/` and `selection_rules_wide/`.
+
+Interactive sessions stop when the browser sleeps: use commit runs for anything
+long. If an interactive cell was started by hand, it cannot be converted.
+
 ## Review follow-ups in one Kaggle cell
 
 The three runs `docs/REVIEW-2026-08-21.md` asks for, in one `%%bash` cell. Needs a GPU
