@@ -6,8 +6,8 @@ MEASURED / SIMULATED / EXTERNAL / PROJECTED / INFERENCE. Large artifacts stay ou
 | id | question | hypothesis (stated before running) | status | data | seeds | result | limitations |
 |---|---|---|---|---|---|---|---|
 | E0 | all | — (audit and plan) | done 2026-10-02 | existing reports | — | research matrix, plan | no experiment run |
-| E1.0 | Q1, Q2 | the per-query store reproduces every committed s7b selection exactly | running | ColPali, ColQwen2 (DocVQA, InfoVQA) | s7b split seeds 0–19 | — | — |
-| E1.1 | Q1, Q2 | H1a, H1b, H1c (verbatim in `E1/DESIGN.md`) | pre-registered 2026-10-02 | E1.0 store (development datasets) + synthetic | resamples 0–1999; synthetic generator 2026+K | — | — |
+| E1.0 | Q1, Q2 | the per-query store reproduces every committed s7b selection exactly | done 2026-10-02 | ColPali, ColQwen2 (DocVQA, InfoVQA) | s7b split seeds 0–19 | MEASURED: 3,360/3,360 outcomes identical, max diff 0.0 (`E1/e1_0_*.json`) | development datasets only |
+| E1.1 | Q1, Q2 | H1a, H1b, H1c (verbatim in `E1/DESIGN.md`) | done 2026-10-02, except 10 of 30 synthetic cells (K = 82) | E1.0 store (development datasets) + synthetic | resamples 0–1999; synthetic generator 2026+K | `E1/RESULTS.md`: valid ordered testing (C) holds its δ, deploys only at T = 0.95 (and 0.97 on InfoVQA) with ≤ 225 queries; current rule misses up to 26% at n = 50; H1a causal part rejected, H1b and H1c supported | one pool per dataset; i.i.d. with replacement; K = 82 incomplete |
 | E1.2 | Q2 | the method frozen after E1.1 keeps its stated error level on unseen datasets | not started; needs review of E1.1 | ColQwen2.5, SciFact (held back) | frozen after E1.1 | — | — |
 
 Hypotheses for E1.1, recorded before execution:

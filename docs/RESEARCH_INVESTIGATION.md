@@ -9,7 +9,26 @@ Labels used in every table:
 - **PROJECTED**: an estimate (compute cost, scale). It is never a result.
 - **INFERENCE**: our reading of measured evidence, not itself measured.
 
-Status: **Phase 0 (audit and plan) only.** No experiment has been run on this branch.
+Status: Phase 0 done. **E1.0 + E1.1 done and awaiting review** (2026-10-02). Nothing
+else has been started.
+
+### E1 summary (details: `reports/research/E1/RESULTS.md`; design: `E1/DESIGN.md`)
+
+- **E1.0 (MEASURED).** The per-query store reproduces all 3,360 committed selection
+  outcomes exactly.
+- **E1.1 (SIMULATED resampling of MEASURED per-query results).** Family-ordered
+  fixed-sequence testing with exact betting p-values (method C) gives a valid,
+  finite-sample statement for the *selected* configuration: P(deploy ∧ R_Q < T) ≤ δ
+  under i.i.d. queries and a fixed corpus. It held in every check.
+- With ≤ 225 calibration queries, C deploys only at T = 0.95, and at 0.97 on
+  InfoVQA. There it matches the current rule's compression on InfoVQA (72.7x,
+  63.0x).
+- **No valid method can certify T = 0.99 with ≤ 225 queries** (a lower bound that
+  applies to every distribution-free test).
+- The current rule (A) has no valid post-selection statement. It misses the
+  finite-pool target in up to 26% of resamples at n = 50 (real data), and up to 88%
+  in synthetic near-miss configurations.
+
 
 ---
 
