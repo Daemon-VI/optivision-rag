@@ -38,6 +38,7 @@ import json
 import os
 import sys
 import time
+from statistics import NormalDist
 
 import numpy as np
 
@@ -88,9 +89,17 @@ def run_cell(prob: Problem, draw, n: int, a_mode: str) -> dict:
     for s in range(SEEDS):
         pq, b = pq_all[s], b_all[s]
         t0 = time.perf_counter()
-        bnd = a_bounds(pq[:, cal], b[cal], A_CONF, a_mode)
-        t1 = time.perf_counter()
-        bnd_bonf = a_bounds(pq[:, cal], b[cal], A_BONF_CONF, a_mode)
+        if a_mode == "vector":
+            # one bootstrap serves both levels: above 0.99 the bound is point - z * sd(ratios)
+            point, ratios = S.lower_bound_stats(pq[:, cal], b[cal])
+            sd = np.nanstd(ratios, axis=1)
+            bnd = point - NormalDist().inv_cdf(A_CONF) * sd
+            t1 = time.perf_counter()
+            bnd_bonf = point - NormalDist().inv_cdf(A_BONF_CONF) * sd
+        else:
+            bnd = a_bounds(pq[:, cal], b[cal], A_CONF, a_mode)
+            t1 = time.perf_counter()
+            bnd_bonf = a_bounds(pq[:, cal], b[cal], A_BONF_CONF, a_mode)
         t2 = time.perf_counter()
         secs["A"] += t1 - t0
         secs["A-bonf"] += t2 - t1
