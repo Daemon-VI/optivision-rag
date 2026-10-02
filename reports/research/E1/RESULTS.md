@@ -76,12 +76,11 @@ of candidates, which dominates in practice.
 
 ## 4. Synthetic stress test (SIMULATED; truth known exactly; T = 0.95)
 
-24 of the 30 planned cells are complete: K ∈ {10, 40} for all 5 scenarios × 2
-dependence structures, and K = 82 for the separated and near-tied scenarios. Full table in `RESULTS_TABLES.md`.
+All 30 cells are complete: K ∈ {10, 40, 82} × 5 scenarios × 2 dependence structures. Full table in `RESULTS_TABLES.md`.
 
 - **B, C, C-split and D: every observed miss rate is at most 0.3%,** against a
-  claimed 5%. There are zero contradictions of the claimed level in 576 checks
-  (24 cells × 3 n × 4 methods × 2 δ).
+  claimed 5%. There are zero contradictions of the claimed level in 720 checks
+  (30 cells × 3 n × 4 methods × 2 δ).
 - **A misses far more often when many candidates sit just below the target,**
   and more with K = 40 than with K = 10. Miss rates of A:
 
@@ -101,9 +100,11 @@ dependence structures, and K = 82 for the separated and near-tied scenarios. Ful
 - **The error of A grows with the number of candidates.** In the near-tied,
   independent-loss scenario, A's miss rate at n = 225 is 0.3% (K = 10), 5.9%
   (K = 40) and 25.8% (K = 82). The valid methods stay at 0%.
-- **K = 82, many-below / one-above / several-above (6 cells): not run.** The run
-  driver was stopped by the host for low memory, and those cells were never
-  launched. Nothing above depends on them.
+- **At K = 82 it is worse again.** With many candidates just below the target
+  (independent losses), A misses in 98.9% of resamples at n = 50 and 25.9% at
+  n = 225. With one candidate above, it misses in 96.5% and 10.5%.
+- The last 6 K = 82 cells were run separately, after the first driver was stopped
+  for low memory. The code and seeds were unchanged.
 
 ## 5. Compression and conservatism trade-off (INFERENCE from 3–4)
 
@@ -153,7 +154,7 @@ Under these, the procedure satisfies, for every sample size n,
 Here the probability is over the draw of the calibration queries. This is a
 finite-sample, distribution-free statement about the selected configuration
 (INFERENCE, proof in `DESIGN.md`). It is consistent with every simulation here:
-0 contradictions in 288 real and 576 synthetic checks.
+0 contradictions in 288 real and 720 synthetic checks.
 
 On the word "guarantee":
 - Under the three assumptions above, this is a guarantee in the usual
@@ -196,7 +197,6 @@ On the word "guarantee":
 - **The bet cap c = 0.9** was chosen at the design stage from synthetic power
   checks. Other valid tests (other bets, Hoeffding–Bentkus) could be somewhat
   more powerful. None can beat the sample-size lower bound.
-- **6 of 30 synthetic cells (K = 82) were not run** (see §4).
 - **Only labels-based nDCG@5** was studied, not the baseline@1 reference.
 
 ## 10. Hypotheses
@@ -227,8 +227,7 @@ On the word "guarantee":
    `scripts/research/e1_stats.py`. Run it with A on the held-back ColQwen2.5
    (both splits) and SciFact. This is CPU only, about 1–2 h including building
    their per-query stores, and needs no method change.
-2. **Finish the 6 remaining K = 82 synthetic cells.** CPU, about 1 h, run with
-   fewer parallel processes to stay within memory.
+2. Done: all 30 synthetic cells are complete.
 3. Only after review: decide whether a valid selection mode belongs in the library
    as a new opt-in option. That would be a library change, which is a stop
    condition, so it is not done here. Q3 (DocVQA vs InfoVQA) can also reuse these
