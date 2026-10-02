@@ -1179,4 +1179,4 @@ a million), and a bit-level binary search kernel.
 - Learned components: trained merging, Matryoshka or distilled projections,
   per-model adapters.
 
-**Release status:** v0.2.0 was published on 2026-10-01 (PyPI and npm). R11 and R12 are prepared for v0.3.0 and not yet published; until then PyPI and npm stay at 0.2.0.
+**Release status:** v0.3.0 (2026-10-02, PyPI and npm) contains R11 and R12; v0.2.0 was published on 2026-10-01.

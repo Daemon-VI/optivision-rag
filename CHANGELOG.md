@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-02)
 
 The measured model set grows from three to six encoders, one of them
 2,560 dimensions wide. Evidence and caveats are in `docs/UNIVERSAL.md` (R11, R12).
