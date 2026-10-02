@@ -9,8 +9,8 @@ Labels used in every table:
 - **PROJECTED**: an estimate (compute cost, scale). It is never a result.
 - **INFERENCE**: our reading of measured evidence, not itself measured.
 
-Status: Phase 0 done. **E1.0 + E1.1 done and awaiting review** (2026-10-02). Nothing
-else has been started.
+Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
+on held-back data passed its frozen criterion. Nothing else has been started.
 
 ### E1 summary (details: `reports/research/E1/RESULTS.md`; design: `E1/DESIGN.md`)
 
@@ -25,6 +25,10 @@ else has been started.
   63.0x).
 - **No valid method can certify T = 0.99 with ≤ 225 queries** (a lower bound that
   applies to every distribution-free test).
+- **E1.2 (frozen before loading held-back data).** On ColQwen2.5 DocVQA, ColQwen2.5
+  InfoVQA and SciFact, C kept δ = 0.05 in all 27 cells (max observed miss 0.05%).
+  It deployed at T = 0.95 on all three (7.8x, 76.0x, 11.8x) and at 0.97 only on
+  InfoVQA (9.6x).
 - The current rule (A) has no valid post-selection statement. It misses the
   finite-pool target in up to 26% of resamples at n = 50 (real data), and up to 88%
   in synthetic near-miss configurations.

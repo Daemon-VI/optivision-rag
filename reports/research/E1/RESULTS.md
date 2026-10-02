@@ -232,3 +232,59 @@ On the word "guarantee":
    as a new opt-in option. That would be a library change, which is a stop
    condition, so it is not done here. Q3 (DocVQA vs InfoVQA) can also reuse these
    per-query stores.
+
+---
+
+# E1.2 confirmation on held-back datasets
+
+Frozen before any confirmation data was loaded: `E1_2_FREEZE.md` (`106ba51`).
+Procedure, protocol and code are identical to E1.1. Tables are in
+`RESULTS_TABLES.md` (E1.2 section). Results are SIMULATED resampling of MEASURED
+per-query results.
+
+**Stores (MEASURED).** ColQwen2.5-v0.2 DocVQA, ColQwen2.5-v0.2 InfoVQA and SciFact
+(nDCG@10). Each store's replay reproduced all 840 of that dataset's committed s7b
+outcomes exactly: 0 mismatches, maximum float difference 0.0. The candidate lists
+are identical. Files: `e1_0_colqwen25_*.json`, `e1_0_scifact.json`. The re-run from
+fresh scores was skipped, as the freeze record specified.
+
+**Primary criterion: confirmed.** For frozen C at δ = 0.05, all 27 cells (3
+datasets × n ∈ {50, 100, 225} × T ∈ {0.99, 0.97, 0.95}) are consistent with the
+claim. The largest observed miss rate is 0.05% (SciFact, T = 0.95, n = 225; 95%
+interval [0.0%, 0.28%]). Every other cell has 0 misses. No other formal method
+(B, C-split, D, at δ = 0.05 or 0.01) contradicted its δ either.
+
+**Selected compression at n = 225 (median · deployment rate):**
+
+| dataset | T = 0.99 | T = 0.97 | T = 0.95 | A at 0.95 (for comparison) | finite-pool oracle at 0.95 |
+|---|---|---|---|---|---|
+| ColQwen2.5 · DocVQA | 1.0x · 0.3% | 1.0x · 2.5% | **7.8x · 100%** | 10.6x | 280.9x |
+| ColQwen2.5 · InfoVQA | 1.0x · 0% | **9.6x · 100%** | **76.0x · 100%** | 76.0x | 280.7x |
+| SciFact | 1.0x · 0% | 1.0x · 5.9% | **11.8x · 100%** | 13.0x | 26.1x |
+
+**Predictions recorded before the run:**
+- *C deploys nothing at T = 0.99:* held up to 0.3% (ColQwen2.5 DocVQA, n = 225,
+  with 0 misses). Read strictly, the prediction "nothing" missed by 0.3%.
+- *At n ≤ 100, at most a few percent:* held (≤ 0.9%).
+- *T = 0.97 at n = 225, rarely on DocVQA and possibly on InfoVQA and SciFact:* held
+  (2.5%; 100% at 9.6x; 5.9%).
+- *T = 0.95 at n = 225, deploys on all three:* held (100% each).
+- *SciFact compresses less:* held (11.8x, against 7.8x and 76.0x on the image pools
+  and a 26.1x oracle).
+
+**The current rule A on the held-back datasets** (finite-pool miss rates): up to
+10.2% at n = 50 (SciFact, T = 0.99), 8.9% (ColQwen2.5 InfoVQA) and 7.7%
+(ColQwen2.5 DocVQA), falling to ≤ 0.5% at n = 225. This is the same pattern as on
+the development data.
+
+**What the confirmation adds, and what it does not.**
+- It adds two encoders' worth of evidence: a second ColQwen generation and a text
+  ColBERT with nDCG@10 and several relevant documents per query. These are unseen
+  pools, on which the frozen method kept its stated error level, with the
+  compression trade-off predicted from the sample-size bound.
+- It does not widen the formal claim. The claim was already proved under its
+  assumptions. The confirmation is evidence that the implementation behaves as
+  the proof says on new data.
+- All the limits in §8–9 still apply: one pool per dataset, i.i.d. with
+  replacement, a fixed corpus, R_Q rather than finite future batches, and no
+  2,560-d model.
