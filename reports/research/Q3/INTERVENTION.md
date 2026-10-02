@@ -10,7 +10,7 @@ The two strongest competing explanations are:
 - **X: composition (H3c, acting through H3b).** DocVQA has many more queries whose
   labelled page sits at or near the decision boundary.
   - 56–58% of DocVQA queries fall in the two lowest relevance-margin quintiles
-    (quintile edges pooled per model), against 19–26% on InfoVQA.
+    (quintile edges pooled per model), against 23–26% on InfoVQA.
   - Within a margin quintile, loss rates are similar between the splits, or higher
     on InfoVQA.
   - Boundary queries both lose and gain under compression. That raises the
