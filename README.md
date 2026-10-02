@@ -82,7 +82,7 @@ measures instead of prescribing.
 
 ### Tested coverage
 
-Exactly five encoders have been measured:
+Exactly six encoders have been measured:
 
 - **ColPali-v1.3**: ViDoRe V1 DocVQA and InfoVQA (500 pages each, 451 and 494
   queries) and a generated corpus (60 pages).
@@ -91,6 +91,13 @@ Exactly five encoders have been measured:
   ViDoRe scores. Out of sample, the default met its target in 236 of 240 choices,
   for example 114–122x at a 0.95 target on InfoVQA
   ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R11).
+- **NVIDIA Nemotron ColEmbed 4B** (2,560-d, licensed CC-BY-NC-4.0, so
+  non-commercial use only): the same two ViDoRe V1 splits. The default met its
+  target in 119 of 120 held-out choices
+  ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R12). OptiVision has thus been
+  evaluated empirically on a 2,560-dimensional multi-vector retrieval model, and
+  its model-agnostic compression and optimization machinery kept working at that
+  width. That is one model on two 500-page splits; nothing wider is measured.
 - **ColSmol-256M**: the generated corpus only (60 pages, 72 queries, about ±6
   points); a sanity check, not evidence.
 - **answerai-colbert-small-v1** (text): BEIR SciFact (5,183 abstracts, 300 queries).
@@ -98,11 +105,9 @@ Exactly five encoders have been measured:
 Any other model's vectors go in through `from_arrays`, but how they compress is
 **unmeasured** until someone runs `scripts/universal_study/`. Corpora so far
 have 500–5,183 documents, and retention measurably falls as distractors are
-added (release audit, §7). One wide encoder is measured on the same two splits:
-NVIDIA Nemotron ColEmbed 4B at 2,560 dimensions (research licence;
-[docs/UNIVERSAL.md](docs/UNIVERSAL.md), R12). ColQwen3, ColNomic, 4,096-d models,
-ViDoRe V2/V3, million-page corpora and database connectors beyond numpy/Qdrant are
-**future work**, not results.
+added (release audit, §7). ColQwen3, ColNomic, 4,096-d models (the 8B ColEmbed
+loader exists but was not benchmarked), ViDoRe V2/V3, million-page corpora and
+database connectors beyond numpy/Qdrant are **future work**, not results.
 
 ### What is not claimed
 

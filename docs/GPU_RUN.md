@@ -106,7 +106,7 @@ reproducible, so a reviewer who clones should find the numbers printed in it.
 **Accelerator: GPU T4 x2** and **Internet: On**. It runs in about 2 hours and
 stops at the first failed check:
 
-1. Install from the `colqwen-validation` branch, pinning `colpali-engine==0.3.17`,
+1. Install from `main` (R11 ran at commit `46adfd9`), pinning `colpali-engine==0.3.17`,
    and remove Kaggle's preinstalled `torchao`: peft 0.19 refuses to apply LoRA
    adapters while an incompatible version is importable.
 2. Smoke-test ColQwen2 twice: pre-merged checkpoint against loader-merged
@@ -126,8 +126,8 @@ files in `data/vectors/` and run the studies as
 ## A wide (2,560-d) encoder on Kaggle: encode and analyse in one session
 
 `notebooks/kaggle_wide_model.ipynb` produced `docs/UNIVERSAL.md`, R12, for
-`nvidia/nemotron-colembed-vl-4b-v2` (CC-BY-NC-4.0, research use; pinned revision
-`0ed152d9`). One split is about 3.8 GB of float32 vectors, too large to download
+`nvidia/nemotron-colembed-vl-4b-v2` (CC-BY-NC-4.0, non-commercial use only;
+pinned revision `0ed152d9`). One split is about 3.8 GB of float32 vectors, too large to download
 at home-connection speeds. Each session therefore encodes **and** analyses, and
 exports only a few MB.
 

@@ -27,17 +27,17 @@ Measured on held-out queries with default settings (20 random splits, labels):
 
 Each cell: median compression chosen (vs float32) · splits whose choice met the target on the held-out half · mean held-out retention. At SciFact 0.99 no configuration qualified in 6 of 20 splits.
 
-Tested coverage is exactly five encoders:
+Tested coverage is exactly six encoders:
 - ColPali-v1.3, ColQwen2-v1.0 and ColQwen2.5-v0.2 (ViDoRe V1 DocVQA and InfoVQA,
   500 pages each);
+- NVIDIA Nemotron ColEmbed 4B, 2,560-d (the same two ViDoRe V1 splits; licensed
+  CC-BY-NC-4.0, non-commercial use only);
 - ColSmol-256M (a 60-page generated corpus only);
 - answerai-colbert-small-v1 (BEIR SciFact).
 
 Other models' vectors are accepted, but their compression behaviour is
-unmeasured. One 2,560-d encoder (NVIDIA Nemotron ColEmbed 4B, research licence)
-is measured on the same two splits. ColQwen3, ColNomic, 4,096-d models, ViDoRe
-V2/V3, million-page corpora and database connectors beyond numpy/Qdrant are not
-validated.
+unmeasured. ColQwen3, ColNomic, 4,096-d models, ViDoRe V2/V3, million-page
+corpora and database connectors beyond numpy/Qdrant are not validated.
 
 There is no guarantee that a target is met. The confidence bound applies to each
 configuration individually; choosing among many configurations is a
