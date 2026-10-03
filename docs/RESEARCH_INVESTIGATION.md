@@ -32,6 +32,22 @@ closed and accepted. **Q5/Q6 closed** (2026-10-03, `reports/research/Q5Q6/REPORT
   laptop CPU).
 - Q5/Q6's conclusion about native scoring is unchanged.
 
+**Q7 done** (2026-10-03, `reports/research/Q7/REPORT.md`): literature and comparability
+investigation, no experiments. Awaiting review; Q8 not started.
+- Tiers were fixed before reading (`Q7/PLAN.md`, `43123aa`).
+- **Only one setup is directly comparable (Tier A):** SAP (arXiv 2601.20107v3), with
+  ViDoRe V1 DocVQA and InfoVQA for the same ColPali v1.3 and ColQwen2 v1.0
+  checkpoints.
+- At about 1/10 of the vectors, OptiVision's measured Ward merging retains 4–10 points
+  more than SAP's reported K-means clustering baseline. This disagreement is
+  unexplained: its candidate causes are merged-vector norm handling, the clustering
+  algorithm, the token set and the evaluation set. E7a, specified and not run,
+  would attribute it.
+- All other methods are Tier B (other benchmarks, aggregates, retrained models,
+  blog) or Tier C (text ColBERT, engines).
+- HPC-ColPali is excluded: it declares its own results to be estimates.
+- No leaderboard.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
