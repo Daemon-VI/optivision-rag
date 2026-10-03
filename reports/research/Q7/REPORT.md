@@ -172,6 +172,16 @@ SAP reports γ = 0.20 and 0.05. Those are listed separately and not paired:
      minimizing within-cluster sum of squares.
   3. **What γ counts.** SAP's γ counts *visual tokens*. OptiVision's ratio applies to
      all of a page's vectors (ColPali: 1,031 per page, including non-patch tokens).
+
+     **Correction (2026-10-03, found while freezing E7a).** This description of
+     OptiVision is inaccurate.
+     - OptiVision's merging leaves the corpus's protected non-patch tokens untouched
+       (7 per ColPali page, 11 per ColQwen2 page). The ratio applies only to the
+       remaining patch vectors.
+     - So Ward 1/10 keeps ceil(0.1 × 1,024) + 7 = 110 vectors per ColPali page.
+     - OptiVision's convention is therefore close to SAP's "fraction of visual tokens".
+       SAP's handling of non-visual tokens is still unknown.
+     - Q7's conclusion is unchanged.
   4. **Evaluation sets and tooling.** The ColQwen2 baselines differ by 1–1.6 points,
      so the query sets or evaluation code are not identical. SAP's query counts and
      toolkit version were not found.
