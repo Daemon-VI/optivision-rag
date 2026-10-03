@@ -11,7 +11,43 @@ Labels used in every table:
 
 Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
 on held-back data passed its frozen criterion. **Q3 closed** (2026-10-03): conclusion supported with residual uncertainty
-(`reports/research/Q3/REPORT.md` §19). Q4 not started; awaiting review.
+(`reports/research/Q3/REPORT.md` §19). **Q4 done** (2026-10-03, `reports/research/Q4/REPORT.md`):
+closed with limitations, awaiting review. Q5/Q6 not started.
+
+### Q4 summary (axis ablation; MEASURED unless marked)
+
+- **Latency: vector count is the only axis that cuts scan time** in the current
+  implementation.
+  - 1/2, 1/4 and 1/8 of the vectors give 0.53, 0.28 and 0.16 of the float32 scan, on
+    all three 128-d models. ColEmbed 4B (GPU) behaves the same.
+  - Width has a floor: d/16 still takes 70% of the scan time.
+  - Codecs make scans 1–7% slower (decode to float32).
+  - H4a: supported in substance. The pre-stated rule returns "mixed" because of one
+    warm-up-inflated cell; post hoc checks clear all 9 cells.
+- **Storage depends on width.**
+  - At 128-d, codecs (int8, centred int4) are within about 1 point and merging to 1/4
+    costs ≤ 1.3 points. A+C owns the mid-range frontier (8–125x), and PCA collapses
+    beyond d/2 (d/4: −9 to −20 points).
+  - At 2,560-d, PCA is nearly free to d/8, and B+C owns 8–63x (DocVQA) or 105x
+    (InfoVQA).
+  - H4b (width most storage-efficient): not supported.
+- **H4c (codecs after structure; model dependence): partially supported.**
+  - Plain int4 works at 128-d and fails at 2,560-d.
+  - int8 adds 3.5–3.9x after structure, except after PCA 8, where per-vector scales
+    cap it at 3.2x.
+- **H4d (interactions): partially supported.**
+  - Interactions are negative and confined mainly to PCA combined with coarse codecs
+    (up to −18 points). Merging + codec is near-multiplicative.
+  - Byte factors do not multiply (0.69–1.00 of the product).
+- **H4e (carries over to 2,560-d): not supported as a whole.** The latency axis and
+  the direction of interactions carry over; the storage-efficient axis and the
+  plain-int4 failure do not.
+- **RAM equals storage for single-tier indexes.** Two-tier (binary in RAM, about
+  125x at full retention) separates them, but its shortlist rescoring costs as much
+  as a full float scan (12–21 ms/query on the CPU).
+- **Library limitations found, not fixed:** `save_compressed` refuses centred int4
+  and 2-bit, and does not store the PCA basis.
+
 
 ### Q3 summary (DocVQA against InfoVQA)
 
