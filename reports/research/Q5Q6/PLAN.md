@@ -190,3 +190,25 @@ binary → int8, 50) and roughly its rescoring cost (12.4 ms/query).
 
 **MEASURED** (timed or computed here) · **DERIVED** (from shapes or array sizes) ·
 **INFERENCE** (our reading).
+
+## 10. Reviewed amendment (2026-10-03, reviewer decision after `d0bbc34`, before any latency measurement)
+
+The strict criterion of §4 (identical full rankings) failed for both exact direct paths
+(`CORRECTNESS.md`). The reviewer chose option 2.
+
+**The exact-path correctness criterion is now rounding-aware.** For every query, all of
+the following must hold:
+1. an identical top-50, as a set;
+2. an identical per-query nDCG@5;
+3. every full-ranking discordance is a page pair whose float64 reference gap is
+   below the float32 dot-product error bound.
+
+**Both paths meet it on the existing results:**
+- I8-dir and R-dir: all 45 discordances are within rounding;
+- B1: the shortlist is the same set for all 451 queries, and all 44 discordances are
+  within rounding (`b1_diagnosis.json`).
+
+**Unchanged:** the original strict result stays in the report as the primary
+finding. The latency protocol (§5), configurations, warm-up rule and H5a–H5d are as
+pre-registered. In H5a, "reproduce the current rankings exactly" now means this
+amended criterion, and the report states so.
