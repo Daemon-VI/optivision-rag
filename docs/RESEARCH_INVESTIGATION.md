@@ -12,7 +12,10 @@ Labels used in every table:
 Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
 on held-back data passed its frozen criterion. **Q3 closed** (2026-10-03): conclusion supported with residual uncertainty
 (`reports/research/Q3/REPORT.md` §19). **Q4 done** (2026-10-03, `reports/research/Q4/REPORT.md`):
-closed with limitations, awaiting review. Q5/Q6 not started.
+closed and accepted. **Q5/Q6 STOPPED at its exact-ranking criterion** (2026-10-03,
+`reports/research/Q5Q6/CORRECTNESS.md`): direct int8 and exact binary scoring match the current
+top-50 and nDCG@5 for every query, but full rankings differ on 44–45 of 451 queries through
+float32 near-ties (all within rounding). No latency was measured; awaiting reviewer decision.
 
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
