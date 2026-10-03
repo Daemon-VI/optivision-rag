@@ -11,7 +11,10 @@ Data:
   scores equals the E1 store exactly, for the baseline and both scored
   representative candidates.
 
-Numbers: `observational.json`, `intervention/*.json`. Labels: **MEASURED**
+Within-DocVQA margin split, pre-stated: `SPLIT.md` (`5734903`), results in §18;
+Q3 status in §19.
+
+Numbers: `observational.json`, `intervention/*.json`, `split/*.json`. Labels: **MEASURED**
 (computed from encoder outputs), **SIMULATED** (resampling), **INFERENCE**.
 
 ## 1. Research question
@@ -286,7 +289,8 @@ In log terms, matching removes:
   most but not all of the difference.
 - **The pattern is model-independent in direction** across ColPali, ColQwen2 and
   ColQwen2.5. The size of the residual varies by encoder (largest for
-  ColQwen2.5).
+  ColQwen2.5 by matching; the within-DocVQA split places it on ColPali instead, so
+  the ordering is not established, §18.6).
 
 ## 15. What the evidence does NOT support
 
@@ -323,12 +327,13 @@ In log terms, matching removes:
   structure); its per-candidate numbers are in `observational.json`.
 - **Latency was not measured.**
 
-## 17. Recommended next experiment (not started)
+## 17. Recommended next experiment (run as Q3H, §18)
 
 The cheapest way to resolve the residual is a **within-DocVQA split by relevance
 margin**, using the existing store, CPU only, minutes:
 - run frozen C and A on DocVQA restricted to queries with margin above and below
-  InfoVQA's median;
+  InfoVQA's median (as run, the threshold is DocVQA's own median, so InfoVQA does
+  not place the split; `SPLIT.md`);
 - if DocVQA's high-margin half certifies like InfoVQA, the residual is margin
   structure;
 - if not, it points to corpus homogeneity or labels.
@@ -341,3 +346,161 @@ is a new-dataset decision (Q8/Q9 territory) and needs your approval.
 The number of calibration queries a corpus needs depends strongly on its
 relevance-margin distribution, which is measurable *before* compression from the
 float index alone. That could predict how many queries a user must label.
+
+## 18. Within-DocVQA margin split (Q3H, MEASURED; selection SIMULATED)
+
+Pre-stated in `SPLIT.md` (`5734903`) before any computation. There is one split per
+model, at the median of that model's DocVQA relevance margins:
+- **High half:** 225 queries.
+- **Low half:** 226 queries.
+
+Same store, candidates, scoring and frozen E1 selection code (`run_cell`, 2,000
+resamples per n). InfoVQA and full-DocVQA selection rows are E1's, unchanged.
+Script: `scripts/research/q3_split.py`. Output: `split/<model>_<half>.json` and
+`split/summary.json`.
+
+**The threshold is about zero on all three models** (−0.0007, +0.0097 and +0.0128 per
+token for ColPali, ColQwen2 and ColQwen2.5). So the split is, almost exactly,
+"labelled page ranked first by a positive margin" against "not":
+- the high half has top-1 accuracy of 0.99, 1.00 and 1.00;
+- the low half has top-1 accuracy of 0.00, 0.05 and 0.07.
+
+This was not anticipated in `SPLIT.md`, and it shapes everything below.
+
+### 18.1 What the halves look like (MEASURED)
+
+| model | set | n | mean nDCG@5 | top-1 | outside top 5 | median margin | in lowest pooled quintile |
+|---|---|---|---|---|---|---|---|
+| ColPali | DocVQA high | 225 | 0.996 | 0.99 | 0.00 | 0.099 | 0% |
+| | DocVQA (all) | 451 | 0.584 | 0.49 | 0.34 | −0.001 | 23% |
+| | InfoVQA | 494 | 0.846 | 0.78 | 0.10 | 0.085 | 18% |
+| ColQwen2 | DocVQA high | 225 | 1.000 | 1.00 | 0.00 | 0.170 | 0% |
+| | DocVQA (all) | 451 | 0.606 | 0.52 | 0.32 | 0.010 | 30% |
+| | InfoVQA | 494 | 0.920 | 0.89 | 0.05 | 0.148 | 11% |
+| ColQwen2.5 | DocVQA high | 225 | 1.000 | 1.00 | 0.00 | 0.134 | 0% |
+| | DocVQA (all) | 451 | 0.618 | 0.53 | 0.31 | 0.013 | 29% |
+| | InfoVQA | 494 | 0.917 | 0.87 | 0.05 | 0.134 | 11% |
+
+- The high half's median margin is close to InfoVQA's.
+- The high half has none of InfoVQA's low-margin tail, and its baseline is at the
+  nDCG ceiling. So it is **not** an InfoVQA-like sample: it is a cleaner one.
+- Because every high-half query already scores b ≈ 1, it cannot gain under
+  compression. Its measured gain rate is 0 for every representative candidate.
+
+### 18.2 Compression sensitivity per query (MEASURED)
+
+Share of queries that lose (rank shift + drop-out), shown as high half / DocVQA
+all / InfoVQA:
+
+| model | int8 (1) | Ward 1/3 + int8 (16) | binary (27) | Ward 1/4 + binary (30) |
+|---|---|---|---|---|
+| ColPali | 0.4 / 0.7 / 0.0% | 5.3 / 6.2 / 3.4% | 7.6 / 10.4 / 7.7% | 10.2 / 10.6 / 9.1% |
+| ColQwen2 | 0.0 / 0.4 / 0.0% | 2.2 / 7.3 / 3.4% | 4.9 / 9.8 / 3.4% | 6.2 / 11.8 / 6.5% |
+| ColQwen2.5 | 0.0 / 0.4 / 0.0% | 2.2 / 7.5 / 2.8% | 3.6 / 8.4 / 5.1% | 4.0 / 9.8 / 6.3% |
+
+- On ColQwen2 and ColQwen2.5, high-half loss rates are mostly at or below InfoVQA's.
+- On ColPali they are at or slightly above InfoVQA's. This repeats the ColPali
+  residual seen in §12.
+- The low half loses more often than DocVQA overall (1.1–1.7x for candidates 16–30)
+  and gains about twice as often
+  (gains come only from imperfect queries; `split/*_low.json`).
+
+### 18.3 Certification and retention (MEASURED)
+
+| model | median log SE ratio, Doc / Info | high half / Info | share of gap closed (primary) | numerator sd, high / Info (median) | candidates with R_high < R_Info beyond 95% CI |
+|---|---|---|---|---|---|
+| ColPali | 0.73 | 0.12 | **84%** | 1.33 | 28 of 40 |
+| ColQwen2 | 0.74 | −0.15 | **120%** | 0.93 | 1 of 40 |
+| ColQwen2.5 | 0.99 | 0.14 | **86%** | 1.25 | 10 of 40 |
+
+- The SE gap closes mainly through the denominator: mean b is 1.00 in the high half,
+  against 0.85–0.92 on InfoVQA.
+- On ColPali and ColQwen2.5 the per-query spread stays 1.25–1.33x InfoVQA's.
+- The low half has a median log SE ratio of 2.0–2.2 against InfoVQA. Essentially all
+  of DocVQA's certification difficulty sits in the half with non-positive margin.
+- Pool retention in the high half is **lower** than InfoVQA's for many candidates
+  on ColPali (28 of 40) and ColQwen2.5 (10 of 40). That is partly built into the
+  split: high-half retention is pure loss, because no query can gain from b = 1.
+  InfoVQA's retention, by contrast, nets losses against gains from imperfect
+  queries. So this is not a like-for-like retention comparison.
+
+### 18.4 Selection at n = 225, T = 0.95 (SIMULATED resampling, frozen E1 code)
+
+Median selected compression. Deployment was ≥ 98.6% wherever the median is above 1x.
+
+| model | method | InfoVQA | DocVQA (all) | DocVQA high | DocVQA low |
+|---|---|---|---|---|---|
+| ColPali | A | 72.7x | 7.8x | 23.2x | 3.9x |
+| | C@0.05 | 72.7x | 3.9x | 15.4x | 1.0x (deploys 0.8%) |
+| ColQwen2 | A | 63.0x | 11.6x | 47.6x | 3.9x |
+| | C@0.05 | 63.0x | 7.8x | 29.7x | 1.0x (deploys 0.1%) |
+| ColQwen2.5 | A | 76.0x | 10.6x | 47.6x | 3.9x |
+| | C@0.05 | 76.0x | 7.8x | 47.6x | 1.0x (deploys 5.6%) |
+
+- Gap to InfoVQA:
+  - A: from 5.4–9.3x for all of DocVQA down to 1.3–3.1x for the high half.
+  - C: from 8.1–18.6x down to 1.6–4.7x.
+- Method C's miss rate was at most 0.05% in every half.
+- A's miss rate in the ColPali high half was 1.85%. That fits E1: A does not control
+  its miss rate.
+
+### 18.5 Pre-stated reading
+
+| model | gap closed | A within 2x of InfoVQA | C within 2x of InfoVQA | reading |
+|---|---|---|---|---|
+| ColPali | 84% | no (3.1x) | no (4.7x) | C (ambiguous) |
+| ColQwen2 | 120% | yes (1.3x) | no (2.1x, just outside) | C (ambiguous) |
+| ColQwen2.5 | 86% | yes (1.6x) | yes (1.6x) | A |
+
+**Overall: C, ambiguous**, by the rule fixed in `SPLIT.md`: one model reads A, none
+reads B.
+
+### 18.6 Interpretation (INFERENCE)
+
+- **What the split shows.** Within DocVQA, almost all of the certification
+  difficulty, and most of the selection gap, sits in the queries whose labelled page
+  is not ranked first (non-positive margin).
+  - Restricted to the other half, DocVQA's certification SE matches or beats
+    InfoVQA's (84–120% of the log gap closed).
+  - The selected compression comes within 1.3–4.7x of InfoVQA's, from 5.4–18.6x.
+  - The within-DocVQA analysis gives additional evidence that relevance-margin
+    structure accounts for most of the certification gap (84–120% in the high
+    half) and most, but not all, of the selection gap.
+- **Why it is not read as A.**
+  - Splitting at DocVQA's median makes the high half a ceiling subset (b ≈ 1, no
+    gains). It is easier than InfoVQA in its denominator and different from it in
+    composition, so part of "approaches InfoVQA" comes from how the split was made.
+  - On ColPali a clear gap remains: 3.1–4.7x in selection and 28 of 40 candidates
+    with lower retention. The ceiling effect explains part of that retention gap,
+    but it cannot be separated here.
+- **Residual model-dependence is not established.**
+  - §12 placed the largest residual on ColQwen2.5 (the least gap closed by
+    matching).
+  - The split places it on ColPali.
+  - The two analyses condition on different things, so neither ordering is
+    established. Read the statement in §14 that the residual is largest for
+    ColQwen2.5 as unconfirmed.
+- **Effect on the existing conclusions.**
+  - §14 stands: certification difficulty is the main driver, margin composition
+    explains much of it, and H3a is not the main explanation.
+  - The split strengthens the margin part. It does not settle the remainder, which
+    shows mainly on ColPali.
+- **Not causal.** The halves are two parts of one query pool, not independent
+  datasets, and conditioning on margin also conditions on everything correlated
+  with it.
+
+## 19. Q3 status
+
+**Q3 closed: conclusion supported with residual uncertainty.**
+
+- Supported: DocVQA's lower selected compression comes mainly from certification
+  difficulty, not retention.
+  - Relevance-margin composition accounts for most of it: 61–81% of the SE gap by
+    cross-dataset matching (§12) and 84–120% by the within-DocVQA split (§18).
+- Residual uncertainty, which further experiments on the same two corpora cannot
+  resolve:
+  - the remaining selection gap, mainly on ColPali;
+  - whether the residual is model-dependent (§18.6);
+  - corpus homogeneity and label noise as contributors.
+- Separating these needs a third document-VQA corpus with complete labels, which
+  is a new-dataset decision.

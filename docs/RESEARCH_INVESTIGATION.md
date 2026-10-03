@@ -10,8 +10,8 @@ Labels used in every table:
 - **INFERENCE**: our reading of measured evidence, not itself measured.
 
 Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
-on held-back data passed its frozen criterion. **Q3 done, awaiting review**
-(`reports/research/Q3/REPORT.md`). Nothing else has been started.
+on held-back data passed its frozen criterion. **Q3 closed** (2026-10-03): conclusion supported with residual uncertainty
+(`reports/research/Q3/REPORT.md` §19). Q4 not started; awaiting review.
 
 ### Q3 summary (DocVQA against InfoVQA)
 
@@ -30,6 +30,22 @@ on held-back data passed its frozen criterion. **Q3 done, awaiting review**
 - The pre-stated reading is **partial; both contribute (H3d)**. "Intrinsically
   less compressible" (H3a) is not supported as the main explanation. A residual
   remains unexplained.
+- **Within-DocVQA margin split (Q3H, MEASURED; pre-stated in `Q3/SPLIT.md`).**
+  - DocVQA was split at its own median margin, which is about 0. So the split
+    amounts to "labelled page ranked first" (225 queries) against "not" (226).
+  - In the high half, 84%, 120% and 86% of the log SE gap to InfoVQA is closed
+    (ColPali, ColQwen2, ColQwen2.5).
+  - Its selected compression at n = 225, T = 0.95 comes within 1.3–3.1x of
+    InfoVQA's for A and 1.6–4.7x for C, against 5.4–18.6x for all of DocVQA.
+  - The pre-stated reading is **ambiguous (C)**: ColQwen2.5 reads A, while ColPali
+    and ColQwen2 miss the factor-2 selection criterion.
+  - The high half is a ceiling subset (b ≈ 1, it cannot gain), so it is cleaner
+    than InfoVQA rather than like it.
+  - ColPali keeps a clear residual (28 of 40 candidates with lower retention, part
+    of it a ceiling artefact).
+- **Q3 status: closed, conclusion supported with residual uncertainty.** The
+  residual (mainly ColPali, its model-dependence unsettled, corpus and labels
+  untested) needs a third labelled document-VQA corpus to separate.
 
 ### E1 summary (details: `reports/research/E1/RESULTS.md`; design: `E1/DESIGN.md`)
 
