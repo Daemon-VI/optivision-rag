@@ -251,3 +251,19 @@ measured, and missing cells left missing.
 **MEASURED** (computed here, or in R12 within this repository) · **EXTERNAL**
 (reported elsewhere) · **EXTRAPOLATED** (beyond the measured range; none planned;
 no million-page claims) · **INFERENCE** (our reading).
+
+## 10. Clarifications added before any Q4 result was inspected (commit after `709f421`)
+
+1. **Model-level verdicts with two splits.** H4b, H4c and H4d are evaluated per
+   dataset. A criterion counts for a model only if it holds on **both** its DocVQA
+   and InfoVQA splits. H4a uses DocVQA only, the latency subset of §6.
+2. **ColEmbed storage accounting.**
+   - R12's `bytes_per_doc` counts codes plus codec state, but not offsets or the
+     projection basis.
+   - For ColEmbed rows Q4 adds both: offsets of 501 × 8 bytes, and a basis of
+     2,560 × w × 4 bytes, which follows from the recorded shapes. That puts every
+     model on the same index-bytes convention.
+   - Shared state is amortized over each corpus's 500 pages and is also reported
+     separately. No other corpus size is extrapolated.
+3. **H4a matched levels for ColEmbed.** R12 has no Ward 1/8, so the 8x level uses
+   Ward 1/10 (9.9x), the nearest measured row. This is marked in the table.
