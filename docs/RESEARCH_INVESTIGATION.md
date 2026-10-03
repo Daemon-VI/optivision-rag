@@ -59,6 +59,19 @@ reproduction of SAP. Awaiting review; E7b, E7c and Q8 not started.
   on ColQwen2. That points to an evaluation or preprocessing difference.
 - Pre-stated rule: recommend **E7c** (official ViDoRe evaluation alignment).
 
+**E7c done** (2026-10-03, `reports/research/Q7/E7c/REPORT.md`): evaluation alignment on
+CPU. Awaiting review; E7b and Q8 not started.
+- The official ViDoRe evaluation differs from OptiVision's only in how repeated
+  question texts are labelled: legacy `vidore-benchmark` uses the last page, MTEB all
+  pages, OptiVision the first.
+- pytrec_eval reproduces OptiVision's nDCG@5 exactly.
+- Alignment changes baselines by at most 0.5 points and retention by at most 0.65.
+- The ColQwen2 random-control gap to SAP is unchanged (median 4.8 → 5.0, maximum
+  13.7 → 14.2).
+- Pre-stated rule: case 2, substantially intact and unresolved. It sits upstream of the
+  evaluation pipeline and is not addressable by E7b.
+- Recommendation: stop Q7.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
