@@ -95,10 +95,15 @@ on the other.
 
 | model | width | vectors on disk | DocVQA (451 q) | InfoVQA (494 q) | per-query results | latency |
 |---|---|---|---|---|---|---|
-| ColPali v1.2 | 128 | yes | full grid | full grid | yes | CPU, this laptop |
+| ColPali v1.3 (`vidore/colpali-v1.3-merged`; corrected from "v1.2", see note) | 128 | yes | full grid | full grid | yes | CPU, this laptop |
 | ColQwen2 v1.0 | 128 | yes | full grid | full grid | yes | CPU, this laptop |
 | ColQwen2.5 v0.2 | 128 | yes | full grid | full grid | yes | CPU, this laptop |
 | ColEmbed 4B (nemotron v2) | 2,560 | **no** | R12's 74 rows | R12's 74 rows | **no** (aggregates + intervals) | GPU (R12, Kaggle 2×T4) |
+
+**Correction (2026-10-03, found during Q7).** The ColPali checkpoint is
+`vidore/colpali-v1.3-merged` (`docs/UNIVERSAL.md`), not "v1.2" as `PLAN.md` and an
+earlier version of this table said. The data and results are unchanged; only the
+label was wrong.
 
 **Missing cells (not projected):**
 - **ColEmbed 4B:**

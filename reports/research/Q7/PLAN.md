@@ -8,7 +8,8 @@ comparability investigation:
 ## 1. The object OptiVision measures (what a comparison must match)
 
 **Input.** Fixed multi-vector page embeddings from an existing late-interaction
-encoder: ColPali v1.2, ColQwen2 v1.0, ColQwen2.5 v0.2 (128-d) and ColEmbed 4B
+encoder: ColPali v1.3 (`vidore/colpali-v1.3-merged`; first written as "v1.2", a
+label error carried over from the Q4 plan), ColQwen2 v1.0, ColQwen2.5 v0.2 (128-d) and ColEmbed 4B
 (2,560-d).
 
 **Transformation.** Post hoc and training-free: no encoder retraining, and no labels
