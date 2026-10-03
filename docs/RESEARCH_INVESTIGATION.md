@@ -12,10 +12,18 @@ Labels used in every table:
 Status: Phase 0 done. **E1.0, E1.1 and E1.2 done** (2026-10-02). The E1.2 confirmation
 on held-back data passed its frozen criterion. **Q3 closed** (2026-10-03): conclusion supported with residual uncertainty
 (`reports/research/Q3/REPORT.md` §19). **Q4 done** (2026-10-03, `reports/research/Q4/REPORT.md`):
-closed and accepted. **Q5/Q6 STOPPED at its exact-ranking criterion** (2026-10-03,
-`reports/research/Q5Q6/CORRECTNESS.md`): direct int8 and exact binary scoring match the current
-top-50 and nDCG@5 for every query, but full rankings differ on 44–45 of 451 queries through
-float32 near-ties (all within rounding). No latency was measured; awaiting reviewer decision.
+closed and accepted. **Q5/Q6 closed** (2026-10-03, `reports/research/Q5Q6/REPORT.md`), awaiting review.
+- The strict exact-ranking criterion failed on float32 near-ties. Under the reviewer's
+  rounding-aware amendment, direct int8 and exact binary scoring are equivalent.
+- Native scoring is much slower on this numpy/torch stack:
+  - direct int8 full scan: 24–34x slower than the current scan;
+  - exact binary LUT first stage: 28–30x slower;
+  - native exact two-tier: 9.7–11.7x slower in total.
+- H5a–H5c are rejected and H5d is supported (the binarized query's shortlist recall
+  is 81.2% against 82.9%).
+- The batched decode-first control makes rescoring 5.3x faster and the two-tier query
+  2.2–3.2x faster, with bit-identical rankings. Q4's two-tier penalty came from the
+  per-query rescoring loop.
 
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
