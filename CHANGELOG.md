@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (branch `research-investigation`)
+
+- **`ExactIndex.rescore` is batched.**
+  - Each distinct candidate document is decoded once and scored against every query
+    that shortlisted it, instead of re-decoding every query's candidates. The
+    arithmetic (decode, float32 products, max, per-query sum), the column order and
+    the API are unchanged.
+  - On six ViDoRe datasets (500 pages, 50 candidates, all queries scored in one
+    batch), rankings and per-query nDCG@5 were identical and the scores
+    bit-identical.
+  - Rescoring was 5.5–9.3x faster and the two-tier query 2.9–3.7x faster, on one
+    laptop CPU. Evidence: `reports/engineering/batched_rescore/RESULTS.md`.
+
 ## 0.3.0 (2026-10-02)
 
 The measured model set grows from three to six encoders, one of them

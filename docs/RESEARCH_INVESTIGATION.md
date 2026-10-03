@@ -25,6 +25,13 @@ closed and accepted. **Q5/Q6 closed** (2026-10-03, `reports/research/Q5Q6/REPORT
   2.2–3.2x faster, with bit-identical rankings. Q4's two-tier penalty came from the
   per-query rescoring loop.
 
+**Engineering follow-up (separate from Q5/Q6): batched `ExactIndex.rescore` kept**
+(2026-10-03, `reports/engineering/batched_rescore/RESULTS.md`).
+- Bit-identical scores on all 6 Q4 datasets × 2 hot tiers × 5 candidate counts.
+- Rescoring 5.5–9.3x faster and the two-tier query 2.9–3.7x faster (50 candidates,
+  laptop CPU).
+- Q5/Q6's conclusion about native scoring is unchanged.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current

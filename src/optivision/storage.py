@@ -30,7 +30,7 @@ import numpy as np
 
 from .compose import CompressedCorpus, Pipeline, load_compressed, save_compressed
 from .representation import MultiVectorCorpus
-from .scoring import DEFAULT_MAX_BLOCK_BYTES, maxsim_matrix, rank, segment_reduce
+from .scoring import DEFAULT_MAX_BLOCK_BYTES, maxsim_matrix, rank
 from .types import CompressedPage, PageRef
 
 
@@ -56,27 +56,49 @@ class ExactIndex:
         return top, np.take_along_axis(scores, top, axis=1)
 
     def rescore(self, queries: MultiVectorCorpus, candidates: np.ndarray) -> np.ndarray:
-        """Exact scores of each query against its own candidate documents only."""
+        """Exact scores of each query against its own candidate documents only.
+
+        Each distinct candidate document is decoded once and scored against the
+        tokens of every query that listed it (one product per document, chunked to
+        ``max_block_bytes``), rather than decoding every query's candidates anew.
+        The arithmetic is unchanged: the same decode, float32 products, maximum
+        over the document's vectors and sum over each query's tokens. Column ``j``
+        of the result is candidate column ``j`` (duplicates included); a query with
+        no tokens scores 0 and a document with no vectors scores -inf.
+        """
         q = self._q(queries)
         cand = np.asarray(candidates, dtype=np.int64)
         out = np.full(cand.shape, -np.inf, dtype=np.float32)
+        q_off = np.asarray(q.offsets, dtype=np.int64)
+        lens = np.diff(q_off)
+        out[lens == 0] = 0.0
+        if cand.size == 0 or q.num_vectors == 0:
+            return out
+        m = cand.shape[1]
+        qv = q.decode_rows(0, q.num_vectors)
+        best = np.full((q.num_vectors, m), -np.inf, dtype=np.float32)  # per query token, per candidate column
+        flat = cand.ravel()
+        order = np.argsort(flat, kind="stable")
+        docs, starts = np.unique(flat[order], return_index=True)
+        ends = np.append(starts[1:], flat.size)
         offsets = self.store.offsets
-        for qi in range(cand.shape[0]):
-            lo_q, hi_q = int(q.offsets[qi]), int(q.offsets[qi + 1])
-            if hi_q == lo_q:
-                out[qi] = 0.0
+        for d, s0, s1 in zip(docs, starts, ends, strict=True):
+            lo, hi = int(offsets[d]), int(offsets[d + 1])
+            if hi == lo:
                 continue
-            qv = q.decode_rows(lo_q, hi_q)
-            docs = cand[qi]
-            spans = [(int(offsets[d]), int(offsets[d + 1])) for d in docs]
-            blocks = [self.store.decode_rows(lo, hi) for lo, hi in spans]
-            counts = np.array([b.shape[0] for b in blocks], dtype=np.int64)
-            if counts.sum() == 0:
-                continue
-            block = np.concatenate(blocks, axis=0)
-            local = np.concatenate([[0], np.cumsum(counts)])
-            per_token = segment_reduce(qv @ block.T, local, np.maximum, axis=1, fill=-np.inf)
-            out[qi] = per_token.sum(axis=0)
+            slots = order[s0:s1]
+            qs, cols = slots // m, slots % m
+            n_tok = lens[qs]
+            first = np.repeat(np.cumsum(n_tok) - n_tok, n_tok)
+            rows = np.arange(int(n_tok.sum())) - first + np.repeat(q_off[qs], n_tok)
+            cols = np.repeat(cols, n_tok)
+            block = self.store.decode_rows(lo, hi)
+            step = max(1, self.max_block_bytes // (4 * block.shape[0]))
+            for t0 in range(0, rows.size, step):
+                r, c = rows[t0:t0 + step], cols[t0:t0 + step]
+                best[r, c] = (qv[r] @ block.T).max(axis=1)
+        for qi in np.flatnonzero(lens):
+            out[qi] = best[q_off[qi]:q_off[qi + 1]].sum(axis=0)
         return out
 
 
