@@ -48,6 +48,17 @@ investigation, no experiments. Awaiting review; Q8 not started.
 - HPC-ColPali is excluded: it declares its own results to be estimates.
 - No leaderboard.
 
+**E7a done** (2026-10-03, `reports/research/Q7/E7a/REPORT.md`): attribution on CPU, no
+reproduction of SAP. Awaiting review; E7b, E7c and Q8 not started.
+- Within OptiVision's data, Ward clustering (+0.7 to +3.7 points) and norm rescaling
+  (+0.1 to +4.6) each add retention at equal vector count. Merging beats random
+  pruning in 51 of 54 comparisons.
+- Using K-means with plain means reduces the Q7 gap to SAP's Cluster row in 11 of 12
+  cells (at γ = 0.10, from +4.4 to +10.3 points to +2.3 to +6.2). A gap remains.
+- Random pruning matches SAP within 1.6 points on ColPali, but differs by up to 13.7
+  on ColQwen2. That points to an evaluation or preprocessing difference.
+- Pre-stated rule: recommend **E7c** (official ViDoRe evaluation alignment).
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
