@@ -110,6 +110,18 @@ limitations.** Awaiting review; Q10 not started.
 - **Unsupported:** codec speedups (decode-first), untested models, widths or corpora,
   quality at scale, and certification at 0.99 with ≤ 225 queries.
 
+**Q10 done** (2026-10-04, `reports/research/Q10/REPORT.md`): research-vs-engineering
+synthesis, no new experiment. Verdict: **mixed research + engineering contribution.**
+- **Research findings** are established empirically, within the tested scope; their
+  novelty against the full literature is not established.
+- **Method C** is a validated application of known methods, giving a conditional
+  guarantee.
+- **The framework and batched rescoring** are engineering.
+- **Codec speed, native kernels and persistence gaps** are implementation-specific.
+- Includes a do-not-claim list.
+
+The investigation is complete; no further question has been started.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
