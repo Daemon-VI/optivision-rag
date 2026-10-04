@@ -45,3 +45,34 @@ Next-phase preregistration (X1, X2, X3; rules for XH), recorded before execution
   was committed with, and any change goes to its Appendix C as a dated amendment.
 - **Scope**: it registers X1, X2 and X3, and the rules for XH. XH itself is registered
   only by the later `heldout-freeze` addendum.
+
+Amendment 1 to the next-phase preregistration (X1, X2, X3), recorded before execution:
+- **Document**: "Amendment 1, 2026-10-04" in Appendix C of
+  `NEXT_PHASE_PREREGISTRATION.md`, added by commit
+  `130286dd06c763f2bd11a66d706d98dbccf053e6` (2026-10-04, parent `95b1cc3`). The amended
+  document is blob `445d94cdb1dda8671a7d4c4ba3bbb7f895f15700`, the text the X1–X3 scripts
+  require at the commit that runs. The text above Appendix C is byte for byte the text
+  registered by commit `73085ab637679f30fffece6632eb7b9e92adff79` (blob
+  `fa9deb73fdf380f06141d89cfaf145444f883506`): the amendment replaces the line `None.`
+  under that heading and changes nothing above it. The same commit brings the harness into
+  line with it (`x_common.py`, `x1_agreement.py`, `x3_symmetry.py`,
+  `tests/test_x_harness.py`, `X_HARNESS.md`).
+- **Before execution**: the amendment was committed before any X1, X2 or X3 execution. No
+  X1, X2 or X3 computation was run before that commit, and none has been run before this
+  registry entry. No per-query outcome value has been read in this phase, for the
+  preregistration, the harness or the amendment: only file hashes, array names, shapes and
+  types, candidate metadata and synthetic test data.
+- **Scope**: it records the operational clarifications OP1–OP7, accepted by the project
+  owner as implemented; the alternative N10 count (D1), always reported and diagnostic
+  only; the failure handling F1–F5, where F1 is marked as an amendment and replaces the
+  candidate-failure treatment of §16.7 for X3 only; the operational requirements O1–O4 on
+  outputs and reporting; the reporting conventions R1–R13; and the sha256 hashes of 34
+  auxiliary input files (7 E1 selection files, 6 Q3 feature files, 21 vector files), as
+  integrity checks only. It alters no hypothesis, dataset, candidate space, threshold,
+  Method C setting, query-budget definition, seed or primary decision criterion.
+- **Status**: under §2 of the document it is an amendment and not a deviation, because it
+  was committed before the analyses it affects. X1, X2 and X3 are not started, and this
+  entry reports no result.
+- **Repository state at this entry**: nothing of this phase has been pushed
+  (`origin/research-investigation` is at `7d87e33`). `main` and `origin/main` are at
+  `4d520603469e179135ffd9df922b02d4504b4add`, untouched.
