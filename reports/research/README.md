@@ -20,6 +20,10 @@ MEASURED / SIMULATED / EXTERNAL / PROJECTED / INFERENCE. Large artifacts stay ou
 | Q8 | Q8 | frozen scale model (`Q8/PLAN.md`, `3a39ba3`; validity amendment `ae67a46`) | done 2026-10-04, awaiting review | Q4/Q5Q6/R12 primitives + validation timing on ColQwen2 DocVQA tiled to 4,000 duplicated pages (timing only) | 1 warm-up + 5 rounds; first run invalidated (standby), rerun with keep-awake, no power events | `Q8/REPORT.md`: storage and RAM linear (exact projections); scan linear 500–4,000 pages (R² ≥ 0.999); old rescoring flat, batched gain falls 7.4x → 2.8x with overlap; two-tier hot scan dominates beyond about 1,300 pages; 1M pages = storage arithmetic only, about 8.6 s/query exhaustive (PROJECTED) | linearity only to 4,000 duplicated pages; batch-amortized timing; no paging model; no quality at scale; ColEmbed storage only |
 | Q9 | Q9 | re-analysis of frozen Q1–Q8 / R-series evidence; experiment criteria in the brief | done 2026-10-04, awaiting review | no new data or experiment | – | `Q9/REPORT.md`: supported with scope limitations; core findings replicate across 4 visual + 1 text encoder and 3 corpora; dimension reduction and low-bit codecs model-specific; certifiable compression dataset-specific; codec speedups, untested models or corpora, quality at scale unsupported | one pool per corpus; text model/data confounded; ColEmbed aggregates only; coarse operating-point grids |
 | Q10 | Q10 | synthesis of Q1–Q9, ENG-1 and R-series; classification framework in the report | done 2026-10-04 | no new data or experiment | – | `Q10/REPORT.md`: mixed research + engineering; findings established, novelty not established; method C a validated application (conditional guarantee); framework and batched rescoring are engineering; codec speed, native kernels and persistence are implementation-specific; do-not-claim list | Q7 literature limited to compression/engines; one laptop; tested models and corpora only |
+| X1 | next phase: label-free reference agreement (SQ1) | H4a–H4c (`NEXT_PHASE_PREREGISTRATION.md` §7, §10; commit `73085ab637679f30fffece6632eb7b9e92adff79`) | pre-registered 2026-10-04; not started | the seven E1 stores (read only): labels and baseline@1 arrays | resamples 0–1999; block 2000–3999 only by the registered rules | – (not run) | development encoders only; one agreement measure (placement of the reference's top document); agreement is not retrieval quality; thresholds set knowing the labelled outcomes |
+| X2 | next phase: query budget and certification (SQ2) | H3, and the agreement arm of H4 (`NEXT_PHASE_PREREGISTRATION.md` §7, §11; `73085ab`) | pre-registered 2026-10-04; not started | the seven E1 stores (read only); registered budgets 50–3600 | resamples 0–1999; block 2000–3999 only by the registered rules | – (not run) | decided at the pool-capped budget (450; 300 on SciFact); 900, 1800 and 3600 exceed every pool, are extrapolated simulations and decide no primary hypothesis |
+| X3 | next phase: coordinate and symmetry test (SQ3) | H5 (`NEXT_PHASE_PREREGISTRATION.md` §7, §12; `73085ab`) | pre-registered 2026-10-04; not started | existing vectors: ColPali DocVQA, ColQwen2 InfoVQA, ColQwen2.5 DocVQA, SciFact (extension: the other three stores) | transformation seeds 0, 1, 2, 3; bootstrap seed 0; resamples 0–1999 | – (not run) | four registered maps only; 96-d and 128-d encoders; says nothing about model-blindness |
+| XH | next phase: held-out encoders (SQ4) | H1, H2: definitions and decision rules only (`NEXT_PHASE_PREREGISTRATION.md` §7, §13; `73085ab`) | rules pre-registered 2026-10-04; experiment not yet registered (needs the `heldout-freeze` addendum); not started | closed pool of nine candidate encoders; none encoded | resamples 0–1999 | – (not run) | registered subset, corpora, pools, revisions and compute plan are fixed only by the addendum; Tier 1 pools are not unseen |
 
 Hypotheses for E1.1, recorded before execution:
 - **H1a**: the current point/bound-based selection procedure loses substantial
@@ -29,3 +33,15 @@ Hypotheses for E1.1, recorded before execution:
 - **H1c**: a properly constructed simultaneous/ordered-testing method can recover
   some compression relative to naive independent certification while controlling
   the intended error quantity.
+
+Next-phase preregistration (X1, X2, X3; rules for XH), recorded before execution:
+- **Document**: `NEXT_PHASE_PREREGISTRATION.md`, added by commit
+  `73085ab637679f30fffece6632eb7b9e92adff79` (2026-10-04, parent `7d87e33`). That commit
+  contains only that document (blob `fa9deb73fdf380f06141d89cfaf145444f883506`).
+- **Before execution**: no X1, X2 or X3 computation was run before that commit, and none
+  has been run before this registry entry.
+- **Status**: with this entry the three conditions in §2 of the document hold, so it is
+  PREREGISTERED. Its text is frozen and was not edited: the header keeps the wording it
+  was committed with, and any change goes to its Appendix C as a dated amendment.
+- **Scope**: it registers X1, X2 and X3, and the rules for XH. XH itself is registered
+  only by the later `heldout-freeze` addendum.
