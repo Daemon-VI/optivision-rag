@@ -7,11 +7,15 @@ read while writing it. No result exists.**
 - Specification: `NEXT_PHASE_PREREGISTRATION.md`, commit
   `73085ab637679f30fffece6632eb7b9e92adff79` (blob `fa9deb73fdf380f06141d89cfaf145444f883506`),
   recorded in the registry by `d408b96db87698f76f5f320b8ee8591a3d75ecd9`. Section numbers
-  below refer to it. That document was not edited.
+  below refer to it. The registered text was not edited.
+- **Amendment 1 of 2026-10-04**, in Appendix C of that document, settles the open points
+  of §6, the failure handling, the output requirements and the auxiliary input hashes. The
+  project owner accepted the seven open points exactly as implemented. The amendment only
+  adds text under the heading of Appendix C.
 - XH is not built. Nothing in `src/optivision` was changed, and no existing script, report
   or store was edited.
-- **A registered run is refused until the open points of §6 are accepted** by the project
-  owner. The code carries one reading for each. None of them is decided here.
+- **A registered run is refused unless the amended text is the one committed at HEAD**, the
+  code is committed, and every input has its registered hash.
 
 ## 1. Files
 
@@ -21,8 +25,8 @@ read while writing it. No result exists.**
 | `scripts/research/x1_agreement.py` | X1, label-free reference agreement (§10) |
 | `scripts/research/x2_budget.py` | X2, query budget and certification (§11) |
 | `scripts/research/x3_symmetry.py` | X3, coordinate and symmetry test (§12) |
-| `tests/test_x_harness.py` | 52 tests on synthetic fixtures |
-| this file | how to run, what is checked, what is open |
+| `tests/test_x_harness.py` | 62 tests on synthetic fixtures |
+| this file | how to run, what is checked, what was open and how it was decided |
 
 Method C is not re-implemented. `betting_pvalues`, `to_y`, `fixed_sequence_by_family`,
 `fixed_sequence`, `walk_select` and `smallest` are imported from `e1_stats.py`, and
@@ -50,16 +54,17 @@ python scripts/research/x3_symmetry.py --run --dataset colpali_docvqa   # one da
   its checks passed and the machine did not sleep. Every attempt is logged in `runs.json`
   (`attempts.json` for X3), including failed gates and interrupted runs.
 - `--store NAME` (X1, X2) repeats one unit. The summary and the report are written when all
-  seven stores have a valid unit from the same commit.
+  seven stores have a valid unit produced by the same code (Amendment 1, F5).
 - **X3** has one unit per (dataset, transformation), at most three attempts each (§21). The
-  extension set (`--extension`) is refused until the whole primary set is complete.
+  extension set (`--extension`) is refused until the whole primary set is complete. An
+  error in any candidate ends the unit and counts as an attempt (Amendment 1, F1).
 - Run one job at a time. X3 holds a corpus and its transformed copy in memory.
 - A run asks Windows not to sleep while it works. Closing the lid can still suspend the
   machine; a unit during which it slept is marked invalid and is repeated (§20).
 
-PROJECTED durations on the laptop. X1 and X2 are from timing the engine on a synthetic
-store of 451 queries; X3 is five store builds per dataset at the build times recorded in
-the E1 sidecars.
+PROJECTED durations on the laptop, on mains power. X1 and X2 are from timing the engine on
+a synthetic store of 451 queries; X3 is five store builds per dataset at the build times
+recorded in the E1 sidecars. On battery the same timing was about three times slower.
 
 | experiment | duration | peak memory |
 |---|---|---|
@@ -82,8 +87,14 @@ A mismatch stops the run before any array is loaded. Nothing is substituted.
 | candidate list the code generates | the same hash, for d = 128 and d = 96 | `recommended_search_space` |
 | 14 code files | git blob hashes | recomputed from the working files |
 | Method C constants | bet cap 0.9; levels 0.05 and 0.01; δ/7; E1 grid and seeds | read from the imported modules |
-| E1 selection files (gate G4) | not in §22.1 | present, real content, expected keys; sha256 recorded |
-| code state | §22.2 | clean working tree; preregistration blob at HEAD is one the harness implements |
+| 7 E1 selection files (gate G4) | sha256, Amendment 1 part 4 | the file's bytes; expected keys |
+| 6 Q3 feature files (A6) | sha256, Amendment 1 part 4 | the file's bytes; expected arrays |
+| 21 vector files (X3) | sha256, Amendment 1 part 4 | the file's bytes, before anything is loaded |
+| the preregistration | blob of the amended text; sha256 of the frozen part | the working file and the commit at HEAD |
+| code state | §22.2 | clean working tree; the code identity is recorded with every unit |
+
+The auxiliary hashes are integrity checks only. They register no new data and change
+nothing in the scientific protocol.
 
 Gates that read values run next, in the registered order: G2 (finite, in [0, 1],
 `base_b1` = 1), G3 (ViDoRe stores: both constructs agree where `base_labels` = 1), G4
@@ -98,7 +109,11 @@ symmetry check on the uncompressed vectors.
 free and chain oracles, CP1; P0 under agreement at every registered budget, thresholds
 0.99, 0.97, 0.95, 0.90, both error levels (A3); the labelled retention of what the
 agreement arm deploys (A4, CP2); the paired comparison with P0 under labels on the same
-resamples (A5); A6. Across stores: H4a, H4b, H4c, and the sentences N8, N9, N10.
+resamples (A5); A6. Across stores: H4a, H4b, H4c, and the sentences N8, N9, N10. The N10
+count under the other reading ("more than half of the resamples deploy non-trivially") is
+always written beside the count that decides, whether or not the N10 sentence applies. It
+is diagnostic only and enters no verdict, threshold, selection, n* or hypothesis outcome
+(Amendment 1, D1).
 
 **X2 (§11).** Per store and construct: P0, I8, D and C-split at every registered budget
 with seeds 0–1999; A, A-bonf and B at 50, 100, 225 with seeds 0–1999; A and B at the
@@ -133,7 +148,7 @@ directories are refused.
 
 | file | content |
 |---|---|
-| `x1_<store>.json`, `x2_<store>.json` | every table of that store, the gates, and a header with the preregistration commit, the code commit, the Method C configuration, the seeds and the input hashes |
+| `x1_<store>.json`, `x2_<store>.json` | every table of that store, the gates, and a header with the preregistration commit and amended blob, the code commit and code identity, the Method C configuration, the seeds, and the hashes of the stores and of the auxiliary inputs |
 | `x?_<store>_selections.npz` | per-seed selections (−1 = abstain), keys as in the E1 files, prefixed `L_` or `A_` for the construct and `rep_` for the replication block |
 | `x?_summary.json`, `X?_REPORT.md` | verdicts, the registered negative-result sentences that apply, short tables |
 | `x?_provenance.json` | environment, git state, input validation, sha256 of every output |
@@ -144,11 +159,12 @@ Result files hold no timestamp, so the same inputs at the same commit give the s
 Text outputs are written with LF line endings on every platform, and the recorded hashes
 are of those bytes, which is also what git stores.
 
-## 6. Open points: decisions needed before a run
+## 6. Open points, accepted by Amendment 1
 
-The preregistration leaves these technically open. Each row gives the reading the code
-carries. A registered run of an affected experiment is refused until the point is listed
-in `ACCEPTED_OPEN_POINTS`.
+The registered text left these technically open. Each row gives the reading the code
+carries. **The project owner accepted all seven exactly as implemented on 2026-10-04**, and
+Amendment 1 (part 1) records the decisions. `ACCEPTED_OPEN_POINTS` in `x_common.py` lists
+them; a registered run is refused if a point that affects it is not in that set.
 
 | id | affects | what the text leaves open | implemented reading | what the choice can change |
 |---|---|---|---|---|
@@ -160,19 +176,19 @@ in `ACCEPTED_OPEN_POINTS`.
 | OP6 | X1 | A6 names neither the margin, nor the candidates, nor the aggregation | both margins in `Q3/features` (relevance margin, top-2 margin), separately; pool quartiles; per distinct candidate, 1 − mean of a in the quartile | an exploratory table only |
 | OP7 | X1 | N10: when a cell counts as "the labels arm deploys non-trivially" | its non-trivial deployment rate is at least 0.90; cells are (store, threshold, δ, pool-supported budget), both error levels together | whether the N10 sentence is reported |
 
-To accept them:
+With OP7, the N10 count under the other reading ("more than half of the resamples deploy
+non-trivially") is always reported beside the primary count, as a diagnostic. It decides
+nothing (Amendment 1, D1).
 
-1. Decide each point: accept the implemented reading or state another.
-2. Record the decisions as a dated amendment in Appendix C of the preregistration and
-   commit it before the run it affects (§2 of that document).
-3. In the same commit, add the amended file's blob hash to `PREREG_BLOBS_IMPLEMENTED` and
-   the accepted identifiers to `ACCEPTED_OPEN_POINTS` in `x_common.py`. If a decision
-   differs from the implemented reading, change the code in that commit too.
-4. Run the dry run again. It lists what still blocks a run.
+A later change to the protocol is made the same way: a dated amendment in Appendix C,
+committed before the run it affects, with `PREREG_BLOB_IMPLEMENTED` in `x_common.py` set
+to the blob of the amended file in the same commit. The dry run lists what blocks a run.
 
 ## 7. Readings taken where the text has a basis
 
-Not blocking, listed so they can be challenged before any result exists.
+R1–R13 are frozen as reporting conventions by Amendment 1 (O4), and no other reporting
+convention is introduced. R14 and R15 are no longer readings: the amendment states them
+as rules F3 and F5.
 
 | id | point | reading |
 |---|---|---|
@@ -189,8 +205,8 @@ Not blocking, listed so they can be challenged before any result exists.
 | R11 | X3 materiality | judged on the 37 distinct candidates; a pipeline that opens two chains has the same values in both |
 | R12 | H5 when a pair fails and another is incomplete | "fails": a failure under one registered map is a failure; "not assessable" only when no pair fails and one is incomplete |
 | R13 | N11 and N12 when only the P0 outcome is material | the registered sentence with "the outcome of P0" in place of "candidate k" |
-| R14 | sleep check (§20, §22.2) | wall-clock time minus time on a clock that stops during sleep; more than 5 s marks the unit invalid |
-| R15 | units at different commits | X1 and X2: the summary needs all seven stores from one commit. X3: each unit records its commit |
+| R14 | sleep check (§20, §22.2) | now rule F3 of Amendment 1: a unit is invalid if the machine slept for more than 5 seconds during it, measured as wall-clock time minus time on a clock that stops during sleep |
+| R15 | units from different code | now rule F5 of Amendment 1: units are combined into a summary only when the same code produced them. The identity is the git hashes of the experiment's scripts, the frozen E1 scripts, the library tree and (X3) the dataset loader, with the Python, numpy and SciPy versions. A unit of other code is repeated; in X3 the repeat counts as an attempt |
 
 ## 8. Limitations found
 
@@ -203,27 +219,33 @@ Not blocking, listed so they can be challenged before any result exists.
   match and gate G1 passes as registered. On an LF checkout the raw hash differs: the
   harness reports that the CRLF form matches and refuses to run. The hash of the candidate
   specification does not depend on line endings.
-- **L3. The E1 selection files and the Q3 feature files have no registered hash.** A run
-  records their sha256. Their content is checked by gate G4 (selections) and by an
-  alignment check against `base_labels` (features).
+- **L3. The E1 selection files, the Q3 feature files and the vector files had no registered
+  hash.** Amendment 1 (part 4) registers the sha256 of all 34, as integrity checks only. A
+  run stops on a mismatch. Their content is also checked by gate G4 (selections), by an
+  alignment check against `base_labels` (features) and by the T0 gate (vectors).
 - **L4. The rotations depend on the linear-algebra library.** QR and the matrix product can
   differ in the last bits between machines. Each matrix's sha256 is recorded with the run.
   On this machine the dry run gives, for d = 128: T1 `fe558cab6a3e…`, T2a `479c843b76a8…`,
   T2b `2b9074e732df…`; for d = 96: T1 `9bbb554a5c7a…`, T2a `61d2225c05ee…`, T2b
   `5d8a7c858243…`.
 - **L5. The shared module is named `x_common.py`.** §22.3 lists `x1_*.py`, `x2_*.py`,
-  `x3_*.py`. The name follows `e1_common.py` and `q56_common.py`.
+  `x3_*.py`. The name follows `e1_common.py` and `q56_common.py`. Amendment 1 (O2) makes it
+  part of the registered script set.
 - **L6. Only Python 3.11 was available locally.** CI runs 3.10 and 3.13.
 - **L7. X3 memory was not measured.** It was exercised on small synthetic vectors only.
-- **L8. No figure is drawn.** §11.5 asks for curves with different markers for the two
-  budget classes. The harness writes the tables, in separate columns, and the JSON a
-  figure would be drawn from. A figure made later must keep the two classes apart.
-- **L9. X3 does not handle a candidate that fails to run.** §16.7 says to record it and
-  treat it as not rejected. Here an error ends the unit, which is logged and counts as one
-  of its three attempts. A store holds one row of values per candidate, and a failed
-  candidate has none. None of the 40 candidates failed when the E1 stores were built.
-- **L10. The registry rows are not updated by the scripts.** After a run, the X1, X2 and X3
-  rows of `README.md` are edited by hand (§22.3).
+- **L8. No figure is drawn.** §11.5 speaks of curves with different markers for the two
+  budget classes. The harness writes the tables, with the pool-supported and the
+  extrapolated budgets in separate columns, and the JSON a figure would be drawn from.
+  Amendment 1 (O1) settles that no figure is required and that these tables satisfy §11.5.
+- **L9. X3 does not handle a candidate that fails to run per candidate.** §16.7 says to
+  record it and treat it as not rejected. Here an error ends the unit, which is logged with
+  the error and counts as one of its three attempts; after three the pair is incomplete,
+  and H5 cannot then be supported. Amendment 1 replaces the §16.7 treatment for X3 only
+  (F1, marked there as an amendment to a registered rule, not a clarification) and fixes
+  how an incomplete pair counts for H5 (F2). F1 does not apply to XH, where §16.7 stands.
+  None of the 40 candidates failed when the E1 stores were built.
+- **L10. The registry rows are not updated by the scripts.** After each actual run, the X1,
+  X2 and X3 rows of `README.md` are edited by hand (§22.3; Amendment 1, O3).
 
 ## 9. Tests
 
@@ -242,6 +264,11 @@ registered 40 candidates and made-up values, and a small set of unit-norm vector
 | decision rules | oracles; borderline rule; n*; replication rule; monotonicity; gates G2, G3, G4; X3 classes, bootstrap interval, T0 gate, attempt limit, extension order |
 | outputs | schema of every file; provenance header; output hashes; paths confined to their directory |
 | no mutation | inputs unchanged after a run; dry runs and refused runs change no file under `reports/research` |
+| Amendment 1 | the text above Appendix C is the registered text, byte for byte; the amended file is the one the harness implements; the hash tables of the amendment equal the constants the harness checks; the seven open points are accepted and the gate still closes without them; F1 is the only item marked as an amendment to a registered rule |
+| auxiliary hashes | the registered selection and feature files have their registered hash; a selection, feature or vector file with another hash stops the run before anything is written |
+| same code | every unit records its code identity; a summary refuses units of other code in X1, X2 and X3; in X3 the repeat is a second attempt |
+| X3 failures | an error in a candidate ends the unit and the run, is logged with how far the build got, and counts as an attempt; after three the pair is incomplete and H5 is not supported |
+| N10 diagnostic | the count under the other reading is always written beside the deciding count, whether or not N10 applies; raising it changes no verdict, sentence or hypothesis outcome |
 
 The frozen `run_cell` is used to produce the "stored E1 selections" of the synthetic
 stores, so gate G4 is tested against the frozen code itself.

@@ -11,9 +11,12 @@ import dataclasses
 import hashlib
 import importlib
 import json
+import os
 import pathlib
+import re
 import shutil
 import sys
+import types
 
 import numpy as np
 import pytest
@@ -722,7 +725,13 @@ def test_outputs_carry_their_provenance(registry, x1_run, x2_run):
             assert head["seeds"]["resamples"] == [0, registry.n_seeds - 1]
             assert head["inputs"][name] == {"npz_sha256": spec.npz_sha256, "json_sha256": spec.json_sha256,
                                             "candidate_spec_sha256": X.S0_SPEC_SHA256}
+            assert head["preregistration"]["blob_implemented"] == X.PREREG_BLOB_IMPLEMENTED
+            assert head["preregistration"]["amendments"] == ["Amendment 1, 2026-10-04"]
+            assert head["code_identity"] == X.code_identity(experiment)
+            assert head["auxiliary_inputs"]["e1_selection_files"][name] == X.sha256_file(registry.e1_selections[name])
+            assert head["accepted_open_points"] == [f"OP{i}" for i in range(1, 8)]
         provenance = X.read_json(folder / f"{prefix}_provenance.json")
+        assert provenance["code_identity"] == X.code_identity(experiment) and provenance["auxiliary"]["ok"]
         assert {"python", "numpy", "scipy", "platform"} <= set(provenance["environment"])
         for file, digest in provenance["outputs"].items():
             assert X.sha256_file(folder / file) == digest
@@ -785,11 +794,25 @@ def test_a_registered_run_is_refused_while_open_points_are_open(module, monkeypa
     assert research_snapshot() == before  # nothing was computed or written
 
 
-def test_open_points_name_the_experiments_they_block():
+def test_the_seven_open_points_are_accepted_as_implemented(monkeypatch):
     assert set(X.OPEN_POINTS) == {f"OP{i}" for i in range(1, 8)}
-    assert set(X.open_points_for("X3")) >= {"OP1", "OP2", "OP3", "OP4"}
     assert all(set(p) == {"affects", "text", "implemented"} for p in X.OPEN_POINTS.values())
-    assert X.ACCEPTED_OPEN_POINTS <= set(X.OPEN_POINTS)
+    assert X.ACCEPTED_OPEN_POINTS == frozenset(X.OPEN_POINTS)  # Amendment 1, part 1
+    assert all(X.open_points_for(experiment) == {} for experiment in ("X1", "X2", "X3"))
+    monkeypatch.setattr(X, "ACCEPTED_OPEN_POINTS", frozenset())  # the gate itself is still there
+    assert set(X.open_points_for("X3")) == {"OP1", "OP2", "OP3", "OP4"}
+    assert set(X.open_points_for("X2")) == {"OP5"} and set(X.open_points_for("X1")) == {"OP5", "OP6", "OP7"}
+
+
+def test_a_registered_run_needs_the_amended_text_committed(monkeypatch):
+    unamended = {"available": True, "commit": "c" * 40, "branch": "b", "tracked_changes": False,
+                 "uncommitted_code": [], "prereg_commit_present": True, "prereg_blob_at_head": X.PREREG_BLOB,
+                 "prereg_blob_registered": X.PREREG_BLOB, "main": None}
+    monkeypatch.setattr(X, "git_state", lambda root=X.ROOT: unamended)
+    with pytest.raises((X.RunNotAllowed, X.RegisteredInputMismatch)) as caught:
+        X.require_run_allowed("X2")  # checks only; it runs nothing
+    if isinstance(caught.value, X.RunNotAllowed):  # a full checkout: the inputs are fine, the text at HEAD is not
+        assert "not the amended text" in str(caught.value)
 
 
 def test_only_the_registered_registry_can_claim_registration(registry):
@@ -799,6 +822,147 @@ def test_only_the_registered_registry_can_claim_registration(registry):
         X.require_run_allowed("X1", fake)
     assert X.REGISTERED.registered and not registry.registered
     assert (X.REGISTERED.n_seeds, X.REGISTERED.draw_size, X.REGISTERED.replication_seeds) == (2000, 3600, (2000, 4000))
+
+
+# --------------------------------------------------------------- Amendment 1
+
+
+def amendment_parts():
+    text = (ROOT / X.PREREG_PATH).read_bytes().replace(b"\r\n", b"\n").decode("utf-8")
+    frozen, _, amendment = text.partition(X.PREREG_FROZEN_UNTIL)
+    return frozen + X.PREREG_FROZEN_UNTIL, amendment
+
+
+def test_the_amendment_only_adds_text_below_the_registered_preregistration():
+    frozen, amendment = amendment_parts()
+    assert X.sha256_bytes(frozen.encode("utf-8")) == X.PREREG_FROZEN_SHA256  # the registered text, byte for byte
+    assert X.git_blob_sha1(ROOT / X.PREREG_PATH) == X.PREREG_BLOB_IMPLEMENTED != X.PREREG_BLOB
+    assert X.check_preregistration() == {**X.check_preregistration(), "frozen_part_unchanged": True, "ok": True}
+    assert amendment.lstrip().startswith("### Amendment 1, 2026-10-04.")
+    for phrase in ("The registered text is unchanged", "before any X1, X2 or X3 computation",
+                   "No per-query outcome value was read", "73085ab637679f30fffece6632eb7b9e92adff79",
+                   "always reported alongside the primary N10 count", "diagnostic only and does not affect",
+                   "The error ends that unit", "for X3 only", "F1 does not apply to XH", "more than 5 seconds",
+                   "only when the same code produced them", "No figure is required", "scripts/research/x_common.py",
+                   "updated by hand after each actual run", "No other reporting convention is introduced",
+                   "provenance and input-integrity checks only"):
+        assert phrase in amendment, phrase
+    assert all(f"| OP{i} |" in amendment for i in range(1, 8))
+    assert all(f"| R{i} |" in amendment for i in range(1, 14)) and "| R14 |" not in amendment
+    assert all(f"| F{i} |" in amendment for i in range(1, 6)) and all(f"| O{i} |" in amendment for i in range(1, 5))
+    marks = {"**clarification**", "**implementation**", "**diagnostic**", "**amendment**"}
+    assert marks <= set(re.findall(r"\*\*[a-z]+\*\*", amendment)) and "**Four kinds of item.**" in amendment
+    assert re.findall(r"\| ([A-Z]+\d+) \| amendment \|", amendment) == ["F1"]  # the one changed registered rule
+
+
+def test_the_hashes_in_the_amendment_are_the_ones_the_harness_checks():
+    rows = dict(re.findall(r"\| `([^`]+)` \| `([0-9a-f]{64})` \|", amendment_parts()[1]))
+    assert len(rows) == 7 + 6 + 21
+    assert {X.E1_SELECTIONS[n].removeprefix("reports/research/E1/"): h for n, h in X.E1_SELECTION_SHA256.items()} == {
+        k: v for k, v in rows.items() if k.endswith("_selections.npz")}
+    assert all(rows[f"{name}.npz"] == digest for name, digest in X.Q3_FEATURE_SHA256.items())
+    vectors = {file: digest for files in X.VECTOR_SHA256.values() for file, digest in files.items()}
+    assert len(vectors) == 21 and all(rows[file] == digest for file, digest in vectors.items())
+    assert len(X.E1_SELECTION_SHA256) == 7 and len(X.Q3_FEATURE_SHA256) == 6
+    assert set(X.VECTOR_SHA256) == set(X.REGISTERED.stores) == set(X.E1_SELECTION_SHA256)
+    assert set(X.Q3_FEATURE_SHA256) == {n for n, s in X.REGISTERED.stores.items() if s.vidore}
+    s7b = E.load_s7b()  # the registered paths are the ones the loader reads
+    for name, registered in X.VECTOR_SHA256.items():
+        assert {os.path.relpath(p, s7b.D).replace(os.sep, "/") for p in X3.vector_files(name, s7b)} == set(registered)
+
+
+def test_registered_auxiliary_files_have_their_registered_hash():
+    for experiment in ("X1", "X2", "X3"):
+        aux = X.check_auxiliary(experiment)  # hashes and array headers only
+        assert aux["identity_ok"], aux["problems"]
+        assert len(aux["e1_selection_files"]) == 7
+    assert len(X.check_auxiliary("X1")["q3_feature_files"]) == 6 and not X.check_auxiliary("X2")["q3_feature_files"]
+
+
+def test_an_auxiliary_file_with_another_hash_stops_the_run(registry, tmp_path):
+    reg = copy_registry(registry, tmp_path)
+    good = {n: X.sha256_file(reg.e1_selections[n]) for n in reg.stores}
+    features = {"syn_doc": X.sha256_file(reg.q3_features / "syn_doc.npz")}
+    ok = dataclasses.replace(reg, selection_sha256=good, feature_sha256=features)
+    assert X.check_auxiliary("X1", ok)["ok"] and X.check_auxiliary("X2", ok)["ok"]
+    for module, field, wrong in ((X1, "selection_sha256", {**good, "syn_text": "0" * 64}),
+                                 (X1, "feature_sha256", {"syn_doc": "0" * 64}),
+                                 (X2, "selection_sha256", {**good, "syn_doc": "0" * 64})):
+        with pytest.raises(X.RegisteredInputMismatch, match="auxiliary input does not match"):
+            module.run(dataclasses.replace(ok, **{field: wrong}))
+    assert X.check_auxiliary("X2", dataclasses.replace(ok, feature_sha256={"syn_doc": "0" * 64}))["ok"]  # not read by X2
+    assert not (tmp_path / "out").exists()  # nothing was computed or written
+
+
+def test_a_vector_file_with_another_hash_stops_x3(tmp_path, monkeypatch):
+    files = {"vectors/a_docs.npz": b"docs", "vectors/a_queries.npz": b"queries", "vectors/a_qrels.json": b"{}"}
+    (tmp_path / "vectors").mkdir()
+    for rel, content in files.items():
+        (tmp_path / rel).write_bytes(content)
+    s7b = types.SimpleNamespace(D=str(tmp_path))
+    monkeypatch.setattr(X3, "vector_files", lambda name, s: [f"{s.D}/{rel}" for rel in files])
+    hashes = {rel: X.sha256_bytes(content) for rel, content in files.items()}
+    reg = X.Registry(stores={}, store_dir=tmp_path, out_roots={}, vector_sha256={"a": hashes})
+    assert X3.require_vectors("a", reg, s7b) == hashes
+    (tmp_path / "vectors" / "a_queries.npz").write_bytes(b"other")
+    with pytest.raises(X.RegisteredInputMismatch, match="does not hash to its registered value"):
+        X3.require_vectors("a", reg, s7b)
+    (tmp_path / "vectors" / "a_queries.npz").unlink()
+    with pytest.raises(X.RegisteredInputMismatch, match="missing file"):
+        X3.require_vectors("a", reg, s7b)
+
+
+def test_units_are_combined_only_when_the_same_code_produced_them(registry, tmp_path, monkeypatch):
+    reg = copy_registry(registry, tmp_path)
+    assert X1.run(reg)["finished"]
+    identity = X.code_identity("X1")
+    assert set(identity) == {*X.EXPERIMENT_CODE["X1"], "src/optivision", "python", "numpy", "scipy"}
+    assert {"scripts/research/x_common.py", "scripts/research/x1_agreement.py", "scripts/research/e1_stats.py",
+            "scripts/research/e1_1_study.py", "scripts/research/e1_common.py"} == set(X.EXPERIMENT_CODE["X1"])
+    assert "scripts/universal_study/s7b_selection_rules.py" in X.EXPERIMENT_CODE["X3"]
+    assert X.read_json(tmp_path / "out" / "X1" / "x1_syn_doc.json")["header"]["code_identity"] == identity
+    summary = tmp_path / "out" / "X1" / "x1_summary.json"
+    summary.unlink()
+    for changed in ("numpy", "scripts/research/x_common.py", "src/optivision"):
+        monkeypatch.setattr(X, "code_identity", lambda experiment, root=X.ROOT, c=changed: {**identity, c: "other"})
+        out = X.finish_experiment("X1", reg, "x1", X1.summarise, X1.report)
+        assert not out["finished"] and len(out["pending"]) == 2
+        assert all("produced by other code" in p for p in out["pending"]) and not summary.exists()
+    monkeypatch.setattr(X, "code_identity", lambda experiment, root=X.ROOT: dict(identity))
+    assert X.finish_experiment("X1", reg, "x1", X1.summarise, X1.report)["finished"] and summary.exists()
+
+
+def test_n10_diagnostic_count_decides_nothing(registry, x1_run):
+    stores = {n: X.read_json(x1_run / f"x1_{n}.json") for n in registry.stores}
+    for s in stores.values():
+        other = s["N10"]["diagnostic_only"]
+        assert other["reading"] == "more than half of the resamples deploy non-trivially"
+        assert other["eligible_cells"] >= s["N10"]["eligible_cells"]  # a rate of 0.90 is above one half
+        assert set(other["by_delta"]) == set(s["N10"]["by_delta"]) == {"0.05", "0.01"}
+    before = X1.summarise(stores, registry)
+    for s in stores.values():  # make the diagnostic count as large as it can be
+        s["N10"]["diagnostic_only"].update({"eligible_cells": 50, "agreement_at_most_half": 50})
+    after = X1.summarise(stores, registry)
+    assert after["N10"]["diagnostic_only"]["agreement_at_most_half"] == 100
+    assert after["N10"]["applies"] == before["N10"]["applies"]  # no verdict, sentence or decision moves
+    assert after["negative_result_sentences"] == before["negative_result_sentences"]
+    assert after["hypotheses"] == before["hypotheses"]
+    for s in stores.values():  # the count that does decide
+        s["N10"].update({"eligible_cells": 10, "agreement_at_most_half": 6})
+    decided = X1.summarise(stores, registry)
+    assert decided["N10"]["applies"] and X1.N10 in decided["negative_result_sentences"]
+    for s in stores.values():  # no eligible cell: N10 does not apply
+        s["N10"].update({"eligible_cells": 0, "agreement_at_most_half": 0})
+    absent = X1.summarise(stores, registry)
+    assert not absent["N10"]["applies"] and X1.N10 not in absent["negative_result_sentences"]
+    assert "Diagnostic only, deciding nothing" in (x1_run / "X1_REPORT.md").read_text(encoding="utf-8")
+    header = X.read_json(x1_run / "x1_summary.json")["header"]
+    for summary in (before, after, decided, absent):  # always beside the primary count, whatever it decides
+        primary, other = summary["N10"], summary["N10"]["diagnostic_only"]
+        assert other["reading"] == X1.DIAGNOSTIC_READING
+        text = X1.report({"header": header, **summary}, stores)
+        assert f"N10: in {primary['agreement_at_most_half']} of {primary['eligible_cells']} pool-supported" in text
+        assert f"the count is {other['agreement_at_most_half']} of {other['eligible_cells']}." in text
 
 
 # ------------------------------------------------------------------------ X3
@@ -924,3 +1088,65 @@ def test_x3_extension_waits_for_the_primary_set(tmp_path, vectors):
     with pytest.raises(X.RunNotAllowed, match="only after the whole primary set"):
         X3.run(reg, datasets=["syn_ext"], loader=lambda name: (vectors, "ndcg@5", {}))
     assert not (tmp_path / "out" / "X3" / "units").exists()
+
+
+def test_x3_candidate_that_fails_to_run_ends_the_unit_and_counts_as_an_attempt(tmp_path, vectors, monkeypatch):
+    """Amendment 1, F1 and F2: no per-candidate handling; three attempts; then the pair is incomplete."""
+    reg = vector_registry(tmp_path, vectors)
+    real = X3.score_space
+
+    def failing(corpus, queries, space, progress=None):
+        if corpus is vectors.corpus:  # the identity run is left alone
+            return real(corpus, queries, space, progress=progress)
+        scored = []
+
+        def stop_at_the_sixth(sc):
+            progress(sc)
+            scored.append(sc.label)
+            if len(scored) == 5:
+                raise RuntimeError("the sixth candidate could not be fitted")
+
+        return real(corpus, queries, space, progress=stop_at_the_sixth)
+
+    def loader(name):
+        return vectors, "ndcg@5", {}
+
+    monkeypatch.setattr(X3, "score_space", failing)
+    for attempt in (1, 2, 3):
+        with pytest.raises(RuntimeError, match="could not be fitted"):  # the error ends the unit, and the run
+            X3.run(reg, loader=loader)
+        last = X.read_json(tmp_path / "out" / "X3" / "attempts.json")[-1]
+        assert (last["unit"], last["attempt"], last["status"]) == ("syn_vec__T1", attempt, "invalid")
+        assert "a candidate failed to run after 5 of 40 were scored: RuntimeError" in last["reason"]
+    assert not (tmp_path / "out" / "X3" / "store" / "syn_vec__T1.npz").exists()  # no store without all 40
+    monkeypatch.setattr(X3, "score_space", real)
+    out = X3.run(reg, loader=loader)  # T1 has used its three attempts and is not tried again
+    log = X.read_json(tmp_path / "out" / "X3" / "attempts.json")
+    assert sum(e["unit"] == "syn_vec__T1" for e in log) == 3
+    h5 = out["summary"]["hypotheses"]["H5"]
+    assert h5["pairs"]["syn_vec__T1"] == "incomplete" and h5["incomplete_pairs"] == ["syn_vec__T1"]
+    assert h5["verdict"] == ("fails" if h5["failing_pairs"] else "not assessable")  # never "supported"
+
+
+def test_x3_uses_only_units_produced_by_the_same_code(x3_run, tmp_path, vectors, monkeypatch):
+    log = X.RunLog(X.out_path(x3_run, "X3", "attempts.json"))
+    identity = X.code_identity("X3")
+    record = X3.unit_record("syn_vec", "T1", x3_run, log, identity)
+    assert record is not None and record["header"]["code_identity"] == identity
+    other = {**identity, "scripts/research/x3_symmetry.py": "0" * 40}
+    assert X3.unit_record("syn_vec", "T1", x3_run, log, other) is None
+    assert not X3.exhausted("syn_vec", "T1", x3_run, log, other)  # one attempt so far: it would be repeated
+    reg = vector_registry(tmp_path, vectors)
+
+    def loader(name):
+        return vectors, "ndcg@5", {}
+
+    assert X3.run(reg, loader=loader)["finished"]
+    monkeypatch.setattr(X, "code_identity", lambda experiment, root=X.ROOT: other)
+    assert X3.analyse_dataset("syn_vec", reg, X.RunLog(X.out_path(reg, "X3", "attempts.json"))) is None
+    out = X3.finish(reg, X.RunLog(X.out_path(reg, "X3", "attempts.json")))
+    assert not out["finished"] and len(out["pending"]) == 4  # units of other code are not combined
+    assert X3.run(reg, loader=loader)["finished"]  # each unit is repeated, and the repeat is an attempt
+    attempts = X.read_json(tmp_path / "out" / "X3" / "attempts.json")
+    assert [(e["unit"], e["attempt"], e["status"]) for e in attempts[5:]] == [
+        (f"syn_vec__{t}", 2, "valid") for t in X3.TRANSFORMATIONS]

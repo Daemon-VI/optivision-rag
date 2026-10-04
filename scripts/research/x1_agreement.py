@@ -39,6 +39,7 @@ H4B_IF_FAILS = ("On every store and threshold the two free oracles were within a
                 "the two constructs led to the same decisions on these stores. That would not establish "
                 "equivalence elsewhere.")
 MARGINS = {"relevance margin": "base_margin_rel", "top-2 margin": "base_margin_12"}  # A6, open point OP6
+DIAGNOSTIC_READING = "more than half of the resamples deploy non-trivially"  # N10, Amendment 1, D1
 
 
 def ranks_from_agreement(a: np.ndarray, cutoff: int) -> np.ndarray:
@@ -199,7 +200,9 @@ def analyse(name: str, prep: dict, reg: X.Registry, validation: dict) -> tuple:
                             rep["agreement"].get(n, target, method), target))
                 cross.append(row)
 
-    paired, n10 = [], {str(delta): {"eligible_cells": 0, "agreement_at_most_half": 0} for delta in X.DELTAS}
+    paired = []
+    n10 = {str(delta): {"eligible_cells": 0, "agreement_at_most_half": 0} for delta in X.DELTAS}  # OP7: decides N10
+    n10_other = {str(delta): {"eligible_cells": 0, "agreement_at_most_half": 0} for delta in X.DELTAS}  # diagnostic
     for target in X.PRIMARY_THRESHOLDS:  # A5: the thresholds both arms share
         for delta in X.DELTAS:
             for n in budgets:
@@ -215,9 +218,13 @@ def analyse(name: str, prep: dict, reg: X.Registry, validation: dict) -> tuple:
                        "median_compression_agreement": float(np.median(ca)),
                        "median_compression_labels": float(np.median(cl)),
                        "labels_nontrivial_rate": float(labels_rate)}
-                if row["budget_class"] == "pool-supported" and labels_rate >= X.RATE_THRESHOLD:  # N10, OP7
-                    n10[str(delta)]["eligible_cells"] += 1
-                    n10[str(delta)]["agreement_at_most_half"] += int(np.median(ca) <= 0.5 * np.median(cl))
+                if row["budget_class"] == "pool-supported":
+                    at_most_half = int(np.median(ca) <= 0.5 * np.median(cl))
+                    # OP7: the labels arm deploys non-trivially when its rate is at least 0.90. The count with
+                    # "more than half of the resamples" is diagnostic only and decides nothing (Amendment 1, D1).
+                    for counts, eligible in ((n10, labels_rate >= X.RATE_THRESHOLD), (n10_other, labels_rate > 0.5)):
+                        counts[str(delta)]["eligible_cells"] += int(eligible)
+                        counts[str(delta)]["agreement_at_most_half"] += int(eligible) * at_most_half
                 paired.append(row)
 
     method = f"C@{X.PRIMARY_DELTA}"
@@ -248,7 +255,11 @@ def analyse(name: str, prep: dict, reg: X.Registry, validation: dict) -> tuple:
         "A6": margin_analysis(name, d, spec, reg),
         "H4c": h4c,
         "N10": {"by_delta": n10, "eligible_cells": sum(v["eligible_cells"] for v in n10.values()),
-                "agreement_at_most_half": sum(v["agreement_at_most_half"] for v in n10.values())},
+                "agreement_at_most_half": sum(v["agreement_at_most_half"] for v in n10.values()),
+                "diagnostic_only": {
+                    "reading": DIAGNOSTIC_READING, "by_delta": n10_other,
+                    "eligible_cells": sum(v["eligible_cells"] for v in n10_other.values()),
+                    "agreement_at_most_half": sum(v["agreement_at_most_half"] for v in n10_other.values())}},
         "checks": {"monotonicity": monotone},
         "replicated_cells": {c: sorted(rep[c].selections) for c in X.CONSTRUCTS},
     }
@@ -279,7 +290,13 @@ def summarise(stores: dict, reg: X.Registry) -> dict:
     h4c["by_pool"] = X.worst_by_pool(h4c["cells"], reg)
     eligible = sum(s["N10"]["eligible_cells"] for s in stores.values())
     half = sum(s["N10"]["agreement_at_most_half"] for s in stores.values())
-    n10 = {"eligible_cells": eligible, "agreement_at_most_half": half, "applies": bool(2 * half > eligible)}
+    n10 = {"eligible_cells": eligible, "agreement_at_most_half": half, "applies": bool(2 * half > eligible),
+           # reported beside the count that decides; it enters no verdict, sentence or decision (Amendment 1, D1)
+           "diagnostic_only": {
+               "reading": DIAGNOSTIC_READING,
+               "eligible_cells": sum(s["N10"]["diagnostic_only"]["eligible_cells"] for s in stores.values()),
+               "agreement_at_most_half": sum(s["N10"]["diagnostic_only"]["agreement_at_most_half"]
+                                             for s in stores.values())}}
     violating = [n for n in stores if any(v["store"] == n for v in cp1 + cp2)]
     sentences = ([N8.format(store=n) for n in violating] + [N9.format(store=n) for n in failing]
                  + ([N10] if n10["applies"] else []))
@@ -365,6 +382,9 @@ def report(summary: dict, stores: dict) -> str:
             f"N10: in {summary['N10']['agreement_at_most_half']} of {summary['N10']['eligible_cells']} "
             "pool-supported cells where the labels arm deploys non-trivially, the median certified compression "
             "under agreement is at most half that under labels.", "",
+            f"Diagnostic only, deciding nothing: with \"{DIAGNOSTIC_READING}\" in place of a rate of at least 0.90, "
+            f"the count is {summary['N10']['diagnostic_only']['agreement_at_most_half']} of "
+            f"{summary['N10']['diagnostic_only']['eligible_cells']}.", "",
             "A6 (exploratory, MEASURED): agreement loss by quartile of the baseline score margin is in each "
             "store's JSON file under `A6`. No hypothesis depends on it.", ""]
     return "\n".join(out)
@@ -376,26 +396,11 @@ def run(reg: X.Registry = X.REGISTERED, stores=None) -> dict:
 
 
 def dry_run(reg: X.Registry = X.REGISTERED) -> dict:
-    rep = X.dry_run_common(EXPERIMENT, reg)
-    features = {}
-    for name, spec in reg.stores.items():
-        path = None if reg.q3_features is None else pathlib.Path(reg.q3_features) / f"{name}.npz"
-        if not spec.vidore:
-            continue
-        if path is None or not path.is_file():
-            features[name] = {"ok": False, "problem": "missing file"}
-        elif X.lfs_pointer_oid(path) is not None:
-            features[name] = {"ok": False, "problem": "Git LFS pointer", "lfs_pointer_oid": X.lfs_pointer_oid(path)}
-        else:
-            heads = X.npz_headers(path)
-            features[name] = {"sha256": X.sha256_file(path),
-                              "ok": all(heads.get(k, (None,))[0] == (spec.n_queries,)
-                                        for k in ("base_rank", *MARGINS.values()))}
-    rep["q3_features_for_A6"] = features
+    rep = X.dry_run_common(EXPERIMENT, reg)  # includes the E1 selection files and the Q3 feature files
     rep["analyses"] = ["gates G1-G4", "A1 pool table (37 distinct candidates)", "A2 CP1 and oracles",
                        "A3 P0 under agreement at every registered budget", "A4 cross-construct miss (CP2)",
                        "A5 paired comparison with the labels arm", "A6 exploratory margin analysis",
-                       "H4a, H4b, H4c; N8, N9, N10"]
+                       "H4a, H4b, H4c; N8, N9, N10; the diagnostic-only N10 count"]
     return rep
 
 
@@ -409,8 +414,6 @@ def main(argv=None) -> int:
     if not args.run:
         rep = dry_run()
         X.print_dry_run(rep, as_json=args.json)
-        if not args.json:
-            print(f"  Q3 features for A6: { {k: v['ok'] for k, v in rep['q3_features_for_A6'].items()} }")
         return 0 if rep["inputs_ok"] else 1
     run(X.REGISTERED, args.store)
     return 0

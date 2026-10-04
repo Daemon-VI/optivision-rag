@@ -2,7 +2,8 @@
 
 Specification: ``reports/research/NEXT_PHASE_PREREGISTRATION.md`` as committed in
 ``73085ab637679f30fffece6632eb7b9e92adff79`` and recorded in the registry by
-``d408b96db87698f76f5f320b8ee8591a3d75ecd9``. Section numbers below refer to it.
+``d408b96db87698f76f5f320b8ee8591a3d75ecd9``, with Amendment 1 of 2026-10-04 in its
+Appendix C. Section numbers below refer to that document.
 
 Nothing here changes Method C or the library. The statistics are imported from
 ``e1_stats.py`` and ``e1_1_study.py`` (frozen at E1.2); this module only wires them to
@@ -46,10 +47,13 @@ PREREG_COMMIT = "73085ab637679f30fffece6632eb7b9e92adff79"
 PREREG_BLOB = "fa9deb73fdf380f06141d89cfaf145444f883506"
 REGISTRY_COMMIT = "d408b96db87698f76f5f320b8ee8591a3d75ecd9"
 
-#: Versions of the preregistration this harness implements. The registered text, plus
-#: any later version that only appends dated amendments to its Appendix C: the commit
-#: that makes an amendment adds the new blob here.
-PREREG_BLOBS_IMPLEMENTED = (PREREG_BLOB,)
+#: The text this harness implements: the registered text with Amendment 1 (2026-10-04)
+#: appended to its Appendix C. A later amendment replaces this value in its own commit.
+PREREG_BLOB_IMPLEMENTED = "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700"
+#: sha256 of the registered text up to and including the heading of Appendix C (LF line
+#: endings). That part is frozen; an amendment only adds text below the heading.
+PREREG_FROZEN_UNTIL = "## Appendix C. Amendments\n"
+PREREG_FROZEN_SHA256 = "6bf057a2dbcab778e2e986c35c0afb2f794877a08568b35a949f73380103e389"
 
 #: sha256 of the 40 candidate specifications (section 22.1): the JSON array of
 #: {"position", "family", "pipeline"} objects, sorted keys, separators "," and ":".
@@ -132,6 +136,91 @@ E1_SELECTIONS = {
     **{n: f"reports/research/E1/real/{n}_selections.npz" for n in E.DATASETS},
     **{n: f"reports/research/E1/confirm/{n}_selections.npz" for n in E.CONFIRMATION},
 }
+
+# Auxiliary input hashes (Amendment 1, part 4): sha256 of the file contents. They are
+# integrity checks only; a mismatch stops a run before the file is used.
+E1_SELECTION_SHA256 = {
+    "colpali_docvqa": "5118210e00d8a41d2f43d6969347400e709a73f6f29b1fba7b375aaae1efe0bd",
+    "colpali_infovqa": "6f79293b9e41299a52765aa0bbedf1a3973ae55cbd735cde25af89307e17f7f8",
+    "colqwen2_docvqa": "a326c212618ce49980ab8ea2dd7499aeb740ecc0e5b70bbbf1b8ce37167af26f",
+    "colqwen2_infovqa": "5ae5ab0baa51a48d2c34e99e52093f36489707d90e04784cf4763e2661f1ca1e",
+    "colqwen25_docvqa": "ef3dff3f9173a594f74a799a3913501d82722d5cda8cdb5d0a5f202da302578d",
+    "colqwen25_infovqa": "81544c164fb14f74f80d86cc723dc3bf1dd524fc4f3df259339692e610ff95ab",
+    "scifact": "381c4a3e09daefc89e0575135d0cd4d257142e271e1d326e6fb9386450a78935",
+}
+Q3_FEATURE_SHA256 = {
+    "colpali_docvqa": "6415c7ddbc9600ea21d887ab619b7783f6678966dfb517504adf13da8116588b",
+    "colpali_infovqa": "5babb5469ef1c9ae3fcad67ac4914f093fffa4d1449d5b19fa33a1c9a1cad0c4",
+    "colqwen2_docvqa": "03ba315d8ee267628ab5265dbb3d403f38c3c6664d7837f7de515a64239e3506",
+    "colqwen2_infovqa": "1d9a3e6a2ac720640826286f2dd1c498446eb48cc627fadb8919a20bf7fbdde3",
+    "colqwen25_docvqa": "a5f9d2427f7cf1f032c8dff108503dd1455dbbb77500327521a1d1102f13bdf2",
+    "colqwen25_infovqa": "b039e5f0aaf0e3ed6cf7874cf8e0961271c764c5d39f127092ea6600e9c3462e",
+}
+#: the vector files X3 reads: outside git, paths relative to the data directory
+VECTOR_SHA256 = {
+    "colpali_docvqa": {
+        "cache/colpali_docvqa_test_subsampled.npz":
+            "2ff460f4283916a1c50a16bd510b181eba3ebfc2b10ca20611cb2ad9f3dfd5f3",
+        "cache/colpali_docvqa_test_subsampled.queries.npz":
+            "722a67fc5017be9a3773e09c0a1af0f04f2aea2c59f8999eba2de17df7c6fbf6",
+        "vidore_docvqa_test_subsampled/queries.json":
+            "4734e6e46c44af9e98ce26c66a7b19bd16ac8a82f526d5fbd56f2ca05d382708"},
+    "colpali_infovqa": {
+        "cache/colpali_infovqa_test_subsampled.npz":
+            "51453e93172cf14dc60994086f05af222e9fd0bd32a5b888060231e3a482ba95",
+        "cache/colpali_infovqa_test_subsampled.queries.npz":
+            "b99796531e7eb79d1eaa9806e0448ad65703ce39ca903c3e95613aa5ccce1e46",
+        "vidore_infovqa/queries.json":
+            "f5a64eacf890c407fc4632319f4317704454ad971c2637bf2b88b22870fa68af"},
+    "colqwen2_docvqa": {
+        "vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_docs.npz":
+            "01412095103c4029487652887ab6668a15c0cc29a811c3e108dd18fb566b4da0",
+        "vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_queries.npz":
+            "e4e9e5798658d6116ea27b9b50fd872ef74376e9914abf0ac6da88c760b772b7",
+        "vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_qrels.json":
+            "5dcd8035448318a9e15716f08c10d958c1332853f57926585690cd8ee1ee7ab6"},
+    "colqwen2_infovqa": {
+        "vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_docs.npz":
+            "c4182f57404173341dafe78eef02d8ed3ebc967f1471880ba212b7676d9b679f",
+        "vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_queries.npz":
+            "53504bb742a959546fd9fb35b53ed917eb092a43a00f914abc0e22e9750aa973",
+        "vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_qrels.json":
+            "9be499c909f3f618cb5fac43202bf0a10b734d3659313d96a3b4bdee0a714229"},
+    "colqwen25_docvqa": {
+        "vectors/colqwen2.5-v0.2_docvqa_test_subsampled_docs.npz":
+            "8b34b9eeabdfa2e5445e5d75b6ff03f0b0a0e0a61247c2f3327e6f4e44e29eed",
+        "vectors/colqwen2.5-v0.2_docvqa_test_subsampled_queries.npz":
+            "1d46db6d1c96a06a90f846cf3ac06079492c94cebe5b4755313f95d7224e4d0f",
+        "vectors/colqwen2.5-v0.2_docvqa_test_subsampled_qrels.json":
+            "5dcd8035448318a9e15716f08c10d958c1332853f57926585690cd8ee1ee7ab6"},
+    "colqwen25_infovqa": {
+        "vectors/colqwen2.5-v0.2_infovqa_test_subsampled_docs.npz":
+            "d4fe391654371fddb26c574d0862f364559d5e8fe1fa32afaf4e49ce192b1324",
+        "vectors/colqwen2.5-v0.2_infovqa_test_subsampled_queries.npz":
+            "15e05d4b043a0c14744eeaa7fee97c2bf901a937a0eb60d083ad793ff93729da",
+        "vectors/colqwen2.5-v0.2_infovqa_test_subsampled_qrels.json":
+            "9be499c909f3f618cb5fac43202bf0a10b734d3659313d96a3b4bdee0a714229"},
+    "scifact": {
+        "vectors/scifact_answerai-colbert-small-v1_docs.npz":
+            "e29c127bbc5ed500f7b6988b4f13b4b96e45e35915ce438d509a384c340c5864",
+        "vectors/scifact_answerai-colbert-small-v1_queries.npz":
+            "ede243a3d79c9df49948357b6ad20b9693edfeef5bac07a398c68e828b00c53d",
+        "vectors/scifact_qrels_test.json":
+            "7b35922b4c7fe32bfb0c0c4d0e9ac81ae60712a9a4caa43af2b100503c827a4a"},
+}
+
+#: The code an experiment runs, besides the library tree. Its git hashes are the identity
+#: every unit records; units are combined only when the same code produced them
+#: (Amendment 1, F5).
+FROZEN_SCRIPTS = ("scripts/research/e1_stats.py", "scripts/research/e1_1_study.py",
+                  "scripts/research/e1_common.py")
+EXPERIMENT_CODE = {
+    "X1": ("scripts/research/x_common.py", "scripts/research/x1_agreement.py", *FROZEN_SCRIPTS),
+    "X2": ("scripts/research/x_common.py", "scripts/research/x2_budget.py", *FROZEN_SCRIPTS),
+    "X3": ("scripts/research/x_common.py", "scripts/research/x3_symmetry.py", *FROZEN_SCRIPTS,
+           "scripts/universal_study/s7b_selection_rules.py"),
+}
+LIBRARY_TREE = "src/optivision"
 E1_METHODS = tuple(E1S.METHODS)  # A, A-bonf, then B, C, C-split, D at each delta
 
 # Budgets (sections 6 and 11.1)
@@ -195,6 +284,9 @@ class Registry:
     out_roots: dict
     e1_selections: dict = field(default_factory=dict)
     q3_features: pathlib.Path | None = None
+    selection_sha256: dict = field(default_factory=dict)
+    feature_sha256: dict = field(default_factory=dict)
+    vector_sha256: dict = field(default_factory=dict)
     s0_spec_sha256: str = S0_SPEC_SHA256
     code_blobs: dict = field(default_factory=dict)
     root: pathlib.Path = ROOT
@@ -237,17 +329,20 @@ REGISTERED = Registry(
     out_roots={x: RESEARCH / x for x in ("X1", "X2", "X3")},
     e1_selections={k: ROOT / v for k, v in E1_SELECTIONS.items()},
     q3_features=RESEARCH / "Q3" / "features",
+    selection_sha256=E1_SELECTION_SHA256,
+    feature_sha256=Q3_FEATURE_SHA256,
+    vector_sha256=VECTOR_SHA256,
     code_blobs=CODE_BLOBS,
     registered=True,
 )
 
-# ------------------------------------------------------------ open points (not decided)
+# ------------------------------------------------------- open points and Amendment 1
 
-#: Points the preregistration leaves technically open. ``implemented`` is the reading
-#: this harness carries. None of them is decided here: a registered run of an
-#: experiment refuses to start until every point that affects it is in
-#: ACCEPTED_OPEN_POINTS, which only the project owner fills (with a dated amendment in
-#: Appendix C of the preregistration, committed before the run it affects).
+#: Points the registered text left technically open, each with the reading the harness
+#: implements. The project owner accepted all seven as implemented; Amendment 1 of
+#: 2026-10-04 (Appendix C of the preregistration, part 1) records that. A registered run
+#: refuses to start unless every point that affects it is in ACCEPTED_OPEN_POINTS and the
+#: amended text is the one committed at HEAD.
 OPEN_POINTS = {
     "OP1": {"affects": ("X3",),
             "text": "T1, the signed coordinate permutation with seed 0 (section 12.3): the text does "
@@ -293,7 +388,8 @@ OPEN_POINTS = {
                            "budget), both error levels counted together; the labels arm deploys "
                            "non-trivially when its non-trivial deployment rate is at least 0.90."},
 }
-ACCEPTED_OPEN_POINTS: frozenset = frozenset()
+#: accepted by the project owner on 2026-10-04, exactly as implemented (Amendment 1, part 1)
+ACCEPTED_OPEN_POINTS: frozenset = frozenset(OPEN_POINTS)
 
 
 class RegisteredInputMismatch(SystemExit):
@@ -448,21 +544,106 @@ def check_store_files(spec: StoreSpec, reg: Registry = REGISTERED) -> dict:
     return out
 
 
-def check_selection_file(name: str, reg: Registry = REGISTERED) -> dict:
-    """The E1 per-seed selections used by gate G4: present, real content, expected keys. Headers only."""
-    path = reg.e1_selections.get(name)
+def check_file_hash(path, registered: str | None) -> dict:
+    """One auxiliary input against its registered sha256 (Amendment 1, part 4). Hash only.
+
+    ``ok``: the file is present with real content and, where a hash is registered, has it.
+    ``identity_ok``: the same, or a Git LFS pointer to the registered object.
+    """
     if path is None or not pathlib.Path(path).is_file():
-        return {"store": name, "ok": False, "problem": "missing file"}
+        return {"registered_sha256": registered, "ok": False, "identity_ok": False, "problem": "missing file"}
     oid = lfs_pointer_oid(path)
     if oid is not None:
-        return {"store": name, "ok": False, "lfs_pointer_oid": oid,
-                "problem": "Git LFS pointer; fetch the object before a run"}
-    heads = npz_headers(path)
-    want = [sel_key(n, t, m) for n in reg.e1_budgets for t in PRIMARY_THRESHOLDS for m in E1_METHODS]
-    missing = [k for k in want if k not in heads]
-    shapes_ok = all(heads[k] == ((reg.n_seeds,), "int16") for k in want if k in heads)
-    return {"store": name, "sha256": sha256_file(path), "keys": len(heads), "missing_keys": missing,
-            "ok": bool(not missing and shapes_ok)}
+        return {"registered_sha256": registered, "lfs_pointer_oid": oid, "ok": False,
+                "identity_ok": registered in (None, oid), "problem": "Git LFS pointer; fetch the object before a run"}
+    digest = sha256_file(path)
+    out = {"registered_sha256": registered, "sha256": digest, "ok": registered in (None, digest)}
+    out["identity_ok"] = out["ok"]
+    if not out["ok"]:
+        out["problem"] = "the file does not hash to its registered value"
+    return out
+
+
+def check_selection_file(name: str, reg: Registry = REGISTERED) -> dict:
+    """The E1 per-seed selections read by gate G4: registered hash, expected keys. Headers only."""
+    path = reg.e1_selections.get(name)
+    out = {"store": name, **check_file_hash(path, reg.selection_sha256.get(name))}
+    if out["ok"]:
+        heads = npz_headers(path)
+        want = [sel_key(n, t, m) for n in reg.e1_budgets for t in PRIMARY_THRESHOLDS for m in E1_METHODS]
+        out["keys"], out["missing_keys"] = len(heads), [k for k in want if k not in heads]
+        if out["missing_keys"] or not all(heads[k] == ((reg.n_seeds,), "int16") for k in want if k in heads):
+            out.update({"ok": False, "problem": "the file lacks the E1 selection keys"})
+    return out
+
+
+def check_feature_file(name: str, reg: Registry = REGISTERED) -> dict:
+    """The Q3 per-query features read by analysis A6: registered hash, expected arrays. Headers only."""
+    spec = reg.stores[name]
+    path = None if reg.q3_features is None else pathlib.Path(reg.q3_features) / f"{name}.npz"
+    out = {"store": name, **check_file_hash(path, reg.feature_sha256.get(name))}
+    if out["ok"]:
+        heads = npz_headers(path)
+        arrays = ("base_rank", "base_margin_rel", "base_margin_12")
+        if not all(heads.get(k, (None,))[0] == (spec.n_queries,) for k in arrays):
+            out.update({"ok": False, "problem": "the file lacks the feature arrays"})
+    return out
+
+
+def check_auxiliary(experiment: str, reg: Registry = REGISTERED, stores=None) -> dict:
+    """The auxiliary inputs an experiment reads, against the hashes of Amendment 1, part 4.
+
+    X1 and X2 read the E1 selections of every store (gate G4). X1 reads the Q3 features
+    of every store that has registered ones (A6). X3 reads the E1 selections of its
+    datasets for one extra check; its vector files are checked where they are loaded.
+    """
+    names = list(reg.stores) if stores is None else list(stores)
+    needs_all = experiment in ("X1", "X2")
+    selections = {n: check_selection_file(n, reg) for n in names if needs_all or n in reg.selection_sha256}
+    features = {n: check_feature_file(n, reg) for n in names if n in reg.feature_sha256} if experiment == "X1" else {}
+    problems = [f"E1 selections of {n}: {s['problem']}" for n, s in selections.items() if not s["ok"]]
+    problems += [f"Q3 features of {n}: {s['problem']}" for n, s in features.items() if not s["ok"]]
+    return {"e1_selection_files": selections, "q3_feature_files": features, "problems": problems,
+            "ok": not problems,
+            "identity_ok": all(s["identity_ok"] for s in (*selections.values(), *features.values()))}
+
+
+def check_preregistration(root=ROOT) -> dict:
+    """The preregistration in the working tree: its frozen part is the registered text, and the
+    whole file is the amended text this harness implements."""
+    path = pathlib.Path(root) / PREREG_PATH
+    raw = path.read_bytes().replace(b"\r\n", b"\n")
+    cut = raw.find(PREREG_FROZEN_UNTIL.encode("utf-8"))
+    frozen = raw[:cut + len(PREREG_FROZEN_UNTIL.encode("utf-8"))] if cut >= 0 else b""
+    out = {"blob": git_blob_sha1(path), "blob_implemented": PREREG_BLOB_IMPLEMENTED,
+           "blob_registered": PREREG_BLOB, "frozen_part_sha256": sha256_bytes(frozen),
+           "frozen_part_unchanged": sha256_bytes(frozen) == PREREG_FROZEN_SHA256}
+    out["ok"] = bool(out["frozen_part_unchanged"] and out["blob"] == PREREG_BLOB_IMPLEMENTED)
+    return out
+
+
+def code_identity(experiment: str, root=ROOT) -> dict:
+    """The identity of the code an experiment runs (Amendment 1, F5): the git hashes at HEAD of its
+    scripts and of the library tree, and the versions of Python, numpy and SciPy.
+
+    A registered run needs a clean tree, so HEAD is the code that runs. Units are combined
+    into a summary only when their identities are equal.
+    """
+    import scipy
+
+    key = (experiment, str(root))
+    if key not in _CODE_IDENTITY:  # read once: it describes the code this process has loaded
+        paths = (*EXPERIMENT_CODE[experiment], LIBRARY_TREE)
+        r = subprocess.run(["git", "-C", str(root), "rev-parse", *(f"HEAD:{p}" for p in paths)],
+                           capture_output=True, text=True, check=False)
+        hashes = r.stdout.split() if r.returncode == 0 else []
+        out = dict(zip(paths, hashes, strict=True)) if len(hashes) == len(paths) else dict.fromkeys(paths)
+        out.update({"python": sys.version.split()[0], "numpy": np.__version__, "scipy": scipy.__version__})
+        _CODE_IDENTITY[key] = out
+    return dict(_CODE_IDENTITY[key])
+
+
+_CODE_IDENTITY: dict = {}
 
 
 def check_code(reg: Registry = REGISTERED) -> dict:
@@ -530,9 +711,11 @@ def validate_inputs(reg: Registry = REGISTERED, stores=None) -> dict:
     names = list(reg.stores) if stores is None else list(stores)
     checked = {name: check_store_files(reg.stores[name], reg) for name in names}
     out = {"stores": checked, "code": check_code(reg), "method_c": check_method_c(),
-           "generated_candidate_space": check_generated_space(reg, sorted({s.dim for s in reg.stores.values()}))}
+           "generated_candidate_space": check_generated_space(reg, sorted({s.dim for s in reg.stores.values()})),
+           "preregistration": check_preregistration(reg.root)}
     out["identity_ok"] = bool(all(s["identity_ok"] for s in checked.values()) and out["code"]["ok"]
-                              and out["method_c"]["ok"] and out["generated_candidate_space"]["ok"])
+                              and out["method_c"]["ok"] and out["generated_candidate_space"]["ok"]
+                              and out["preregistration"]["ok"])
     out["ok_for_run"] = bool(out["identity_ok"] and all(s["ok_for_run"] for s in checked.values()))
     return out
 
@@ -561,13 +744,14 @@ def require_run_allowed(experiment: str, reg: Registry = REGISTERED, stores=None
             problems.append("Method C constants differ from the E1.2 freeze")
         if not report["generated_candidate_space"]["ok"]:
             problems.append("the generated candidate space does not hash to the registered specification")
+        if not report["preregistration"]["ok"]:
+            problems.append("the preregistration in the working tree is not the amended text this harness implements")
         raise RegisteredInputMismatch(f"{experiment}: registered inputs do not match. Nothing was run.\n  "
                                       + "\n  ".join(problems))
-    if experiment in ("X1", "X2"):  # gate G4 reads the selections stored by E1.1 and E1.2
-        bad = [n for n in report["stores"] if not check_selection_file(n, reg)["ok"]]
-        if bad:
-            raise RegisteredInputMismatch(f"{experiment}: the E1 selection files of {', '.join(bad)} are missing, "
-                                          "are Git LFS pointers, or lack the E1 keys. Nothing was run.")
+    report["auxiliary"] = check_auxiliary(experiment, reg, stores)
+    if not report["auxiliary"]["ok"]:
+        raise RegisteredInputMismatch(f"{experiment}: an auxiliary input does not match. Nothing was run.\n  "
+                                      + "\n  ".join(report["auxiliary"]["problems"]))
     if reg.registered:
         g = git_state(reg.root)
         if not g.get("available"):
@@ -575,8 +759,9 @@ def require_run_allowed(experiment: str, reg: Registry = REGISTERED, stores=None
         if g["tracked_changes"] or g["uncommitted_code"]:
             raise RunNotAllowed(f"{experiment}: uncommitted changes. Each script is committed before its "
                                 "first run (section 22.2)")
-        if not g["prereg_commit_present"] or g["prereg_blob_at_head"] not in PREREG_BLOBS_IMPLEMENTED:
-            raise RunNotAllowed(f"{experiment}: the preregistration at HEAD is not a version this harness implements")
+        if not g["prereg_commit_present"] or g["prereg_blob_at_head"] != PREREG_BLOB_IMPLEMENTED:
+            raise RunNotAllowed(f"{experiment}: the preregistration committed at HEAD is not the amended text "
+                                "this harness implements")
         report["git"] = g
     return report
 
@@ -1048,17 +1233,22 @@ def environment() -> dict:
 def header(experiment: str, reg: Registry, validation: dict | None = None) -> dict:
     """What identifies a result file: the registration, the code, Method C, the seeds, the inputs."""
     g = git_state(reg.root)
-    inputs = None
+    inputs = auxiliary = None
     if validation is not None:
         inputs = {n: {"npz_sha256": s["npz"]["sha256"], "json_sha256": s["json"]["sha256"],
                       "candidate_spec_sha256": s["meta"]["candidate_spec_sha256"]}
                   for n, s in validation["stores"].items()}
+        auxiliary = {kind: {n: s.get("sha256") for n, s in files.items()}
+                     for kind, files in validation.get("auxiliary", {}).items() if kind.endswith("_files")}
     return {
         "experiment": experiment,
         "registered_configuration": reg is REGISTERED,
         "preregistration": {"path": PREREG_PATH, "commit": PREREG_COMMIT, "blob": PREREG_BLOB,
-                            "registry_commit": REGISTRY_COMMIT, "blob_at_head": g.get("prereg_blob_at_head")},
+                            "registry_commit": REGISTRY_COMMIT, "amendments": ["Amendment 1, 2026-10-04"],
+                            "blob_implemented": PREREG_BLOB_IMPLEMENTED, "blob_at_head": g.get("prereg_blob_at_head")},
         "code_commit": g.get("commit"), "code_tree_clean": not (g.get("tracked_changes") or g.get("uncommitted_code")),
+        "code_identity": code_identity(experiment, reg.root),
+        "auxiliary_inputs": auxiliary,
         "method_c": method_c_config(),
         "candidate_spec_sha256": reg.s0_spec_sha256,
         "seeds": {"resamples": [0, reg.n_seeds - 1], "replication_block": [reg.replication_seeds[0],
@@ -1306,8 +1496,9 @@ def run_store_units(experiment: str, reg: Registry, names, prepare, analyse, pre
 
 
 def finish_experiment(experiment: str, reg: Registry, prefix: str, summarise_fn, report_fn) -> dict:
-    """Summary, report and provenance, once every registered store has a unit from this commit."""
-    commit = git_state(reg.root).get("commit")
+    """Summary, report and provenance, once every registered store has a unit produced by the same
+    code as the code that builds the summary (Amendment 1, F5)."""
+    identity = code_identity(experiment, reg.root)
     stores, pending = {}, []
     for name in reg.stores:
         path = out_path(reg, experiment, f"{prefix}_{name}.json")
@@ -1315,8 +1506,8 @@ def finish_experiment(experiment: str, reg: Registry, prefix: str, summarise_fn,
             pending.append(f"{name}: no valid unit yet")
             continue
         stores[name] = read_json(path)
-        if reg.registered and stores[name]["header"]["code_commit"] != commit:
-            pending.append(f"{name}: produced at another commit; repeat it")
+        if stores[name]["header"].get("code_identity") != identity:
+            pending.append(f"{name}: produced by other code; repeat it")
     if pending:
         print(f"{experiment}: summary not written.\n  " + "\n  ".join(pending), flush=True)
         return {"finished": False, "pending": pending}
@@ -1326,8 +1517,8 @@ def finish_experiment(experiment: str, reg: Registry, prefix: str, summarise_fn,
     write_text(out_dir / f"{experiment}_REPORT.md", report_fn(summary, stores))
     provenance = {
         "experiment": experiment, "environment": environment(), "git": git_state(reg.root),
-        "validation": validate_inputs(reg), "run_log": "runs.json",
-        "e1_selection_files": {n: check_selection_file(n, reg) for n in reg.stores},
+        "code_identity": identity, "validation": validate_inputs(reg),
+        "auxiliary": check_auxiliary(experiment, reg), "run_log": "runs.json",
         "outputs": {p.relative_to(out_dir).as_posix(): sha256_file(p) for p in sorted(out_dir.rglob("*"))
                     if p.is_file() and p.name != f"{prefix}_provenance.json"},
     }
@@ -1339,7 +1530,7 @@ def finish_experiment(experiment: str, reg: Registry, prefix: str, summarise_fn,
 def dry_run_common(experiment: str, reg: Registry = REGISTERED) -> dict:
     """What can be validated without reading a per-query value or writing a result."""
     validation = validate_inputs(reg)
-    selections = {name: check_selection_file(name, reg) for name in reg.stores}
+    auxiliary = check_auxiliary(experiment, reg)
     plan = {}
     for name, spec in reg.stores.items():
         plan[name] = {"encoder": spec.encoder, "pool": spec.pool, "pool_queries": spec.n_queries,
@@ -1359,21 +1550,26 @@ def dry_run_common(experiment: str, reg: Registry = REGISTERED) -> dict:
     blocked = [f"open point {k} is not accepted" for k in sorted(open_points_for(experiment))]
     if g.get("available") and (g["tracked_changes"] or g["uncommitted_code"]):
         blocked.append("the working tree has uncommitted changes")
-    if g.get("available") and g["prereg_blob_at_head"] not in PREREG_BLOBS_IMPLEMENTED:
-        blocked.append("the preregistration at HEAD is not a version this harness implements")
+    if g.get("available") and g["prereg_blob_at_head"] != PREREG_BLOB_IMPLEMENTED:
+        blocked.append("the preregistration committed at HEAD is not the amended text this harness implements")
     if not validation["ok_for_run"]:
         blocked.append("an input does not have its registered bytes on this checkout")
-    # X3 reads the E1 selections only for an extra check of its identity run
-    selections_ok = experiment == "X3" or all(s["ok"] or "lfs_pointer_oid" in s for s in selections.values())
+    if not auxiliary["ok"]:
+        blocked.append("an auxiliary input is missing, is a Git LFS pointer, or does not have its registered hash")
+    # an LFS pointer to the registered object is the registered content, though not usable for a run
+    files = [*auxiliary["e1_selection_files"].values(), *auxiliary["q3_feature_files"].values()]
+    auxiliary_ok = all(s["ok"] or ("lfs_pointer_oid" in s and s["identity_ok"]) for s in files)
     return {
         "experiment": experiment, "mode": "dry run: no per-query value read, no result computed or written",
-        "git": g, "validation": validation, "e1_selection_files": selections, "plan": plan,
+        "git": g, "validation": validation, "auxiliary": auxiliary, "plan": plan,
         "thresholds": {k: list(v) for k, v in THRESHOLDS.items()}, "deltas": list(DELTAS),
         "seeds": header(experiment, reg)["seeds"], "sampling": sampling,
+        "code_identity": code_identity(experiment, reg.root),
         "output_dir": {"path": out_dir.as_posix(), "inside_reports_research": bool(inside), "existing_files": existing},
-        "open_points": {k: v for k, v in OPEN_POINTS.items() if experiment in v["affects"]},
+        "open_points": {k: {**v, "accepted": k in ACCEPTED_OPEN_POINTS} for k, v in OPEN_POINTS.items()
+                        if experiment in v["affects"]},
         "run_blocked_by": blocked,
-        "inputs_ok": bool(validation["identity_ok"] and selections_ok and inside
+        "inputs_ok": bool(validation["identity_ok"] and auxiliary_ok and inside
                           and all(v for s in sampling.values() for v in s.values())),
     }
 
@@ -1384,19 +1580,26 @@ def print_dry_run(rep: dict, as_json: bool = False) -> None:
         return
     v, g = rep["validation"], rep["git"]
     print(f"{rep['experiment']} dry run. No per-query value is read and nothing is computed or written.")
+    pre = v["preregistration"]
     if g.get("available"):
         print(f"  branch {g['branch']} at {g['commit'][:12]}; preregistration commit present: "
-              f"{g['prereg_commit_present']}; its blob at HEAD is the registered one: "
-              f"{g['prereg_blob_at_head'] == PREREG_BLOB}")
+              f"{g['prereg_commit_present']}; the amended text is committed at HEAD: "
+              f"{g['prereg_blob_at_head'] == PREREG_BLOB_IMPLEMENTED}")
+    print(f"  preregistration in the working tree: frozen part unchanged: {pre['frozen_part_unchanged']}; "
+          f"is the amended text the harness implements: {pre['ok']}")
+    aux = rep["auxiliary"]
     for name, s in v["stores"].items():
         state = "registered bytes" if s["ok_for_run"] else ("registered content" if s["identity_ok"] else "MISMATCH")
-        sel = rep["e1_selection_files"][name]
+        sel = aux["e1_selection_files"].get(name)
         meta = s.get("meta", {})
         print(f"  store {name:18s} {state:18s} candidates {meta.get('n_candidates')} "
-              f"({meta.get('n_distinct_candidates')} distinct), chains {meta.get('n_chains')}, "
-              f"E1 selections {'ok' if sel['ok'] else sel.get('problem')}")
+              f"({meta.get('n_distinct_candidates')} distinct), chains {meta.get('n_chains')}"
+              + ("" if sel is None else f", E1 selections {'registered hash' if sel['ok'] else sel.get('problem')}"))
         for p in s["problems"]:
             print(f"      note: {p}")
+    if aux["q3_feature_files"]:
+        print(f"  Q3 feature files with their registered hash: "
+              f"{sum(s['ok'] for s in aux['q3_feature_files'].values())} of {len(aux['q3_feature_files'])}")
     space = v["generated_candidate_space"]
     print(f"  candidate specification generated by the code equals the registered hash: {space['ok']}")
     print(f"  frozen code blobs match: {v['code']['ok']}; Method C constants match the E1.2 freeze: "
@@ -1412,7 +1615,8 @@ def print_dry_run(rep: dict, as_json: bool = False) -> None:
     print(f"  output directory {rep['output_dir']['path']} "
           f"(existing files: {len(rep['output_dir']['existing_files'])})")
     for k, p in rep["open_points"].items():
-        print(f"  {k}: {p['text']}\n      implemented, not accepted: {p['implemented']}")
+        state = "accepted as implemented (Amendment 1)" if p["accepted"] else "implemented, not accepted"
+        print(f"  {k}: {state}: {p['implemented']}")
     print(f"  inputs ok: {rep['inputs_ok']}")
     for b in rep["run_blocked_by"]:
         print(f"  a run is blocked: {b}")

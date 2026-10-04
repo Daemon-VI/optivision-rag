@@ -121,11 +121,35 @@ def transform(corpus: MultiVectorCorpus, queries: MultiVectorCorpus, tid: str) -
 # --------------------------------------------------------- store, gates, P0
 
 
-def load_dataset(name: str) -> tuple:
-    """(dataset, metric, vector files) for a registered store, loaded as E1.0 loaded it."""
+def check_vectors(name: str, reg: X.Registry, s7b) -> dict:
+    """The vector files of a dataset against their registered sha256 (Amendment 1, part 4).
+
+    Keys are paths relative to the data directory. Only the files are hashed.
+    """
+    registered = reg.vector_sha256.get(name, {})
+    out = {}
+    for path in vector_files(name, s7b):
+        key = os.path.relpath(path, s7b.D).replace(os.sep, "/")
+        out[key] = X.check_file_hash(path, registered.get(key))
+    return out
+
+
+def require_vectors(name: str, reg: X.Registry, s7b) -> dict:
+    """{relative path: sha256} of a dataset's vector files. A mismatch stops the run before anything is loaded."""
+    files = check_vectors(name, reg, s7b)
+    bad = [f"{key}: {f['problem']}" for key, f in files.items() if not f["ok"]]
+    if bad or (name in reg.vector_sha256 and set(files) != set(reg.vector_sha256[name])):
+        raise X.RegisteredInputMismatch(f"X3 {name}: a vector file does not match its registered hash. "
+                                        "Nothing was run.\n  " + "\n  ".join(bad))
+    return {key: f["sha256"] for key, f in files.items()}
+
+
+def load_dataset(name: str, reg: X.Registry = X.REGISTERED) -> tuple:
+    """(dataset, metric, vector file hashes) for a registered store, loaded as E1.0 loaded it."""
     s7b = E.load_s7b()
+    files = require_vectors(name, reg, s7b)
     ds, metric = s7b.dataset(E.dataset_arg(name))
-    return ds, metric, {pathlib.Path(p).name: X.sha256_file(p) for p in vector_files(name, s7b)}
+    return ds, metric, files
 
 
 def vector_files(name: str, s7b) -> list:
@@ -142,14 +166,22 @@ def vector_files(name: str, s7b) -> list:
     return [cache, str(pathlib.Path(cache).with_suffix(".queries.npz")), queries_json]
 
 
-def build_store(ds, metric: str, corpus, queries, base: np.ndarray) -> tuple:
-    """The per-query store of one (transformed) dataset: the calls of ``e1_0_rebuild.build``."""
+def build_store(ds, metric: str, corpus, queries, base: np.ndarray, scored_labels: list | None = None) -> tuple:
+    """The per-query store of one (transformed) dataset: the calls of ``e1_0_rebuild.build``.
+
+    ``scored_labels`` collects the label of each candidate as it is scored, so that an error
+    can be logged with how far the build got.
+    """
     rel_labels = ds.relevant()
     rel_base = relevant_from_baseline(base, 1)
     space = recommended_search_space(corpus.dimension)
-    scored = score_space(corpus, queries, space,
-                         progress=lambda sc: print(f"  scored {sc.label:48s} x{sc.report['compression_vs_float32']:7.1f}",
-                                                   flush=True))
+
+    def progress(sc):
+        if scored_labels is not None:
+            scored_labels.append(sc.label)
+        print(f"  scored {sc.label:48s} x{sc.report['compression_vs_float32']:7.1f}", flush=True)
+
+    scored = score_space(corpus, queries, space, progress=progress)
     arrays = {
         "base_labels": per_query_metrics(base, rel_labels, [metric])[metric],
         "base_b1": per_query_metrics(base, rel_base, [metric])[metric],
@@ -258,7 +290,14 @@ def run_unit(name: str, tid: str, loaded: tuple, base0: np.ndarray, reg: X.Regis
         gates["symmetry"] = symmetry_check(base0, base, metric0, per_query_metrics(base, ds.relevant(), [metric])[metric])
         if not gates["symmetry"]["passed"]:
             stop(X.GateFailure, "the symmetry check failed: the transformation is implemented incorrectly", gates)
-    arrays, meta, scored = build_store(ds, metric, corpus, queries, base)
+    scored_labels = []
+    try:
+        arrays, meta, scored = build_store(ds, metric, corpus, queries, base, scored_labels)
+    except Exception as exc:  # a candidate that fails to run: the error ends the unit (Amendment 1, F1)
+        reason = (f"a candidate failed to run after {len(scored_labels)} of {X.N_CANDIDATES} were scored: "
+                  f"{type(exc).__name__}: {exc}")
+        log.end(entry, "invalid", reason=reason[:1000], gates=gates, **timer.record())
+        raise
     meta["transformation"] = record
     meta["evidence"] = X.MEASURED if tid == "T0" else f"{X.MEASURED}, transformed vectors"
     gates["candidate_specification"] = {"sha256": X.spec_sha256(X.candidate_spec(meta["candidates"])),
@@ -304,16 +343,33 @@ def run_unit(name: str, tid: str, loaded: tuple, base0: np.ndarray, reg: X.Regis
     return True
 
 
+def unit_record(name: str, tid: str, reg: X.Registry, log: X.RunLog, identity: dict) -> dict | None:
+    """The record of a unit that can be used: it has a valid attempt, and the code that produced it
+    is the code now at HEAD (the same-code rule, Amendment 1, F5). None otherwise."""
+    path = X.out_path(reg, EXPERIMENT, "units", f"{unit(name, tid)}.json")
+    if log.valid(unit(name, tid)) is None or not path.is_file():
+        return None
+    record = X.read_json(path)
+    return record if record["header"].get("code_identity") == identity else None
+
+
+def exhausted(name: str, tid: str, reg: X.Registry, log: X.RunLog, identity: dict) -> bool:
+    """No usable record after three attempts. Every logged start counts, whatever code made it."""
+    return (unit_record(name, tid, reg, log, identity) is None
+            and len(log.attempts(unit(name, tid))) >= MAX_ATTEMPTS)
+
+
 def run_dataset(name: str, reg: X.Registry, loader, log: X.RunLog, validation: dict) -> None:
     """The units of one dataset that are still missing, T0 first. A failed gate stops X3."""
-    todo = [t for t in TRANSFORMATIONS if log.valid(unit(name, t)) is None
+    identity = X.code_identity(EXPERIMENT, reg.root)
+    todo = [t for t in TRANSFORMATIONS if unit_record(name, t, reg, log, identity) is None
             and len(log.attempts(unit(name, t))) < MAX_ATTEMPTS]
     if not todo:
         return
     loaded = loader(name)
     base0 = maxsim_matrix(loaded[0].queries, loaded[0].corpus)
     for tid in todo:
-        if tid != "T0" and log.valid(unit(name, "T0")) is None:
+        if tid != "T0" and unit_record(name, "T0", reg, log, identity) is None:
             print(f"X3 {name}: no valid T0 unit, so its other transformations are not run", flush=True)
             break
         run_unit(name, tid, loaded, base0, reg, log, validation)
@@ -357,13 +413,17 @@ def overlap(reference: np.ndarray, candidate: np.ndarray, k: int) -> float:
     return float((hits / k).mean())
 
 
-def analyse_dataset(name: str, reg: X.Registry) -> dict | None:
-    """Everything H5 needs for one dataset, rebuilt from its unit files. None until T0 exists."""
+def analyse_dataset(name: str, reg: X.Registry, log: X.RunLog) -> dict | None:
+    """Everything H5 needs for one dataset, rebuilt from its unit files. None until T0 exists.
+
+    Only units produced by the code now at HEAD are used (the same-code rule).
+    """
     def path(*parts):
         return X.out_path(reg, EXPERIMENT, *parts)
 
-    units = {t: X.read_json(path("units", f"{unit(name, t)}.json")) for t in TRANSFORMATIONS
-             if path("units", f"{unit(name, t)}.json").is_file()}
+    identity = X.code_identity(EXPERIMENT, reg.root)
+    units = {t: unit_record(name, t, reg, log, identity) for t in TRANSFORMATIONS}
+    units = {t: u for t, u in units.items() if u is not None}
     if "T0" not in units:
         return None
     stores = {t: dict(np.load(path("store", f"{unit(name, t)}.npz"), allow_pickle=False)) for t in units}
@@ -410,6 +470,7 @@ def analyse_dataset(name: str, reg: X.Registry) -> dict | None:
                            "procedure_outcome": "SIMULATED, pool-supported"},
               "units": {t: {"transformation": u["transformation"], "gates": u["gates"],
                             "code_commit": u["header"]["code_commit"]} for t, u in units.items()},
+              "code_identity": identity,
               "pairs": pairs}
     if "T2a" in pairs and "T2b" in pairs:  # secondary; not required for a verdict
         a, b = pairs["T2a"]["candidates"]["labels"], pairs["T2b"]["candidates"]["labels"]
@@ -501,19 +562,18 @@ def finish(reg: X.Registry, log: X.RunLog) -> dict:
     out_dir = X.out_path(reg, EXPERIMENT)
     datasets = {}
     for name in (*reg.x3_primary, *reg.x3_extension):
-        result = analyse_dataset(name, reg)
+        result = analyse_dataset(name, reg, log)
         if result is not None:
             datasets[name] = result
             X.write_json(out_dir / f"{PREFIX}_{name}.json", result)
+    identity = X.code_identity(EXPERIMENT, reg.root)
     status, pending = {}, []
     for name in reg.x3_primary:
         for tid in list(TRANSFORMATIONS)[1:]:
             pair = datasets.get(name, {}).get("pairs", {}).get(tid)
-            exhausted = any(log.valid(unit(name, t)) is None and len(log.attempts(unit(name, t))) >= MAX_ATTEMPTS
-                            for t in ("T0", tid))
             if pair is not None:
                 status[unit(name, tid)] = "holds" if pair["holds"] else "does not hold"
-            elif exhausted:
+            elif any(exhausted(name, t, reg, log, identity) for t in ("T0", tid)):
                 status[unit(name, tid)] = "incomplete"
             else:
                 pending.append(unit(name, tid))
@@ -526,20 +586,29 @@ def finish(reg: X.Registry, log: X.RunLog) -> dict:
     X.write_text(out_dir / f"{EXPERIMENT}_REPORT.md", report(summary, datasets))
     X.write_json(out_dir / f"{PREFIX}_provenance.json", {
         "experiment": EXPERIMENT, "environment": X.environment(), "git": X.git_state(reg.root),
-        "run_log": "attempts.json",
+        "code_identity": identity, "auxiliary": X.check_auxiliary(EXPERIMENT, reg), "run_log": "attempts.json",
         "outputs": {p.relative_to(out_dir).as_posix(): X.sha256_file(p) for p in sorted(out_dir.rglob("*"))
                     if p.is_file() and p.name != f"{PREFIX}_provenance.json"}})
     print(f"X3: summary, report and provenance written to {out_dir}", flush=True)
     return {"finished": True, "summary": summary}
 
 
-def run(reg: X.Registry = X.REGISTERED, datasets=None, loader=load_dataset) -> dict:
+def run(reg: X.Registry = X.REGISTERED, datasets=None, loader=None) -> dict:
     names = list(datasets or reg.x3_primary)
     validation = X.require_run_allowed(EXPERIMENT, reg, names)
     if reg.registered and os.environ.get("OPTIVISION_SCORE_DEVICE"):
         raise X.RunNotAllowed("X3: OPTIVISION_SCORE_DEVICE is set; the stores were built on the numpy path")
+    if loader is None:
+        s7b = E.load_s7b()
+        for name in names:  # every vector file of the run is checked before anything is loaded
+            require_vectors(name, reg, s7b)
+
+        def loader(name):
+            return load_dataset(name, reg)
+
     log = X.RunLog(X.out_path(reg, EXPERIMENT, "attempts.json"))
-    primary_done = all(log.valid(unit(n, t)) is not None or len(log.attempts(unit(n, t))) >= MAX_ATTEMPTS
+    identity = X.code_identity(EXPERIMENT, reg.root)
+    primary_done = all(unit_record(n, t, reg, log, identity) is not None or exhausted(n, t, reg, log, identity)
                        for n in reg.x3_primary for t in TRANSFORMATIONS)
     if any(n in reg.x3_extension for n in names) and not primary_done:
         raise X.RunNotAllowed("X3: the extension set is run only after the whole primary set is complete")
@@ -604,17 +673,15 @@ def dry_run(reg: X.Registry = X.REGISTERED) -> dict:
     vectors = {}
     if reg.registered:
         s7b = E.load_s7b()
-        for name in (*reg.x3_primary, *reg.x3_extension):
-            files = [pathlib.Path(p) for p in vector_files(name, s7b)]
-            vectors[name] = {p.name: ({"bytes": p.stat().st_size, "sha256": X.sha256_file(p)} if p.is_file() else None)
-                             for p in files}
+        vectors = {name: check_vectors(name, reg, s7b) for name in (*reg.x3_primary, *reg.x3_extension)}
         rep["data_directory"] = s7b.D
     rep["vector_files"] = vectors
-    rep["vectors_ok"] = all(v is not None for files in vectors.values() for v in files.values())
+    rep["vectors_ok"] = all(f["ok"] for files in vectors.values() for f in files.values())
     rep["environment"] = {"OPTIVISION_CACHE_BYTES": os.environ.get("OPTIVISION_CACHE_BYTES"),
                           "OPTIVISION_SCORE_DEVICE": os.environ.get("OPTIVISION_SCORE_DEVICE")}
     if not rep["vectors_ok"]:
-        rep["run_blocked_by"].append("a vector file is missing under the data directory (OPTIVISION_DATA)")
+        rep["run_blocked_by"].append("a vector file under the data directory (OPTIVISION_DATA) is missing or does "
+                                     "not have its registered hash")
     rep["inputs_ok"] = bool(rep["inputs_ok"] and rep["transformations_ok"] and rep["vectors_ok"])
     return rep
 
@@ -635,7 +702,9 @@ def main(argv=None) -> int:
                 print(f"  maps on synthetic unit vectors, d = {d}: "
                       + ", ".join(f"{t} {'ok' if r['passed'] else 'FAILED'} ({r['sha256'][:12]})" for t, r in tests.items()))
             for name, files in rep["vector_files"].items():
-                print(f"  vectors {name:18s} " + ", ".join(f"{f} {'ok' if v else 'MISSING'}" for f, v in files.items()))
+                ok = sum(f["ok"] for f in files.values())
+                print(f"  vectors {name:18s} {ok} of {len(files)} files have their registered hash"
+                      + "".join(f"\n      {key}: {f['problem']}" for key, f in files.items() if not f["ok"]))
             print(f"  inputs ok including vectors and maps: {rep['inputs_ok']}")
         return 0 if rep["inputs_ok"] else 1
     run(X.REGISTERED, args.dataset or (X.X3_EXTENSION if args.extension else None))

@@ -1665,4 +1665,188 @@ Corrections made in the pre-commit audit of 2026-10-04:
 
 ## Appendix C. Amendments
 
-None.
+### Amendment 1, 2026-10-04. Operational decisions before the first run of X1–X3
+
+**Status.**
+
+- **The registered text is unchanged.** Everything above the heading of this appendix is
+  the text committed in `73085ab637679f30fffece6632eb7b9e92adff79` (blob
+  `fa9deb73fdf380f06141d89cfaf145444f883506`), byte for byte. This amendment adds text
+  under that heading and edits nothing else.
+- **Operational clarifications, made before any computation.** It was written on
+  2026-10-04, after the harness commit `95b1cc3ed388903976c67c7ab97751a8007cef93` and
+  before any X1, X2 or X3 computation. No X1, X2 or X3 result existed. It is committed
+  before the analyses it affects, so under §2 it is an amendment and not a deviation.
+- **No outcome was inspected.** No per-query outcome value was read to make these
+  decisions. What had been read: file hashes, array names, shapes and types, candidate
+  metadata, and synthetic test data.
+- **What it does not alter.** The scientific hypotheses (§7), the datasets and stores
+  (§9), the candidate space S0 (§14.1), every threshold, the Method C settings (§14.2),
+  the query-budget definitions and their two classes (§6, §11.1), the seeds, and the
+  primary decision criteria (§7, §17). No store or candidate hash of §22.1 is changed.
+- **Decided by** the project owner. The scripts are brought into line with this amendment
+  in the commit that adds it.
+
+**Four kinds of item.** Every item below carries one of these marks.
+
+| mark | meaning |
+|---|---|
+| **clarification** | protocol clarification: it settles a point the registered text left open, or says which reading of a sentence applies |
+| **implementation** | implementation requirement: how the scripts must behave for a run to be valid and traceable. It has no scientific content |
+| **diagnostic** | diagnostic-only output: a number that is reported and decides nothing |
+| **amendment** | an explicit pre-run change to a registered operational rule, made before any affected computation and without using experimental outcomes |
+
+Three items state a rule that differs from a sentence of the registered text. Each says so
+and governs X1–X3: F1 (the row of §16.7 on a candidate that fails to run, for X3 only), O1
+(the drawn curves of §11.5) and O2 (the list of scripts in §22.3).
+
+#### 1. The seven open points
+
+The registered text left seven points technically open. Each is accepted exactly as the
+harness at `95b1cc3` implements it. All seven are **clarifications**.
+
+| id | where | decision |
+|---|---|---|
+| OP1 | §12.3, T1 | `rng = numpy.random.default_rng(0)`; `perm = rng.permutation(d)`; then independent signs `rng.integers(0, 2, size=d) * 2 - 1`. Coordinate j of the transformed vector is `signs[j] * v[perm[j]]`. Applied to documents and queries |
+| OP2 | §12.3, T3 | One generator `numpy.random.default_rng(3)`. Documents are processed in corpus order, with an independent `rng.permutation(n_i)` for a document of n_i rows. The row annotations (`protected`, `positions`, `weights`, `importance`) move with their rows. Queries are not changed |
+| OP3 | §12.3, T2a and T2b | The rotation convention is U·v: every document and query vector v becomes U v, as §12.2 writes it. For vectors stored as rows X this is `X @ U.T`, computed in float64 in blocks of 65,536 rows and stored as float32 |
+| OP4 | §12.5 step 2, the T0 gate | The stricter gate. A T0 store that is not identical to the committed store passes only if both registered constructs and all four registered arrays satisfy it: the pool retentions of all 40 candidates agree within 0.001 under labels and under agreement, and at least 99.5% of the entries are identical in each of `base_labels`, `base_b1`, `cand_labels` and `cand_b1` |
+| OP5 | §11.5, the borderline rule | The extra registered seeds (2000–3999) go to these cells and no others: the H3 cells, primary and secondary; the H4c cells; and, for each n*, the cells met when the registered budgets are scanned downward from the largest to the first one that fails, that one included. A cell below the first failure cannot change n* and gets no extra seeds |
+| OP6 | §10.5, analysis A6 | Both registered Q3 margins, each reported separately: the relevance margin (`base_margin_rel`) and the top-2 margin (`base_margin_12`). Quartiles of the margin over the store's pool (`numpy.quantile` at 0.25, 0.5 and 0.75; a query on an edge goes to the upper quartile). Per distinct candidate, 1 − mean agreement in each quartile |
+| OP7 | §19, N10 | A cell counts as one "where the labels arm deploys non-trivially" when its non-trivial deployment rate under labels is at least 0.90. Cells are (store, threshold, δ, pool-supported budget), and both error levels are counted together |
+
+**D1, diagnostic.** The N10 count is also reported under the alternative reading "more
+than half of the resamples deploy non-trivially", in place of "at least 0.90". The
+alternative N10 count is always reported alongside the primary N10 count. It is
+diagnostic only and does not affect any verdict, threshold, candidate selection, n*, the
+H3 or H4c decisions, or any registered hypothesis outcome.
+
+#### 2. Failure handling
+
+A *unit* is one store in X1 and X2, and one (dataset, transformation) in X3, the identity
+T0 included.
+
+| id | mark | rule |
+|---|---|---|
+| F1 | amendment | **A candidate that fails to run in X3.** The error ends that unit. The error counts as one of the unit's three attempts (§21, rule 4). After three attempts the (dataset, transformation) pair is incomplete. F1 replaces the candidate-failure treatment of §16.7 ("recorded; not rejected; its chain stops there") for X3 only, where a store holds one row of values per candidate and has no way to hold a failed one. F1 does not apply to XH, where that row of §16.7 stands as registered |
+| F2 | clarification | **H5 with incomplete pairs.** An incomplete pair prevents H5 from being supported. H5 fails if any completed pair fails. H5 is "not assessable" only when no completed pair fails and at least one pair is incomplete. A pair is incomplete when its own unit, or the T0 unit of its dataset, has no valid attempt after three |
+| F3 | implementation | **Sleep.** A unit is invalid if the machine slept for more than 5 seconds during that unit. Sleep is measured as the wall-clock time of the unit minus its time on a clock that stops while the machine sleeps. The results of an invalid unit are not written. The attempt is logged and the unit is repeated (§20) |
+| F4 | implementation | **Stop conditions.** The stop conditions of the harness at `95b1cc3` remain in force. They are listed below |
+| F5 | implementation | **Same code.** Units may be combined into a summary only when the same code produced them. The rule is given below |
+
+**F4, the stop conditions.** A run is refused, or stops and writes no result for the unit
+concerned, in each of these cases.
+
+- An input does not have its registered identity (§22.1, and part 4 below); or the
+  candidate list the code generates does not hash to the registered value; or a frozen
+  code file differs from its registered blob.
+- The code is not committed; or the text of this document at the commit that runs is not
+  the text the scripts implement.
+- A gate fails: G1–G4 in X1; G1, G2 and G4 in X2; the T0 gate or the symmetry check in X3.
+- In X2, the selections of A, A-bonf, B, C-split or D at n = 50, 100 or 225 under labels
+  differ from those E1 stored. §11.3 runs them "exactly as in E1".
+- P0 deploys less compression at a larger budget on nested samples (§11.6).
+- A miss rate fails the check of §16.3 after its replication: P0, I8, D and C-split in X2;
+  P0 in X1.
+- In X1, an agreement value is neither 0 nor 1/log2(1 + r) for a rank r within the cut-off.
+- In X3, a rebuilt store holds a value that is not finite or not in [0, 1], or a
+  `base_b1` value other than 1; or the candidate list that was scored does not hash to the
+  registered value; or, where the T0 store equals the committed store exactly, P0 at
+  n = 225 and δ = 0.05 does not reproduce the selections E1 stored.
+- In X3, an extension dataset is requested before the primary set is complete; or scoring
+  is directed to a device other than the numpy path the stores were built on.
+
+**F5, the same-code rule.**
+
+- Each unit records the identity of the code that produced it. The identity is the git
+  hashes, at the commit that ran, of `scripts/research/x_common.py`; of the experiment's
+  script (`x1_agreement.py`, `x2_budget.py` or `x3_symmetry.py`); of the frozen scripts
+  `e1_stats.py`, `e1_1_study.py` and `e1_common.py`; of the library tree `src/optivision`;
+  in X3 also of the dataset loader `scripts/universal_study/s7b_selection_rules.py`; and
+  the versions of Python, numpy and SciPy.
+- A summary, a report and a verdict are built only from units whose recorded identity is
+  the identity of the code that builds the summary.
+- A unit with another identity is not used. It is repeated, and in X3 the repeat counts
+  as one of the unit's three attempts.
+- A commit that changes none of these files, such as one that adds results, leaves the
+  identity unchanged.
+
+#### 3. Outputs and reporting
+
+| id | mark | rule |
+|---|---|---|
+| O1 | clarification | **No figure is required.** §11.5 item 1 speaks of curves "drawn with different markers". The tables that give the pool-supported budgets and the extrapolated budgets in separate columns satisfy §11.5. Both kinds of column hold SIMULATED rates; the only observed outcome remains the full-pool decision (§11.1) |
+| O2 | clarification | **Scripts.** `scripts/research/x_common.py`, the module the three experiment scripts share, is part of the registered script set of §22.3 |
+| O3 | implementation | **Registry.** The X1, X2 and X3 rows of `reports/research/README.md` are updated by hand after each actual run (§22.3). The scripts do not edit the registry |
+| O4 | clarification | **Reporting conventions.** R1–R13 below are frozen. No other reporting convention is introduced |
+
+| id | point | convention |
+|---|---|---|
+| R1 | full-pool decision: "per store, construct and threshold" (§11.1) names no δ | computed at both registered levels; 0.05 is shown in the report |
+| R2 | thresholds of A2 and H4b | CP1 and the oracle comparison at 0.99, 0.97, 0.95; at 0.90 the agreement side only, since 0.90 is registered for agreement alone |
+| R3 | H3 secondary: "the same at T = 0.99, and with 'substantial'" | three cells: (0.99, non-trivial), (0.97, substantial), (0.99, substantial) |
+| R4 | "the class of the budget that decides" n* | the class of n* itself; when there is none, of the largest budget |
+| R5 | an oracle that does not exist | compression 1.0, as E1 does; ratios to an oracle use the median over seeds of compression ÷ oracle compression |
+| R6 | I8 | the first of the two `int8(per_vector)` positions (position 1) |
+| R7 | validity check (§11.6, §16.3) | applied to P0 in X1 as well; a confirmed failure stops the run |
+| R8 | replication and borderline re-runs | only the cell that triggered the rule is re-run; the pooled 4,000 seeds decide |
+| R9 | X3 bootstrap | `default_rng(0).integers(0, N, size=(2000, N))`, the library's own convention; 2.5% and 97.5% quantiles; one index set for all candidates |
+| R10 | X3 symmetry check | the "uncompressed per-query metric" is the labelled one; entries that are −inf in both score matrices are left out of the difference |
+| R11 | X3 materiality | judged on the 37 distinct candidates; a pipeline that opens two chains has the same values in both |
+| R12 | H5 when a pair fails and another is incomplete | "fails": a failure under one registered map is a failure; "not assessable" only when no pair fails and one is incomplete |
+| R13 | N11 and N12 when only the P0 outcome is material | the registered sentence with "the outcome of P0" in place of "candidate k" |
+
+#### 4. Auxiliary input hashes
+
+**Implementation.** These sha256 hashes are provenance and input-integrity checks only.
+They do not change the scientific protocol, and no store or candidate hash of §22.1 is
+changed. The scripts stop on a mismatch, before the file is used.
+
+E1 selection files, read by gate G4. Paths are under `reports/research/E1/`.
+
+| file | sha256 |
+|---|---|
+| `real/colpali_docvqa_selections.npz` | `5118210e00d8a41d2f43d6969347400e709a73f6f29b1fba7b375aaae1efe0bd` |
+| `real/colpali_infovqa_selections.npz` | `6f79293b9e41299a52765aa0bbedf1a3973ae55cbd735cde25af89307e17f7f8` |
+| `real/colqwen2_docvqa_selections.npz` | `a326c212618ce49980ab8ea2dd7499aeb740ecc0e5b70bbbf1b8ce37167af26f` |
+| `real/colqwen2_infovqa_selections.npz` | `5ae5ab0baa51a48d2c34e99e52093f36489707d90e04784cf4763e2661f1ca1e` |
+| `confirm/colqwen25_docvqa_selections.npz` | `ef3dff3f9173a594f74a799a3913501d82722d5cda8cdb5d0a5f202da302578d` |
+| `confirm/colqwen25_infovqa_selections.npz` | `81544c164fb14f74f80d86cc723dc3bf1dd524fc4f3df259339692e610ff95ab` |
+| `confirm/scifact_selections.npz` | `381c4a3e09daefc89e0575135d0cd4d257142e271e1d326e6fb9386450a78935` |
+
+Q3 feature files, read by analysis A6. Paths are under `reports/research/Q3/features/`.
+
+| file | sha256 |
+|---|---|
+| `colpali_docvqa.npz` | `6415c7ddbc9600ea21d887ab619b7783f6678966dfb517504adf13da8116588b` |
+| `colpali_infovqa.npz` | `5babb5469ef1c9ae3fcad67ac4914f093fffa4d1449d5b19fa33a1c9a1cad0c4` |
+| `colqwen2_docvqa.npz` | `03ba315d8ee267628ab5265dbb3d403f38c3c6664d7837f7de515a64239e3506` |
+| `colqwen2_infovqa.npz` | `1d9a3e6a2ac720640826286f2dd1c498446eb48cc627fadb8919a20bf7fbdde3` |
+| `colqwen25_docvqa.npz` | `a5f9d2427f7cf1f032c8dff108503dd1455dbbb77500327521a1d1102f13bdf2` |
+| `colqwen25_infovqa.npz` | `b039e5f0aaf0e3ed6cf7874cf8e0961271c764c5d39f127092ea6600e9c3462e` |
+
+Vector files, read by X3. They lie outside git; paths are under the data directory.
+
+| dataset | file | sha256 |
+|---|---|---|
+| `colpali_docvqa` | `cache/colpali_docvqa_test_subsampled.npz` | `2ff460f4283916a1c50a16bd510b181eba3ebfc2b10ca20611cb2ad9f3dfd5f3` |
+| | `cache/colpali_docvqa_test_subsampled.queries.npz` | `722a67fc5017be9a3773e09c0a1af0f04f2aea2c59f8999eba2de17df7c6fbf6` |
+| | `vidore_docvqa_test_subsampled/queries.json` | `4734e6e46c44af9e98ce26c66a7b19bd16ac8a82f526d5fbd56f2ca05d382708` |
+| `colpali_infovqa` | `cache/colpali_infovqa_test_subsampled.npz` | `51453e93172cf14dc60994086f05af222e9fd0bd32a5b888060231e3a482ba95` |
+| | `cache/colpali_infovqa_test_subsampled.queries.npz` | `b99796531e7eb79d1eaa9806e0448ad65703ce39ca903c3e95613aa5ccce1e46` |
+| | `vidore_infovqa/queries.json` | `f5a64eacf890c407fc4632319f4317704454ad971c2637bf2b88b22870fa68af` |
+| `colqwen2_docvqa` | `vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_docs.npz` | `01412095103c4029487652887ab6668a15c0cc29a811c3e108dd18fb566b4da0` |
+| | `vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_queries.npz` | `e4e9e5798658d6116ea27b9b50fd872ef74376e9914abf0ac6da88c760b772b7` |
+| | `vectors/colqwen2-v1.0-merged_docvqa_test_subsampled_qrels.json` | `5dcd8035448318a9e15716f08c10d958c1332853f57926585690cd8ee1ee7ab6` |
+| `colqwen2_infovqa` | `vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_docs.npz` | `c4182f57404173341dafe78eef02d8ed3ebc967f1471880ba212b7676d9b679f` |
+| | `vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_queries.npz` | `53504bb742a959546fd9fb35b53ed917eb092a43a00f914abc0e22e9750aa973` |
+| | `vectors/colqwen2-v1.0-merged_infovqa_test_subsampled_qrels.json` | `9be499c909f3f618cb5fac43202bf0a10b734d3659313d96a3b4bdee0a714229` |
+| `colqwen25_docvqa` | `vectors/colqwen2.5-v0.2_docvqa_test_subsampled_docs.npz` | `8b34b9eeabdfa2e5445e5d75b6ff03f0b0a0e0a61247c2f3327e6f4e44e29eed` |
+| | `vectors/colqwen2.5-v0.2_docvqa_test_subsampled_queries.npz` | `1d46db6d1c96a06a90f846cf3ac06079492c94cebe5b4755313f95d7224e4d0f` |
+| | `vectors/colqwen2.5-v0.2_docvqa_test_subsampled_qrels.json` | `5dcd8035448318a9e15716f08c10d958c1332853f57926585690cd8ee1ee7ab6` |
+| `colqwen25_infovqa` | `vectors/colqwen2.5-v0.2_infovqa_test_subsampled_docs.npz` | `d4fe391654371fddb26c574d0862f364559d5e8fe1fa32afaf4e49ce192b1324` |
+| | `vectors/colqwen2.5-v0.2_infovqa_test_subsampled_queries.npz` | `15e05d4b043a0c14744eeaa7fee97c2bf901a937a0eb60d083ad793ff93729da` |
+| | `vectors/colqwen2.5-v0.2_infovqa_test_subsampled_qrels.json` | `9be499c909f3f618cb5fac43202bf0a10b734d3659313d96a3b4bdee0a714229` |
+| `scifact` | `vectors/scifact_answerai-colbert-small-v1_docs.npz` | `e29c127bbc5ed500f7b6988b4f13b4b96e45e35915ce438d509a384c340c5864` |
+| | `vectors/scifact_answerai-colbert-small-v1_queries.npz` | `ede243a3d79c9df49948357b6ad20b9693edfeef5bac07a398c68e828b00c53d` |
+| | `vectors/scifact_qrels_test.json` | `7b35922b4c7fe32bfb0c0c4d0e9ac81ae60712a9a4caa43af2b100503c827a4a` |
