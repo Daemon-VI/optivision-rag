@@ -72,6 +72,27 @@ CPU. Awaiting review; E7b and Q8 not started.
   evaluation pipeline and is not addressable by E7b.
 - Recommendation: stop Q7.
 
+**Q8 done** (2026-10-04, `reports/research/Q8/REPORT.md`): corpus-size scaling. Awaiting
+review; Q9 and Q10 not started.
+- **Storage and RAM:** linear in pages, plus a fixed shared state, so projectable
+  exactly. Pages within 8 GB:
+
+  | configuration | 128-d models | ColEmbed 4B |
+  |---|---|---|
+  | float32 | 16–23k | 1.1k |
+  | binary | 0.5–0.7M | – |
+  | Ward 1/4 > binary | 2.0–2.8M | – |
+
+- **Full-scan CPU time:** linear in stored vectors from 500 to 4,000 pages (MEASURED,
+  6 configurations, R² ≥ 0.999). Vector count is the latency lever.
+- **Rescoring:** the old per-query rescoring is flat in N. Batched rescoring's gain
+  falls with candidate overlap (7.4x → 2.8x, MEASURED).
+- **Two-tier:** the exhaustive hot scan dominates beyond about 1,300 pages, so two-tier
+  changes RAM, not the scaling class.
+- **1M pages:** projectable as storage arithmetic, not a demonstrated capability.
+  Exhaustive search projects to about 8.6 s per query on this laptop, and quality at
+  scale is unmeasured.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
