@@ -93,6 +93,23 @@ review; Q9 and Q10 not started.
   Exhaustive search projects to about 8.6 s per query on this laptop, and quality at
   scale is unmeasured.
 
+**Q9 done** (2026-10-04, `reports/research/Q9/REPORT.md`): generalization, by re-analysis of
+frozen results only (no new experiment needed). Verdict: **supported with scope
+limitations.** Awaiting review; Q10 not started.
+- **Generalized within the tested set** (4 visual encoders, 1 text encoder, 3 corpora):
+  - vector count drives latency;
+  - relative merging beats pruning;
+  - int8 and centred int4 are near-lossless;
+  - factors do not multiply, and the axes interact;
+  - two-tier preserves quality;
+  - certification difficulty drives the dataset differences;
+  - method C's conditional validity held.
+- **Model-specific:** dimension reduction, plain int4, centred binary, 2-bit and binary
+  strength.
+- **Dataset-specific:** the amount of certifiable compression.
+- **Unsupported:** codec speedups (decode-first), untested models, widths or corpora,
+  quality at scale, and certification at 0.99 with ≤ 225 queries.
+
 ### Q4 summary (axis ablation; MEASURED unless marked)
 
 - **Latency: vector count is the only axis that cuts scan time** in the current
