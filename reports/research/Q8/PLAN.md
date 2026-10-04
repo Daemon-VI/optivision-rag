@@ -151,3 +151,20 @@ and on the projected-RAM crossover. Nothing is extrapolated to other widths.
   only quality-versus-size evidence.
 - **No claim of "validated", "demonstrated" or "production-ready" at any size beyond
   500 real pages.** The V1 and V2 timings cover up to 4,000 duplicated pages.
+
+## 9. Run-validity amendment (2026-10-04, before any valid V1 or V2 result was used)
+
+**The first run is invalid** (started 2026-10-03 22:36).
+- The laptop entered Modern Standby and sleep overnight while timing. The Windows
+  Kernel-Power events show standby until 08:55.
+- The process used about 4,800 CPU-seconds in about 10 hours of wall time.
+- Its only completed configuration (float32) is discarded and not reported as a
+  measurement.
+
+**Rerun conditions.**
+- The design is unchanged.
+- The script asks Windows not to sleep during the run
+  (`SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)`) and records the run's
+  wall-clock start and end.
+- After the run, the System event log is checked for sleep or standby events inside
+  that window. If any occurred, the run is invalid again.

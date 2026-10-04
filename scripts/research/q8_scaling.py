@@ -78,7 +78,19 @@ def timed(fn):
     return time.perf_counter() - t0
 
 
+def keep_awake(on: bool) -> None:
+    """Ask Windows not to sleep while timing (ES_CONTINUOUS | ES_SYSTEM_REQUIRED); no-op elsewhere.
+
+    Added after the first run was invalidated: the laptop entered standby overnight mid-run.
+    """
+    if sys.platform == "win32":
+        import ctypes
+
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | (0x00000001 if on else 0))
+
+
 def main():
+    keep_awake(True)
     t_start = time.time()
     ds, _ = E.load_s7b().dataset(E.dataset_arg("colqwen2_docvqa"))
     corpus, queries = ds.corpus, ds.queries
@@ -147,10 +159,13 @@ def main():
                     "no retrieval metric", "dataset": "colqwen2_docvqa tiled", "n_queries": nq, "repeats": REPEATS,
            "V1_scan": v1, "V2_rescore": v2,
            "environment": E.environment() | {"processor": platform.processor(), "cpus": os.cpu_count()},
+           "wall_clock": {"start": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t_start)),
+                          "end": time.strftime("%Y-%m-%d %H:%M:%S")},
            "seconds": time.time() - t_start}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "validation.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
     print("done", f"{time.time() - t_start:.0f}s", flush=True)
+    keep_awake(False)
     return 0
 
 
