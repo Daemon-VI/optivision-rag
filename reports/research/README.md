@@ -76,3 +76,20 @@ Amendment 1 to the next-phase preregistration (X1, X2, X3), recorded before exec
 - **Repository state at this entry**: nothing of this phase has been pushed
   (`origin/research-investigation` is at `7d87e33`). `main` and `origin/main` are at
   `4d520603469e179135ffd9df922b02d4504b4add`, untouched.
+
+Execution of X1, X2 and X3, recorded after the runs:
+- **Runs**: X1 on 2026-10-04 at `d125232`; X2 on 2026-10-04 and 2026-10-05 at
+  `e4d4865`; X3 on 2026-10-05 at `59d08f2`. The same code at all three commits, under the
+  amended text (blob `445d94cdb1dda8671a7d4c4ba3bbb7f895f15700`). Results committed as
+  `e4d4865`, `59d08f2` and `bbad6bc`. The entry above ("not started") is the state before
+  execution.
+- **Record**: `X_RESULTS.md` indexes what was executed, every attempt, the verdicts, the
+  diagnostics and the hashes of the outputs. The numbers are in `X1/`, `X2/` and `X3/`.
+- **Outcome**: H4a, H4b and H4c supported; H3 primary supported and its three secondary
+  cells fail; H5 fails (13 of 16 primary pairs hold; the three that do not are rotations).
+- **Protocol**: no deviation. No hypothesis, dataset, candidate, threshold, seed, budget,
+  Method C setting or decision rule was changed, and no code file was edited. The invalid
+  X2 attempts (a process stopped for low memory; one unit during which the machine slept)
+  are in `X2/runs.json`. Every X3 unit was valid on its first attempt.
+- **Repository state at this entry**: nothing of this phase has been pushed. `main` and
+  `origin/main` are at `4d520603469e179135ffd9df922b02d4504b4add`, untouched.
