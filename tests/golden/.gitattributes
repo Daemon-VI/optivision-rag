@@ -1,0 +1,6 @@
+# Golden fixtures are small binary files that the tests read straight from a checkout.
+# The repository-wide rules send *.npy and *.npz to Git LFS, and CI checks out without LFS
+# (a pointer file cannot be loaded), so inside this directory they are ordinary blobs and
+# are never converted.
+*.npz -filter -diff -merge -text
+*.npy -filter -diff -merge -text
