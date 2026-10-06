@@ -1,5 +1,57 @@
 # Changelog
 
+## Unreleased (branch `package-universal`, based on `research-investigation` at `91564fd`)
+
+`__version__` stays `0.3.0` and nothing below is released. `optimize()`, `calibrate()`, the 40
+names of `optivision.__all__`, the CLI commands that existed, every old import path and the v1
+file formats are unchanged; `docs/package/MIGRATION.md` lists the observable differences. The
+additions are engineering capability, tested on synthetic data and against the research code for
+numerical equality; no registered experiment evaluated them as a package, and none of the
+research results (`reports/research/`) was changed or re-run.
+
+- **`optivision.certify()` and `CertifiedResult`** (`optivision/api.py`): a second entry point
+  beside `optimize()`. It scores a frozen candidate list on all the queries, lets a selection
+  rule choose the smallest certified candidate or abstain, and returns the decision, a
+  certificate, the evidence, and (unless it abstained) the fitted pipeline and the compressed
+  corpus. Parameters: `target`, `error`, `metric`, `reference` (`auto`, `labels`, `agreement`
+  or a reference object), `space`, `rule`, `query_budget`, `order_seed`, `fallback`, `encoder`,
+  `progress`, `created`. `result.retriever()`, `result.save()` and `result.report()`;
+  `optivision.verify()` checks a certificate or an artifact directory. Nothing certified gives
+  `Outcome.ABSTAIN` and the uncompressed index; there is no default fallback. Design:
+  `docs/package/API_DESIGN.md`.
+- **New top-level names**, loaded on demand: `certify`, `verify`, `verify_certificate`,
+  `load_artifact`, `save_artifact`, `CertifiedResult`, `Certificate`, `CandidateSpace`,
+  `Decision`, `Outcome`, `EncoderIdentity`. `import optivision` also registers the `rotation`
+  stage.
+- **CLI**: `optivision certify VECTORS QUERIES` and `optivision verify PATH`, with `--json`.
+  `certify` exits 0 for every outcome and 2 for invalid input; `verify` exits 1 when a check
+  fails.
+- **`optivision.core`**, a model-agnostic layer over the existing modules (which are not moved
+  or edited): content identities and the vector contract (`identity`, `vectors`); stage traits
+  that state which changes of coordinate basis leave a stage's scores unchanged, fitted-state
+  save and restore, byte accounting and a seeded `RotationProjector` (`stages`); a retrieval
+  seam with exact, compressed, tiered and two-tier retrievers (`retrieve`); references
+  (`LabelReference`, `RankingReference`), `Evidence` and `collect_evidence` (`evaluate`);
+  `CandidateSpace`, the rule (`FixedSequenceBetting`, `BonferroniBetting`), `Decision` and
+  `select` (`selection`); `Certificate`, `create_certificate`, `verify_certificate`,
+  `sign_certificate` (optional HMAC), `save_artifact`, `load_artifact` and `code_identity`
+  (`artifact`). Specifications: `docs/package/CERTIFICATE_SPEC.md`, `METHOD_C_SPEC.md`.
+- **`optivision.backends`**: a `Backend` protocol and wrappers over `NumpyIndex` and
+  `QdrantIndex`, which are not changed, and the canonical import place for the indexes.
+- **Adapters** (`optivision.adapters` is now a package; same imports): `ArrayAdapter`,
+  `CallableAdapter`, `corpus_from_arrays` for bringing your own vectors; `NemotronAdapter`;
+  `EncoderAdapter.identity()` and `.dimension`. `load_adapter` now returns a `NemotronAdapter`
+  for the NVIDIA ColEmbed ids (it used to fall through to the sentence-transformers adapter).
+- **Namespaces and helpers**: `optivision.ext.vision` and `optivision.legacy` name the page
+  layer and the original recipe without moving code; `optivision.testing` holds `make_corpus`,
+  `make_queries`, `random_orthogonal`, `signed_permutation`, `apply_basis`, `reorder_rows`,
+  `basis_probe`, `check_adapter` and `check_stage`.
+- **Tests and documents**: `tests/test_core_*`, `test_api_*`, `test_backends_*`,
+  `test_adapters_*`, `test_cli_certify.py`, `test_integration_*`, `test_public_surface.py` and
+  `test_golden_formats.py` (files written by v0.3.0 keep reading back); the user guide in
+  `docs/package/guide/` with examples that the tests run; the design and audit documents in
+  `docs/package/`.
+
 ## Unreleased (branch `research-investigation`)
 
 - **`ExactIndex.rescore` is batched.**

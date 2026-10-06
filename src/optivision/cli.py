@@ -348,6 +348,11 @@ from .cli_universal import register as _register_universal
 
 _register_universal(app)
 
+# ``certify`` and ``verify`` (certified selection and its checks), same arrangement.
+from .cli_certify import register as _register_certify
+
+_register_certify(app)
+
 
 if __name__ == "__main__":  # pragma: no cover
     app()
