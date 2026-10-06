@@ -1,5 +1,13 @@
 # Architecture
 
+> **Scope of this page.** It describes the original page recipe (v0.1): spatial and
+> redundancy pruning, sign-bit codes and the numpy and Qdrant indexes, as built for
+> page-image encoders. It does not describe the composable layer added later
+> (`stages/`, `compose.py`, `calibration.py`, `optimize.py`; see
+> [UNIVERSAL.md](UNIVERSAL.md)), nor the model-agnostic core and backends on the
+> unreleased development branch. For the layered package architecture see
+> [docs/package/guide/ARCHITECTURE.md](package/guide/ARCHITECTURE.md).
+
 ## Why the pipeline is shaped this way
 
 The project constraint from the abstract is precise: *reduce the memory used by
@@ -114,10 +122,14 @@ Asymmetric scoring by default — query in float32, documents as ±1:
 score(q, d) = Σ_i max_j  q_i · sign(d_j)
 ```
 
-The symmetric alternative (binarise the query too, score by popcount) is faster but
-throws away the one side we can afford to keep precise. A query has ~20 vectors; a
-corpus has millions. `maxsim_hamming` implements it anyway so the ablation can price
-the difference.
+The symmetric alternative (binarise the query too, score by popcount) throws away the
+one side we can afford to keep precise, and no speed advantage was measured: a numpy
+XOR-and-popcount first stage ran 4.4-4.7x slower than decoding the codes to float32
+and using BLAS, on one laptop CPU (`reports/research/Q5Q6/REPORT.md`, section 6);
+compiled kernels were not tested. A query has ~20 vectors; a corpus has millions.
+`maxsim_hamming` implements the symmetric scoring anyway, as a float matrix product
+over the unpacked signs and not as a popcount, so the ablation can price the
+difference.
 
 `int8` scalar quantization is included as the 4× middle ground — not because it is a
 good answer here, but because a table with only "1×" and "32×" in it does not show
@@ -128,11 +140,12 @@ where quality actually starts to bend.
 Two backends, deliberately:
 
 **`NumpyIndex`** — exact brute-force MaxSim over the packed codes. All quality numbers
-in the benchmark come from here, so that a change in the score can only be caused by
-pruning or quantization, never by an ANN graph missing a neighbour. Pages are stored as
-one concatenated code matrix plus an offsets array, and scored with a single matmul
-followed by `np.maximum.reduceat` over the page segments — which is what makes an
-exhaustive index fast enough to be the reference.
+of this recipe's benchmark (`bench.py`) come from here, so that a change in the score
+can only be caused by pruning or quantization, never by an ANN graph missing a
+neighbour (the composable layer scores with `scoring.maxsim_matrix` instead). Pages are
+stored as one concatenated code matrix plus an offsets array, and scored with a single
+matmul followed by `np.maximum.reduceat` over the page segments — which is what makes
+an exhaustive index fast enough to be the reference.
 
 **`QdrantIndex`** — one point per page, whose vector is the whole list of surviving
 patch vectors, compared with a native `MAX_SIM` multivector comparator and

@@ -1,21 +1,31 @@
 """Qdrant-backed multi-vector index.
 
-Qdrant stores one point per page whose "vector" is the whole list of surviving
-patch vectors, and compares them with MaxSim natively — the same late-interaction
-scoring the numpy index does, but with an HNSW graph over the vectors and binary
-quantization applied inside the engine.
+Qdrant stores one point per page whose "vector" is the whole list of the page's
+document vectors, and compares them with MaxSim natively. That is late-interaction
+scoring like the numpy index's, with these differences: the similarity is cosine
+(Qdrant normalises stored vectors and queries), so its scores are not comparable
+with the numpy index's inner products; and on a server an HNSW graph over the
+vectors and binary quantization are applied inside the engine (local path mode is
+brute force and does not use the quantization setting).
 
-Two ways the compression reaches Qdrant:
+What is sent is always ``decode(page.codes, ...)``, never the float vectors the
+codes came from: +/-1 floats for ``binary``, dequantised floats for ``int8`` and the
+stored float32 values only for ``method="none"``. Unless that is the method,
+Qdrant holds no originals to rescore from, and its own rescoring cannot restore
+float32 quality. Its recall, latency and quality were not measured here
+(``docs/RESULTS.md``: the deployment path, not the measurement path).
+
+Two modes, which differ only in the collection's quantization setting:
 
 ``server_quantized`` (default)
-    Send the pruned float32 vectors and let Qdrant binarise them
-    (``BinaryQuantization`` + ``always_ram``). The engine keeps the originals on
-    disk for optional rescoring, so recall is recoverable at query time. This is
-    the deployment-shaped path.
+    Create the collection with ``BinaryQuantization`` + ``always_ram``, so a
+    server keeps a binarised copy of the sent vectors in RAM. Whether and how it
+    rescores is left to Qdrant (no search parameters are passed). This is the
+    deployment-shaped path.
 
 ``client_binary``
-    Send our own +/-1 vectors and let Qdrant treat them as ordinary floats. The
-    index then holds exactly the bits this project produced — useful to prove
+    Create the collection without quantization. With ``method="binary"`` the index
+    then holds exactly the +/-1 vectors this project produced — useful to prove
     the client-side pipeline in isolation, at the cost of Qdrant storing a float
     per bit.
 

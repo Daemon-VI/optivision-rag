@@ -14,7 +14,7 @@ short_description: Visual-token pruning and binary quantization for document ret
 
 # OptiVision RAG
 
-**Quality-constrained, model-agnostic multi-vector compression.**
+**Quality-constrained multi-vector compression behind a model-agnostic interface.**
 
 > The YAML block above is Hugging Face Space metadata. It is ignored by GitHub
 > and by every tool in this repo; see [docs/DEPLOY.md](docs/DEPLOY.md) for how
@@ -25,9 +25,10 @@ short_description: Visual-token pruning and binary quantization for document ret
 OptiVision compresses the index of a late-interaction (multi-vector, MaxSim)
 retriever — ColPali-style page encoders or ColBERT-style text encoders — **to a
 quality target you set**. Give it the vectors your encoder produced and a few
-hundred real sample queries. It chooses token merging, dimension reduction and
-quantization, and reports the retention it measured **on queries that played no
-part in the choice**. The model and the query path are unchanged.
+hundred real sample queries. It chooses token merging and quantization (dimension
+reduction is an experimental opt-in, measured on one encoder), and reports the
+retention it measured **on queries that played no part in the choice**. The model
+and the query path are unchanged.
 
 ```python
 from optivision import MultiVectorCorpus, optimize
@@ -42,7 +43,8 @@ result.pipeline.label(), result.compression_ratio, result.quality_retention
 
 `calibrate()` / `optimize()` with default settings, labels as the reference,
 repeated over 20 random calibration / held-out splits of each query set. This is
-what you should expect when you run it
+what it did on these three encoder and corpus pairs (500, 500 and 5,183 documents;
+451, 494 and 300 queries), not a prediction for another encoder or corpus
 ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R7b):
 
 | target | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
@@ -61,9 +63,9 @@ splits cannot pin down a rate near 95%, and none of this is a guarantee (R10).
 
 ### Fixed configurations, measured on all queries
 
-One named pipeline each, scored on every query, with no choice made from these
-queries. They are only unbiased for a pipeline you pick *in advance*, and
-reading the best row off the table is itself a selection:
+One named pipeline each, scored on every query of the same three corpora, with no
+choice made from these queries. They are only unbiased for a pipeline you pick
+*in advance*, and reading the best row off the table is itself a selection:
 
 | pipeline | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
 |---|---|---|---|
@@ -96,7 +98,7 @@ Exactly six encoders have been measured:
   target in 119 of 120 held-out choices
   ([docs/UNIVERSAL.md](docs/UNIVERSAL.md), R12). OptiVision has thus been
   evaluated empirically on a 2,560-dimensional multi-vector retrieval model, and
-  its model-agnostic compression and optimization machinery kept working at that
+  its compression and optimization machinery kept working at that
   width. That is one model on two 500-page splits; nothing wider is measured.
 - **ColSmol-256M**: the generated corpus only (60 pages, 72 queries, about ±6
   points); a sanity check, not evidence.
@@ -124,6 +126,77 @@ database connectors beyond numpy/Qdrant are **future work**, not results.
 Write-up with every table: [docs/UNIVERSAL.md](docs/UNIVERSAL.md). Release audit:
 [docs/RELEASE-AUDIT-2026-09-27.md](docs/RELEASE-AUDIT-2026-09-27.md). CLI:
 `optivision inspect | compress | calibrate | benchmark | compare`.
+
+## On the development branch: a model-agnostic core and certified selection (unreleased)
+
+None of this is in a release: the latest release, 0.3.0, does not contain it, and
+`__version__` is still `0.3.0` on this branch. It is engineering capability, tested on
+synthetic data and against the research code for numerical equality; no registered
+experiment evaluated it as a package.
+
+What was added, for any late-interaction encoder that hands over one `[n_vectors, dim]`
+float array per document and per query, scored by MaxSim:
+
+- **a vector interface** (`optivision.core`): validation and content identities, the same
+  for every encoder;
+- **composable stages** (token reducers, projections, codecs), each with declared
+  structural traits, including which changes of coordinate basis leave its scores
+  unchanged;
+- **a frozen, hashed candidate list** of pipelines (the default list was shaped by
+  results on the development encoders);
+- **a decision procedure** that selects one pipeline from that list or abstains, under an
+  error level you state, against relevance labels or against agreement with the
+  uncompressed ranking (agreement is not retrieval quality);
+- **a certificate** that records the decision and its assumptions and can be verified
+  (`optivision certify`, `optivision verify`), and an artifact directory holding the
+  codes and the fitted state;
+- **a retrieval seam** (queries in, ranked ids out) and wrappers over the NumPy and Qdrant
+  indexes (`optivision.backends`).
+
+`optimize()` and `calibrate()` are unchanged. A model-agnostic interface is not
+model-independent compression quality: whether a pipeline keeps retrieval quality depends
+on the encoder, the coordinate basis of its vectors, the corpus and the queries, and is
+measured each time; the procedure may abstain. A certificate carries the selection rule's
+own statement, conditional on the assumptions it lists. It is not a statement that the
+compressed index keeps retrieval quality, and it does not carry over to another encoder,
+corpus or coordinate basis.
+
+To try it, install a clone of this branch (`pip install -e ".[merge]"`; the default
+candidate list needs SciPy):
+
+```python
+from optivision import certify, verify
+from optivision.testing import make_corpus, make_queries
+
+# Synthetic vectors exercise the code path; they say nothing about any encoder.
+docs = make_corpus(300, 128, tokens=(10, 20), seed=0)
+queries, qrels = make_queries(docs, 200, noise=0.3, seed=1)
+
+result = certify(docs, queries, qrels, target=0.97, error=0.05)   # default list needs SciPy
+result.outcome, result.certified   # SELECT on this run; ABSTAIN is a normal outcome too
+result.save("artifact/")           # certificate, codes, fitted state, evidence
+verify("artifact/").ok             # integrity, replay from stored evidence, binding to stored codes
+```
+
+What the research record shows, and does not show:
+
+- X1-X3 were run on the seven development stores (three visual encoders on DocVQA and
+  InfoVQA, one text encoder on SciFact), one query pool per corpus, and the registered
+  list of 40 pipelines. H4a-c (agreement with the uncompressed ranking as a reference) and
+  the primary setting of H3 (non-trivial compression at T = 0.97, delta = 0.05) were
+  supported, mostly as
+  resamples of one query pool per corpus and within that pool; **H5, invariance of the
+  outcome under the registered maps of the vectors, failed**: 13 of 16 primary pairs
+  hold, and the three that do not are rotations. At a 0.99 target the registered
+  deployment criterion was not met on any store at pool-sized budgets.
+- Transfer to encoders that took no part in the design has **not** been demonstrated:
+  X1-X3 reuse the encoders that shaped the candidate list.
+- XH, the held-out encoder protocol, has not been registered and has not been run.
+
+See the [user guide](docs/package/guide/README.md), the
+[API design](docs/package/API_DESIGN.md), the
+[boundary between the package and the research](docs/package/FINAL_RESEARCH_BOUNDARY.md)
+and the [certificate format](docs/package/CERTIFICATE_SPEC.md).
 
 ## The original recipe (v0.1): pruning and binary codes for ColPali pages
 
@@ -218,8 +291,9 @@ result — read both tables before drawing a conclusion from either.
 **Under this encoder, the two halves of the proposal do not contribute equally.**
 Pruning is nearly free — 3.5x fewer vectors for 3.9% of nDCG@5.
 Binary quantization is where the quality goes — 12.1% lost *without dropping a single
-token*, while int8 gives 4x for 0.5%. Pruning harder barely matters once binary is in
-play (keeping the top 10% of patches scores the same as keeping the top 50%).
+token*, while int8 gives 4x with no measured loss (100.7%, table above). Pruning harder
+barely matters once binary is in play (keeping the top 10% of patches scores the same as
+keeping the top 50%).
 
 So under E1 the pipeline has two defensible operating points:
 
@@ -228,8 +302,10 @@ So under E1 the pipeline has two defensible operating points:
   0.864 against 0.866 for pruning alone, so int8 adds no measurable ranking distortion on
   top of the pruning
 
-448 KB/page becomes 3.95 KB/page: a million-page archive drops from ~448 GB to ~4 GB.
-At the quality-first setting it is ~32 GB.
+448 KB/page becomes 3.95 KB/page: multiplied out, a million-page archive would drop from
+~448 GB to ~4 GB, and to ~32 GB at the quality-first setting. That is arithmetic from a
+60-page corpus (PROJECTED), not a measurement at that size, and retention at that size
+was not measured.
 
 ### E2 — ColPali-v1.3, real ViDoRe pages
 
@@ -260,8 +336,10 @@ the pages are the same ones. It splits the reversal in two.
 | pruning buys | E1 → E3: 3.55x → 4.20x | E3 → E2: **4.20x → 1.85x** |
 
 **The corpus sets what pruning buys.** Run `python scripts/compare_regimes.py` to
-print it from the benchmark files. E3 is also the best operating point in the project
-(98.7% retention at 134.5x) and the least representative one.
+print it from the benchmark files (its closing line about what the codec costs is the
+earlier reading, superseded by the next paragraph). E3 is also the best operating point
+in the project (98.7% retention at 134.5x, on 60 pages and 72 queries, so about 6
+points either way) and the least representative one.
 
 The codec half is not an encoder property. Per query, a sign code adds the same ~3% of
 score noise under both encoders, and it flips only queries whose float margin over
@@ -283,9 +361,11 @@ budget — and 256 random probe directions do as well as the designed selector
 This part holds under both experiments. A compressed index is worth nothing if
 searching it expands the vectors back to float32, which costs 32x the index and
 is what the obvious implementation does. Scoring here runs in blocks bounded by
-a memory budget, so peak RAM is set by that budget rather than by the size of
-the corpus — 239 MB at the 256 MB default, whether the index holds sixty pages
-or a million. See [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).
+a memory budget, so peak RAM follows that budget instead of the decoded size of
+the index: 239 MB at the 256 MB default, measured on a 4,000-page index (1M
+vectors) scored one query at a time. The stored codes still grow with the corpus,
+and so does the queries-by-pages score matrix of batched scoring; an index of a
+million pages was not measured. See [docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md).
 
 ### Reading either table
 
@@ -429,7 +509,7 @@ src/optivision/
   compression/
     binary.py         bit packing, asymmetric/symmetric MaxSim
   index/
-    numpy_index.py    exact brute-force MaxSim (the reference)
+    numpy_index.py    exact brute-force MaxSim (reference of the original recipe)
     qdrant_index.py   Qdrant multivector + binary quantization
   pipeline.py         OptiVisionRAG.build() / .search()
   bench.py            encode-once, replay-every-variant ablation harness
@@ -439,10 +519,10 @@ src/optivision/
 
   # universal layer (see docs/UNIVERSAL.md)
   representation.py   MultiVectorCorpus: any model's vectors, contiguous + offsets
-  adapters.py         model registry (measured / untested / unverified) + adapters
+  adapters/           model registry (measured / untested / unverified) + adapters
   stages/             merge.py, prune.py, project.py, quantize.py — composable stages
   compose.py          Pipeline, CompressedCorpus
-  scoring.py          exact MaxSim over any store, memory-bounded
+  scoring.py          exact MaxSim over any store; decode and similarity blocks memory-bounded
   evaluation.py       per-query metrics, labels or float-baseline reference, bootstrap
   calibration.py      calibrate(): choose on some queries, report on others
   optimize.py         optimize(): the one-call entry point
@@ -450,8 +530,18 @@ src/optivision/
   storage.py          ExactIndex, TieredIndex, StorageBackend
   benchmark.py        datasets + result matrices
   cli_universal.py    inspect / compress / calibrate / benchmark / compare
+
+  # model-agnostic core and certified selection: unreleased, see "On the development branch"
+  core/               vector contract, stages with declared traits, candidate list and
+                      selection rule, certificates, retrieval seam
+  backends/           Backend protocol; wrappers over NumpyIndex and QdrantIndex
+  api.py              certify(), verify()
+  cli_certify.py      optivision certify / verify
+  testing/            synthetic data and conformance checks for new adapters, stages, backends
+  ext/, legacy/       namespaces that say which layer a name belongs to (no code moved)
 app/streamlit_app.py  demo UI
-docs/                 architecture, results, viva notes, AUDIT-2026-09-27, UNIVERSAL
+docs/                 architecture, results, viva notes, AUDIT-2026-09-27, UNIVERSAL,
+                      package/ (design, specifications and guide of the unreleased core)
 notebooks/            Colab / Kaggle runner for the ColPali benchmark
 reports/universal/    every measured number of the universal layer (JSON + tables)
 scripts/universal_study/  the scripts that produced them
@@ -460,7 +550,7 @@ scripts/universal_study/  the scripts that produced them
 ## Testing
 
 ```bash
-pytest              # 284 tests, no model download needed
+pytest              # no model download needed
 ruff check src tests app
 ```
 

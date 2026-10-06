@@ -1,9 +1,14 @@
 """Exact brute-force MaxSim index over packed codes.
 
-This is the reference implementation: no approximation, no ANN graph, no server.
-Every quality number in the benchmark is produced here so that a change in the
-score can only come from pruning or quantization — never from a recall miss in
-an approximate index. It is also the fallback when Qdrant is unavailable.
+This is the reference index of the original recipe: no ANN graph and no server, and
+the only approximation is the one the codes themselves introduce (the scores are
+exact over the decoded codes, not over the float vectors they came from). Every
+quality number of the original benchmark (``bench.py``) is produced here so that a
+change in the score can only come from pruning or quantization — never from a
+recall miss in an approximate index. The numbers of the universal layer
+(``optimize()``, ``calibrate()``, ``benchmark.py``) come from
+``scoring.maxsim_matrix`` instead. This is the index to select (``backend: numpy``)
+when no Qdrant is available; nothing falls back to it automatically.
 
 Layout on disk (``<path>/``):
 
@@ -27,8 +32,9 @@ from .base import BaseIndex
 
 # Peak float32 working set allowed while scoring. 256 MB holds ~520k vectors at
 # dim 128 — comfortably more than any laptop-scale corpus, so a small index keeps
-# the single-matmul fast path while a million-page index stays bounded instead of
-# expanding to tens of gigabytes.
+# the single-matmul fast path, while a larger index is scored in blocks of this size
+# instead of expanding to its full decoded size (measured on a 4,000-page index only,
+# docs/IMPROVEMENTS.md; the stored codes still grow with the corpus).
 DEFAULT_MAX_DECODED_BYTES = 256 * 1024 * 1024
 
 
@@ -181,8 +187,11 @@ class NumpyIndex(BaseIndex):
         just compressed into, which is precisely the memory the pipeline exists
         to save. Below ``max_decoded_bytes`` the full expansion is cached, so a
         laptop-scale corpus keeps the single-matmul fast path; above it the
-        pages are scored in blocks and peak memory stays bounded however large
-        the corpus grows. The arithmetic is identical either way.
+        pages are scored in blocks, so the float32 working set follows
+        ``max_decoded_bytes`` instead of the decoded size of the index (measured
+        on a 4,000-page index, docs/IMPROVEMENTS.md; the stored codes still grow
+        with the corpus and larger indexes were not measured). The arithmetic is
+        identical either way.
         """
         n_pages = self.n_pages
         if n_pages == 0 or self._codes is None or self._codes.size == 0:

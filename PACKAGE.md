@@ -1,13 +1,13 @@
 # OptiVision RAG
 
-**Quality-constrained, model-agnostic multi-vector compression.**
+**Quality-constrained multi-vector compression behind a model-agnostic interface.**
 
 OptiVision compresses the index of a late-interaction (multi-vector, MaxSim)
 retriever, such as a ColPali-style page encoder or a ColBERT-style text encoder,
 to a quality target you set. Give it your encoder's vectors and a few hundred
-real sample queries. It chooses token merging, dimension reduction and
-quantization, and reports the retention it measured on queries that played no
-part in the choice.
+real sample queries. It chooses token merging and quantization (dimension
+reduction is an experimental opt-in, measured on one encoder), and reports the
+retention it measured on queries that played no part in the choice.
 
 ```python
 from optivision import MultiVectorCorpus, optimize
@@ -17,7 +17,8 @@ queries = MultiVectorCorpus.from_arrays(query_vectors)  # real sample queries (r
 result = optimize(docs, queries=queries, qrels=labels_or_None, quality_target=0.97)
 ```
 
-Measured on held-out queries with default settings (20 random splits, labels):
+Measured on held-out queries with default settings (20 random splits, labels; 500, 500
+and 5,183 documents with 451, 494 and 300 queries):
 
 | target | ColPali · ViDoRe DocVQA | ColPali · ViDoRe InfoVQA | ColBERT-small · SciFact (text) |
 |---|---|---|---|
@@ -46,6 +47,81 @@ multiple-testing problem that it does not correct for. Measured corpora have
 their limits and a release audit are in the
 [repository](https://github.com/Daemon-VI/optivision-rag).
 
+## On the development branch: a model-agnostic core and certified selection (unreleased)
+
+None of this is in a release: the latest release, 0.3.0 (what `pip install optivision-rag`
+installs), does not contain it, and `__version__` is still `0.3.0` on the development
+branch. It is engineering capability, tested on synthetic data and against the research
+code for numerical equality; no registered experiment evaluated it as a package.
+
+What was added, for any late-interaction encoder that hands over one `[n_vectors, dim]`
+float array per document and per query, scored by MaxSim:
+
+- **a vector interface** (`optivision.core`): validation and content identities, the same
+  for every encoder;
+- **composable stages** (token reducers, projections, codecs), each with declared
+  structural traits, including which changes of coordinate basis leave its scores
+  unchanged;
+- **a frozen, hashed candidate list** of pipelines (the default list was shaped by
+  results on the development encoders);
+- **a decision procedure** that selects one pipeline from that list or abstains, under an
+  error level you state, against relevance labels or against agreement with the
+  uncompressed ranking (agreement is not retrieval quality);
+- **a certificate** that records the decision and its assumptions and can be verified
+  (`optivision certify`, `optivision verify`), and an artifact directory holding the
+  codes and the fitted state;
+- **a retrieval seam** (queries in, ranked ids out) and wrappers over the NumPy and Qdrant
+  indexes (`optivision.backends`).
+
+`optimize()` and `calibrate()` are unchanged. A model-agnostic interface is not
+model-independent compression quality: whether a pipeline keeps retrieval quality depends
+on the encoder, the coordinate basis of its vectors, the corpus and the queries, and is
+measured each time; the procedure may abstain. A certificate carries the selection rule's
+own statement, conditional on the assumptions it lists. It is not a statement that the
+compressed index keeps retrieval quality, and it does not carry over to another encoder,
+corpus or coordinate basis.
+
+To try it, install a checkout of the development branch with
+`pip install -e ".[merge]"`; the default candidate list needs SciPy:
+
+```python
+from optivision import certify, verify
+from optivision.testing import make_corpus, make_queries
+
+# Synthetic vectors exercise the code path; they say nothing about any encoder.
+docs = make_corpus(300, 128, tokens=(10, 20), seed=0)
+queries, qrels = make_queries(docs, 200, noise=0.3, seed=1)
+
+result = certify(docs, queries, qrels, target=0.97, error=0.05)   # default list needs SciPy
+result.outcome, result.certified   # SELECT on this run; ABSTAIN is a normal outcome too
+result.save("artifact/")           # certificate, codes, fitted state, evidence
+verify("artifact/").ok             # integrity, replay from stored evidence, binding to stored codes
+```
+
+What the research record shows, and does not show:
+
+- X1-X3 were run on the seven development stores (three visual encoders on DocVQA and
+  InfoVQA, one text encoder on SciFact), one query pool per corpus, and the registered
+  list of 40 pipelines. H4a-c (agreement with the uncompressed ranking as a reference) and
+  the primary setting of H3 (non-trivial compression at T = 0.97, delta = 0.05) were
+  supported, mostly as
+  resamples of one query pool per corpus and within that pool; **H5, invariance of the
+  outcome under the registered maps of the vectors, failed**: 13 of 16 primary pairs
+  hold, and the three that do not are rotations. At a 0.99 target the registered
+  deployment criterion was not met on any store at pool-sized budgets.
+- Transfer to encoders that took no part in the design has **not** been demonstrated:
+  X1-X3 reuse the encoders that shaped the candidate list.
+- XH, the held-out encoder protocol, has not been registered and has not been run.
+
+Documentation, in the repository checkout of that branch (paths, not links: the
+branch is not published):
+
+- `docs/package/guide/README.md`: user guide
+- `docs/package/API_DESIGN.md`: API design
+- `docs/package/FINAL_RESEARCH_BOUNDARY.md`: what the package and the research record do
+  and do not support
+- `docs/package/CERTIFICATE_SPEC.md`: certificate format
+
 ## The original recipe: pruning and binary codes for page images
 
 ColPali-style models search scanned documents as images, with no OCR. They store
@@ -67,9 +143,14 @@ page image
 
 | setting | encoder / corpus | compression | nDCG@5 retained |
 |---|---|---|---|
-| prune + binary | ColSmol-256M, generated pages | 113.5x | 86.7% |
-| prune + int8 | ColSmol-256M, generated pages | 14.2x | 96.0% |
-| prune + binary | ColPali-v1.3, ViDoRe (4 splits) | 53-60x | 94.6-103.4% |
+| prune + binary | ColSmol-256M, 60 generated pages (72 queries) | 113.5x | 86.7% |
+| prune + int8 | ColSmol-256M, 60 generated pages (72 queries) | 14.2x | 96.0% |
+| prune + binary | ColPali-v1.3, 4 ViDoRe splits (1,780 pages, 1,325 queries) | 53-60x | 94.6-103.4% |
+
+Each row is one fixed pipeline scored on every query of its corpus, with no choice made
+from those queries. The 60-page corpus has 72 queries, so its figures carry intervals of
+about 6 points (a sanity check, not evidence). Ratios and retention are specific to the
+encoder and corpus named in each row.
 
 Full results, the ablations and the analysis are in the
 [repository](https://github.com/Daemon-VI/optivision-rag).
