@@ -30,7 +30,7 @@ from typing import Any
 
 import numpy as np
 
-from .representation import MultiVectorCorpus
+from ..representation import MultiVectorCorpus
 
 MEASURED = "measured"
 UNTESTED = "untested"
@@ -198,7 +198,7 @@ def load_adapter(model_id: str, **kwargs: Any) -> EncoderAdapter:
     """
     info = MODELS.get(model_id)
     if info is not None and info.loader.startswith("colpali-engine:"):
-        from .encoders.colvlm import ColVLMEncoder  # needs torch + colpali-engine
+        from ..encoders.colvlm import ColVLMEncoder  # needs torch + colpali-engine
 
         backend = info.loader.split(":", 1)[1]
         return PageEncoderAdapter(ColVLMEncoder(backend=backend, model_name=model_id, **kwargs), info=info)
