@@ -48,9 +48,10 @@ class RotationProjector(DimensionReducer):
     for basis dependence and is not presented as an improvement: a registered experiment
     (X3; ``reports/research/X_RESULTS.md``, per-dataset outputs in ``reports/research/X3/``)
     found that the outcome of sign-code and 4-bit pipelines depends on the coordinate basis
-    under rotation, and that rotating the vectors can *reduce* the compression the selection
-    certifies. A rotation in front of a codec has to be measured like any other candidate
-    and may abstain.
+    under rotation: rotating the vectors can reduce the compression the selection certifies
+    (it did on SciFact) and on one extension dataset it moved the outcome in both directions.
+    A rotation in front of a codec has to be measured like any other candidate, and the
+    selection may abstain.
 
     The float scores of a pipeline made only of this stage are those of the input, up to
     float32 rounding. The coordinates a later codec sees are a rotation of the stored ones

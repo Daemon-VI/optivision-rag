@@ -188,7 +188,7 @@ in an index is insertion order, not a contract) so that ids are always what is m
 ## 12. Defects left unchanged (reported, not fixed)
 
 From the audit (section 8, findings 3 to 6): three tie conventions; NumPy and Qdrant score differently; Qdrant
-receives decoded codes while `index/qdrant_index.py:10-14` says otherwise; three empty-document conventions;
+receives decoded codes (the `index/qdrant_index.py` docstring said otherwise and was corrected); three empty-document conventions;
 float64 narrowing in `scoring.py` and `NumpyIndex.search`; `OPTIVISION_SCORE_DEVICE` global and partial;
 `NumpyIndex.add` quadratic and not idempotent; `get_index` prefers on-disk metadata over its arguments;
 `OptiVisionRAG` rerank reloads a pickled cache per query and mixes score scales; `relevant_from_qrels` drops
@@ -212,7 +212,13 @@ empty query with an opaque `ValueError` and a NaN query with an `AssertionError`
    for its score relation to the NumPy backend, ties, empties and persistence.
 6. Run `tests/test_core_layering.py` and `tests/test_core_retrieve.py::TestSourceProperties`.
 
-## 14. Existing texts the audit flagged as overstated (W9): NOT edited in this work
+## 14. Existing texts the audit flagged as overstated (W9)
+
+Status after the later documentation pass on this branch: the `docs/ARCHITECTURE.md`,
+`README.md`, `index/numpy_index.py` and `index/qdrant_index.py` texts below were reworded
+(docstrings and prose only; no code change). The `docs/UNIVERSAL.md` texts belong to a results
+record that is not edited, and `compression/binary.py` is byte-pinned by the research
+harness; those three rows still stand.
 
 | where | says | audit reason |
 |---|---|---|
