@@ -4,12 +4,13 @@ Two references are never merged: ``LabelReference`` (relevance labels) and
 ``RankingReference`` (agreement with the uncompressed ranking, including its mistakes;
 not retrieval quality).
 
-``collect_evidence`` lives in ``core/evaluate/collect.py`` and is exported lazily (it
-depends on the candidate space, which in turn uses ``Evidence``).
+``collect_evidence`` and ``compress_selected`` live in ``core/evaluate/collect.py`` and are
+exported lazily (they depend on the candidate space, which in turn uses ``Evidence``).
 """
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from .evidence import Evidence, EvidenceFormatError
@@ -36,14 +37,17 @@ __all__ = [
 ]
 
 
+_LAZY = ("collect_evidence", "compress_selected")
+
+
 def __getattr__(name: str) -> Any:
-    if name == "collect_evidence":
+    if name in _LAZY:
         try:
-            from .collect import collect_evidence
+            collect = importlib.import_module(f"{__name__}.collect")
         except ModuleNotFoundError as exc:
             if exc.name != f"{__name__}.collect":
                 raise
             raise AttributeError(f"module {__name__!r} has no attribute {name!r} "
                                  "(core/evaluate/collect.py does not exist yet)") from exc
-        return collect_evidence
+        return getattr(collect, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
