@@ -4,10 +4,13 @@
     optivision verify artifact/ --vectors docs.npz --queries queries.npz --qrels qrels.json
 
 ``certify`` tests the library's fixed candidate list on the queries and prints one of three
-outcomes: ``select`` (the rule certified a candidate), ``abstain`` (nothing was certified; the
-uncompressed index is the answer) or ``fallback`` (only with an explicit fallback pipeline, which
-the CLI does not offer). Abstaining is a normal result and exits with status 0, like a
-selection; read ``outcome`` in the ``--json`` output to branch on it. Invalid input exits 2.
+outcomes: ``select`` (the rule rejected "retention <= target" for at least one candidate and the
+smallest was chosen), ``abstain`` (nothing was certified; the uncompressed index is the answer)
+or ``fallback`` (only with an explicit fallback pipeline, which the CLI does not offer).
+Abstaining is a normal result and exits with status 0, like a selection; read ``outcome`` in the
+``--json`` output to branch on it. Invalid input exits 2. The queries are tested in a seeded
+random order (``--order-seed``, default 0) unless ``--given-order`` asks for the order of the
+file, which is valid only if that order is unrelated to the outcomes.
 
 ``verify`` prints every check of a certificate and exits 1 when any check failed. A passing
 report means that no check failed: it does not make the certificate true, and it is only as good
@@ -61,6 +64,12 @@ def _read_qrels(path: str) -> dict[str, set[str]]:
         raise typer.BadParameter(f"cannot read the labels file {path!r}: {exc}") from exc
     if not isinstance(raw, dict):
         raise typer.BadParameter(f"{path!r} must hold a JSON object {{query id: [document ids]}}")
+    for query_id, relevant in raw.items():
+        if isinstance(relevant, dict):
+            raise typer.BadParameter(
+                f"{path!r}: the labels of query {query_id!r} are an object {{document: grade}}. "
+                "Graded labels are not supported: every listed document would count as relevant, "
+                "grade 0 included. List the relevant document ids, {query id: [document ids]}")
     try:
         return {str(k): set(v) for k, v in raw.items()}
     except TypeError as exc:
@@ -91,16 +100,28 @@ def _render_certify(report: dict[str, Any], n_docs: int, dim: int, artifact: Pat
                    f"{report['error']:g}   (per-test level {report['level']:.4g})")
     _say("candidate list", f"{space['name']}: {space['n_candidates']} candidates in "
                            f"{space['n_families']} families"
-                           + ("; the registered default list" if space["registered_default"] else ""))
-    order_text = order["kind"] if order["kind"] == "given" else f"seeded permutation (seed {order['seed']})"
+                           + ("; the default list registered for the development stores, not "
+                              "validated for other encoders" if space["registered_default"] else ""))
+    order_text = ("given (the order of the file)" if order["kind"] == "given"
+                  else f"seeded permutation (seed {order['seed']})")
     _say("queries", f"{report['n_queries']} tested of {report['n_queries_given']} given "
                     f"({report['n_queries_without_relevant_document']} without a relevant "
                     f"document), order: {order_text}"
-                    + ("" if order["budget"] is None else f", budget {order['budget']}"))
+                    + ("" if order["budget"] is None else f", budget {order['budget']}")
+                    + ("" if not report["n_exact_duplicate_queries"]
+                       else f"; {report['n_exact_duplicate_queries']} repeat an earlier query "
+                            "exactly"))
     console.print()
 
-    if outcome == "select":
-        head, style = "select (certified)", "bold green"
+    if outcome == "select" and report["certified"]:
+        head = ("select (the rule rejected 'retention <= target' for this candidate at the "
+                f"stated error level, {report['error']:g}; claimed only under the assumptions "
+                "and conditions below)")
+        if report["construct"].startswith("agreement@"):
+            head += "; agreement with the uncompressed ranking, not retrieval quality"
+        style = "bold green"
+    elif outcome == "select":
+        head, style = "select (NOT certified)", "bold yellow"
     elif outcome == "abstain":
         head, style = "abstain (nothing certified; use the uncompressed index)", "bold"
     else:
@@ -122,8 +143,8 @@ def _render_certify(report: dict[str, Any], n_docs: int, dim: int, artifact: Pat
     for caveat in report["caveats"]:
         _paragraph(caveat, style="yellow")
     console.print()
-    console.print(Text("what the rule states (conditional on every assumption below):", style="bold"),
-                  soft_wrap=True, highlight=False)
+    console.print(Text("what the rule states (claimed only if every assumption and condition below "
+                       "holds):", style="bold"), soft_wrap=True, highlight=False)
     _paragraph(report["statement"])
     for assumption in report["assumptions"]:
         _paragraph(assumption, style="dim", indent=4)
@@ -135,7 +156,10 @@ def _render_certify(report: dict[str, Any], n_docs: int, dim: int, artifact: Pat
 def certify(
     vectors: str = typer.Argument(..., help="document vectors: corpus .npz or legacy encode cache"),
     queries: str = typer.Argument(..., help="query vectors: queries .npz, or a legacy queries.json"),
-    qrels: str | None = typer.Option(None, "--qrels", help="labels JSON {query id: [doc ids]}"),
+    qrels: str | None = typer.Option(None, "--qrels",
+                                     help="labels JSON {query id: \\[doc ids]}: binary, every "
+                                          "listed document is relevant (graded labels are "
+                                          "refused)"),
     target: float = typer.Option(0.97, "--target", help="retention to be exceeded, in (0, 1]"),
     error: float = typer.Option(0.05, "--error", help="error level of the statement, in (0, 1)"),
     metric: str = typer.Option("ndcg@5", "--metric", help="ndcg@k | recall@k | mrr@k | hit@k"),
@@ -145,8 +169,16 @@ def certify(
                               help="default | wide (wide is an engineering option the registered "
                                    "experiments did not evaluate)"),
     budget: int | None = typer.Option(None, "--budget", help="test only a prefix of N queries of the order"),
-    order_seed: int | None = typer.Option(None, "--order-seed",
-                                          help="test the queries in a seeded permutation (recorded)"),
+    order_seed: int | None = typer.Option(
+        None, "--order-seed",
+        help="seed of the random order in which the queries are tested (default 0, recorded). "
+             "Choose it before you look and use it once: trying several seeds and reporting one "
+             "is outside the statement"),
+    given_order: bool = typer.Option(
+        False, "--given-order",
+        help="test the queries in the order of the file instead of a random order; valid only if "
+             "that order is unrelated to the outcomes (never sorted by difficulty, date, source "
+             "or any query attribute)"),
     out: str | None = typer.Option(None, "--out", help="write the artifact to this new directory"),
     as_json: bool = typer.Option(False, "--json", help="print the report as JSON on stdout"),
     trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
@@ -154,10 +186,15 @@ def certify(
     """Select the smallest candidate the rule certifies at (target, error), or abstain.
 
     Abstaining (nothing certified, use the uncompressed index) is a normal result and exits 0.
+
     Run it once per (target, error): another look at the same queries is outside the statement.
+
+    Queries are tested in a seeded random order; a sorted file cannot break the order assumption.
+
+    Exact duplicate queries are counted and reported.
     """
     from .api import certify as run_certify
-    from .core.selection import CandidateSpace
+    from .core.selection import DEFAULT_ORDER_SEED, CandidateSpace
 
     if reference not in REFERENCES:
         raise typer.BadParameter(f"reference must be one of {', '.join(REFERENCES)}; got {reference!r}",
@@ -168,10 +205,15 @@ def certify(
     if reference == "agreement" and qrels is not None:
         raise typer.BadParameter("--qrels is not used by reference=agreement; drop it, or use "
                                  "reference=labels", param_hint="--qrels")
+    if given_order and order_seed is not None:
+        raise typer.BadParameter("--given-order tests the queries in the order of the file and "
+                                 "cannot be combined with --order-seed", param_hint="--given-order")
+    seed = None if given_order else DEFAULT_ORDER_SEED if order_seed is None else order_seed
     _need_file(vectors, "the vectors file")
     _need_file(queries, "the queries file")
     if qrels is not None:
         _need_file(qrels, "the labels file")
+        _read_qrels(qrels)  # refuses graded labels before any candidate is scored
     if out is not None and Path(out).exists() and (not Path(out).is_dir() or any(Path(out).iterdir())):
         raise typer.BadParameter(f"{out!r} already exists and is not empty; choose a new directory "
                                  "(refused now, before any candidate is scored)", param_hint="--out")
@@ -201,7 +243,7 @@ def certify(
         chosen_space = None if space == "default" else CandidateSpace.wide(docs.dimension)
         result = run_certify(docs, qs, labels, target=target, error=error, metric=metric,
                              reference=reference, space=chosen_space, query_budget=budget,
-                             order_seed=order_seed, progress=progress)
+                             order_seed=seed, progress=progress)
     except ImportError as exc:
         raise _fail(str(exc), code=1) from exc
     except ValueError as exc:  # invalid input, including every ContractError
@@ -293,6 +335,8 @@ def verify(
                 ("[", ""), (f"{check.status:<7}", _STATUS_STYLE[check.status]), ("] ", ""),
                 (f"{check.name:<{width}}", "bold"), (f"  {check.detail}" if check.detail else "", "")),
                 soft_wrap=True, highlight=False)
+        for note in report.notes:
+            _paragraph(f"note: {note}", style="yellow", indent=0)
         verdict = "OK: no check failed" if report.ok else f"FAILED: {len(report.failed())} check(s) failed"
         console.print(Text(f"{verdict} (level reached: {report.level})",
                            style="bold green" if report.ok else "bold red"),

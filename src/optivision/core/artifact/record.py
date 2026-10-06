@@ -2,8 +2,10 @@
 
 Shared by creation (``certificate.py``) and verification (``verification.py``), so that a
 value is computed in one place: the content digest, the HMAC, the fixed texts that depend on
-the outcome and the construct, the order in which queries were tested, and the descriptive
-statistics of the selected candidate on that sample.
+the rule, the outcome, the construct, the order and the inputs, the order in which queries
+were tested, the descriptive statistics of the selected candidate on that sample, and two
+properties of the inputs that the statement needs and no stage checks: how many queries repeat
+an earlier one exactly, and whether the vectors have unit L2 norm.
 
 A certificate is a JSON object (``docs/package/CERTIFICATE_SPEC.md``). Its ``digest`` is the
 SHA-256 of the canonical JSON of every field except ``digest`` and ``signature``. That digest is
@@ -16,14 +18,16 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import numpy as np
 
 from optivision.core.evaluate.evidence import Evidence
 from optivision.core.identity import array_digest, digest
+from optivision.core.selection.engine import DEFAULT_ORDER_SEED
 from optivision.core.selection.rules import STATEMENT
+from optivision.representation import MultiVectorCorpus
 
 SCHEMA = "optivision-certificate"
 SCHEMA_VERSION = 1
@@ -32,17 +36,28 @@ SIGNATURE_ALGORITHM = "HMAC-SHA256"
 #: Top-level fields, in the order they are written to a file. The digest does not depend on it.
 FIELD_ORDER = (
     "schema", "schema_version", "created_utc", "package", "code", "encoder", "corpus", "queries",
-    "reference", "space", "sizes", "rule", "statement", "assumptions", "caveats", "target",
-    "error", "level", "evidence", "result", "sample", "candidate", "digest", "signature",
+    "norms", "reference", "space", "sizes", "rule", "statement", "assumptions", "caveats",
+    "target", "error", "level", "evidence", "result", "sample", "candidate", "digest",
+    "signature",
 )
 #: Fields the content digest does not cover.
 UNCOVERED = ("digest", "signature")
 
 OUTCOMES = ("select", "abstain", "fallback")
 
-STATEMENT_NOT_CERTIFYING = (
-    "The selection rule that produced this record is not a certifying rule: it makes no error "
-    "statement about the candidate it selected, and nothing in this record is certified."
+#: A vector counts as unit-norm when its L2 norm is within this distance of 1.
+NORM_TOLERANCE = 1e-3
+_NORM_BLOCK_ELEMENTS = 1 << 21  # rows are normed in blocks of about 16 MB of float64
+
+STATEMENT_UNEXAMINED = (
+    "This record was produced by a selection rule that is not part of this library. The library "
+    "has not examined that rule and makes no statement about it, and nothing in this record is "
+    "certified. Any statement the rule makes is its author's."
+)
+CAVEAT_UNEXAMINED_RULE = (
+    "The selection rule that produced this record is not part of this library. The library has "
+    "not examined it, so a selected candidate is not certified, whatever the rule declares about "
+    "itself, and the assumptions recorded here are the rule author's, not the library's."
 )
 CAVEAT_AGREEMENT = (
     "Retention here means agreement with the uncompressed ranking, which is not retrieval "
@@ -54,8 +69,31 @@ CAVEAT_FALLBACK = (
     "The deployed pipeline is a fallback supplied by the caller. It is not certified, and the "
     "statement above does not cover it."
 )
-CAVEAT_NOT_CERTIFIED = (
-    "The selected candidate is not certified: the rule that chose it makes no error statement."
+CAVEAT_ORDER_GIVEN = (
+    "The queries were tested in the order supplied. The statement requires that order to be "
+    "unrelated to the outcomes (assumption A5): the arrival order of independent draws "
+    "qualifies; an order sorted by difficulty, date, source or any other query attribute does "
+    "not."
+)
+CAVEAT_ORDER_SEED = (
+    "The order seed ({seed}) was chosen by the caller, not left at the default. Choosing a seed "
+    "after looking at results, or trying several seeds and keeping one, is outside the "
+    "statement."
+)
+CAVEAT_DUPLICATES = (
+    "{n} of the {m} queries tested repeat an earlier query exactly (the same vectors). Repeated "
+    "queries count as independent draws only if they really are; if they come from failed "
+    "de-duplication, logs replayed twice or augmentation, assumption A1 does not hold and the "
+    "stated error level does not apply."
+)
+CAVEAT_NORMS = (
+    "Not every vector has unit L2 norm (tolerance {tolerance:g}): {which}. The research studied "
+    "only MaxSim over L2-normalised vectors, and nothing is known outside that scope."
+)
+CAVEAT_DROPPED = (
+    "{k} of the {n} queries given have no relevant document under this reference and were "
+    "removed before testing, for the baseline and for every candidate alike. The statement is "
+    "about the queries that have a relevant document."
 )
 SAMPLE_NOTE = (
     "Descriptive statistics of the selected candidate on the queries that selected it. They are "
@@ -73,20 +111,59 @@ def signature_value(key: bytes, digest_hex: str) -> str:
     return hmac.new(bytes(key), digest_hex.encode("ascii"), hashlib.sha256).hexdigest()
 
 
-def statement_for(certifying: bool) -> str:
-    """The rule's statement for a certifying rule; a plain refusal for any other rule."""
-    return STATEMENT if certifying else STATEMENT_NOT_CERTIFYING
+def statement_for(rule: Mapping[str, Any]) -> str:
+    """The statement recorded for ``rule`` (an entry as ``rules.rule_record`` writes it).
+
+    The library's ``STATEMENT`` only for one of its own certifying rules. For any other rule a
+    fixed text that says the library has not examined it and makes no statement about it.
+    """
+    return STATEMENT if rule["certifying"] else STATEMENT_UNEXAMINED
 
 
-def caveats_for(outcome: str, construct: str, certifying: bool) -> list[str]:
-    """Sentences a reader must not miss, derived from the outcome, construct and rule."""
+def _norm_sentence(norms: Mapping[str, Any]) -> str | None:
+    def show(x: Any) -> str:
+        return "?" if x is None else f"{x:.6g}"
+
+    parts = []
+    for key, label in (("documents", "document"), ("queries", "query")):
+        entry = norms[key]
+        if not entry["unit_norm"]:
+            parts.append(f"{label} vectors have norms from {show(entry['norm_min'])} to "
+                         f"{show(entry['norm_max'])}")
+    if not parts:
+        return None
+    return CAVEAT_NORMS.format(tolerance=norms["tolerance"], which=" and ".join(parts))
+
+
+def caveats_for(d: Mapping[str, Any]) -> list[str]:
+    """Sentences a reader must not miss, derived from the record's own fields.
+
+    ``d`` is a certificate record (or the fields of one that is being written): the sentences
+    depend on the rule, the outcome, the construct, how the queries were ordered, how many
+    repeat one another, the norms of the vectors and the queries that were removed. Because they
+    follow from fields the record carries, verification can recompute them.
+    """
     out = []
-    if construct.startswith("agreement@"):
+    if not d["rule"]["builtin"]:
+        out.append(CAVEAT_UNEXAMINED_RULE)
+    if d["reference"]["construct"].startswith("agreement@"):
         out.append(CAVEAT_AGREEMENT)
-    if outcome == "fallback":
+    if d["result"]["outcome"] == "fallback":
         out.append(CAVEAT_FALLBACK)
-    if outcome == "select" and not certifying:
-        out.append(CAVEAT_NOT_CERTIFIED)
+    order = d["queries"]["order"]
+    if order["kind"] == "given":
+        out.append(CAVEAT_ORDER_GIVEN)
+    elif order["seed"] != DEFAULT_ORDER_SEED:
+        out.append(CAVEAT_ORDER_SEED.format(seed=order["seed"]))
+    if d["queries"]["exact_duplicates"] > 0:
+        out.append(CAVEAT_DUPLICATES.format(n=d["queries"]["exact_duplicates"],
+                                            m=d["queries"]["n_used"]))
+    sentence = _norm_sentence(d["norms"])
+    if sentence is not None:
+        out.append(sentence)
+    dropped = d["evidence"]["dropped_queries"]
+    if dropped:
+        out.append(CAVEAT_DROPPED.format(k=len(dropped), n=d["queries"]["n_pool"]))
     return out
 
 
@@ -132,3 +209,59 @@ def sample_record(evidence: Evidence, position: int, order: Mapping[str, Any]) -
         raise ValueError("the mean baseline metric on the tested queries is not positive")
     return {"n": int(idx.size), "mean": mean, "baseline_mean": base,
             "retention_point": mean / base, "note": SAMPLE_NOTE}
+
+
+# ---------------------------------------------------------- properties of the inputs
+
+
+def exact_duplicates(queries: MultiVectorCorpus, dropped: Sequence[str],
+                     order: Mapping[str, Any]) -> int:
+    """How many of the queries the rule tested repeat an earlier tested query exactly.
+
+    Two queries are exact duplicates when their vector arrays are identical (same dtype, shape
+    and values: the digests of the per-query rows are compared); a repeated query id counts as
+    well, although ``validate_corpus`` refuses repeated ids, so that only matters for objects
+    built by hand. ``dropped`` are the ids removed for having no relevant document and ``order``
+    is the decision's order record: the count is over the queries the rule saw, in the order
+    it saw them, so a budget leaves the rest out. Near-duplicates are not detected.
+    """
+    gone = set(dropped)
+    kept = [i for i, qid in enumerate(queries.ids) if qid not in gone]
+    seen_vectors: set[str] = set()
+    seen_ids: set[str] = set()
+    repeats = 0
+    for j in tested_indices(order, len(kept)).tolist():
+        i = kept[j]
+        rows = array_digest(queries.vectors[queries.offsets[i]:queries.offsets[i + 1]])
+        qid = queries.ids[i]
+        repeats += int(rows in seen_vectors or qid in seen_ids)
+        seen_vectors.add(rows)
+        seen_ids.add(qid)
+    return repeats
+
+
+def norm_record(corpus: MultiVectorCorpus) -> dict[str, Any]:
+    """Whether every vector of ``corpus`` has unit L2 norm within ``NORM_TOLERANCE``.
+
+    ``{"unit_norm", "norm_min", "norm_max"}``: the extremes of the row norms and whether both
+    lie within the tolerance of 1 (``None`` extremes and ``True`` for a corpus without
+    vectors). Rows are normed in blocks, in float64, so nothing as large as the corpus is
+    allocated; the corpus is neither changed nor converted.
+    """
+    vectors = corpus.vectors
+    low, high = float("inf"), float("-inf")
+    step = max(1, _NORM_BLOCK_ELEMENTS // max(1, vectors.shape[1]))
+    for start in range(0, vectors.shape[0], step):
+        block = np.asarray(vectors[start:start + step], dtype=np.float64)
+        norms = np.sqrt(np.einsum("ij,ij->i", block, block))
+        low, high = min(low, float(norms.min())), max(high, float(norms.max()))
+    if low > high:
+        return {"unit_norm": True, "norm_min": None, "norm_max": None}
+    unit = bool(low >= 1.0 - NORM_TOLERANCE and high <= 1.0 + NORM_TOLERANCE)
+    return {"unit_norm": unit, "norm_min": low, "norm_max": high}
+
+
+def norms_record(corpus: MultiVectorCorpus, queries: MultiVectorCorpus) -> dict[str, Any]:
+    """The ``norms`` field: the tolerance, and :func:`norm_record` of the documents and queries."""
+    return {"tolerance": NORM_TOLERANCE, "documents": norm_record(corpus),
+            "queries": norm_record(queries)}

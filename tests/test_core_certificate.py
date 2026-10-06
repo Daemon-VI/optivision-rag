@@ -35,7 +35,16 @@ from optivision.core.artifact import (
     verify_certificate,
 )
 from optivision.core.artifact import verification as verification_module
-from optivision.core.artifact.record import FIELD_ORDER
+from optivision.core.artifact.record import (
+    CAVEAT_DROPPED,
+    CAVEAT_ORDER_GIVEN,
+    CAVEAT_ORDER_SEED,
+    FIELD_ORDER,
+    NORM_TOLERANCE,
+    STATEMENT_UNEXAMINED,
+    exact_duplicates,
+    norm_record,
+)
 from optivision.core.evaluate import (
     LabelReference,
     RankingReference,
@@ -70,8 +79,9 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 #: The fields of schema version 1, in file order.
 SCHEMA_V1_FIELDS = (
     "schema", "schema_version", "created_utc", "package", "code", "encoder", "corpus", "queries",
-    "reference", "space", "sizes", "rule", "statement", "assumptions", "caveats", "target",
-    "error", "level", "evidence", "result", "sample", "candidate", "digest", "signature",
+    "norms", "reference", "space", "sizes", "rule", "statement", "assumptions", "caveats",
+    "target", "error", "level", "evidence", "result", "sample", "candidate", "digest",
+    "signature",
 )
 
 
@@ -124,6 +134,25 @@ def issue(problem, space, *, kind="labels", target=0.8, error=0.2, rule=None, fa
         created=created)
     return Issued(decision, evidence, space, corpus, queries, reference, pipeline, compressed,
                   certificate)
+
+
+class DeclaresCertifying:
+    """A rule of someone else's that declares itself certifying and tests nothing: every
+    p-value is 1 and the smallest candidate is selected."""
+
+    name = "declares_certifying"
+    certifying = True
+
+    def config(self):
+        return {"name": self.name}
+
+    def assumptions(self):
+        return ("none: trust me.",)
+
+    def decide(self, candidates, baseline, families, bytes_per_doc, vectors_per_doc, target,
+               error):
+        k = int(np.argmin(bytes_per_doc))
+        return RuleResult(k, (k,), tuple(1.0 for _ in bytes_per_doc), error)
 
 
 def statuses(report, status):
@@ -204,10 +233,20 @@ class TestFieldsOfTheRecord:
         c = selected.certificate
         assert c.statement == STATEMENT
         assert c.assumptions == selected.decision.assumptions
-        assert len(c.assumptions) == 6
-        assert [a[:3] for a in c.assumptions] == [f"A{i}:" for i in range(1, 7)]
+        assert len(c.assumptions) == 10
+        assert [a[:3] for a in c.assumptions] == [f"{k}{i}:" for k, n in (("A", 6), ("C", 4))
+                                                  for i in range(1, n + 1)]
         assert c.data["rule"]["certifying"] is True
         assert c.data["rule"]["config"]["bet_cap"] == 0.9
+
+    def test_the_rule_is_recorded_with_its_class_and_whether_it_is_the_librarys_own(self,
+                                                                                   selected):
+        rule = selected.certificate.to_dict()["rule"]
+        assert set(rule) == {"name", "class", "builtin", "certifying", "declared_certifying",
+                             "config"}
+        assert rule["class"] == "optivision.core.selection.rules.FixedSequenceBetting"
+        assert rule["builtin"] is True and rule["declared_certifying"] is True
+        assert rule == selected.decision.to_dict()["rule"]
 
     def test_the_space_is_recorded_whole(self, selected):
         s = selected.certificate.to_dict()["space"]
@@ -239,6 +278,7 @@ class TestFieldsOfTheRecord:
         assert d["queries"]["n_pool"] == len(selected.queries) == 80
         assert d["queries"]["n_used"] == 77
         assert d["queries"]["order"]["kind"] == "given"
+        assert d["queries"]["exact_duplicates"] == 0
 
     def test_reference_identity(self, selected, agreement):
         r = selected.certificate.to_dict()["reference"]
@@ -313,8 +353,8 @@ class TestOutcomes:
         d = c.to_dict()
         assert d["candidate"] is None and d["sample"] is None
         assert d["result"]["certified"] is False
-        assert c.statement == STATEMENT and len(c.assumptions) == 6  # the abstention is checkable
-        assert c.caveats == ()
+        assert c.statement == STATEMENT and len(c.assumptions) == 10  # an abstention is checkable
+        assert c.caveats == (CAVEAT_ORDER_GIVEN, CAVEAT_DROPPED.format(k=3, n=80))
 
     def test_fallback_is_recorded_and_never_certified(self, fell_back):
         c = fell_back.certificate
@@ -365,7 +405,8 @@ class TestTheAgreementConstruct:
         assert c.statement == STATEMENT  # the rule's statement is unchanged; the caveat is beside it
 
     def test_labels_runs_carry_no_such_caveat(self, selected):
-        assert selected.certificate.caveats == ()
+        assert not any("agreement" in c for c in selected.certificate.caveats)
+        assert selected.certificate.caveats == (CAVEAT_ORDER_GIVEN, CAVEAT_DROPPED.format(k=3, n=80))
 
     def test_the_baseline_of_the_agreement_construct_is_one(self, agreement):
         assert agreement.certificate.to_dict()["evidence"]["baseline_mean"] == 1.0
@@ -404,11 +445,12 @@ class TestOtherRulesAndOrders:
                 np.mean(out.evidence.candidates[pos][idx]))
             assert out.certificate.to_dict()["sample"]["n"] == 50
 
-    def test_a_rule_that_does_not_certify_never_gives_a_certified_certificate(self, problem,
-                                                                              space):
+    @pytest.mark.parametrize("declared", [False, True], ids=["declares-nothing", "declares-certifying"])
+    def test_a_rule_of_someone_elses_is_never_certified_whatever_it_declares(self, problem, space,
+                                                                            declared):
         class PointRetention:
             name = "test_point_retention"
-            certifying = False
+            certifying = declared
 
             def config(self):
                 return {"name": self.name}
@@ -428,15 +470,225 @@ class TestOtherRulesAndOrders:
         c = out.certificate
         assert c.outcome is Outcome.SELECT and out.decision.outcome is Outcome.SELECT
         assert c.certified is False and c.to_dict()["result"]["certified"] is False
-        assert c.statement != STATEMENT and "not a certifying rule" in c.statement
-        assert any("not certified" in s for s in c.caveats)
-        assert c.assumptions == ("This rule makes no error statement.",)
+        assert out.decision.certified is False
+        rule = c.to_dict()["rule"]
+        assert rule["builtin"] is False and rule["certifying"] is False
+        assert rule["declared_certifying"] is declared  # kept: it is what the author declared
+        assert rule["class"].endswith("PointRetention")
+        # the library's statement is never recorded for it, and the text says why
+        assert c.statement == STATEMENT_UNEXAMINED != STATEMENT
+        assert "not part of this library" in c.statement and "makes no statement" in c.statement
+        assert any("not part of this library" in s and "not certified" in s for s in c.caveats)
+        assert c.assumptions == (
+            ("Declared by the rule's author, not examined by this library: "
+             "This rule makes no error statement."),)
         report = out.verify()
         assert report.ok, report.summary()
-        # a custom rule cannot be replayed or have its decision step recomputed here
-        assert report.status("replay.decision") == "skipped"
-        assert report.status("consistency.decision") == "skipped"
-        assert report.status("rule.text") == "skipped"
+        # what the library cannot examine is skipped and said so; what it can is checked
+        for name in ("replay.decision", "consistency.decision", "consistency.level"):
+            assert report.status(name) == "skipped", name
+        assert report.status("rule.text") == "pass"
+        assert "not examined" in report.get("rule.text").detail
+        assert "nothing in this record is certified" in report.get("replay.decision").detail
+        assert any("not one of this library's own" in n and "nothing in this record is certified"
+                   in n for n in report.notes)
+        assert "note: this record names a rule" in report.summary()
+
+
+# ------------------------------------------- what is recorded about the order and the inputs
+
+
+def with_copies(problem):
+    """The queries followed by an exact copy of each under a new id (the labels are copied too)."""
+    corpus, queries, qrels = problem
+    arrays = [queries.vectors[queries.offsets[i]:queries.offsets[i + 1]]
+              for i in range(len(queries))]
+    ids = [*queries.ids, *[f"{q}_copy" for q in queries.ids]]
+    labels = {**qrels, **{f"{q}_copy": docs for q, docs in qrels.items()}}
+    return corpus, MultiVectorCorpus.from_arrays(arrays + arrays, ids=ids), labels
+
+
+class TestTheOrderIsRecordedWithWhatItRequires:
+    def test_a_given_order_carries_the_sentence_that_it_must_be_unrelated_to_the_outcomes(
+            self, selected):
+        assert selected.certificate.to_dict()["queries"]["order"]["kind"] == "given"
+        assert CAVEAT_ORDER_GIVEN in selected.certificate.caveats
+        assert "unrelated to the outcomes" in CAVEAT_ORDER_GIVEN
+        assert "sorted by difficulty, date, source" in CAVEAT_ORDER_GIVEN
+
+    def test_the_default_seed_carries_no_order_sentence(self, problem, space):
+        out = issue(problem, space, order_seed=0)
+        order = out.certificate.to_dict()["queries"]["order"]
+        assert order["kind"] == "seeded_permutation" and order["seed"] == 0
+        assert not any("order" in c and "seed" in c for c in out.certificate.caveats)
+        assert CAVEAT_ORDER_GIVEN not in out.certificate.caveats
+        assert out.verify().ok
+
+    @pytest.mark.parametrize("seed", [1, 7, 12345])
+    def test_another_seed_says_that_the_caller_chose_it_and_that_looking_first_is_outside(
+            self, problem, space, seed):
+        out = issue(problem, space, order_seed=seed)
+        assert CAVEAT_ORDER_SEED.format(seed=seed) in out.certificate.caveats
+        text = CAVEAT_ORDER_SEED.format(seed=seed)
+        assert "chosen by the caller" in text and "trying several seeds" in text
+        assert "outside the statement" in text
+        assert CAVEAT_ORDER_GIVEN not in out.certificate.caveats
+        assert out.verify().ok
+
+    def test_the_sentences_are_recomputed_from_the_record_so_an_edit_of_the_order_fails(
+            self, problem, space):
+        out = issue(problem, space, order_seed=7)
+        d = out.certificate.to_dict()
+        d["caveats"] = [c for c in d["caveats"] if "order seed" not in c]
+        d["digest"] = digest({k: v for k, v in d.items() if k not in ("digest", "signature")})
+        report = out.verify(Certificate.from_dict(d))
+        assert report.status("rule.text") == "fail" and "caveats" in report.get("rule.text").detail
+
+
+class TestExactDuplicateQueriesAreCounted:
+    def test_distinct_queries_give_zero_and_no_sentence(self, problem, space):
+        corpus, queries, qrels = make_problem(n_unlabelled=0)
+        out = issue((corpus, queries, qrels), space, order_seed=0)
+        assert out.certificate.to_dict()["queries"]["exact_duplicates"] == 0
+        assert not any("repeat an earlier query" in c for c in out.certificate.caveats)
+        assert out.verify().ok
+
+    def test_every_query_twice_gives_the_number_of_copies_and_the_sentence(self, space):
+        corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))
+        assert len(doubled) == 160
+        out = issue((corpus, doubled, labels), space, order_seed=0, target=0.7)
+        record = out.certificate.to_dict()
+        assert record["queries"]["exact_duplicates"] == 80 and record["queries"]["n_used"] == 160
+        sentence = next(c for c in record["caveats"] if "repeat an earlier query" in c)
+        assert sentence.startswith("80 of the 160 queries tested repeat an earlier query exactly")
+        assert "assumption A1 does not hold" in sentence
+        assert "de-duplication" in sentence and "logs replayed twice" in sentence
+        assert "augmentation" in sentence and "stated error level does not apply" in sentence
+        report = out.verify()
+        assert report.ok, report.summary()
+        assert report.status("binding.queries") == "pass"
+        assert "exact-duplicate count" in report.get("binding.queries").detail
+
+    def test_the_count_is_the_same_whatever_the_order_and_is_over_the_queries_tested(self, space):
+        corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))
+        full = {issue((corpus, doubled, labels), space, order_seed=s, target=0.7)
+                .certificate.to_dict()["queries"]["exact_duplicates"] for s in (None, 0, 5)}
+        assert full == {80}
+        out = issue((corpus, doubled, labels), space, order_seed=3, query_budget=60, target=0.7)
+        recorded = out.certificate.to_dict()["queries"]["exact_duplicates"]
+        tested = [out.evidence.query_ids[i]
+                  for i in np.random.default_rng(3).permutation(160)[:60]]
+        distinct = {q.removesuffix("_copy") for q in tested}  # a copy and its original are one
+        assert recorded == len(tested) - len(distinct) and 0 < recorded < 60
+        assert out.verify().ok
+
+    def test_queries_removed_for_having_no_relevant_document_are_not_counted(self, space):
+        corpus, doubled, labels = with_copies(make_problem(n_unlabelled=3))
+        for q in ("q0", "q1", "q2"):  # no labels for the originals and no labels for their copies
+            labels.pop(f"{q}_copy", None)
+        out = issue((corpus, doubled, labels), space, order_seed=0, target=0.7)
+        assert out.certificate.to_dict()["evidence"]["dropped_queries"] == [
+            "q0", "q1", "q2", "q0_copy", "q1_copy", "q2_copy"]
+        assert out.certificate.to_dict()["queries"]["exact_duplicates"] == 77
+
+    def test_the_helper_compares_the_vectors_and_also_counts_a_repeated_id(self, problem):
+        _, queries, _ = problem
+        order = {"kind": "given", "seed": None, "budget": None, "n_available": 80,
+                 "n_used": 80, "indices_sha256": array_digest(np.arange(80, dtype=np.int64))}
+        assert exact_duplicates(queries, (), {**order, "n_available": 80}) == 0
+        arrays = [queries.vectors[queries.offsets[i]:queries.offsets[i + 1]] for i in range(3)]
+        same_vectors = MultiVectorCorpus.from_arrays([arrays[0], arrays[1], arrays[0]],
+                                                     ids=["a", "b", "c"])
+        short = {**order, "n_available": 3, "n_used": 3,
+                 "indices_sha256": array_digest(np.arange(3, dtype=np.int64))}
+        assert exact_duplicates(same_vectors, (), short) == 1
+        same_id = MultiVectorCorpus.from_arrays(arrays, ids=["a", "b", "a"])  # not a valid corpus
+        assert exact_duplicates(same_id, (), short) == 1
+        near = arrays[0].copy()
+        near[0, 0] += 1e-7  # a near-duplicate is not detected: that stays a documentation matter
+        almost = MultiVectorCorpus.from_arrays([arrays[0], near, arrays[2]], ids=["a", "b", "c"])
+        assert exact_duplicates(almost, (), short) == 0
+
+
+class TestTheNormsOfTheVectorsAreRecorded:
+    def test_unit_vectors_are_recorded_as_unit_with_their_extremes(self, selected):
+        norms = selected.certificate.to_dict()["norms"]
+        assert set(norms) == {"tolerance", "documents", "queries"}
+        assert norms["tolerance"] == NORM_TOLERANCE == 1e-3
+        for side in ("documents", "queries"):
+            assert norms[side]["unit_norm"] is True
+            assert abs(norms[side]["norm_min"] - 1.0) < 1e-6
+            assert abs(norms[side]["norm_max"] - 1.0) < 1e-6
+        assert not any("unit L2 norm" in c for c in selected.certificate.caveats)
+
+    def test_documents_that_are_not_unit_norm_say_so_in_a_caveat(self, problem, space):
+        corpus, queries, qrels = problem
+        scaled = MultiVectorCorpus(corpus.vectors * np.float32(1.5), corpus.offsets,
+                                   ids=corpus.ids)
+        out = issue((scaled, queries, qrels), space)
+        norms = out.certificate.to_dict()["norms"]
+        assert norms["documents"]["unit_norm"] is False and norms["queries"]["unit_norm"] is True
+        assert norms["documents"]["norm_min"] == pytest.approx(1.5, abs=1e-5)
+        sentence = next(c for c in out.certificate.caveats if "unit L2 norm" in c)
+        assert "document vectors have norms from 1.5 to 1.5" in sentence
+        assert "query vectors" not in sentence and "tolerance 0.001" in sentence
+        assert "only MaxSim over L2-normalised vectors" in sentence
+        assert "nothing is known outside that scope" in sentence
+        assert out.verify().ok
+
+    def test_queries_that_are_not_unit_norm_say_so_too(self, problem, space):
+        corpus, queries, qrels = problem
+        wide = MultiVectorCorpus(queries.vectors * np.float32(0.5), queries.offsets,
+                                 ids=queries.ids)
+        out = issue((corpus, wide, qrels), space)
+        sentence = next(c for c in out.certificate.caveats if "unit L2 norm" in c)
+        assert "query vectors have norms from 0.5 to 0.5" in sentence
+        assert "document vectors" not in sentence
+        both = MultiVectorCorpus(corpus.vectors * np.float32(2.0), corpus.offsets, ids=corpus.ids)
+        out = issue((both, wide, qrels), space)
+        sentence = next(c for c in out.certificate.caveats if "unit L2 norm" in c)
+        assert "document vectors" in sentence and "and query vectors" in sentence
+
+    def test_the_tolerance_is_one_in_a_thousand_and_float16_unit_vectors_pass_it(self):
+        base = np.eye(4, dtype=np.float32)
+        inside = MultiVectorCorpus(base * np.float32(1.0009), np.array([0, 4]), ids=["a"])
+        outside = MultiVectorCorpus(base * np.float32(1.0011), np.array([0, 4]), ids=["a"])
+        assert norm_record(inside)["unit_norm"] is True
+        assert norm_record(outside)["unit_norm"] is False
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((500, 128))
+        x /= np.linalg.norm(x, axis=1, keepdims=True)
+        half = MultiVectorCorpus(x.astype(np.float16), np.array([0, 500]), ids=["a"])
+        assert norm_record(half)["unit_norm"] is True
+
+    def test_the_norms_are_computed_in_blocks_and_equal_the_direct_computation(self, monkeypatch):
+        from optivision.core.artifact import record as record_module
+
+        rng = np.random.default_rng(4)
+        x = (rng.standard_normal((1000, 32)) * rng.uniform(0.5, 1.5, (1000, 1))).astype(np.float32)
+        corpus = MultiVectorCorpus(x, np.array([0, 1000]), ids=["a"])
+        direct = np.linalg.norm(x.astype(np.float64), axis=1)
+        whole = norm_record(corpus)
+        monkeypatch.setattr(record_module, "_NORM_BLOCK_ELEMENTS", 32 * 7)  # seven rows a block
+        blocks = norm_record(corpus)
+        assert whole == blocks
+        assert blocks["norm_min"] == pytest.approx(direct.min(), rel=1e-12)
+        assert blocks["norm_max"] == pytest.approx(direct.max(), rel=1e-12)
+        asked = []
+        real = np.asarray
+
+        def spy(a, *args, **kwargs):
+            if kwargs.get("dtype") == np.float64:
+                asked.append(len(a))
+            return real(a, *args, **kwargs)
+
+        monkeypatch.setattr(record_module.np, "asarray", spy)
+        norm_record(corpus)
+        assert max(asked) == 7 and len(asked) == 143  # float64 only ever for a block of rows
+
+    def test_a_corpus_with_no_vectors_is_vacuously_unit(self):
+        empty = MultiVectorCorpus(np.zeros((0, 4), dtype=np.float32), np.array([0, 0]), ids=["a"])
+        assert norm_record(empty) == {"unit_norm": True, "norm_min": None, "norm_max": None}
 
 
 # --------------------------------------------------------- creation refuses mismatches

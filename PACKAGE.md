@@ -95,7 +95,7 @@ queries, qrels = make_queries(docs, 200, noise=0.3, seed=1)
 result = certify(docs, queries, qrels, target=0.97, error=0.05)   # default list needs SciPy
 result.outcome, result.certified   # SELECT on this run; ABSTAIN is a normal outcome too
 result.save("artifact/")           # certificate, codes, fitted state, evidence
-verify("artifact/").ok             # integrity, replay from stored evidence, binding to stored codes
+verify("artifact/").ok             # integrity, replay from stored evidence (built-in rules), binding to stored codes
 ```
 
 What the research record shows, and does not show:

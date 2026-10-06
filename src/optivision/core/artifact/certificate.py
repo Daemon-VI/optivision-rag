@@ -7,12 +7,13 @@ was computed from into an immutable :class:`Certificate`; ``verify_certificate``
 
 What a certificate is, and is not
 ---------------------------------
-It answers: *was this compression decision certified under the stated configuration, and is
-this the index it was certified for?* It carries the selection rule's own statement and its
-assumptions A1-A6 verbatim, and nothing wider. It is not a statement that the compressed index
-keeps retrieval quality, and it does not transfer to another corpus, query distribution or
-candidate list. Under the ``agreement@...`` construct "retention" means agreement with the
-uncompressed ranking, which is not retrieval quality; the certificate says so.
+It answers: *was this compression decision certified under the stated configuration, and does
+this record match the index it was issued for?* It carries the selection rule's own statement
+and its assumptions A1-A6 and conditions C1-C4 verbatim, and nothing wider. It is not a
+statement that the compressed index keeps retrieval quality, and it does not transfer to another
+corpus, query distribution or candidate list. Under the ``agreement@...`` construct "retention"
+means agreement with the uncompressed ranking, which is not retrieval quality; the certificate
+says so.
 
 * The content ``digest`` is an integrity check, not security: anyone who can edit the file can
   recompute it.
@@ -24,8 +25,9 @@ uncompressed ranking, which is not retrieval quality; the certificate says so.
   that gap.
 
 A certificate is issued for every outcome (``select``, ``abstain``, ``fallback``); an
-abstention is as checkable as a selection. ``certified`` is true only for ``select`` under a
-certifying rule.
+abstention is as checkable as a selection. ``certified`` is true only for ``select`` under one
+of the library's own certifying rules: a rule written by anyone else is recorded with its class,
+the library makes no statement about it, and the certificate says so and is never ``certified``.
 """
 
 from __future__ import annotations
@@ -66,6 +68,8 @@ from .record import (
     SIGNATURE_ALGORITHM,
     caveats_for,
     content_digest,
+    exact_duplicates,
+    norms_record,
     sample_record,
     signature_value,
     statement_for,
@@ -165,7 +169,7 @@ class Certificate:
 
     @property
     def certified(self) -> bool:
-        """True only for a ``select`` outcome under a certifying rule."""
+        """True only for a ``select`` outcome under one of the library's own certifying rules."""
         return bool(self._at("result", "certified"))
 
     @property
@@ -483,12 +487,17 @@ def create_certificate(
     with the size the evidence recorded. ``select`` and ``fallback`` need both ``pipeline`` and
     ``compressed`` (use ``compress_selected``); an ``abstain`` outcome takes neither.
 
-    ``certified`` is true only for ``select`` under a certifying rule. The statement and the
-    assumptions are the rule's own, verbatim; sentences a reader must not miss (agreement is not
-    retrieval quality; a fallback is not certified) are recorded in ``caveats``. ``encoder`` is
-    descriptive metadata and is never verified. ``created`` is an ISO string ending in ``Z`` or an
-    aware ``datetime``; the clock is read only when it is not given, so with ``created`` the same
-    inputs give a byte-identical certificate.
+    ``certified`` is true only for ``select`` under one of the library's own certifying rules.
+    For such a rule the statement and the assumptions are its own, verbatim; for any other rule
+    the statement is a fixed text saying that the library has not examined it, and its
+    assumptions are recorded as its author's. Sentences a reader must not miss (agreement is not
+    retrieval quality; a fallback is not certified; the order, repeated queries, vectors that
+    are not unit-norm, queries removed for having no relevant document) are recorded in
+    ``caveats``. ``queries.exact_duplicates`` counts the tested queries that repeat an earlier one
+    exactly, and ``norms`` records whether the document and query vectors have unit L2 norm.
+    ``encoder`` is descriptive metadata and is never verified. ``created`` is an ISO string
+    ending in ``Z`` or an aware ``datetime``; the clock is read only when it is not given, so
+    with ``created`` the same inputs give a byte-identical certificate.
 
     The certificate is an integrity record, not a security token: see the module docstring.
     """
@@ -499,7 +508,6 @@ def create_certificate(
     encoder_record = _encoder_record(encoder, corpus)
 
     outcome = decision.outcome
-    certifying = bool(decision.rule["certifying"])
     selected = decision.selected
     sample = None
     candidate = None
@@ -521,7 +529,10 @@ def create_certificate(
             "n_used": decision.n_queries,
             "identity": _identity_record(queries),
             "order": thaw_json(decision.query_order),
+            "exact_duplicates": exact_duplicates(queries, evidence.dropped_queries,
+                                                 decision.query_order),
         },
+        "norms": norms_record(corpus, queries),
         "reference": {
             "construct": decision.construct,
             "metric": decision.metric,
@@ -539,9 +550,9 @@ def create_certificate(
         "sizes": {"bytes_per_doc": evidence.bytes_per_doc.tolist(),
                   "vectors_per_doc": evidence.vectors_per_doc.tolist()},
         "rule": thaw_json(decision.rule),
-        "statement": statement_for(certifying),
+        "statement": statement_for(thaw_json(decision.rule)),
         "assumptions": list(decision.assumptions),
-        "caveats": caveats_for(outcome.value, decision.construct, certifying),
+        "caveats": [],
         "target": decision.target,
         "error": decision.error,
         "level": decision.level,
@@ -561,6 +572,7 @@ def create_certificate(
         "sample": sample,
         "candidate": candidate,
     }
+    fields["caveats"] = caveats_for(fields)
     fields["digest"] = content_digest(fields)
     fields["signature"] = None
     return Certificate(fields)

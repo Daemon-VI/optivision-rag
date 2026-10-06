@@ -22,9 +22,14 @@ from optivision.core.selection import (
     FixedSequenceBetting,
     RuleResult,
     SelectionRule,
+    assumptions_of,
     betting_pvalues,
+    builtin_rule_from_record,
+    is_builtin_rule,
+    rule_record,
     to_y,
 )
+from optivision.core.selection.rules import DECLARED_PREFIX
 from optivision.core.selection.statistics import (
     EmptySampleError,
     NonFiniteError,
@@ -111,11 +116,12 @@ def test_bonferroni_config_names_its_own_multiplicity():
     assert config["bet_cap"] == 0.9 and "chains" not in config
 
 
-def test_assumptions_are_the_six_of_the_statement():
+def test_assumptions_are_the_six_of_the_statement_and_the_four_conditions_of_use():
     for rule in (FS, BON):
         a = rule.assumptions()
-        assert isinstance(a, tuple) and len(a) == 6
-        assert [s.split(":")[0] for s in a] == ["A1", "A2", "A3", "A4", "A5", "A6"]
+        assert isinstance(a, tuple) and len(a) == 10
+        assert [s.split(":")[0] for s in a] == ["A1", "A2", "A3", "A4", "A5", "A6",
+                                                "C1", "C2", "C3", "C4"]
         assert all(isinstance(s, str) and s.endswith(".") for s in a)
     assert "independent draws" in FS.assumptions()[0]
     assert "order inside each chain" in FS.assumptions()[2]
@@ -123,16 +129,148 @@ def test_assumptions_are_the_six_of_the_statement():
     assert "fixed before their outcomes are seen" in FS.assumptions()[4]
 
 
-def test_statement_is_the_conditional_marginal_statement_without_extra_claims():
+def test_the_strengthened_assumptions_say_what_the_reviews_asked_them_to_say():
+    a1, a3, a5 = FS.assumptions()[0], FS.assumptions()[2], FS.assumptions()[4]
+    # A1: repeated queries, one session or author, and a sample sorted or filtered by difficulty
+    assert "distribution of the queries the deployed index will serve" in a1
+    assert "Repeated or near-duplicate queries" in a1 and "one session or one author" in a1
+    assert "sorted or filtered by anything related to difficulty" in a1
+    assert "are not independent draws" in a1
+    # A3: nothing fitted may use the calibration queries (the library fits on documents only)
+    assert "no fitted stage uses the calibration queries" in a3
+    assert "stages are fitted on documents only" in a3
+    assert "no fitted stage uses the calibration queries" in BON.assumptions()[2]
+    # A5: fixed before the outcomes AND unrelated to them
+    assert "and is unrelated to them" in a5
+    assert "arrival order of independent draws" in a5 and "random permutation" in a5
+    assert "sorted by any query attribute" in a5 and "picked among several orders" in a5
+    # the unchanged ones stay as they were, so that A1-A6 stay traceable to the registration
+    assert FS.assumptions()[1].startswith("A2: the corpus is fixed")
+    assert FS.assumptions()[3].startswith("A4: the per-query metric lies in [0, 1]")
+    assert FS.assumptions()[5].startswith("A6: the reference is taken as given")
+    assert FS.assumptions()[:2] == BON.assumptions()[:2]
+    assert FS.assumptions()[3:] == BON.assumptions()[3:]
+
+
+def test_the_conditions_of_use_are_the_ones_the_research_protocol_satisfied_by_construction():
+    c1, c2, c3, c4 = FS.assumptions()[6:]
+    assert "one look" in c1 and "one target, one error level, one rule, one metric" in c1.lower()
+    assert "one reference and one candidate list" in c1 and "run once on this sample" in c1
+    assert "other choices on the same queries is outside the statement" in c1
+    assert "baseline and every candidate are scored on the same queries" in c2
+    assert "same metric and the same reference" in c2
+    assert "fixed without regard to the candidates' results" in c3
+    assert "the index that is deployed is the one that was evaluated" in c4
+    assert "same corpus" in c4 and "same fitted state" in c4 and "same scoring procedure" in c4
+    # nothing is said about the sample size or about stopping: that is not a condition added here
+    text = " ".join(FS.assumptions()).lower()
+    assert "optional stopping" not in text and "sample size" not in text
+
+
+def test_the_statement_is_the_joint_statement_with_its_disclaimers_in_the_stored_text():
     assert ("P(a compressed candidate is selected and its retention under Q is below T) "
             "<= delta") in STATEMENT
     assert "over the draw of the calibration queries" in STATEMENT
-    assert "every sample size" in STATEMENT and "A1-A6" in STATEMENT
-    assert "no statement about power" in STATEMENT
-    assert "not been externally reviewed" in STATEMENT
+    assert "every sample size" in STATEMENT
+    assert "assumptions A1-A6 and conditions C1-C4" in STATEMENT
+    assert "sufficient conditions" in STATEMENT and "nothing is claimed if one" in STATEMENT
+    assert "only under" not in STATEMENT  # the statement is not false when an assumption fails
+    assert "This is a joint probability" in STATEMENT
+    assert "NOT the probability, given that a candidate was selected" in STATEMENT
+    assert "not a statement about the retention measured on the calibration queries" in STATEMENT
+    assert "not a statement about a finite batch of future queries" in STATEMENT
+    assert "not a statement about power" in STATEMENT and "always abstains" in STATEMENT
+    assert "an application of published tools" in STATEMENT
+    assert "this project's own and has not been externally reviewed" in STATEMENT
     assert "|" not in STATEMENT  # never written as a conditional probability
     lowered = STATEMENT.lower()
-    assert "guarantee" not in lowered
+    assert "guarantee" not in lowered and "conditional on" not in lowered
+    STATEMENT.encode("ascii")
+
+
+# ------------------------------------------------------------ only the library's own rules
+
+
+class Declaring:
+    """A rule of someone else's that declares itself certifying and tests nothing."""
+
+    name = "declaring"
+    certifying = True
+
+    def config(self):
+        return {"name": self.name}
+
+    def assumptions(self):
+        return ("none: trust me.",)
+
+    def decide(self, candidates, baseline, families, bytes_per_doc, vectors_per_doc, target,
+               error):
+        k = int(np.argmin(bytes_per_doc))
+        return RuleResult(k, (k,), tuple(1.0 for _ in bytes_per_doc), error)
+
+
+class SneakyFixedSequence(FixedSequenceBetting):
+    """A subclass that keeps the built-in name and overrides the decision."""
+
+    def decide(self, candidates, baseline, families, bytes_per_doc, vectors_per_doc, target,
+               error):
+        k = int(np.argmin(bytes_per_doc))
+        return RuleResult(k, (k,), tuple(0.0 for _ in bytes_per_doc), error / 3)
+
+
+def test_only_the_exact_types_of_the_two_library_rules_are_built_in():
+    assert is_builtin_rule(FS) and is_builtin_rule(BON)
+    assert is_builtin_rule(FixedSequenceBetting()) and is_builtin_rule(BonferroniBetting())
+    sneaky = SneakyFixedSequence()
+    assert isinstance(sneaky, FixedSequenceBetting) and sneaky.name == FS.name
+    assert not is_builtin_rule(sneaky)  # a subclass is not built in, nor is a matching name
+    assert not is_builtin_rule(Declaring()) and not is_builtin_rule("fixed_sequence_betting")
+    assert not is_builtin_rule(FixedSequenceBetting)  # the class is not an instance
+
+
+def test_the_record_of_a_builtin_rule_names_its_class_and_says_it_is_built_in():
+    for rule, cls in ((FS, "FixedSequenceBetting"), (BON, "BonferroniBetting")):
+        record = rule_record(rule)
+        assert record == {"name": rule.name, "class": f"optivision.core.selection.rules.{cls}",
+                          "builtin": True, "certifying": True, "declared_certifying": True,
+                          "config": rule.config()}
+        assert assumptions_of(rule) == rule.assumptions()
+
+
+def test_the_record_of_any_other_rule_is_never_certifying_whatever_it_declares():
+    for rule in (Declaring(), SneakyFixedSequence()):
+        record = rule_record(rule)
+        assert record["builtin"] is False and record["certifying"] is False
+        assert record["declared_certifying"] is True  # the declaration is kept, as the author's
+        assert record["class"].endswith(type(rule).__qualname__)
+        assert record["class"].startswith(type(rule).__module__)
+        assert record["name"] == rule.name and record["config"] == rule.config()
+    quiet = Declaring()
+    quiet.certifying = False
+    assert rule_record(quiet)["declared_certifying"] is False
+
+
+def test_the_assumptions_of_another_rule_are_labelled_as_its_authors_and_not_examined():
+    sentences = assumptions_of(Declaring())
+    assert sentences == (DECLARED_PREFIX + "none: trust me.",)
+    assert "Declared by the rule's author, not examined by this library" in sentences[0]
+    # a subclass of a built-in rule gets the same treatment: its inherited sentences are labelled
+    assert all(s.startswith(DECLARED_PREFIX) for s in assumptions_of(SneakyFixedSequence()))
+    assert len(assumptions_of(SneakyFixedSequence())) == 10
+
+
+def test_a_record_resolves_to_a_builtin_rule_only_by_name_class_and_flag_together():
+    good = rule_record(FS)
+    assert builtin_rule_from_record(good) == FS
+    assert builtin_rule_from_record(rule_record(BON)) == BON
+    for edit in ({"name": "fixed_sequence_betting_v2"}, {"class": "my.module.MyRule"},
+                 {"builtin": False}, {"name": "bonferroni_betting"},
+                 {"class": "optivision.core.selection.rules.BonferroniBetting"}):
+        assert builtin_rule_from_record({**good, **edit}) is None, edit
+    assert builtin_rule_from_record(rule_record(Declaring())) is None
+    assert builtin_rule_from_record(rule_record(SneakyFixedSequence())) is None
+    assert builtin_rule_from_record({"name": ["unhashable"], "builtin": True}) is None
+    assert builtin_rule_from_record({}) is None
 
 
 # ------------------------------------------------------------ fixed-sequence behaviour

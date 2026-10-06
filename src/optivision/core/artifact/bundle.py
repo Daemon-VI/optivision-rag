@@ -26,9 +26,10 @@ one NumPy version and the manifest can hash the files themselves. A ``.json`` fi
 after CRLF is turned into LF, so a checkout that converts line endings does not break it.
 
 What the manifest is. It detects accidental damage and naive edits of a file. Anyone who can
-write the directory can write a matching manifest too: the guarantees against that come from the
-certificate (its digest, its fitted-state and codes digests, an optional HMAC), which
-``load_artifact(verify=True)`` also checks. ``verify=False`` reads without any integrity check.
+write the directory can write a matching manifest too, and anyone who can edit the certificate
+can recompute its digest: without an HMAC key nothing in the bundle is a root of trust.
+``load_artifact(verify=True)`` also checks the certificate (its digest, the fitted-state and
+codes digests it records, an optional HMAC). ``verify=False`` reads without any integrity check.
 """
 
 from __future__ import annotations

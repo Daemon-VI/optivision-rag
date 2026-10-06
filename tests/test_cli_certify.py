@@ -84,21 +84,28 @@ def test_certify_prints_a_selection_plainly(files, tmp_path):
                "--out", tmp_path / "artifact")
     assert r.exit_code == 0, r.output
     out = r.output
-    assert "outcome: select (certified)" in out
+    assert "outcome: select (the rule rejected 'retention <= target' for this candidate" in out
+    assert "at the stated error level, 0.05; claimed only under the assumptions" in out
+    assert "outcome: select (certified)" not in out  # the headline claims no more than the rule
     assert "reference" in out and "labels" in out and "ndcg@5" in out
-    assert "40 candidates in 7 families; the registered default list" in out
-    assert "120 tested of 120 given (0 without a relevant document), order: given" in out
+    assert ("40 candidates in 7 families; the default list registered for the development "
+            "stores, not validated for other encoders") in out
+    assert ("120 tested of 120 given (0 without a relevant document), "
+            "order: seeded permutation (seed 0)") in out
     assert "compression" in out and "x vs float32 (a size, not a quality figure)" in out
     assert "(a property of the code, not a quality figure)" in out
     # the statement comes with its conditions, and square brackets in it are printed as written
-    assert "what the rule states (conditional on every assumption below)" in out
+    assert "what the rule states (claimed only if every assumption and condition below holds)" in out
+    assert "conditional on" not in out
     assert "E_Q[metric of the candidate]" in out
-    assert all(f"A{i}:" in out for i in range(1, 7))
+    assert "This is a joint probability" in out and "not a statement about power" in out
+    assert all(f"{k}{i}:" in out for k, n in (("A", 6), ("C", 4)) for i in range(1, n + 1))
     assert "certificate" in out and "artifact" in out
     written = {p.name for p in (tmp_path / "artifact").iterdir()}
     assert {"MANIFEST.json", "certificate.json", "codes.npz", "evidence.npz"} <= written
     assert written <= {"MANIFEST.json", "certificate.json", "codes.npz", "evidence.npz", "fitted.npz"}
-    assert "retention" not in out.split("what the rule states")[0]  # no measured retention figure
+    head = out.split("what the rule states")[0]  # no measured retention figure before the statement
+    assert not [ln for ln in head.splitlines() if "retention" in ln and not ln.startswith("outcome:")]
 
 
 def test_certify_json_is_the_report_alone_on_stdout(selected_run):
@@ -111,7 +118,9 @@ def test_certify_json_is_the_report_alone_on_stdout(selected_run):
     assert rep["selected"]["label"] and rep["compression_ratio"] > 1.0
     assert rep["basis_sensitive"] in (True, False)
     assert rep["artifact"] == str(selected_run.artifact)
-    assert len(rep["assumptions"]) == 6 and rep["not_certified_note"] is None
+    assert len(rep["assumptions"]) == 10 and rep["not_certified_note"] is None
+    assert rep["n_exact_duplicate_queries"] == 0
+    assert rep["query_order"] == {"kind": "seeded_permutation", "seed": 0, "budget": None}
 
 
 @needs_scipy
@@ -121,8 +130,10 @@ def test_nothing_certified_is_a_normal_result_with_exit_status_zero(files, tmp_p
     assert r.exit_code == 0, r.output
     out = r.output
     assert "outcome: abstain (nothing certified; use the uncompressed index)" in out
-    assert "safe outcome, not an error" in out and "before looking again" in out
-    assert "pipeline" not in out and "compression" not in out  # nothing was compressed
+    assert "safe outcome, not an error" in out
+    assert "new, independent queries" in out and "outside the statement of the rule" in out
+    assert "a lower target" not in out
+    assert not re.search(r"^\s+(pipeline|compression)\s", out, re.MULTILINE)  # nothing was compressed
     assert sorted(p.name for p in (tmp_path / "abstained").iterdir()) == [
         "MANIFEST.json", "certificate.json", "evidence.npz"]
     j = invoke("certify", files.docs, files.few, "--qrels", files.qrels, "--target", "0.999", "--json")
@@ -156,6 +167,88 @@ def test_budget_and_order_seed_are_recorded(files):
     text = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--budget", "60",
                   "--order-seed", "5").output
     assert "60 tested of 120 given" in text and "seeded permutation (seed 5), budget 60" in text
+
+
+@needs_scipy
+def test_the_order_is_a_seeded_random_one_unless_the_order_of_the_file_is_asked_for(files):
+    default = json.loads(invoke("certify", files.docs, files.queries, "--qrels", files.qrels,
+                                "--target", "0.9", "--json").stdout)
+    assert default["query_order"] == {"kind": "seeded_permutation", "seed": 0, "budget": None}
+    assert default["caveats"] == []  # the default seed asks nothing of the caller
+    given = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--target", "0.9",
+                   "--given-order", "--json")
+    assert given.exit_code == 0, given.output
+    rep = json.loads(given.stdout)
+    assert rep["query_order"] == {"kind": "given", "seed": None, "budget": None}
+    assert any("order supplied" in c and "unrelated to the outcomes" in c for c in rep["caveats"])
+    text = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--target", "0.9",
+                  "--given-order").output
+    assert "order: given (the order of the file)" in text
+    assert "The queries were tested in the order supplied" in text
+    seven = json.loads(invoke("certify", files.docs, files.queries, "--qrels", files.qrels,
+                              "--target", "0.9", "--order-seed", "7", "--json").stdout)
+    assert any("order seed (7) was chosen by the caller" in c for c in seven["caveats"])
+
+
+def test_graded_labels_are_refused_before_any_candidate_is_scored(files, tmp_path):
+    graded = tmp_path / "graded.json"
+    graded.write_text(json.dumps({"q00000": {"d000001": 1, "d000002": 0}}), encoding="utf-8")
+    r = invoke("certify", files.docs, files.queries, "--qrels", graded)
+    assert r.exit_code == 2
+    assert squash("Graded labels are not supported") in squash(r.output)
+    assert squash("grade 0 included") in squash(r.output)
+    assert squash("graded labels are refused") in squash(invoke("certify", "--help").output)
+
+
+def test_verify_refuses_graded_labels_too(selected_run, tmp_path):
+    graded = tmp_path / "graded.json"
+    graded.write_text(json.dumps({"q00000": {"d000001": 1, "d000002": 0}}), encoding="utf-8")
+    v = invoke("verify", selected_run.artifact, "--qrels", graded)
+    assert v.exit_code == 2 and squash("Graded labels are not supported") in squash(v.output)
+
+
+def test_the_two_ways_of_choosing_the_order_cannot_be_combined(files):
+    r = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--given-order",
+               "--order-seed", "3")
+    assert r.exit_code == 2
+    assert squash("cannot be combined with --order-seed") in squash(r.output)
+
+
+def test_the_help_says_what_the_order_requires():
+    flat = " ".join(re.sub(r"[\s\u2500-\u257f]+", " ", invoke("certify", "--help").output).split())
+    flat = flat.replace("| ", "").replace("\u2502", "")
+    squashed = squash(flat)
+    for sentence in ("seed of the random order in which the queries are tested (default 0",
+                     "trying several seeds and reporting one is outside the statement",
+                     "valid only if that order is unrelated to the outcomes",
+                     "never sorted by difficulty, date, source or any query attribute"):
+        assert squash(sentence) in squashed, sentence
+
+
+@needs_scipy
+def test_repeated_queries_are_counted_in_the_output_and_never_refused(files, tmp_path):
+    from optivision.representation import MultiVectorCorpus
+
+    queries = MultiVectorCorpus.load(files.queries)
+    qrels = json.loads(Path(files.qrels).read_text(encoding="utf-8"))
+    arrays = [queries.vectors[queries.offsets[i]:queries.offsets[i + 1]] for i in range(len(queries))]
+    doubled = MultiVectorCorpus.from_arrays(arrays + arrays,
+                                            ids=[*queries.ids, *[f"{q}_copy" for q in queries.ids]])
+    doubled.save(tmp_path / "doubled.npz")
+    labels = {**qrels, **{f"{q}_copy": docs for q, docs in qrels.items()}}
+    (tmp_path / "doubled.json").write_text(json.dumps(labels), encoding="utf-8")
+    with pytest.warns(UserWarning, match="120 of the 240 queries tested repeat an earlier query"):
+        r = invoke("certify", files.docs, tmp_path / "doubled.npz", "--qrels",
+                   tmp_path / "doubled.json", "--target", "0.9", "--json")
+    assert r.exit_code == 0, r.output
+    rep = json.loads(r.stdout)
+    assert rep["n_exact_duplicate_queries"] == 120 and rep["n_queries"] == 240
+    assert any("120 of the 240 queries tested repeat an earlier query exactly" in c
+               for c in rep["caveats"])
+    with pytest.warns(UserWarning):
+        text = invoke("certify", files.docs, tmp_path / "doubled.npz", "--qrels",
+                      tmp_path / "doubled.json", "--target", "0.9").output
+    assert "120 repeat an earlier query exactly" in text
 
 
 @needs_scipy
@@ -320,6 +413,29 @@ def test_verify_with_a_key_file_checks_the_signature(selected_run, tmp_path):
     assert {c["name"]: c["status"] for c in unkeyed["checks"]}["signature"] == "skipped"
     wrong = invoke("verify", path, "--key-file", bad)
     assert wrong.exit_code == 1 and "[fail   ] signature" in wrong.output
+
+
+def test_verify_says_when_a_record_names_a_rule_that_is_not_the_librarys(tmp_path):
+    from .test_core_certificate import DeclaresCertifying, issue
+    from .test_core_collect_evidence import make_problem, small_space
+
+    out = issue(make_problem(), small_space(), rule=DeclaresCertifying(), target=0.8)
+    path = out.certificate.save(tmp_path / "custom.json")
+    r = invoke("verify", path)
+    assert r.exit_code == 0, r.output
+    assert "[skipped] consistency.decision" in r.output and "[skipped] consistency.level" in r.output
+    assert "note: this record names a rule" in r.output
+    assert "nothing in this record is certified" in r.output
+    notes = json.loads(invoke("verify", path, "--json").stdout)["notes"]
+    assert notes and "nothing in this record is certified" in notes[0]
+    forged = out.certificate.to_dict()  # claim certified for it: failed, never skipped
+    forged["result"]["certified"] = True
+    forged["rule"]["certifying"] = True
+    forged["digest"] = content_digest(forged)
+    bad = invoke("verify", Certificate.from_dict(forged).save(tmp_path / "forged.json"))
+    assert bad.exit_code == 1
+    assert "[fail   ] consistency.decision" in bad.output and "[fail   ] rule.text" in bad.output
+    assert "note: this record says certified: true for a rule" in bad.output
 
 
 def test_strict_code_turns_a_different_source_from_information_into_a_failure(selected_run, tmp_path):

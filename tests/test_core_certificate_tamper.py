@@ -14,13 +14,22 @@ editor would:
     recomputed, and a wrong key fails.
 
 A party who rewrites the certificate and also supplies matching forged evidence and objects is
-not detected at any level; that limit is pinned below as well.
+not detected at any level; that limit is pinned below as well. So is the one thing a key-less
+editor can always do, which is to make a record claim less: a certified record rewritten as an
+uncertified one verifies, and says in the report's notes that nothing in it is certified.
+
+The rows that rename the rule, change its class or its built-in flag, or claim ``certified`` for
+a rule of someone else's are the adversary of ``docs/package/RESEARCH_INTEGRITY_AUDIT.md`` (RI-01
+and RI-02): a record that claims ``certified: true`` for a rule the library does not know fails
+``rule.text``, ``consistency.level``, ``consistency.decision`` and the replay, and is never
+``skipped``, even when the code identity is edited too.
 """
 
 from __future__ import annotations
 
 import copy
 import dataclasses
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -29,6 +38,13 @@ import pytest
 
 from optivision.compose import CompressedCorpus
 from optivision.core.artifact import Certificate, sign_certificate, verify_certificate
+from optivision.core.artifact.record import (
+    CAVEAT_DROPPED,
+    CAVEAT_ORDER_GIVEN,
+    CAVEAT_ORDER_SEED,
+    STATEMENT_UNEXAMINED,
+    caveats_for,
+)
 from optivision.core.evaluate import (
     LabelReference,
     RankingReference,
@@ -36,10 +52,18 @@ from optivision.core.evaluate import (
     compress_selected,
 )
 from optivision.core.identity import array_digest, digest
-from optivision.core.selection import fixed_sequence_by_family, select, smallest
+from optivision.core.selection import (
+    STATEMENT,
+    FixedSequenceBetting,
+    fixed_sequence_by_family,
+    rule_record,
+    select,
+    smallest,
+)
+from optivision.core.selection.rules import DECLARED_PREFIX
 from optivision.representation import MultiVectorCorpus
 
-from .test_core_certificate import KEY, Issued, issue
+from .test_core_certificate import KEY, DeclaresCertifying, Issued, issue, with_copies
 from .test_core_collect_evidence import make_problem, small_space
 
 WRONG_KEY = b"w" * 32
@@ -261,12 +285,190 @@ def query_order_seed(d, out):
     d["queries"]["order"].update(kind="seeded_permutation", seed=3)
 
 
-@case("query-order-seed-and-its-digest", full=("replay.decision",))
+@case("query-order-seed-and-its-digest", full=("rule.text", "replay.decision"),
+      alone=("rule.text",))
 def query_order_seed_and_digest(d, out):
     order = d["queries"]["order"]
     order.update(kind="seeded_permutation", seed=3)
     order["indices_sha256"] = array_digest(
         np.random.default_rng(3).permutation(order["n_available"]).astype(np.int64))
+
+
+@case("query-order-seed-its-digest-and-its-caveat", full=("replay.decision",))
+def query_order_seed_digest_and_caveat(d, out):
+    query_order_seed_and_digest(d, out)
+    d["caveats"] = [CAVEAT_ORDER_SEED.format(seed=3) if c == CAVEAT_ORDER_GIVEN else c
+                    for c in d["caveats"]]
+
+
+@case("order-caveat-removed", full=("rule.text",), alone=("rule.text",))
+def order_caveat_removed(d, out):
+    d["caveats"] = [c for c in d["caveats"] if c != CAVEAT_ORDER_GIVEN]
+
+
+@case("dropped-queries-caveat-removed", full=("rule.text",), alone=("rule.text",))
+def dropped_queries_caveat_removed(d, out):
+    d["caveats"] = [c for c in d["caveats"] if c != CAVEAT_DROPPED.format(k=3, n=80)]
+
+
+# --- exact duplicates and norms: counts that only the live queries and vectors can confirm
+
+
+@case("duplicate-count-cleared", fixture="duplicated", full=("rule.text", "binding.queries"),
+      alone=("rule.text",))
+def duplicate_count_cleared(d, out):
+    d["queries"]["exact_duplicates"] = 0
+
+
+@case("duplicate-count-and-its-caveat-cleared", fixture="duplicated", full=("binding.queries",))
+def duplicate_count_and_caveat_cleared(d, out):
+    d["queries"]["exact_duplicates"] = 0
+    d["caveats"] = [c for c in d["caveats"] if "repeat an earlier query" not in c]
+
+
+@case("duplicate-count-invented", full=("rule.text", "binding.queries"), alone=("rule.text",))
+def duplicate_count_invented(d, out):
+    d["queries"]["exact_duplicates"] = 5
+
+
+@case("duplicate-count-beyond-the-queries-tested", fixture="duplicated",
+      full=("consistency.counts",), alone=("consistency.counts",))
+def duplicate_count_beyond(d, out):
+    d["queries"]["exact_duplicates"] = d["queries"]["n_used"]
+
+
+@case("norm-flag-set-to-hide-it", fixture="scaled",
+      full=("consistency.counts", "rule.text", "binding.corpus"),
+      alone=("consistency.counts", "rule.text"))
+def norm_flag_set(d, out):
+    d["norms"]["documents"]["unit_norm"] = True
+
+
+@case("norms-rewritten-to-hide-it", fixture="scaled", full=("binding.corpus",))
+def norms_rewritten(d, out):
+    d["norms"]["documents"].update(unit_norm=True, norm_min=1.0, norm_max=1.0)
+    d["caveats"] = [c for c in d["caveats"] if "unit L2 norm" not in c]
+
+
+@case("norm-tolerance-widened-to-hide-it", fixture="scaled", full=("binding.corpus",))
+def norm_tolerance_widened(d, out):
+    d["norms"]["tolerance"] = 0.6
+    d["norms"]["documents"]["unit_norm"] = True
+    d["caveats"] = [c for c in d["caveats"] if "unit L2 norm" not in c]
+
+
+@case("norm-extremes-edited-and-the-flag-kept", fixture="scaled",
+      full=("consistency.counts", "binding.corpus"), alone=("consistency.counts",))
+def norm_extremes_edited(d, out):
+    d["norms"]["documents"]["norm_min"] = 1.0
+    d["norms"]["documents"]["norm_max"] = 1.0
+
+
+# --- the rule: its name, its class, its built-in flag and what it declares (RI-01, RI-02)
+
+RULE_CHECKS = ("rule.text", "consistency.level", "consistency.decision")
+RULE_CHECKS_AND_REPLAY = (*RULE_CHECKS, "replay.decision")
+
+
+@case("rule-renamed", full=RULE_CHECKS_AND_REPLAY, alone=RULE_CHECKS)
+def rule_renamed(d, out):
+    d["rule"]["name"] = "fixed_sequence_betting_v2"
+
+
+@case("rule-renamed-and-the-target-edited", full=RULE_CHECKS_AND_REPLAY, alone=RULE_CHECKS)
+def rule_renamed_and_retargeted(d, out):
+    d["target"] = 0.999
+    d["rule"]["name"] = "fixed_sequence_betting_v2"
+
+
+@case("rule-renamed-and-the-decision-forged", full=RULE_CHECKS_AND_REPLAY, alone=RULE_CHECKS)
+def rule_renamed_and_decision_forged(d, out):
+    n = len(d["result"]["p_values"])
+    d["rule"]["name"] = "my_rule"
+    d["error"] = d["level"] = 0.5
+    d["result"]["p_values"] = [1e-9] * n
+    d["result"]["certified_positions"] = list(range(n))
+
+
+@case("rule-renamed-and-the-code-identity-edited", full=RULE_CHECKS_AND_REPLAY,
+      alone=RULE_CHECKS)
+def rule_renamed_and_code_edited(d, out):
+    """The code identity is edited too: a text difference would then only be ``differs``, but a
+    record that claims ``certified: true`` for a rule the library does not know fails anyway."""
+    d["rule"]["name"] = "fixed_sequence_betting_v2"
+    d["code"]["files"]["core/selection/rules.py"] = ZEROS
+    d["code"]["digest"] = digest(d["code"]["files"])
+
+
+@case("rule-class-renamed", full=RULE_CHECKS_AND_REPLAY, alone=(*RULE_CHECKS, "consistency.outcome"))
+def rule_class_renamed(d, out):
+    d["rule"]["class"] = "my.module.MyRule"
+
+
+@case("rule-builtin-flag-cleared", full=RULE_CHECKS_AND_REPLAY,
+      alone=(*RULE_CHECKS, "consistency.outcome"))
+def rule_builtin_flag_cleared(d, out):
+    d["rule"]["builtin"] = False
+
+
+@case("rule-declared-certifying-cleared", full=("consistency.outcome", "rule.text"),
+      alone=("consistency.outcome", "rule.text"))
+def rule_declared_certifying_cleared(d, out):
+    d["rule"]["declared_certifying"] = False
+
+
+@case("rule-swapped-for-the-other-builtin-rule", full=("rule.text", "consistency.level"),
+      alone=("rule.text", "consistency.level"))
+def rule_swapped(d, out):
+    d["rule"].update(name="bonferroni_betting",
+                     **{"class": "optivision.core.selection.rules.BonferroniBetting"})
+
+
+@case("custom-rule-certified-flag-set", fixture="custom",
+      full=("consistency.outcome", *RULE_CHECKS_AND_REPLAY),
+      alone=("consistency.outcome", *RULE_CHECKS))
+def custom_rule_certified_flag_set(d, out):
+    d["result"]["certified"] = True
+
+
+@case("custom-rule-claims-to-be-built-in", fixture="custom",
+      full=("consistency.outcome", *RULE_CHECKS_AND_REPLAY),
+      alone=("consistency.outcome", *RULE_CHECKS))
+def custom_rule_claims_builtin(d, out):
+    d["rule"].update(builtin=True, certifying=True)
+    d["result"]["certified"] = True
+    d["statement"] = STATEMENT
+
+
+@case("custom-rule-given-the-librarys-name-and-class", fixture="custom",
+      full=("consistency.level", "consistency.decision", "replay.decision"),
+      alone=("consistency.level", "consistency.decision"))
+def custom_rule_given_the_librarys_identity(d, out):
+    """Every text and flag now says "built in" and is consistent: the texts pass, and what fails
+    is that the library's own rule, run on the stored p-values (all 1), would certify nothing."""
+    fs = FixedSequenceBetting()
+    d["rule"] = json.loads(json.dumps(rule_record(fs)))
+    d["result"]["certified"] = True
+    d["statement"] = STATEMENT
+    d["assumptions"] = list(fs.assumptions())
+    d["caveats"] = caveats_for(d)
+
+
+@case("custom-rule-statement-replaced-by-the-librarys", fixture="custom",
+      full=("rule.text",), alone=("rule.text",))
+def custom_rule_statement_replaced(d, out):
+    d["statement"] = STATEMENT
+
+
+@case("custom-rule-assumptions-unlabelled", fixture="custom", full=("rule.text",),
+      alone=("rule.text",))
+def custom_rule_assumptions_unlabelled(d, out):
+    d["assumptions"] = [a.removeprefix(DECLARED_PREFIX) for a in d["assumptions"]]
+
+
+@case("custom-rule-caveat-removed", fixture="custom", full=("rule.text",), alone=("rule.text",))
+def custom_rule_caveat_removed(d, out):
+    d["caveats"] = [c for c in d["caveats"] if "not part of this library" not in c]
 
 
 @case("query-budget", full=("consistency.counts", "replay.decision"),
@@ -303,11 +505,16 @@ def construct(d, out):
 def construct_hides_the_caveat(d, out):
     d["reference"]["construct"] = "labels"
     d["reference"]["identity"] = {"construct": "labels", "qrels_sha256": ZEROS}
-    d["caveats"] = []
+    d["caveats"] = [c for c in d["caveats"] if "agreement with the uncompressed ranking" not in c]
 
 
 @case("agreement-caveat-removed", fixture="agreement", full=("rule.text",), alone=("rule.text",))
 def agreement_caveat_removed(d, out):
+    d["caveats"] = [c for c in d["caveats"] if "agreement with the uncompressed ranking" not in c]
+
+
+@case("all-caveats-removed", fixture="agreement", full=("rule.text",), alone=("rule.text",))
+def all_caveats_removed(d, out):
     d["caveats"] = []
 
 
@@ -627,6 +834,34 @@ def abstained(problem, space):
     return issue(problem, space, target=0.95, error=0.3)
 
 
+@pytest.fixture(scope="module")
+def custom(problem, space):
+    """A certificate issued under a rule of someone else's that declares itself certifying."""
+    out = issue(problem, space, rule=DeclaresCertifying(), target=0.8)
+    assert out.decision.outcome.value == "select" and out.certificate.certified is False
+    return out
+
+
+@pytest.fixture(scope="module")
+def duplicated(space):
+    """Every one of the 80 queries counted twice (the copies under new ids), tested at random."""
+    corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))
+    out = issue((corpus, doubled, labels), space, order_seed=0, target=0.7)
+    assert out.certificate.to_dict()["queries"]["exact_duplicates"] == 80
+    assert out.decision.outcome.value == "select"
+    return out
+
+
+@pytest.fixture(scope="module")
+def scaled(problem, space):
+    """Documents of norm 1.5 instead of 1: the vectors are not unit-norm."""
+    corpus, queries, qrels = problem
+    docs = MultiVectorCorpus(corpus.vectors * np.float32(1.5), corpus.offsets, ids=corpus.ids)
+    out = issue((docs, queries, qrels), space)
+    assert out.certificate.to_dict()["norms"]["documents"]["unit_norm"] is False
+    return out
+
+
 def edited(out: Issued, c: Case, *, digest_too: bool, signed: bool = False) -> Certificate:
     base = sign_certificate(out.certificate, KEY, key_id="k") if signed else out.certificate
     d = base.to_dict()
@@ -641,13 +876,17 @@ def failed_names(report) -> set[str]:
 
 
 def test_the_table_covers_every_row_of_the_specification_and_more():
-    assert len(CASES) == len(set(IDS)) >= 60
+    assert len(CASES) == len(set(IDS)) >= 85
     needed = {"pipeline-parameter", "list-drop-one", "list-reorder", "list-add-one", "target",
               "error-level", "query-identity", "query-budget", "query-order-seed",
               "reference-identity", "construct", "fitted-state-digest", "code-identity",
               "outcome-select-to-abstain", "selected-position-another-certified",
               "p-value-that-changes-no-decision", "certified-position-dropped",
-              "corpus-identity", "bytes-code-bytes", "statement-text", "assumption-dropped"}
+              "corpus-identity", "bytes-code-bytes", "statement-text", "assumption-dropped",
+              "rule-renamed", "rule-renamed-and-the-target-edited",
+              "rule-renamed-and-the-decision-forged", "rule-class-renamed",
+              "rule-builtin-flag-cleared", "custom-rule-certified-flag-set",
+              "duplicate-count-cleared", "norm-flag-set-to-hide-it"}
     assert needed <= set(IDS)
 
 
@@ -1061,6 +1300,52 @@ class TestDocumentedLimits:
             cert, **{**full, "evidence": ev}))
         assert verify_certificate(cert, key=KEY).status("signature") == "fail"
         assert verify_certificate(sign_certificate(selected.certificate, KEY), key=KEY).ok
+
+    def test_a_certified_record_can_be_rewritten_into_an_uncertified_one_and_says_so(
+            self, selected):
+        """Pinned: claiming less is always possible without a key. The record then names a rule
+        the library does not know, claims nothing, and the report says that nothing in it is
+        certified: the three checks that need the rule are skipped, not passed."""
+        d = selected.certificate.to_dict()
+        d["rule"].update(name="my_rule", builtin=False, certifying=False)
+        d["rule"]["class"] = "my.module.MyRule"
+        d["result"]["certified"] = False
+        d["statement"] = STATEMENT_UNEXAMINED
+        d["assumptions"] = [DECLARED_PREFIX + a for a in d["assumptions"]]
+        d["caveats"] = caveats_for(d)
+        recompute(d)
+        assert verify_certificate(Certificate.from_dict(d)).ok  # alone, and with everything:
+        report = selected.verify(Certificate.from_dict(d))
+        assert report.ok, report.summary()
+        for name in ("consistency.level", "consistency.decision", "replay.decision"):
+            assert report.status(name) == "skipped", name
+        assert report.status("rule.text") == "pass"
+        assert any("nothing in this record is certified" in n for n in report.notes)
+        assert "note: this record names a rule" in report.summary()
+        assert report.to_dict()["notes"] == list(report.notes)
+        # ... and it is not certified: nothing in it can be read as the library's statement
+        assert Certificate.from_dict(d).certified is False
+        assert Certificate.from_dict(d).statement == STATEMENT_UNEXAMINED != STATEMENT
+
+    def test_a_record_that_claims_certified_for_an_unknown_rule_is_failed_never_skipped(
+            self, selected):
+        for edit in ({"name": "someone_elses_rule"}, {"class": "my.module.MyRule"},
+                     {"builtin": False}):
+            d = selected.certificate.to_dict()
+            d["rule"].update(edit)
+            recompute(d)
+            for report in (verify_certificate(Certificate.from_dict(d)),
+                           selected.verify(Certificate.from_dict(d))):
+                assert not report.ok
+                for name in RULE_CHECKS:
+                    check = report.get(name)
+                    assert check.status == "fail", (edit, name, check.status)
+                    assert "certified: true" in check.detail and "not one of this library's own" \
+                        in check.detail
+                assert any("claims certified: true" in n or "says certified: true" in n
+                           for n in report.notes)
+        # a skip is correct only where nothing is claimed: see the test above
+        assert selected.certificate.certified is True
 
     def test_descriptive_fields_are_not_verified(self, selected):
         for case_id in ("created-time", "package-version", "encoder-declared", "space-name"):

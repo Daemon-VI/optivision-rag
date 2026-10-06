@@ -14,7 +14,7 @@ Rules that keep the rule's assumptions intact:
 * Stages are fitted on documents only. ``score_candidate`` never passes queries to ``fit``,
   and a stage whose declared traits say ``fit_uses_queries`` (``PCAProjector(basis="joint")``,
   or a stage with no declared traits) is refused up front: assumption A3 of the rule's statement
-  needs every fitted stage to be fitted without the calibration queries.
+  needs that no fitted stage uses the calibration queries.
 * A query with no relevant document has a NaN baseline metric. It is removed for the baseline
   and for every candidate together (the rule looks only at the reference, never at a candidate)
   and listed in ``dropped_queries``. A NaN on a kept query for any candidate raises.
@@ -88,8 +88,9 @@ def _check_fitted_on_documents_only(pipeline: Pipeline, where: str) -> None:
                    "PCAProjector(basis='joint') also reads the queries)")
         raise ValueError(
             f"{where}: stage {i} cannot be used here: {why}. The selection rule's statement "
-            "assumes that every stage is fitted on documents only (assumption A3), and the "
-            "evidence collector never passes queries to a stage's fit."
+            "assumes that no fitted stage uses the calibration queries, so that every stage is "
+            "fitted on documents only (assumption A3), and the evidence collector never passes "
+            "queries to a stage's fit."
         )
 
 

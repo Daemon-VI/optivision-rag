@@ -15,10 +15,17 @@ corpus, the queries, the reference, the fitted pipeline, the compressed corpus.
 What is and is not detected is tabulated in ``docs/package/CERTIFICATE_SPEC.md`` (section 4.1).
 In short: an edit is caught by the digest unless the digest is recomputed; with the digest
 recomputed it is caught by the consistency checks, the replay or the binding, *except* where the
-edited value is not tied to anything (the code identity, descriptive fields), and a party who
-rewrites the certificate and also supplies matching forged evidence and objects is not
-detected. Only an HMAC with a key that party does not hold closes that gap, and HMAC is
-symmetric: it gives no non-repudiation.
+edited value is not tied to anything (the code identity, descriptive fields, the counts and
+norms that only the live queries and vectors can confirm), and a party who rewrites the
+certificate and also supplies matching forged evidence and objects is not detected. Only an
+HMAC with a key that party does not hold closes that gap, and HMAC is symmetric: it gives no
+non-repudiation.
+
+The library certifies only for its own rules. The checks that recompute the level, the decision
+step and the replay, and the comparison of the rule's text, need the rule: when the recorded
+rule is not one of the library's own (by its name, its qualified class name and its ``builtin``
+flag together) a record that claims ``certified: true`` fails them, and a record that claims
+nothing is certified skips them and says so in the report's notes.
 """
 
 from __future__ import annotations
@@ -36,7 +43,12 @@ from optivision.core.evaluate.reference import Reference
 from optivision.core.identity import array_digest, canonical_json, digest, strings_digest
 from optivision.core.pipeline import pipeline_identity
 from optivision.core.selection.engine import select
-from optivision.core.selection.rules import rule_from_name
+from optivision.core.selection.rules import (
+    DECLARED_PREFIX,
+    assumptions_of,
+    builtin_rule_from_record,
+    rule_record,
+)
 from optivision.core.selection.spaces import (
     NOT_IN_SPACE,
     REGISTERED_DEFAULT_SPACE_SHA256,
@@ -56,8 +68,11 @@ from .record import (
     SCHEMA,
     SCHEMA_VERSION,
     SIGNATURE_ALGORITHM,
+    STATEMENT_UNEXAMINED,
     caveats_for,
     content_digest,
+    exact_duplicates,
+    norm_record,
     sample_record,
     signature_value,
     statement_for,
@@ -102,6 +117,7 @@ _KINDS: dict[str, Callable[[Any], bool]] = {
     "int": _int,
     "int?": lambda x: x is None or _int(x),
     "real": _real,
+    "real?": lambda x: x is None or _real(x),
     "bool": lambda x: isinstance(x, bool),
     "dict": lambda x: isinstance(x, dict),
     "dict?": lambda x: x is None or isinstance(x, dict),
@@ -121,26 +137,30 @@ _IDENTITY = {
 _TOP = {
     "schema": "str", "schema_version": "int", "created_utc": "str", "package": "dict",
     "code": "dict", "encoder": "dict?", "corpus": "dict", "queries": "dict", "reference": "dict",
-    "space": "dict", "sizes": "dict", "rule": "dict", "statement": "str", "assumptions": "strs",
-    "caveats": "strs", "target": "real", "error": "real", "level": "real", "evidence": "dict",
-    "result": "dict", "sample": "dict?", "candidate": "dict?", "digest": "str",
-    "signature": "dict?",
+    "norms": "dict", "space": "dict", "sizes": "dict", "rule": "dict", "statement": "str",
+    "assumptions": "strs", "caveats": "strs", "target": "real", "error": "real", "level": "real",
+    "evidence": "dict", "result": "dict", "sample": "dict?", "candidate": "dict?",
+    "digest": "str", "signature": "dict?",
 }
 _NESTED: dict[str, dict[str, str]] = {
     "package": {"name": "str", "version": "str"},
     "code": {"digest": "str?", "files": "dict", "python": "str", "numpy": "str", "scipy": "str?"},
     "corpus": _IDENTITY,
-    "queries": {"n_pool": "int", "n_used": "int", "identity": "dict", "order": "dict"},
+    "queries": {"n_pool": "int", "n_used": "int", "identity": "dict", "order": "dict",
+                "exact_duplicates": "int"},
+    "norms": {"tolerance": "real", "documents": "dict", "queries": "dict"},
     "reference": {"construct": "str", "metric": "str", "identity": "dict"},
     "space": {"name": "str", "identity": "str", "n_candidates": "int", "n_families": "int",
               "families": "strs", "registered_default": "bool", "candidates": "list"},
     "sizes": {"bytes_per_doc": "reals", "vectors_per_doc": "reals"},
-    "rule": {"name": "str", "certifying": "bool", "config": "dict"},
+    "rule": {"name": "str", "class": "str", "builtin": "bool", "certifying": "bool",
+             "declared_certifying": "bool", "config": "dict"},
     "evidence": {"digest": "str", "n_queries": "int", "dropped_queries": "strs",
                  "baseline_mean": "real"},
     "result": {"outcome": "str", "certified": "bool", "selected": "int?",
                "certified_positions": "ints", "p_values": "reals"},
 }
+_NORM = {"unit_norm": "bool", "norm_min": "real?", "norm_max": "real?"}
 _ORDER = {"kind": "str", "seed": "int?", "budget": "int?", "n_available": "int", "n_used": "int",
           "indices_sha256": "str"}
 _CANDIDATE = {"pipeline": "dict", "pipeline_sha256": "str", "fitted_state": "strs?",
@@ -197,6 +217,9 @@ def structure_problems(d: Mapping[str, Any]) -> list[str]:
     if isinstance(d["queries"], dict):
         _require(d["queries"].get("identity"), _IDENTITY, "queries.identity", problems)
         _require(d["queries"].get("order"), _ORDER, "queries.order", problems)
+    if isinstance(d["norms"], dict):
+        for key in ("documents", "queries"):
+            _require(d["norms"].get(key), _NORM, f"norms.{key}", problems)
     if (isinstance(d["code"], dict) and isinstance(d["code"].get("files"), dict)
             and not all(isinstance(v, str) for v in d["code"]["files"].values())):
         problems.append("code.files must map paths to digests")
@@ -228,10 +251,16 @@ class _Ctx:
         issued = d["code"].get("digest")
         self.code_same = issued is not None and issued == self.running["digest"]
         self._space: CandidateSpace | None = None
+        #: the library's own rule the record names (name, class and flag together), or None
+        self.builtin = builtin_rule_from_record(d["rule"])
 
     @property
     def outcome(self) -> str:
         return self.d["result"]["outcome"]
+
+    @property
+    def claims_certified(self) -> bool:
+        return bool(self.d["result"]["certified"])
 
     @property
     def space(self) -> CandidateSpace:
@@ -260,6 +289,22 @@ def _summarise(items: Sequence[Any], limit: int = 6) -> str:
 
 def _verdict(problems: list[str], ok_detail: str) -> Result:
     return (FAIL, "; ".join(problems)) if problems else (PASS, ok_detail)
+
+
+def _unexamined(ctx: _Ctx, what: str) -> Result:
+    """The result of a check that needs the rule when the record's rule is not built in.
+
+    The library certifies only its own rules. A record that says ``certified: true`` for any
+    other rule fails the check, whatever else in it is consistent: the claim cannot be true
+    and is never skipped. A record that claims nothing is certified may skip it.
+    """
+    rule = ctx.d["rule"]
+    named = (f"rule {rule['name']!r} (class {rule['class']!r}, builtin flag {rule['builtin']!r})"
+             " is not one of this library's own rules")
+    if ctx.claims_certified:
+        return FAIL, (f"the record says certified: true, but {named}, the only rules it "
+                      f"certifies for: {what}")
+    return SKIPPED, f"{named}: {what}; nothing in this record is certified"
 
 
 # --------------------------------------------------------------- level 1 checks
@@ -377,24 +422,49 @@ def _check_counts(ctx: _Ctx) -> Result:
             problems.append(f"queries.order: {exc}")
     if len(set(ev["dropped_queries"])) != len(ev["dropped_queries"]):
         problems.append("evidence.dropped_queries repeats an id")
-    return _verdict(problems, "sizes, p-values, query counts and order record are consistent")
+    if not 0 <= q["exact_duplicates"] < max(1, q["n_used"]):
+        problems.append(f"queries.exact_duplicates is {q['exact_duplicates']}: it counts tested "
+                        f"queries that repeat an earlier one, so it lies in [0, {q['n_used']})")
+    problems += _norm_record_problems(d["norms"])
+    return _verdict(problems, "sizes, p-values, query counts, the order record, the duplicate "
+                    "count and the norm records are consistent")
+
+
+def _norm_record_problems(norms: Mapping[str, Any]) -> list[str]:
+    problems = []
+    tol = norms["tolerance"]
+    if not 0.0 < tol < 1.0:
+        problems.append(f"norms.tolerance {tol} is outside (0, 1)")
+        return problems
+    for key in ("documents", "queries"):
+        entry = norms[key]
+        low, high = entry["norm_min"], entry["norm_max"]
+        if (low is None) != (high is None):
+            problems.append(f"norms.{key} has one extreme and not the other")
+        elif low is None:
+            if not entry["unit_norm"]:
+                problems.append(f"norms.{key} has no vectors, so unit_norm cannot be false")
+        elif not 0.0 <= low <= high:
+            problems.append(f"norms.{key} extremes are not ordered: {low} > {high}")
+        elif entry["unit_norm"] != (low >= 1.0 - tol and high <= 1.0 + tol):
+            problems.append(f"norms.{key}.unit_norm does not follow from its extremes and the "
+                            "tolerance")
+    return problems
 
 
 def _expected_level(ctx: _Ctx) -> float | None:
     d = ctx.d
-    name = d["rule"]["name"]
-    if name == "fixed_sequence_betting":
+    if ctx.builtin is None:
+        return None
+    if ctx.builtin.name == "fixed_sequence_betting":
         return d["error"] / ctx.space.n_families
-    if name == "bonferroni_betting":
-        return d["error"] / len(ctx.space)
-    return None
+    return d["error"] / len(ctx.space)  # bonferroni_betting
 
 
 def _check_level(ctx: _Ctx) -> Result:
     expected = _expected_level(ctx)
     if expected is None:
-        return SKIPPED, (f"rule {ctx.d['rule']['name']!r} is not a built-in rule: its level "
-                         "cannot be derived here")
+        return _unexamined(ctx, "its level cannot be derived here")
     if ctx.d["level"] != expected:
         return FAIL, (f"level is {ctx.d['level']!r}; the rule's configuration derives "
                       f"{expected!r} from error {ctx.d['error']!r} and the candidate list")
@@ -407,6 +477,13 @@ def _check_outcome(ctx: _Ctx) -> Result:
     outcome = ctx.outcome
     k = d["space"]["n_candidates"]
     problems: list[str] = []
+    rule = d["rule"]
+    if rule["certifying"] != (rule["builtin"] and rule["declared_certifying"]):
+        problems.append("rule.certifying must be true exactly when the rule is built in and "
+                        "declares itself certifying: the library certifies only its own rules")
+    if rule["builtin"] and ctx.builtin is None:
+        problems.append("rule.builtin is true, but rule.name and rule.class are not those of one "
+                        "of the library's own rules")
     if any(not 0 <= p < k for p in r["certified_positions"]) or (
             r["certified_positions"] != sorted(set(r["certified_positions"]))):
         problems.append("result.certified_positions must be distinct positions in list order")
@@ -436,16 +513,14 @@ def _check_outcome(ctx: _Ctx) -> Result:
 
 def _check_decision(ctx: _Ctx) -> Result:
     d = ctx.d
-    name = d["rule"]["name"]
     p = d["result"]["p_values"]
     families = [c["family"] for c in d["space"]["candidates"]]
-    if name == "fixed_sequence_betting":
+    if ctx.builtin is None:
+        return _unexamined(ctx, "the decision step cannot be recomputed from the p-values")
+    if ctx.builtin.name == "fixed_sequence_betting":
         rejected = fixed_sequence_by_family(p, families, d["level"])
-    elif name == "bonferroni_betting":
+    else:  # bonferroni_betting
         rejected = [k for k, pk in enumerate(p) if pk <= d["level"]]
-    else:
-        return SKIPPED, (f"rule {name!r} is not a built-in rule: the decision step cannot be "
-                         "recomputed from the p-values")
     chosen = smallest(rejected, d["sizes"]["bytes_per_doc"], d["sizes"]["vectors_per_doc"])
     r = d["result"]
     problems = []
@@ -530,17 +605,15 @@ def _check_sample(ctx: _Ctx) -> Result:
 
 def _check_rule_text(ctx: _Ctx) -> Result:
     d = ctx.d
-    try:
-        rule = rule_from_name(d["rule"]["name"])
-    except ValueError:
-        return SKIPPED, (f"rule {d['rule']['name']!r} is not a built-in rule: its texts cannot "
-                         "be compared")
-    certifying = bool(rule.certifying)
+    rule = ctx.builtin
+    if rule is None:
+        return _unexamined_texts(ctx)
+    record = rule_record(rule)
     wanted = {
-        "rule": {"name": rule.name, "certifying": certifying, "config": rule.config()},
-        "statement": statement_for(certifying),
-        "assumptions": list(rule.assumptions()),
-        "caveats": caveats_for(ctx.outcome, d["reference"]["construct"], certifying),
+        "rule": record,
+        "statement": statement_for(record),
+        "assumptions": list(assumptions_of(rule)),
+        "caveats": caveats_for(d),
     }
     differing = [k for k, v in wanted.items() if _canon(d[k]) != _canon(v)]
     status = ctx.text_status(not differing)
@@ -549,6 +622,34 @@ def _check_rule_text(ctx: _Ctx) -> Result:
     why = ("the code is the code that issued the certificate, so a different text is not a "
            "version difference" if ctx.code_same else "the running code differs from the issuing "
            "code, so this may be a version difference")
+    return status, f"{', '.join(differing)} differ from what the running library writes ({why})"
+
+
+def _unexamined_texts(ctx: _Ctx) -> Result:
+    """``rule.text`` for a rule that is not built in: only what the library itself writes.
+
+    The rule's configuration and its assumptions cannot be compared (the library has not
+    examined the rule), but the statement is a fixed text, every assumption must carry the
+    label that says whose it is, and the caveats follow from the record's own fields.
+    """
+    d = ctx.d
+    if ctx.claims_certified:
+        return _unexamined(ctx, "its statement and texts cannot be those of a certified rule")
+    differing = []
+    if d["statement"] != STATEMENT_UNEXAMINED:
+        differing.append("statement")
+    if not all(a.startswith(DECLARED_PREFIX) for a in d["assumptions"]):
+        differing.append("assumptions")
+    if _canon(d["caveats"]) != _canon(caveats_for(d)):
+        differing.append("caveats")
+    status = ctx.text_status(not differing)
+    if status == PASS:
+        return PASS, ("the rule is not one of this library's own, so only the fixed statement, "
+                      "the label on the assumptions and the caveats were compared; the rule's "
+                      "configuration was not examined and nothing in this record is certified")
+    why = ("the code is the code that issued the certificate, so a different text is not a "
+           "version difference" if ctx.code_same else "the running code differs from the "
+           "issuing code, so this may be a version difference")
     return status, f"{', '.join(differing)} differ from what the running library writes ({why})"
 
 
@@ -664,11 +765,9 @@ def _check_evidence_sample(ctx: _Ctx, evidence: Evidence) -> Result:
 
 def _check_replay(ctx: _Ctx, evidence: Evidence) -> Result:
     d = ctx.d
-    name = d["rule"]["name"]
-    try:
-        rule = rule_from_name(name)
-    except ValueError:
-        return SKIPPED, f"rule {name!r} is not a built-in rule: the decision cannot be replayed"
+    rule = ctx.builtin
+    if rule is None:
+        return _unexamined(ctx, "the decision cannot be replayed")
     order = d["queries"]["order"]
     fallback = d["candidate"]["pipeline"] if ctx.outcome == "fallback" else None
     try:
@@ -727,6 +826,50 @@ def _check_binding_identity(live_corpus: MultiVectorCorpus, stored: Mapping[str,
         return FAIL, (f"the supplied {what} is not the one certified: differs in "
                       f"{bad or ['combined digest']}")
     return PASS, f"the supplied {what} has the recorded identity ({ident.n_docs} items)"
+
+
+def _live_norm_problems(live: MultiVectorCorpus, stored: Mapping[str, Any], where: str) -> list[str]:
+    """The recorded norm entry against the one the supplied vectors give (they are the
+    certified vectors, since their identity matched, so the two must agree)."""
+    now = norm_record(live)
+    problems = []
+    if now["unit_norm"] != stored["unit_norm"]:
+        problems.append(f"norms.{where}.unit_norm is {stored['unit_norm']}, the supplied "
+                        f"vectors give {now['unit_norm']}")
+    for key in ("norm_min", "norm_max"):
+        a, b = now[key], stored[key]
+        if (a is None) != (b is None) or (a is not None and not np.isclose(
+                a, b, rtol=1e-9, atol=0.0)):
+            problems.append(f"norms.{where}.{key} is {b!r}, the supplied vectors give {a!r}")
+    return problems
+
+
+def _check_binding_corpus(ctx: _Ctx, corpus: MultiVectorCorpus) -> Result:
+    d = ctx.d
+    status, detail = _check_binding_identity(corpus, d["corpus"], "corpus")
+    if status != PASS:
+        return status, detail
+    problems = _live_norm_problems(corpus, d["norms"]["documents"], "documents")
+    return _verdict(problems, detail + "; its norm record is the recorded one")
+
+
+def _check_binding_queries(ctx: _Ctx, queries: MultiVectorCorpus) -> Result:
+    d = ctx.d
+    status, detail = _check_binding_identity(queries, d["queries"]["identity"], "query set")
+    if status != PASS:
+        return status, detail
+    problems = _live_norm_problems(queries, d["norms"]["queries"], "queries")
+    try:
+        repeats = exact_duplicates(queries, d["evidence"]["dropped_queries"],
+                                   d["queries"]["order"])
+    except ValueError as exc:
+        problems.append(f"the exact-duplicate count could not be recomputed: {exc}")
+    else:
+        if repeats != d["queries"]["exact_duplicates"]:
+            problems.append(f"queries.exact_duplicates is {d['queries']['exact_duplicates']}, the "
+                            f"supplied queries give {repeats}")
+    return _verdict(problems, detail + "; its exact-duplicate count and norm record are the "
+                    "recorded ones")
 
 
 def _check_binding_reference(reference: Reference, d: Mapping[str, Any]) -> Result:
@@ -865,13 +1008,11 @@ def run_checks(
     if corpus is None:
         _skip(out, "binding.corpus", BINDING, "no corpus supplied")
     else:
-        _run(out, "binding.corpus", BINDING,
-             lambda: _check_binding_identity(corpus, d["corpus"], "corpus"))
+        _run(out, "binding.corpus", BINDING, lambda: _check_binding_corpus(ctx, corpus))
     if queries is None:
         _skip(out, "binding.queries", BINDING, "no queries supplied")
     else:
-        _run(out, "binding.queries", BINDING,
-             lambda: _check_binding_identity(queries, d["queries"]["identity"], "query set"))
+        _run(out, "binding.queries", BINDING, lambda: _check_binding_queries(ctx, queries))
     if queries is None or evidence is None:
         _skip(out, "binding.evidence_queries", BINDING, "needs both the queries and the evidence")
     else:
@@ -894,7 +1035,21 @@ def run_checks(
     else:
         _run(out, "binding.bytes", BINDING,
              lambda: _check_binding_bytes(ctx, pipeline, compressed))
-    return VerificationReport(tuple(out))
+    return VerificationReport(tuple(out), tuple(_notes(ctx)))
+
+
+def _notes(ctx: _Ctx) -> list[str]:
+    """Sentences about the whole record that the checks alone do not say."""
+    if ctx.builtin is not None:
+        return []
+    cls = ctx.d["rule"]["class"]
+    if ctx.claims_certified:
+        return [(f"this record says certified: true for a rule (class {cls}) that is not one of "
+                 "this library's own; the library certifies only its own rules, so the claim is "
+                 "refused")]
+    return [(f"this record names a rule (class {cls}) that is not one of this library's own. The "
+             "library has not examined it: nothing in this record is certified, and the checks "
+             "that recompute the level and the decision, and the replay, were skipped")]
 
 
 __all__ = ["RTOL", "run_checks", "structure_problems"]

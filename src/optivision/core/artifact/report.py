@@ -65,12 +65,19 @@ class Check:
 
 @dataclass(frozen=True)
 class VerificationReport:
-    """Every check that was considered, in the order it was made."""
+    """Every check that was considered, in the order it was made, and any notes.
+
+    ``notes`` are sentences about the record as a whole that the checks alone do not say: for
+    example that the record names a rule that is not part of this library, so that nothing in
+    it is certified and the checks that need the rule were not run.
+    """
 
     checks: tuple[Check, ...]
+    notes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "checks", tuple(self.checks))
+        object.__setattr__(self, "notes", tuple(str(n) for n in self.notes))
 
     @property
     def ok(self) -> bool:
@@ -108,7 +115,7 @@ class VerificationReport:
 
     def to_dict(self) -> dict[str, Any]:
         return {"ok": self.ok, "level": self.level, "levels": list(self.levels),
-                "checks": [c.to_dict() for c in self.checks]}
+                "checks": [c.to_dict() for c in self.checks], "notes": list(self.notes)}
 
     def summary(self) -> str:
         """A readable multi-line account of what was checked and what was not."""
@@ -121,6 +128,8 @@ class VerificationReport:
         width = max((len(c.name) for c in self.checks), default=0)
         for c in self.checks:
             lines.append(f"  [{c.status:<7}] {c.name:<{width}}  {c.detail}".rstrip())
+        for note in self.notes:
+            lines.append(f"  note: {note}")
         lines.append(
             "  ok means that no check failed. It does not make the certificate true: it is as "
             "good as the queries, labels and corpus it was issued for. 'skipped' checks were "

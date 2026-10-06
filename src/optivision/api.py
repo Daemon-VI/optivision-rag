@@ -20,21 +20,23 @@ it. The two do different things and say different things:
   nothing is certified the answer is the uncompressed index (``Outcome.ABSTAIN``): that is the
   normal, safe outcome, not an error.
 
-What a certificate says is the rule's own statement (``core.selection.STATEMENT``), which is
-conditional on the assumptions it lists. It is not a statement that the compressed index keeps
-retrieval quality in general, and with the agreement reference it is a statement about
-agreement with the uncompressed ranking, which is not retrieval quality. This module adds no
-selection logic of its own: it validates, calls ``collect_evidence``, ``select``,
-``compress_selected`` and ``create_certificate`` in that order, and hands the pieces back.
+What a certificate says is the rule's own statement (``core.selection.STATEMENT``), claimed
+only under the assumptions and conditions it lists, and only for the library's own rules. It is
+not a statement that the compressed index keeps retrieval quality in general, and with the
+agreement reference it is a statement about agreement with the uncompressed ranking, which is
+not retrieval quality. This module adds no selection logic of its own: it validates, calls
+``collect_evidence``, ``select``, ``compress_selected`` and ``create_certificate`` in that
+order, and hands the pieces back.
 
-Model-blind by construction: nothing here branches on the encoder, the dimension (beyond the
-library's own default candidate list), the modality or any name. ``encoder`` (or the identity
-an adapter wrote into the vectors' ``attrs``) is recorded in the certificate and used for
-nothing else.
+Model-blind in the sense of preregistration section 15 (relative to an encoder and a date):
+nothing here branches on the encoder, the dimension (beyond the library's own default candidate
+list), the modality or any name. ``encoder`` (or the identity an adapter wrote into the
+vectors' ``attrs``) is recorded in the certificate and used for nothing else.
 """
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Integral
@@ -57,6 +59,7 @@ from .core.evaluate import Evidence, LabelReference, RankingReference, Reference
 from .core.evaluate.collect import collect_evidence, compress_selected
 from .core.retrieve import CompressedRetriever, ExactRetriever
 from .core.selection import (
+    DEFAULT_ORDER_SEED,
     CandidateSpace,
     CandidateSpec,
     Decision,
@@ -80,9 +83,11 @@ __all__ = ["CertifiedResult", "certify", "verify"]
 _ABSTAIN_NOTE = (
     "Nothing was certified at this target and error level on these queries, so the uncompressed "
     "index is the outcome. This is the safe outcome, not an error. It does not say that no "
-    "candidate would pass: with more queries, or a lower target, a later run may certify one. "
-    "Decide on that before looking again: every further look at the same queries, with another "
-    "target, error level or list, is outside the statement of the rule."
+    "candidate would pass: a later run on new, independent queries, with a target chosen before "
+    "they are looked at, may certify one. Every further look at the same queries, with another "
+    "target, error level, list, order or seed, is outside the statement of the rule; in "
+    "simulations such looks multiplied the false-selection probability by 3 to 14 "
+    "(docs/package/STATISTICAL_REVIEW.md, section 7.7)."
 )
 _FALLBACK_NOTE = (
     "Nothing was certified. The compressed index is the fallback pipeline the caller supplied: "
@@ -104,10 +109,13 @@ class CertifiedResult:
     and ``compressed`` the corpus compressed with it; both are ``None`` on ABSTAIN, where nothing
     is compressed and no copy of the corpus is made.
 
-    ``certified`` is True only for ``Outcome.SELECT`` under a certifying rule. ``Outcome.FALLBACK``
-    (the caller supplied a fallback pipeline and nothing was certified) is not certified.
-    No attribute is a retention figure. What a selection certifies is the rule's statement
-    (``certificate.statement``), which is conditional on ``decision.assumptions``.
+    ``certified`` is True only for ``Outcome.SELECT`` under one of the library's own certifying
+    rules; a rule written by anyone else is never certified, whatever it declares.
+    ``Outcome.FALLBACK`` (the caller supplied a fallback pipeline and nothing was certified) is
+    not certified. No attribute is a retention figure. What a certified selection carries is
+    the rule's statement (``certificate.statement``), which is claimed only under
+    ``decision.assumptions``: it bounds how often the procedure selects a candidate whose
+    retention is below the target, not how reliable this selection is.
     """
 
     decision: Decision
@@ -135,7 +143,7 @@ class CertifiedResult:
 
     @property
     def certified(self) -> bool:
-        """True only when the rule certified the selected candidate (``Outcome.SELECT``)."""
+        """True only for ``Outcome.SELECT`` under one of the library's own certifying rules."""
         return self.decision.certified
 
     @property
@@ -198,10 +206,12 @@ class CertifiedResult:
 
         Every number in it is a setting, a count, a size or the rule's own level; none is a
         measured retention. ``statement`` and ``assumptions`` are the rule's, verbatim, and the
-        statement is conditional on the assumptions. ``caveats`` are the sentences the
+        statement is claimed only under the assumptions. ``n_exact_duplicate_queries`` is how
+        many tested queries repeat an earlier one exactly. ``caveats`` are the sentences the
         certificate records so that a reader cannot miss them (agreement with the uncompressed
-        ranking is not retrieval quality; a fallback is not certified), and
-        ``not_certified_note`` says in words what an ABSTAIN or a FALLBACK means.
+        ranking is not retrieval quality; a fallback is not certified; the order, repeated
+        queries, vectors that are not unit-norm), and ``not_certified_note`` says in words
+        what an ABSTAIN or a FALLBACK means.
         """
         d, cert = self.decision, self.certificate
         record = cert.to_dict()
@@ -224,10 +234,12 @@ class CertifiedResult:
             "target": d.target,
             "error": d.error,
             "level": d.level,
-            "rule": {"name": d.rule["name"], "certifying": d.rule["certifying"]},
+            "rule": {key: d.rule[key] for key in (
+                "name", "class", "builtin", "certifying", "declared_certifying")},
             "n_queries": d.n_queries,
             "n_queries_given": self.evidence.n_queries + len(self.evidence.dropped_queries),
             "n_queries_without_relevant_document": len(self.evidence.dropped_queries),
+            "n_exact_duplicate_queries": record["queries"]["exact_duplicates"],
             "query_order": {k: order.get(k) for k in ("kind", "seed", "budget")},
             "space": {key: record["space"][key] for key in (
                 "name", "identity", "n_candidates", "n_families", "registered_default")},
@@ -295,6 +307,28 @@ def _check_query_order(query_budget: Any, order_seed: Any, n_given: int) -> None
         raise QueryOrderError(f"query_budget {query_budget} exceeds the {n_given} queries given; "
                               "a budget takes a prefix of the order and never samples with "
                               "replacement")
+
+
+def _warn_if_graded(qrels: Mapping[Any, Any] | None) -> None:
+    """Warn once when a ``{document: grade}`` mapping lists a grade of 0 or less.
+
+    ``LabelReference`` counts every listed document as relevant, grade 0 included: the labels
+    are binary. A mapping of positive grades is read correctly and raises nothing.
+    """
+    for query_id, relevant in (qrels or {}).items():
+        if not isinstance(relevant, Mapping):
+            continue
+        try:
+            bad = any(not grade > 0 for grade in relevant.values())
+        except TypeError:
+            bad = True
+        if bad:
+            warnings.warn(
+                f"qrels of query {query_id!r} is a {{document: grade}} mapping with a grade of 0 "
+                "or less. Graded labels are not supported: every listed document counts as "
+                "relevant, grade 0 included. List only the relevant document ids.",
+                UserWarning, stacklevel=3)
+            return
 
 
 def _resolve_reference(reference: Any, qrels: Mapping[Any, Any] | None) -> Reference:
@@ -398,7 +432,7 @@ def certify(
     space: CandidateSpace | Mapping[str, Sequence[Pipeline]] | None = None,
     rule: SelectionRule | None = None,
     query_budget: int | None = None,
-    order_seed: int | None = None,
+    order_seed: int | None = DEFAULT_ORDER_SEED,
     fallback: Pipeline | Mapping[str, Any] | None = None,
     encoder: EncoderIdentity | Mapping[str, Any] | None = None,
     progress: Callable[[int, int, str], None] | None = None,
@@ -411,19 +445,27 @@ def certify(
     candidate over the mean metric of the uncompressed index. If it rejects that for some
     candidates, the smallest of them is selected; if for none, the outcome is ``ABSTAIN`` and
     the uncompressed index is to be used. The rule's statement, which a certified selection
-    carries and which is conditional on its assumptions (``result.decision.assumptions``), is:
-    the probability that a compressed candidate is selected and its retention under the query
-    distribution is below ``target`` is at most ``error``, over the draw of the queries. The
-    verbatim text is ``optivision.core.selection.STATEMENT``; it makes no statement about power,
-    and it also holds if the rule always abstains.
+    carries and which is claimed only under its assumptions and conditions
+    (``result.decision.assumptions``), is: the probability that a compressed candidate is
+    selected and its retention under the query distribution is below ``target`` is at most
+    ``error``, over the draw of the queries. It is a joint probability, not the probability
+    that this selection is below the target. The verbatim text is
+    ``optivision.core.selection.STATEMENT``; it makes no statement about power, and it also
+    holds if the rule always abstains.
 
     Args:
         vectors: the documents, as ``optimize()`` takes them: a ``MultiVectorCorpus`` or a list
             of ``[n_i, d]`` float arrays. Not modified.
-        queries: sample queries, same forms; at least one. The statement is about the
-            distribution these are drawn from (assumption A1).
+        queries: sample queries, same forms. One is enough to run, but certification needs far
+            more (``docs/package/guide/SELECTION_AND_CERTIFICATION.md``, section 7.1, says how
+            many, and what is a floor for any valid test). The statement is about the
+            distribution these are drawn from (assumption A1): a random sample of the queries
+            the index will serve, with exact and near-duplicates removed. Exact duplicates are
+            counted, recorded in the certificate and warned about; they are not refused.
         qrels: ``{query id: [relevant document ids]}``. Query and document ids are the ids of
-            the two corpora (``"0"``, ``"1"``, ... for a list of arrays).
+            the two corpora (``"0"``, ``"1"``, ... for a list of arrays). The labels are binary:
+            every listed document is relevant. A ``{document: grade}`` mapping is read as its
+            keys, grade 0 included, and warns once if it lists a grade of 0 or less.
         target: the retention to be exceeded, in (0, 1].
         error: the level of the statement, in (0, 1).
         metric: ``ndcg@k``, ``recall@k``, ``mrr@k`` or ``hit@k``. Only nDCG@k was evaluated by
@@ -438,8 +480,14 @@ def certify(
             least to most aggressive.
         rule: a selection rule; ``FixedSequenceBetting()`` by default.
         query_budget: test only a prefix of ``query_budget`` queries of the order used.
-        order_seed: if given, test the queries in a seeded permutation (independent of the
-            data) instead of the order given; the seed is recorded.
+        order_seed: the seed of the random permutation in which the queries are tested; the
+            default is ``DEFAULT_ORDER_SEED`` (0) and the seed is recorded. The default shuffle
+            exists so that a sorted input file cannot break assumption A5. ``None`` tests the
+            queries in the order given, which is valid only if that order is unrelated to the
+            outcomes (the arrival order of independent draws; never an order sorted by
+            difficulty, date, source or any other query attribute). Choose the seed before you
+            look and use it once: trying several seeds and reporting one is outside the
+            statement (``docs/package/STATISTICAL_REVIEW.md``, sections 7.1 and 8).
         fallback: a ``Pipeline`` (or its ``to_dict()``) to return when nothing is certified.
             It is recorded as NOT certified (``Outcome.FALLBACK``). There is no default: with
             none, nothing certified means the uncompressed index.
@@ -457,13 +505,17 @@ def certify(
     Obligations that no code can check, and which the statement assumes: the candidate list,
     its families and its order were fixed before these queries were looked at (this function
     never lets the queries influence the list); the queries are independent draws from the
-    deployment distribution; the order they are tested in is fixed in advance. Call this once
-    per ``(target, error)``: trying several targets on the same queries and reporting one is
-    outside the statement. If you want another look, collect new queries.
+    deployment distribution; the order they are tested in is unrelated to their outcomes;
+    the reference was fixed without regard to the candidates; the index you deploy is the one
+    that was evaluated. Call this once per ``(target, error)``: trying several targets on the
+    same queries and reporting one is outside the statement. If you want another look, collect
+    new queries.
 
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original
-    corpus.
+    corpus. ``certify`` gives a ``UserWarning`` in two cases, both about the input: some tested
+    queries repeat an earlier query exactly (that breaks assumption A1), or a graded ``qrels``
+    mapping lists a grade of 0 or less.
 
     Raises ``ValueError`` (``ContractError`` for invalid vectors) on invalid input,
     ``ImportError`` if the default list needs SciPy, and ``CandidateEvaluationError`` if a
@@ -483,6 +535,7 @@ def certify(
     _check_query_order(query_budget, order_seed, len(query_corpus))
     if rule is not None and not isinstance(rule, SelectionRule):
         raise TypeError("rule must provide name, certifying, config(), assumptions() and decide()")
+    _warn_if_graded(qrels)
     ref = _resolve_reference(reference, qrels)
     candidate_space = _resolve_space(space, corpus.dimension)
     _check_fallback(fallback)
@@ -504,6 +557,14 @@ def certify(
         decision, evidence=evidence, space=candidate_space, corpus=corpus, queries=query_corpus,
         reference=ref, pipeline=pipeline, compressed=compressed, encoder=identity,
         created=created)
+    repeats = certificate.data["queries"]["exact_duplicates"]
+    if repeats:
+        warnings.warn(
+            f"{repeats} of the {decision.n_queries} queries tested repeat an earlier query "
+            "exactly. Repeated queries count as independent draws only if they really are; if "
+            "they come from failed de-duplication, logs replayed twice or augmentation, "
+            "assumption A1 does not hold and the stated error level does not apply. The count "
+            "is recorded in the certificate.", UserWarning, stacklevel=2)
     return CertifiedResult(decision=decision, certificate=certificate, evidence=evidence,
                            corpus=corpus, pipeline=pipeline, compressed=compressed)
 
@@ -562,4 +623,6 @@ def verify(
             if objects[name] is None:
                 objects[name] = getattr(stored, name)
     report = verify_certificate(certificate, key=key, strict_code=strict_code, **objects)
-    return VerificationReport((*leading, *report.checks)) if leading else report
+    if not leading:
+        return report
+    return VerificationReport((*leading, *report.checks), report.notes)

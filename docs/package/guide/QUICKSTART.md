@@ -45,7 +45,10 @@ print(len(docs), "documents,", docs.num_vectors, "vectors;", len(queries), "quer
 `qrels` maps each query id to the ids of its relevant documents. The ids are those of the two
 corpora. `target` is the retention a selected candidate must exceed; `error` is the level of the
 rule's statement. Choose both before you look at any result, and use one pair per sample of
-queries.
+queries. The queries should be a random sample of what the index will serve, with exact and
+near-duplicates removed: `certify` counts and warns about exact duplicates, and cannot see
+near-duplicates. They are tested in a seeded random order (`order_seed=0`, recorded), so that a
+file sorted by difficulty, date or source cannot break the rule's assumption about the order.
 
 ```python
 result = certify(docs, queries, qrels, target=0.95, error=0.05, encoder=adapter.identity())
@@ -58,16 +61,19 @@ print("selected:", result.pipeline.label(), "| level per test:", round(result.de
 ```
 
 ```text
-CertifiedResult(outcome='select', certified=True, 'adaptive_merge(0.6) > int8(per_vector)', 3.77x vs float32; reference=labels, metric=ndcg@5, target=0.95, error=0.05, n_queries=200)
-select | certified: True | compression: 3.77x vs float32
-certified candidates: 7 of 40
-selected: adaptive_merge(0.6) > int8(per_vector) | level per test: 0.0071
+CertifiedResult(outcome='select', certified=True, 'adaptive_merge(0.6) > int4(mean)', 7.05x vs float32; reference=labels, metric=ndcg@5, target=0.95, error=0.05, n_queries=200)
+select | certified: True | compression: 7.05x vs float32
+certified candidates: 13 of 40
+selected: adaptive_merge(0.6) > int4(mean) | level per test: 0.0071
 ```
 
-The rule tested all 40 candidates of the default list, certified 7, and chose the smallest. The
-level per test is `error / 7`, because the list has 7 families. "Certified" means that the rule's
-statement covers this choice, under its assumptions. It is not a measured retention. The result
-carries the statement and the assumptions, and says whether the index is basis sensitive:
+The rule tested all 40 candidates of the default list, rejected "retention <= target" for 13 of
+them, and chose the smallest of those. The level per test is `error / 7`, because the list has 7
+families. "Certified" means that the rule rejected that hypothesis for this candidate at the level
+stated; the statement bounds how often the procedure selects a candidate whose retention is below
+the target, under its assumptions and conditions. It does not say that this choice is right, and
+it is not a measured retention. The result carries the statement and the assumptions, and says
+whether the index is basis sensitive:
 
 ```python
 report = result.report()
@@ -77,8 +83,8 @@ print("basis sensitive:", report["basis_sensitive"], "| invariance:", report["ba
 ```
 
 ```text
-P(a compressed candidate is selected and its retention under Q is below T) <= delta, where the probability is over the draw of the calibration queries and retention under Q is E_Q[metric of the candidate] / E_Q[metric of the uncompressed index]. It holds for every sample size, with no large-sample approximation, and only under assumptions A1-A6. It makes no statement about power: it also holds if the rule always abstains. It is an application of published tools; the derivation is this project's own and has not been externally reviewed.
-A1: the calibration queries are independent draws from one distribution Q, the deployment query distribution.
+For the target T and the error level delta of this decision: P(a compressed candidate is selected and its retention under Q is below T) <= delta. The probability is over the draw of the calibration queries; the corpus, the candidate list and its order, T and delta are fixed, not random. Q is the distribution the calibration queries are drawn from, and retention under Q is E_Q[metric of the candidate] / E_Q[metric of the uncompressed index]. This is a joint probability. It is NOT the probability, given that a candidate was selected, that its retention is below T: a rule that rarely selects can satisfy it while most of its selections are below T. It is not a statement about the retention measured on the calibration queries, not a statement about a finite batch of future queries, and not a statement about power (it also holds if the rule always abstains). The project derived it for every sample size, with no large-sample approximation, under assumptions A1-A6 and conditions C1-C4. They are sufficient conditions: nothing is claimed if one of them fails. It is an application of published tools; the derivation is this project's own and has not been externally reviewed.
+A1: the calibration queries are independent draws from one distribution Q, the distribution of the queries the deployed index will serve. Repeated or near-duplicate queries, queries from one session or one author, and a sample sorted or filtered by anything related to difficulty are not independent draws.
 basis sensitive: True | invariance: signed_permutation
 ```
 
@@ -91,7 +97,7 @@ print(ranking.ids[0], ranking.score_kind)
 ```
 
 ```text
-['d000020', 'd000019', 'd000055'] maxsim_ip
+['d000019', 'd000051', 'd000055'] maxsim_ip
 ```
 
 ## 3. What changes without labels
@@ -142,18 +148,19 @@ print("smallest p-value:", round(min(stopped.decision.p_values), 4), "| level:",
 
 ```text
 abstain | certified: False | compressed: None | ratio: 1.0
-Nothing was certified at this target and error level on these queries, so the uncompressed index is the outcome. This is the safe outcome, not an error. It does not say that no candidate would pass: with more queries, or a lower target, a later run may certify one. Decide on that before looking again: every further look at the same queries, with another target, error level or list, is outside the statement of the rule.
+Nothing was certified at this target and error level on these queries, so the uncompressed index is the outcome. This is the safe outcome, not an error. It does not say that no candidate would pass: a later run on new, independent queries, with a target chosen before they are looked at, may certify one. Every further look at the same queries, with another target, error level, list, order or seed, is outside the statement of the rule; in simulations such looks multiplied the false-selection probability by 3 to 14 (docs/package/STATISTICAL_REVIEW.md, section 7.7).
 ExactRetriever searches the original vectors
-smallest p-value: 0.878 | level: 0.0071
+smallest p-value: 0.7295 | level: 0.0071
 ```
 
 Abstaining is a correct outcome, not an error. What to do:
 
 1. Use the uncompressed index.
-2. Do not change the target, the error level or the list and run again on the same queries.
-3. For another attempt, collect a new independent sample, and choose the target and the list
-   beforehand. More queries can certify what fewer could not, if a candidate really keeps more than
-   the target. Nothing says how many are enough.
+2. Do not change the target, the error level, the list, the order or the seed and run again on the
+   same queries: in simulations such looks multiplied the false-selection probability by 3 to 14.
+3. For another attempt, collect new, independent queries, and choose the target and the list
+   beforehand. A larger new sample can certify what a smaller one could not, if a candidate
+   really keeps more than the target. Nothing says how many are enough.
 4. To accept an uncertified compressed index, pass `fallback=Pipeline([...])`. The outcome is then
    `FALLBACK`, recorded as not certified.
 

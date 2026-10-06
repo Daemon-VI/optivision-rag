@@ -10,9 +10,16 @@ fallback.
 
 Exactly one ``(target, error)`` pair per call. The rule's statement is about one pair on one
 sample; looking at the same sample under several targets or error levels, or after changing
-the list, spends error level that the statement does not account for
-(``docs/package/METHOD_C_SPEC.md`` section 6.3). A caller who needs several targets needs
-fresh calibration queries for each, or a rule built for that.
+the list, order or seed, spends error level that the statement does not account for
+(``docs/package/METHOD_C_SPEC.md`` section 6.3; in simulations such looks multiplied the
+false-selection probability by 3 to 14, ``docs/package/STATISTICAL_REVIEW.md`` section 7.7). A
+caller who needs several targets needs fresh calibration queries for each, or a rule built for
+that.
+
+``Decision.certified`` is True only for a selection by one of the library's own certifying
+rules (``rules.is_builtin_rule``: the exact type). Any other rule is recorded with its class
+and what it declared about itself, its selection is never certified, and its assumptions are
+stored as its author's.
 """
 
 from __future__ import annotations
@@ -27,12 +34,16 @@ from optivision.core.evaluate.evidence import Evidence
 from optivision.core.identity import array_digest
 
 from .decision import Decision, Outcome
-from .rules import FixedSequenceBetting, SelectionRule
+from .rules import FixedSequenceBetting, SelectionRule, assumptions_of, rule_record
 from .spaces import NOT_IN_SPACE, CandidateSpace, CandidateSpec
 from .statistics import validate_evidence_arrays
 
 #: Family label recorded for an explicit fallback pipeline, which belongs to no family.
 FALLBACK_FAMILY = "fallback"
+
+#: The seed of the random order that the high-level entry points (``certify``, the command
+#: line) use unless told otherwise. ``select`` itself defaults to the order given.
+DEFAULT_ORDER_SEED = 0
 
 
 class SpaceMismatchError(ValueError):
@@ -103,10 +114,21 @@ def select(space: CandidateSpace, evidence: Evidence, *, target: float, error: f
     number available. The arrays are validated (see ``validate_evidence_arrays``) and the
     rule, ``FixedSequenceBetting()`` by default, decides.
 
-    Outcomes: ``SELECT`` when the rule certified at least one candidate (the smallest by
-    size is chosen); ``ABSTAIN`` when it certified none; ``FALLBACK`` when it certified none
-    and ``fallback`` (a ``Pipeline`` or its ``to_dict()``) was given, in which case the result
-    is not certified. ``fallback`` is ignored when a candidate is selected.
+    The default is the order given (``order_seed=None``), because this layer is exercised
+    against the research code. A given order is valid for the rule's statement only if it is
+    unrelated to the outcomes (assumption A5): the arrival order of independent draws, never
+    an order sorted by difficulty, date, source or any other query attribute. ``certify()``
+    and the command line default to ``order_seed=DEFAULT_ORDER_SEED`` (0) so that a sorted
+    input cannot break A5. Choose the seed before you look and use it once: trying several
+    seeds and reporting one is outside the statement (``docs/package/STATISTICAL_REVIEW.md``,
+    sections 7.1 and 8, measured how far).
+
+    Outcomes: ``SELECT`` when the rule rejected the hypothesis for at least one candidate (the
+    smallest by size is chosen); ``ABSTAIN`` when it did so for none; ``FALLBACK`` when it did
+    so for none and ``fallback`` (a ``Pipeline`` or its ``to_dict()``) was given, in which case
+    the result is not certified. ``fallback`` is ignored when a candidate is selected. The
+    selection is certified (``Decision.certified``) only when the rule is one of the library's
+    own certifying rules; a rule of anyone else's never gives a certified decision.
 
     ``target`` is the retention to be exceeded, in (0, 1]; ``error`` is the level of the
     rule's statement, in (0, 1). Exactly one of each per call (see the module docstring).
@@ -145,8 +167,10 @@ def select(space: CandidateSpace, evidence: Evidence, *, target: float, error: f
     if len(result.p_values) != n_candidates:
         raise ValueError("the rule returned a p-value count that differs from the space")
 
+    record_of_rule = rule_record(rule)
     if result.selected is not None:
-        outcome, chosen, certified = Outcome.SELECT, space[result.selected], bool(rule.certifying)
+        outcome, chosen = Outcome.SELECT, space[result.selected]
+        certified = bool(record_of_rule["certifying"])  # built in and declared, never a custom rule
     elif spec is not None:
         outcome, chosen, certified = Outcome.FALLBACK, spec, False
     else:
@@ -160,8 +184,8 @@ def select(space: CandidateSpace, evidence: Evidence, *, target: float, error: f
         level=result.level,
         target=checked.target,
         error=checked.error,
-        rule={"name": rule.name, "certifying": bool(rule.certifying), "config": rule.config()},
-        assumptions=rule.assumptions(),
+        rule=record_of_rule,
+        assumptions=assumptions_of(rule),
         n_queries=tested.n_queries,
         metric=evidence.metric,
         construct=evidence.construct,

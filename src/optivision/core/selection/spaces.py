@@ -267,6 +267,9 @@ class CandidateSpace:
 
     @property
     def is_registered_default(self) -> bool:
+        """True when ``identity`` is the hash of the list the preregistration fixed (section 14.1)
+        for the development stores. It says which list this is; it does not say that the list
+        was validated for any other encoder."""
         return self.identity == REGISTERED_DEFAULT_SPACE_SHA256
 
     def pipelines(self) -> list[Pipeline]:

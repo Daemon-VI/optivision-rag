@@ -1,10 +1,15 @@
 """The record of one selection: what was decided, from which evidence, under which assumptions.
 
 A :class:`Decision` is a value. It carries everything needed to say what it covers and what
-it does not: the rule and its configuration, the assumptions the rule's statement is
-conditional on, the target and error level, the p-values, the identities of the candidate
-space and of the evidence, and how the queries were ordered. Nothing in it is a promise
-about retention on other queries, other corpora or other encoders.
+it does not: the rule and its configuration, the assumptions the rule's statement is claimed
+under, the target and error level, the p-values, the identities of the candidate space and of
+the evidence, and how the queries were ordered. Nothing in it is a promise about retention on
+other queries, other corpora or other encoders.
+
+``certified`` is True only when the outcome is ``SELECT`` and the rule is one of the library's
+own certifying rules (``rules.is_builtin_rule``). A rule written by anyone else is recorded
+with the class it came from and what it declared about itself, its selection is never called
+certified, and its assumptions are stored as the author's, not examined by the library.
 """
 
 from __future__ import annotations
@@ -16,18 +21,21 @@ from typing import Any
 
 from optivision.core.identity import digest
 
+from .rules import builtin_rule_from_record
 from .spaces import NOT_IN_SPACE, CandidateSpec, freeze_json, thaw_json
 
 _FORMAT = "optivision-decision"
 _VERSION = 1
+_RULE_KEYS = ("name", "class", "builtin", "certifying", "declared_certifying", "config")
 
 
 class Outcome(str, Enum):
     """The three things a selection can end in.
 
-    ``SELECT``    a candidate certified by the rule was chosen. ``Decision.certified`` is
-                  True when the rule is a certifying one, and the rule's statement
-                  (conditional on its assumptions) covers the choice.
+    ``SELECT``    a candidate was chosen from those the rule rejected the hypothesis for.
+                  ``Decision.certified`` is True when the rule is one of the library's own
+                  certifying rules, and the rule's statement (claimed only under its
+                  assumptions) applies to the procedure that made the choice.
     ``ABSTAIN``   nothing was certified, so the uncompressed index is to be used. This is the
                   safe outcome, not an error: the statement also holds if the rule always
                   abstains.
@@ -61,14 +69,18 @@ class Decision:
 
     ``selected`` is ``None`` on ``ABSTAIN``, the chosen member of the space on ``SELECT``, and
     on ``FALLBACK`` the caller's pipeline with ``position == -1`` (not a member of the space).
-    ``certified`` is True only when ``outcome is SELECT`` and the rule is a certifying one;
-    ``certified_positions`` lists every certified member, in list order. ``p_values`` has one
-    entry per candidate and ``level`` is the level they were compared with. ``rule`` holds
-    ``{"name", "certifying", "config"}``; ``assumptions`` are the sentences the rule's
-    statement is conditional on. ``n_queries`` is the number of queries tested, after any
-    budget. ``query_order`` records how they were ordered and how many were used. The
-    decision is bound to its evidence by ``evidence_digest`` and to its candidate space by
-    ``space_identity``.
+    ``certified`` is True only when ``outcome is SELECT`` and the rule is a built-in
+    certifying one; ``certified_positions`` lists every member the rule rejected the
+    hypothesis for, in list order. ``p_values`` has one entry per candidate and ``level`` is
+    the level they were compared with. ``rule`` holds ``{"name", "class", "builtin",
+    "certifying", "declared_certifying", "config"}``: ``class`` is the qualified class name,
+    ``builtin`` says the library's own rule ran, ``declared_certifying`` is what the rule
+    says about itself and ``certifying`` is what the library accepts (``builtin`` and
+    declared). ``assumptions`` are the sentences the rule's statement is claimed under (for a
+    rule that is not built in, labelled as declared by its author). ``n_queries`` is the
+    number of queries tested, after any budget. ``query_order`` records how they were ordered
+    and how many were used. The decision is bound to its evidence by ``evidence_digest`` and
+    to its candidate space by ``space_identity``.
     """
 
     outcome: Outcome
@@ -109,10 +121,21 @@ class Decision:
             raise ValueError(f"n_queries must be a positive int, got {self.n_queries!r}")
         for name in ("metric", "construct", "space_identity", "evidence_digest"):
             _text(name, getattr(self, name))
-        if not all(key in self.rule for key in ("name", "certifying", "config")):
-            raise ValueError("rule must hold name, certifying and config")
-        if not isinstance(self.rule["certifying"], bool):
-            raise TypeError("rule['certifying'] must be a bool")
+        if not all(key in self.rule for key in _RULE_KEYS):
+            raise ValueError(f"rule must hold {', '.join(_RULE_KEYS)}")
+        for key in ("builtin", "certifying", "declared_certifying"):
+            if not isinstance(self.rule[key], bool):
+                raise TypeError(f"rule[{key!r}] must be a bool")
+        for key in ("name", "class"):
+            _text(f"rule[{key!r}]", self.rule[key])
+        if self.rule["certifying"] != (self.rule["builtin"] and self.rule["declared_certifying"]):
+            raise ValueError("rule['certifying'] must be true exactly when the rule is built in "
+                             "and declares itself certifying: the library certifies only its "
+                             "own rules")
+        if self.rule["builtin"] and builtin_rule_from_record(self.rule) is None:
+            raise ValueError("a rule recorded as built in must be one of the library's own "
+                             f"rules; name {self.rule['name']!r} and class "
+                             f"{self.rule['class']!r} are not")
         if self.query_order.get("kind") not in ("given", "seeded_permutation"):
             raise ValueError("query_order['kind'] must be 'given' or 'seeded_permutation'")
         self._check_consistency(outcome)

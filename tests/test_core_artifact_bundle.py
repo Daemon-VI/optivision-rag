@@ -45,7 +45,7 @@ from optivision.core.stages import (
 )
 from optivision.scoring import maxsim_matrix
 
-from .test_core_certificate import KEY, Issued, issue
+from .test_core_certificate import KEY, DeclaresCertifying, Issued, issue
 from .test_core_collect_evidence import make_problem, small_space
 
 try:
@@ -476,6 +476,48 @@ class TestSaveRefusesWhatDoesNotBelongTogether:
         with pytest.raises(TypeError, match="Evidence"):
             save_artifact(tmp_path / "x", certificate=pca.certificate, compressed=pca.compressed,
                           pipeline=pca.pipeline, evidence="e")
+
+
+class TestARuleOfSomeoneElses:
+    """A bundle never carries a claim of certification for a rule the library does not know."""
+
+    @pytest.fixture(scope="class")
+    def custom(self, problem):
+        out = issue(problem, small_space(), rule=DeclaresCertifying(), target=0.8)
+        assert out.decision.outcome is Outcome.SELECT and out.certificate.certified is False
+        return out
+
+    def test_an_honest_record_is_written_and_loads_as_not_certified(self, tmp_path, custom):
+        path = write(tmp_path, custom)
+        loaded = load_artifact(path)
+        assert loaded.verification.ok and loaded.certificate.certified is False
+        assert loaded.verification.notes and "nothing in this record is certified" in \
+            loaded.verification.notes[0]
+        assert loaded.verification.status("replay.decision") == "skipped"
+
+    def test_a_certificate_that_claims_certified_for_it_is_not_written(self, tmp_path, custom):
+        d = custom.certificate.to_dict()
+        d["result"]["certified"] = True
+        d["rule"]["certifying"] = True
+        d["digest"] = digest({k: v for k, v in d.items() if k not in ("digest", "signature")})
+        with pytest.raises(ArtifactError, match="refusing to write") as caught:
+            write(tmp_path, custom, certificate=Certificate.from_dict(d))
+        assert "rule.text" in str(caught.value) and "consistency.decision" in str(caught.value)
+        assert not (tmp_path / "bundle").exists()
+
+    def test_a_bundle_edited_on_disk_to_claim_it_is_refused_when_loaded(self, tmp_path, custom):
+        path = write(tmp_path, custom)
+        d = Certificate.load(path / "certificate.json").to_dict()
+        d["result"]["certified"] = True
+        d["rule"]["certifying"] = True
+        d["digest"] = digest({k: v for k, v in d.items() if k not in ("digest", "signature")})
+        Certificate.from_dict(d).save(path / "certificate.json")
+        refresh_manifest(path)  # the digest and the manifest are consistent: the rule is not
+        with pytest.raises(ArtifactError, match="the bundle failed verification") as caught:
+            load_artifact(path)
+        assert "rule.text" in str(caught.value) and "not one of this library's own" in str(
+            caught.value)
+        assert load_artifact(path, verify=False).certificate.certified is True  # as edited
 
 
 # ------------------------------------------------------------ damage is detected

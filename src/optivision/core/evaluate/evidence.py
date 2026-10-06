@@ -194,9 +194,11 @@ class Evidence:
         """The same evidence on the queries ``indices``, in that order (a reorder or a prefix).
 
         ``indices`` is a 1-D integer array of positions in ``[0, n)``; negative values are
-        refused rather than wrapped, and repeated positions are allowed (resampling with
-        replacement is then the caller's decision). Candidates, sizes, fitted digests and
-        dropped queries are unchanged. The result has its own digest.
+        refused rather than wrapped, and repeated positions are allowed. A repeated position
+        counts the same query again: the test then sees dependent draws, assumption A1 of the
+        rule's statement does not hold, and resampling with replacement is outside it (the
+        caller's decision). Candidates, sizes, fitted digests and dropped queries are
+        unchanged. The result has its own digest.
         """
         idx = np.asarray(indices)
         if idx.ndim != 1 or (idx.size and idx.dtype.kind not in "iu"):

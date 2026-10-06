@@ -13,10 +13,16 @@ hypothesis ``H0_k: retention(k) <= target`` with the same betting p-values, wher
 under the query distribution Q is ``E_Q[metric of the candidate] / E_Q[metric of the
 uncompressed index]``. They differ only in how the error level is spent. A candidate is
 called *certified* when, and only when, its hypothesis is rejected.
+
+"Certified" is only ever asserted for these two classes, which the library derived and tested
+(:func:`is_builtin_rule` compares the exact type: a subclass is not built in). A rule written
+by anyone else may declare ``certifying = True``; the library does not examine it, records the
+declaration as the author's own, and never calls its selection certified.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
@@ -33,42 +39,71 @@ from .statistics import (
     validate_evidence_arrays,
 )
 
-#: The statement a certifying rule makes, with its conditions. It is an application of the
-#: cited tools; the derivation is the project's own and has not been externally reviewed
+#: The statement a built-in certifying rule makes, with its conditions. It is an application of
+#: the cited tools; the derivation is the project's own and has not been externally reviewed
 #: (``docs/package/METHOD_C_SPEC.md`` section 6). It is never to be quoted without
-#: assumptions A1-A6 (see :meth:`FixedSequenceBetting.assumptions`).
+#: assumptions A1-A6 and conditions C1-C4 (see :meth:`FixedSequenceBetting.assumptions`).
+#: Reviewed in ``docs/package/STATISTICAL_REVIEW.md`` (section 6, wording W1).
 STATEMENT = (
-    "P(a compressed candidate is selected and its retention under Q is below T) <= delta, "
-    "where the probability is over the draw of the calibration queries and retention under Q "
-    "is E_Q[metric of the candidate] / E_Q[metric of the uncompressed index]. "
-    "It holds for every sample size, with no large-sample approximation, and only under "
-    "assumptions A1-A6. It makes no statement about power: it also holds if the rule always "
-    "abstains. It is an application of published tools; the derivation is this project's own "
-    "and has not been externally reviewed."
+    "For the target T and the error level delta of this decision: "
+    "P(a compressed candidate is selected and its retention under Q is below T) <= delta. "
+    "The probability is over the draw of the calibration queries; the corpus, the candidate "
+    "list and its order, T and delta are fixed, not random. Q is the distribution the "
+    "calibration queries are drawn from, and retention under Q is E_Q[metric of the "
+    "candidate] / E_Q[metric of the uncompressed index]. "
+    "This is a joint probability. It is NOT the probability, given that a candidate was "
+    "selected, that its retention is below T: a rule that rarely selects can satisfy it "
+    "while most of its selections are below T. It is not a statement about the retention "
+    "measured on the calibration queries, not a statement about a finite batch of future "
+    "queries, and not a statement about power (it also holds if the rule always abstains). "
+    "The project derived it for every sample size, with no large-sample approximation, under "
+    "assumptions A1-A6 and conditions C1-C4. They are sufficient conditions: nothing is "
+    "claimed if one of them fails. "
+    "It is an application of published tools; the derivation is this project's own and has "
+    "not been externally reviewed."
 )
+
+#: The sentence recorded for every assumption a custom rule declares: the library has not
+#: looked at them.
+DECLARED_PREFIX = "Declared by the rule's author, not examined by this library: "
 
 _ASSUMPTIONS = (
     ("A1: the calibration queries are independent draws from one distribution Q, the "
-     "deployment query distribution."),
+     "distribution of the queries the deployed index will serve. Repeated or near-duplicate "
+     "queries, queries from one session or one author, and a sample sorted or filtered by "
+     "anything related to difficulty are not independent draws."),
     ("A2: the corpus is fixed; retention moves with corpus size, so the statement is about "
      "this corpus."),
     ("A3: the candidate list, its family labels and chains, and the order inside each chain "
-     "are fixed before the calibration queries are seen, and every fitted stage is fitted on "
-     "documents only."),
+     "are fixed before the calibration queries are seen, and no fitted stage uses the "
+     "calibration queries (in this library stages are fitted on documents only)."),
     ("A4: the per-query metric lies in [0, 1] and the expected metric of the uncompressed "
      "index under Q is positive."),
     ("A5: the order in which queries enter the sequential test is fixed before their outcomes "
-     "are seen."),
+     "are seen and is unrelated to them: the arrival order of independent draws, or a random "
+     "permutation drawn without reference to the data. An order sorted by any query "
+     "attribute, or picked among several orders after looking, is not."),
     ("A6: the reference is taken as given (the labels under the label construct, the "
      "uncompressed index's own top document under the agreement construct); errors in the "
      "reference are not modelled."),
+    ("C1: one look. One target, one error level, one rule, one metric, one reference and one "
+     "candidate list are fixed before the outcomes are seen, and the procedure is run once on "
+     "this sample; re-running it with other choices on the same queries is outside the "
+     "statement."),
+    ("C2: the baseline and every candidate are scored on the same queries with the same "
+     "metric and the same reference."),
+    ("C3: the reference (the labels, or the uncompressed ranking) is fixed without regard to "
+     "the candidates' results."),
+    ("C4: the index that is deployed is the one that was evaluated: the same corpus, the same "
+     "pipeline, the same fitted state and the same scoring procedure."),
 )
 
 _ASSUMPTIONS_UNORDERED = (
     _ASSUMPTIONS[0],
     _ASSUMPTIONS[1],
-    ("A3: the candidate list is fixed before the calibration queries are seen, and every "
-     "fitted stage is fitted on documents only. No order inside a family is needed."),
+    ("A3: the candidate list is fixed before the calibration queries are seen, and no fitted "
+     "stage uses the calibration queries (in this library stages are fitted on documents "
+     "only). No order inside a family is needed."),
     *_ASSUMPTIONS[3:],
 )
 
@@ -99,10 +134,13 @@ class RuleResult:
 class SelectionRule(Protocol):
     """A rule that maps evidence arrays to a :class:`RuleResult`.
 
-    ``certifying`` says whether the rule makes an error statement about the candidate it
-    selects. ``config()`` is JSON-native and identifies the rule; ``assumptions()`` are the
-    sentences its statement is conditional on. ``decide`` validates its inputs and raises a
-    ``ValueError`` subclass on invalid evidence; it never coerces or drops anything.
+    ``certifying`` is what the rule *declares* about itself: that it makes an error statement
+    about the candidate it selects. The library certifies only for its own rules
+    (:func:`is_builtin_rule`); for any other class ``Decision.certified`` is False whatever
+    this says, and the declaration is recorded as the author's. ``config()`` is JSON-native
+    and identifies the rule; ``assumptions()`` are the sentences its statement is claimed
+    under. ``decide`` validates its inputs and raises a ``ValueError`` subclass on invalid
+    evidence; it never coerces or drops anything.
     """
 
     name: str
@@ -127,7 +165,8 @@ class FixedSequenceBetting:
     """Method C of the research: betting p-values, fixed-sequence testing per chain.
 
     Every candidate gets an exact betting p-value (Waudby-Smith and Ramdas, J. R. Stat. Soc. B
-    86(1), 2024). Inside each family, in list order, a candidate is rejected when
+    86(1), 2024; the citations of this module were given from memory and have not been checked
+    against the sources, ``docs/package/STATISTICAL_REVIEW.md`` section 12). Inside each family, in list order, a candidate is rejected when
     ``p <= error / F`` and the family stops at its earliest non-rejection (fixed-sequence
     testing); ``F`` is the number of distinct family labels *in the list passed*, never a
     constant. The chosen candidate is the certified one with the smallest
@@ -135,11 +174,12 @@ class FixedSequenceBetting:
     there is no choice. This is an application of those published tools together with a
     union bound over chains. It is not a new statistical method.
 
-    The statement (:data:`STATEMENT`) is conditional on assumptions A1-A6, holds for every
-    sample size, and says nothing about power: the rule may abstain on any sample, and
-    abstaining is the safe outcome, not an error. Validity does not need the order inside a
-    family to be monotone; power depends on it. The p-values depend on the order of the
-    queries, so that order must not be chosen after seeing the outcomes. Nothing is random.
+    The statement (:data:`STATEMENT`) is claimed only under assumptions A1-A6 and conditions
+    C1-C4, holds for every sample size, and says nothing about power: the rule may abstain on
+    any sample, and abstaining is the safe outcome, not an error. Validity does not need the
+    order inside a family to be monotone; power depends on it. The p-values depend on the
+    order of the queries, so that order must be unrelated to the outcomes (A5). Nothing is
+    random.
     """
 
     name = "fixed_sequence_betting"
@@ -243,15 +283,82 @@ _BUILTIN_RULES = MappingProxyType({
     FixedSequenceBetting.name: FixedSequenceBetting,
     BonferroniBetting.name: BonferroniBetting,
 })
+_BUILTIN_TYPES = frozenset(_BUILTIN_RULES.values())
 
 
 def rule_from_name(name: str) -> SelectionRule:
     """The built-in rule called ``name`` (the string a ``Decision`` records in ``rule["name"]``).
 
-    Lets a record be replayed from its evidence. Unknown names raise ``ValueError``.
+    Lets a record be replayed from its evidence. Unknown names raise ``ValueError``. A name
+    alone does not make a record's rule built in: see :func:`builtin_rule_from_record`.
     """
     try:
         return _BUILTIN_RULES[name]()
     except (KeyError, TypeError):
         raise ValueError(f"unknown selection rule {name!r}; built-in rules: "
                          f"{sorted(_BUILTIN_RULES)}") from None
+
+
+def _qualified(cls: type) -> str:
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def is_builtin_rule(rule: object) -> bool:
+    """True when ``rule`` is an instance of exactly :class:`FixedSequenceBetting` or
+    :class:`BonferroniBetting`.
+
+    The exact type is compared, not ``isinstance`` and not ``rule.name``: a subclass that
+    overrides ``decide`` and keeps the name is a different rule, and the library has not
+    examined it.
+    """
+    return type(rule) in _BUILTIN_TYPES
+
+
+def rule_record(rule: SelectionRule) -> dict[str, Any]:
+    """What a decision and a certificate record about the rule that decided.
+
+    ``name`` and ``class`` (the qualified class name) say which rule it was; ``builtin`` that it
+    is one of the library's own (:func:`is_builtin_rule`); ``declared_certifying`` what the rule
+    says about itself; ``certifying`` what the library accepts: true only for a built-in rule
+    that declares it. ``config`` is the rule's own configuration.
+    """
+    builtin = is_builtin_rule(rule)
+    declared = bool(rule.certifying)
+    return {
+        "name": rule.name,
+        "class": _qualified(type(rule)),
+        "builtin": builtin,
+        "certifying": builtin and declared,
+        "declared_certifying": declared,
+        "config": rule.config(),
+    }
+
+
+def assumptions_of(rule: SelectionRule) -> tuple[str, ...]:
+    """The sentences a decision records for ``rule``.
+
+    A built-in rule's own assumptions, verbatim. For any other rule the sentences it declares,
+    each prefixed with :data:`DECLARED_PREFIX`: the library has not examined them.
+    """
+    sentences = tuple(str(a) for a in rule.assumptions())
+    if is_builtin_rule(rule):
+        return sentences
+    return tuple(DECLARED_PREFIX + a for a in sentences)
+
+
+def builtin_rule_from_record(record: Mapping[str, Any]) -> SelectionRule | None:
+    """The library's own rule that ``record`` (a ``rule`` entry) names, or ``None``.
+
+    The record counts only if its name, its qualified class name and its ``builtin`` flag all
+    describe the same built-in rule. A record that names a built-in rule but fails any of the
+    three is not that rule: the verification of a certificate refuses to treat it as one.
+    """
+    try:
+        cls = _BUILTIN_RULES.get(record.get("name"))
+    except TypeError:  # an unhashable name in a malformed record
+        return None
+    if cls is None or record.get("builtin") is not True:
+        return None
+    if record.get("class") != _qualified(cls):
+        return None
+    return cls()

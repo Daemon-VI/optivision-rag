@@ -44,14 +44,14 @@ empirical choice with a held-out check is what you need.
 | `search_space={family: [Pipeline, ...]}` | `space=` takes that dict, or a `CandidateSpace`, or `None` for the default list |
 | `reference="auto" / "labels" / "baseline"` (through `**calibrate_kwargs`) | `reference="auto" / "labels" / "agreement"` (`"baseline"` is spelled `"agreement"`), or a reference object |
 | `calibration_fraction`, `seed`, `n_boot`, `safety`, `confidence`, `multiplicity`, `margin`, `max_bytes_per_doc`, `assume_monotone` | no equivalent: there is no split, no bootstrap, no byte cap and no early stop |
-| (none) | `rule`, `query_budget`, `order_seed`, `fallback`, `encoder`, `progress`, `created` |
+| (none) | `rule`, `query_budget`, `order_seed` (default 0), `fallback`, `encoder`, `progress`, `created` |
 
 What changes in meaning:
 
 - **The target.** `quality_target` is a threshold that, by default, a lower bound of retention measured on the
   calibration half has to reach. `target` is the retention to be exceeded, and what the result states is
-  the rule's statement at `(target, error)`, conditional on assumptions A1-A6. The same number
-  does not mean the same thing, in either direction.
+  the rule's statement at `(target, error)`, claimed only under assumptions A1-A6 and conditions
+  C1-C4. The same number does not mean the same thing, in either direction.
 - **No held-out figure.** All queries are tested. There is no `quality_retention` and no
   `target_met`; `certified` says that the rule certified the choice, not that a held-out
   retention reached the target.
@@ -63,9 +63,16 @@ What changes in meaning:
 - **Repeating.** Re-running `optimize()` with another target is an ordinary new empirical choice.
   Re-running `certify()` on the same queries with another target, error level or list is not
   covered by the statement; use fresh queries.
+- **The order of the queries.** `optimize()` splits the queries into two halves with a seed.
+  `certify()` tests all of them in a seeded random order (`order_seed=0`, recorded in the
+  certificate); `order_seed=None` tests them in the order given, which is valid only if that
+  order is unrelated to the outcomes. Trying several seeds and reporting one is outside the
+  statement.
 - **Warnings.** `calibrate` warns below 100 informative queries and, without SciPy, continues
   with a smaller default list. `certify` never warns about few queries (it abstains) and
-  raises `ImportError` without SciPy instead of reducing the list.
+  raises `ImportError` without SciPy instead of reducing the list. It gives one `UserWarning`
+  when some of the queries it tested repeat an earlier query exactly (the count is in the
+  certificate and in `report()`); nothing is refused.
 
 | `OptimizationResult` | `CertifiedResult` |
 |---|---|

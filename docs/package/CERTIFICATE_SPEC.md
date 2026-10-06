@@ -14,12 +14,13 @@ A certificate is a record of one selection decision: which candidate list was te
 vectors and queries, against which reference, at which target and error level, by which rule
 and code, what the rule decided, and under which stated assumptions. It lets someone who holds
 the certificate answer: *was this compression decision certified under the stated
-configuration, and is this the index it was certified for?*
+configuration, and does this record match the index it was issued for?*
 
 What it is not:
 
 - It is not a statement that the compressed index keeps retrieval quality. The statement it
-  carries is the selection rule's own, with its assumptions (section 5), and nothing wider.
+  carries is the selection rule's own, with its assumptions and conditions (section 5), and
+  nothing wider; and it carries one only for the library's own rules (section 3).
 - It is not a security token. The content digest detects accidental or naive modification;
   anyone who can edit the file can recompute it. Tamper resistance against a party who wants to
   forge a certificate needs the optional HMAC with a key that party does not hold (section 6).
@@ -31,7 +32,7 @@ What it is not:
 
 All values are JSON-native. Digests are lower-case hex SHA-256. "Canonical JSON" is
 `optivision.core.identity.canonical_json` (sorted keys, separators `,` and `:`, ASCII, finite
-numbers only). A certificate has exactly the 24 fields below; any other top-level field fails
+numbers only). A certificate has exactly the 25 fields below; any other top-level field fails
 the `schema` check. In a file they are written in this order (nested keys sorted); the digest
 does not depend on the order.
 
@@ -43,15 +44,16 @@ does not depend on the order.
 | `code` | `{digest, files, python, numpy, scipy}`: section 2.1. `digest` is null (with a further key `note`) when sources cannot be read |
 | `encoder` | an `EncoderIdentity` dict declared by the caller, or null. Descriptive only: it is not verified and no decision depends on it. At creation its `dimension` must equal the corpus dimension |
 | `corpus` | `CorpusIdentity` fields (`n_docs`, `n_vectors`, `dimension`, `dtype`, `vectors_sha256`, `offsets_sha256`, `ids_sha256`, and `protected_sha256`, `positions_sha256`, `weights_sha256`, `importance_sha256`, each null when the array is absent) plus `digest`, the combined digest of those fields |
-| `queries` | `{n_pool, n_used, identity, order}`. `n_pool`: query vectors supplied (kept plus dropped); `n_used`: queries the rule tested; `identity`: as `corpus`, for the query vectors and ids; `order`: the decision's record `{kind, seed, budget, n_available, n_used, indices_sha256}`, where `kind` is `given` or `seeded_permutation` and `indices_sha256` is the digest of the tested positions in test order |
+| `queries` | `{n_pool, n_used, identity, order, exact_duplicates}`. `n_pool`: query vectors supplied (kept plus dropped); `n_used`: queries the rule tested; `identity`: as `corpus`, for the query vectors and ids; `order`: the decision's record `{kind, seed, budget, n_available, n_used, indices_sha256}`, where `kind` is `given` or `seeded_permutation` and `indices_sha256` is the digest of the tested positions in test order; `exact_duplicates`: how many of the tested queries repeat an earlier tested query exactly (their vector rows have the same digest, or their id repeats), counted by `record.exact_duplicates` over the queries the rule saw, so that verification can recount it from the live queries. Near-duplicates are not detected |
+| `norms` | `{tolerance, documents, queries}`, where `documents` and `queries` are `{unit_norm, norm_min, norm_max}`: the extremes of the L2 norms of the vectors (null when there are none) and whether both lie within `tolerance` (0.001) of 1. Computed in blocks of rows, in float64, without a copy of the corpus (`record.norm_record`). Descriptive and never a refusal: the research studied only MaxSim over L2-normalised vectors, and a caveat says so when a flag is false |
 | `reference` | `{construct, metric, identity}`. `construct` is `labels` or `agreement@<depth>` (the studied case is depth 1); `identity` is `{construct, qrels_sha256}` for labels (a digest of the listed relevant documents per query, independent of dict order and of grades) or `{construct, depth}` for agreement |
-| `space` | `{name, identity, n_candidates, n_families, families, registered_default, candidates}`: the full ordered candidate list (`{position, family, pipeline}` each), so the certificate is self-contained. `name` is a label and is not part of `identity` |
+| `space` | `{name, identity, n_candidates, n_families, families, registered_default, candidates}`: the full ordered candidate list (`{position, family, pipeline}` each), so the certificate is self-contained. `name` is a label and is not part of `identity`. `registered_default` is true when `identity` is the hash of the list the preregistration fixed (section 14.1) for the development stores; it names the list and does not say the list was validated for any other encoder |
 | `sizes` | `{bytes_per_doc, vectors_per_doc}`: one number per candidate, the values the choice among certified candidates used |
-| `rule` | `{name, certifying, config}`: the rule's configuration, including its name and whether it is certifying |
-| `statement`, `assumptions` | the rule's statement and its assumptions A1-A6, verbatim (`optivision.core.selection.STATEMENT` and `Decision.assumptions`). For a rule that is not certifying, `statement` is instead a fixed refusal text: "The selection rule that produced this record is not a certifying rule: it makes no error statement about the candidate it selected, and nothing in this record is certified." |
-| `caveats` | a list of sentences a reader must not miss, derived from the outcome, the construct and the rule (section 2.2). Often empty |
+| `rule` | `{name, class, builtin, certifying, declared_certifying, config}`. `class` is the qualified class name. `builtin` is true when the exact type is one of the library's own rules (`FixedSequenceBetting`, `BonferroniBetting`; a subclass is not, and neither is a rule that merely has the same name). `declared_certifying` is what the rule says about itself and `certifying` is what the library accepts: true only for a built-in rule that declares it. `config` is the rule's own configuration |
+| `statement`, `assumptions` | for a built-in certifying rule, its statement and its assumptions A1-A6 and conditions C1-C4, verbatim (`optivision.core.selection.STATEMENT` and `Decision.assumptions`). For any other rule, `statement` is a fixed text: "This record was produced by a selection rule that is not part of this library. The library has not examined that rule and makes no statement about it, and nothing in this record is certified. Any statement the rule makes is its author's." and each sentence the rule declared is recorded prefixed with "Declared by the rule's author, not examined by this library: " |
+| `caveats` | a list of sentences a reader must not miss, derived from the record's own fields (section 2.2). Often not empty: a given order, repeated queries and removed queries each add one |
 | `target`, `error`, `level` | the retention target, the error level, and the per-test level the rule derived |
-| `evidence` | `{digest, n_queries, dropped_queries, baseline_mean}`: digest of the per-query arrays the decision was computed from; the number of queries in them (those with a relevant document, before any budget); the ids removed for having none; the mean metric of the uncompressed index over all of them |
+| `evidence` | `{digest, n_queries, dropped_queries, baseline_mean}`: digest of the per-query arrays the decision was computed from; the number of queries in them (those with a relevant document, before any budget); the ids removed for having none (the statement is about the queries that have one); the mean metric of the uncompressed index over all of them |
 | `result` | `{outcome, certified, selected, certified_positions, p_values}`. `selected` is the list position of the deployed candidate, `-1` for a fallback, null for an abstention |
 | `sample` | for `select` only (null otherwise): `{n, mean, baseline_mean, retention_point, note}`, descriptive statistics of the selected candidate on the tested queries. They are optimistically biased by selection and are **not** certified quantities; `note` says so |
 | `candidate` | for `select` and `fallback` (null for `abstain`): `{pipeline, pipeline_sha256, fitted_state, traits, bytes, codes_sha256, offsets_sha256}` |
@@ -88,28 +90,52 @@ edit a certificate can write any identity into it.
 
 ### 2.2 Texts recorded beside the statement
 
-`caveats` holds, in this order, whichever apply:
+`caveats` holds, in this order, whichever apply. Every one follows from fields the record carries
+(`record.caveats_for`), so `rule.text` recomputes the list:
 
+- the rule is not one of the library's own: "The selection rule that produced this record is not
+  part of this library. The library has not examined it, so a selected candidate is not certified,
+  whatever the rule declares about itself, and the assumptions recorded here are the rule author's,
+  not the library's.";
 - construct `agreement@...`: "Retention here means agreement with the uncompressed ranking,
   which is not retrieval quality. The uncompressed index's own top document is taken as the
   relevant one, so the measure is fidelity to that ranking, including its mistakes, and no
   statement in this record is a statement about relevance.";
 - outcome `fallback`: "The deployed pipeline is a fallback supplied by the caller. It is not
   certified, and the statement above does not cover it.";
-- outcome `select` under a rule that is not certifying: "The selected candidate is not certified:
-  the rule that chose it makes no error statement."
+- order kind `given`: "The queries were tested in the order supplied. The statement requires that
+  order to be unrelated to the outcomes (assumption A5): the arrival order of independent draws
+  qualifies; an order sorted by difficulty, date, source or any other query attribute does not.";
+- order kind `seeded_permutation` with a seed other than the default 0: "The order seed (N) was
+  chosen by the caller, not left at the default. Choosing a seed after looking at results, or trying
+  several seeds and keeping one, is outside the statement." The default seed of `certify` and of the
+  command line is `optivision.core.selection.DEFAULT_ORDER_SEED`;
+- `queries.exact_duplicates` above 0: "N of the M queries tested repeat an earlier query exactly
+  (the same vectors). Repeated queries count as independent draws only if they really are; if they
+  come from failed de-duplication, logs replayed twice or augmentation, assumption A1 does not hold
+  and the stated error level does not apply.";
+- a `norms` flag that is false: "Not every vector has unit L2 norm (tolerance 0.001): document
+  vectors have norms from a to b [and query vectors have norms from c to d]. The research studied
+  only MaxSim over L2-normalised vectors, and nothing is known outside that scope.";
+- queries removed for having no relevant document: "K of the N queries given have no relevant
+  document under this reference and were removed before testing, for the baseline and for every
+  candidate alike. The statement is about the queries that have a relevant document."
 
 ## 3. Outcomes
 
 | `result.outcome` | `result.certified` | meaning |
 |---|---|---|
-| `select` | true for a certifying rule, false otherwise | the rule certified at least one candidate and chose among them; `candidate` is the deployed pipeline |
+| `select` | true for one of the library's own certifying rules, false for any other rule | the rule rejected "retention <= target" for at least one candidate and the smallest of those was chosen; `candidate` is the deployed pipeline |
 | `abstain` | false | nothing was certified; the uncompressed index is to be used. This is the safe outcome, not an error. `candidate` and `sample` are null |
 | `fallback` | false | nothing was certified and the caller supplied an explicit fallback pipeline. It is recorded, it is **not** certified, and the rule's statement does not cover it. `sample` is null (the fallback has no per-query evidence) |
 
-`certified` is true only for `select` under a certifying rule, and that is enforced both when a
-certificate is created and by a consistency check when it is verified. A certificate is issued for
-every outcome, so an abstention is as checkable as a selection.
+`certified` is true only for `select` under one of the library's own certifying rules: the exact
+types `FixedSequenceBetting` and `BonferroniBetting`, whatever a rule declares about itself (a rule
+that sets `certifying = True`, or a subclass that keeps a built-in name, is not one). That is
+enforced when the decision is made (`Decision`, `select`), when a certificate is created, and by
+consistency checks when it is verified: a record that says `certified: true` for a rule that is not
+one of those fails `rule.text`, `consistency.level`, `consistency.decision` and the replay (section
+4). A certificate is issued for every outcome, so an abstention is as checkable as a selection.
 
 ## 4. Verification
 
@@ -128,7 +154,7 @@ certificate true: it is as good as the queries, labels and corpus it was issued 
 
 **Level 1, integrity (certificate only).**
 
-1. `schema`: schema name and version are known, exactly the 24 fields are present with the right
+1. `schema`: schema name and version are known, exactly the 25 fields are present with the right
    types and value domains (target in (0, 1], error in (0, 1), level in (0, 1], the time format).
 2. `digest`: the content digest recomputed from the fields equals `digest`.
 3. `signature`: with a key, the HMAC is compared with `hmac.compare_digest`. A signed certificate
@@ -141,12 +167,15 @@ certificate true: it is as good as the queries, labels and corpus it was issued 
    `code.files` equal their fields; the identity in `reference` names the construct;
    `queries.n_pool` is the query count of the identity);
    `consistency.counts` (lengths of sizes and p-values, finite non-negative sizes, p-values in
-   [0, 1], `n_pool = evidence.n_queries + dropped`, `n_used` agrees with the budget, and the
-   digest of the tested positions is reproduced from `kind`, `seed` and `budget`);
+   [0, 1], `n_pool = evidence.n_queries + dropped`, `n_used` agrees with the budget, the digest of
+   the tested positions is reproduced from `kind`, `seed` and `budget`, `exact_duplicates` lies in
+   [0, `n_used`), and each `norms` entry follows from its extremes and the tolerance);
    `consistency.level` (`level` equals what the rule's configuration derives from `error` and the
-   list: `error / n_families` or `error / n_candidates`);
+   list: `error / n_families` or `error / n_candidates`; needs a built-in rule, see below);
    `consistency.outcome` (`outcome`, `certified`, `selected`, `certified_positions`, `candidate`
-   and `sample` agree with each other);
+   and `sample` agree with each other, and so do the parts of the `rule` record: `certifying` is
+   true exactly when the rule is built in and declares itself certifying, and a rule recorded as
+   built in has the name and class of one of the library's own);
    `consistency.decision` (`certified_positions` and `selected` equal what the rule's
    deterministic decision step gives for the stored p-values, families, sizes and level);
    `consistency.candidate` (`candidate.pipeline_sha256` is the digest of `candidate.pipeline`;
@@ -154,21 +183,32 @@ certificate true: it is as good as the queries, labels and corpus it was issued 
    per stage; the byte figures agree with each other, with the corpus identity and with
    `sizes.bytes_per_doc` of the selected candidate);
    `consistency.sample` (`retention_point` is `mean / baseline_mean`; `n` is `queries.n_used`).
-5. `rule.text`: the rule (name, flag, configuration), `statement`, `assumptions` and `caveats` are
-   those the running library writes for the same rule and construct. `candidate.traits`: the
-   recorded traits are those the running library derives from `candidate.pipeline`. A difference is
-   a `fail` when `code.digest` equals the running code's (the same code cannot write a different
-   text), and `differs` otherwise (a different version may word a text differently); it is a `fail`
-   under `strict_code`. For a rule that is not built in (or a stage this process does not know) the
-   check is `skipped`.
+5. `rule.text`: the rule record (name, class, flags, configuration), `statement`, `assumptions` and
+   `caveats` are those the running library writes for the same rule, from the record's own
+   fields. `candidate.traits`: the recorded traits are those the running library derives from
+   `candidate.pipeline`. A difference is a `fail` when `code.digest` equals the running code's (the
+   same code cannot write a different text), and `differs` otherwise (a different version may word a
+   text differently); it is a `fail` under `strict_code`. For a stage this process does not know,
+   `candidate.traits` is `skipped`. A rule counts as built in only when its name, its qualified
+   class name and its `builtin` flag all describe one of the library's own rules. For a rule that
+   is not, a record that says `certified: true` **fails** (it is never skipped, and editing
+   `code.digest` does not turn it into `differs`); a record that says nothing is certified is
+   checked for what the library itself writes there (the fixed statement, the label on every
+   assumption, the caveats) and passes with a detail that says the rule's configuration was not
+   examined.
 6. `code.files`: the running code's identity compared with `code.digest`. A difference is reported
    as `differs` with the files that changed, were added or were removed, not as a failure, unless
    `strict_code=True`: a different library version is not tampering, but a replay under different
    code is weaker evidence. `code.libraries`: differing Python, NumPy or SciPy versions are
    reported as `differs` and never fail a report, even under `strict_code`.
 
-`consistency.level`, `consistency.decision` and the replay need a built-in rule
-(`fixed_sequence_betting`, `bonferroni_betting`); for any other rule they are `skipped`.
+`consistency.level`, `consistency.decision` and the replay need one of the library's own rules
+(`fixed_sequence_betting`, `bonferroni_betting`; section 2, `rule`). For any other rule a record
+that says `certified: true` fails all three, and a record that says nothing is certified skips them.
+In that case the report's `notes` (printed by `summary()` and by the command line, and listed by
+`to_dict()`) say that the record names a rule that is not part of this library, that nothing in it
+is certified and that those checks were not run; in the first case they say that the claim is
+refused.
 
 **Level 2, replay (needs the evidence).**
 
@@ -188,7 +228,11 @@ certificate true: it is as good as the queries, labels and corpus it was issued 
 **Level 3, binding (needs the live objects; each is optional and checked on its own).**
 
 10. `binding.corpus`, `binding.queries`: the identity of the supplied vectors equals `corpus` and
-    `queries.identity`. `binding.evidence_queries` (needs queries and evidence): the evidence's
+    `queries.identity`; once it does, the supplied vectors are the certified ones, so the recorded
+    `norms` entry must equal the one they give (extremes at relative tolerance 1e-9) and, for the
+    queries, `queries.exact_duplicates` must equal the count recomputed with the recorded dropped
+    ids and order. These are the only checks that can confirm a count or a norm: no other check
+    has the vectors. `binding.evidence_queries` (needs queries and evidence): the evidence's
     query ids are the supplied queries without the dropped ones, in order.
 11. `binding.reference`: the supplied reference has the recorded construct and identity.
 12. `binding.pipeline` (fitted): its specification digest and per-stage fitted-state digests equal
@@ -203,34 +247,49 @@ certificate true: it is as good as the queries, labels and corpus it was issued 
 ### 4.1 What each modification is caught by
 
 "Alone" is level 1 with the certificate only; "everything" is levels 1-3 with the evidence and
-every object supplied. Every row is exercised by `tests/test_core_certificate_tamper.py`, once
-with the digest left alone (the `digest` check fails for every row) and once with it recomputed, as
-a careless or dishonest editor would.
+every object supplied. Every row is exercised by `tests/test_core_certificate_tamper.py` (the
+case ids are in the last column), once with the digest left alone (the `digest` check fails for
+every row) and once with it recomputed, as a careless or dishonest editor would. The adversary of
+the table is that editor: someone who can change the file and recompute the digest, and has no
+HMAC key. Where a row says "not detected" the test asserts it, so that the limit is pinned and not
+hidden.
 
-| modified (digest recomputed) | caught alone by | caught with everything by |
-|---|---|---|
-| a candidate pipeline parameter, in `candidate` only | `consistency.candidate` | adds `binding.codes`; `binding.pipeline` too if `pipeline_sha256` was rewritten |
-| the same parameter rewritten in `candidate`, the list and `space.identity` | not detected | `evidence.fields`, `replay.decision`, `binding.pipeline`, `binding.codes` |
-| candidate list: drop, reorder or add one (identity stale) | `consistency.space` (and `consistency.level` if the family count changes) | adds `replay.decision` |
-| candidate list rewritten consistently (identity, counts, sizes, p-values, level, decision) | not detected | `evidence.fields`, `replay.decision` |
-| target | not detected | `replay.decision` |
-| error level (level unchanged) | `consistency.level` | adds `replay.decision` |
-| error level and level together | `consistency.decision` when the certified set would change | adds `replay.decision`; a rewritten selection that differs from the deployed pipeline is caught by `consistency.candidate` and `evidence.sample` |
-| query identity | `consistency.identities`; if its combined digest is refreshed: not detected | `binding.queries` |
-| query count (`n_pool`), dropped queries | `consistency.counts` (and `consistency.identities` for `n_pool`) | the same; dropped queries add `evidence.fields` |
-| query order, seed or budget | `consistency.counts` (and `consistency.sample` for a budget); if the position digest is refreshed too: only a budget (`consistency.sample`) | `replay.decision` |
-| reference identity | not detected | `binding.reference` |
-| construct | `consistency.identities`, `rule.text` (caveats); if rewritten consistently: not detected | adds `evidence.fields`, `binding.reference` |
-| fitted-state digest | not detected (a removed entry: `consistency.candidate`) | `binding.pipeline`, `evidence.fields`; and `binding.codes` if the codes digest was changed |
-| code identity (files table with its digest refreshed) | not detected; `code.files` is `differs` | `differs`; `fail` under `strict_code`. A digest that does not match its table: `consistency.identities` |
-| outcome, `certified`, selected position, certified positions | `consistency.outcome`, `consistency.decision`, `consistency.candidate` | adds `replay.decision` |
-| one p-value | `consistency.decision` when it changes the decision; otherwise not detected | `replay.decision` |
-| corpus identity | `consistency.identities`; if the combined digest is refreshed: not detected. Vector or document counts: `consistency.candidate` | `binding.corpus` |
-| byte figures | `consistency.candidate` for what is tied to something else (parts and totals, the size key, the corpus); the serving-state and append-state figures: not detected | `binding.bytes`; the copies in `sizes`: `evidence.fields` |
-| statement, an assumption, caveats, rule configuration | `rule.text` (`fail`, or `differs` if `code.digest` was also changed) | same |
-| sample statistics | `consistency.sample` (internal arithmetic) | `evidence.sample` |
-| `created_utc`, `package`, `encoder`, `space.name` | not detected | not detected |
-| any field, under an HMAC key | `signature` | `signature` |
+| modified (digest recomputed) | caught alone by | caught with everything by | test case |
+|---|---|---|---|
+| a candidate pipeline parameter, in `candidate` only | `consistency.candidate` | adds `binding.codes`; `binding.pipeline` too if `pipeline_sha256` was rewritten | `pipeline-parameter`, `pipeline-parameter-and-its-digest` |
+| a candidate pipeline parameter rewritten in the list and `space.identity` only | `consistency.candidate` (the candidate record no longer matches its list entry) | adds `evidence.fields`, `replay.decision` | `pipeline-parameter-in-the-list` |
+| the same parameter rewritten everywhere (`candidate`, its digest, the list and `space.identity`) | not detected | `evidence.fields`, `replay.decision`, `binding.pipeline`, `binding.codes` | `pipeline-parameter-everywhere` |
+| candidate list: drop, reorder or add one (identity stale) | `consistency.space` (and `consistency.level` or `consistency.decision` if the count or the families change) | adds `replay.decision` | `list-drop-one`, `list-reorder`, `list-add-one` |
+| candidate list rewritten consistently (identity, counts, sizes, p-values, level, decision) | not detected | `evidence.fields`, `replay.decision` | `list-*-consistently` |
+| target | not detected | `replay.decision` | `target` |
+| error level (level unchanged) | `consistency.level` | adds `replay.decision` | `error-level` |
+| error level and level together | `consistency.decision` when the certified set would change | adds `replay.decision`; a rewritten selection that differs from the deployed pipeline is caught by `consistency.candidate` and `evidence.sample` | `error-level-and-level`, `error-level-and-the-decision-for-another-candidate` |
+| query identity | `consistency.identities`; if its combined digest is refreshed: not detected | `binding.queries` | `query-identity`, `query-identity-consistently` |
+| query count (`n_pool`), dropped queries | `consistency.counts` (and `consistency.identities` for `n_pool`), and `rule.text`, because the sentence about removed queries follows from them | the same; dropped queries add `evidence.fields` and `binding.queries` | `query-pool-size`, `dropped-query-hidden` |
+| query order kind or seed | `consistency.counts` (the digest of the tested positions); if the digest is refreshed too: `rule.text` (the order sentence follows from kind and seed); if the sentence is rewritten as well: not detected | `replay.decision` (and `evidence.sample`) | `query-order-seed`, `query-order-seed-and-its-digest`, `query-order-seed-its-digest-and-its-caveat` |
+| query budget | `consistency.counts` and `consistency.sample`; if the position digest is refreshed too: `consistency.sample` | `replay.decision`, `evidence.sample` | `query-budget`, `query-budget-and-its-digest` |
+| the order sentence, or the sentence about removed queries, deleted | `rule.text` | same | `order-caveat-removed`, `dropped-queries-caveat-removed` |
+| `exact_duplicates` lowered or raised | `rule.text` (the sentence follows from the count), `consistency.counts` if outside [0, `n_used`); if the sentence is rewritten as well: not detected | `binding.queries` (the count is recomputed from the live queries) | `duplicate-count-cleared`, `duplicate-count-invented`, `duplicate-count-and-its-caveat-cleared`, `duplicate-count-beyond-the-queries-tested` |
+| `norms` (a flag set, extremes or tolerance edited) | `consistency.counts` (the flag must follow from the extremes and the tolerance) and `rule.text`; if rewritten consistently, with the sentence: not detected | `binding.corpus`, `binding.queries` (the norms are recomputed from the live vectors) | `norm-flag-set-to-hide-it`, `norm-extremes-edited-and-the-flag-kept`, `norms-rewritten-to-hide-it`, `norm-tolerance-widened-to-hide-it` |
+| reference identity | not detected | `binding.reference` | `reference-identity` |
+| construct | `consistency.identities`, `rule.text` (caveats); if rewritten consistently: not detected | adds `evidence.fields`, `binding.reference` | `construct`, `construct-to-hide-the-agreement-caveat` |
+| fitted-state digest | not detected (a removed entry: `consistency.candidate`) | `binding.pipeline`, `evidence.fields`; and `binding.codes` if the codes digest was changed | `fitted-state-*` |
+| code identity (files table with its digest refreshed) | not detected; `code.files` is `differs` | `differs`; `fail` under `strict_code`. A digest that does not match its table: `consistency.identities` | `code-identity`, `code-identity-digest-only` |
+| outcome, `certified`, selected position, certified positions | `consistency.outcome`, `consistency.decision`, `consistency.candidate` | adds `replay.decision` | `outcome-*`, `certified-*`, `selected-position-*`, `certified-position-*` |
+| one p-value | `consistency.decision` when it changes the decision; otherwise not detected | `replay.decision` | `p-value-*` |
+| **the rule renamed** (`rule.name`), with or without another edit (the target, the error level, every p-value forged): the record says `certified: true` for a rule the library does not know | `rule.text`, `consistency.level`, `consistency.decision`, and `consistency.outcome`: a certified record whose rule is unknown **fails**, it is never skipped, and editing `code.digest` as well does not downgrade `rule.text` to `differs` | adds `replay.decision` | `rule-renamed`, `rule-renamed-and-the-target-edited`, `rule-renamed-and-the-decision-forged`, `rule-renamed-and-the-code-identity-edited` |
+| **the rule's class or built-in flag** (`rule.class`, `rule.builtin`) | the same four checks | adds `replay.decision` | `rule-class-renamed`, `rule-builtin-flag-cleared` |
+| `rule.declared_certifying` or `rule.certifying`, or another built-in rule's name and class | `consistency.outcome` and `rule.text`; the other built-in rule: `consistency.level` and `rule.text` | the same, plus `replay.decision` for the swap | `rule-declared-certifying-cleared`, `rule-certifying-flag`, `rule-swapped-for-the-other-builtin-rule` |
+| a record of a rule of someone else's edited to say `certified: true` (and built in, and with the library's statement) | `consistency.outcome`, `rule.text`, `consistency.level`, `consistency.decision` | adds `replay.decision` | `custom-rule-certified-flag-set`, `custom-rule-claims-to-be-built-in` |
+| the same record rewritten completely as one of the library's own (name, class, flags, statement, assumptions, caveats): the texts then pass | `consistency.level` and `consistency.decision`, when the stored level and p-values do not support the decision (in the test every p-value is 1, so the library's rule would certify nothing); p-values and level forged consistently as well: not detected | adds `replay.decision`, unless the evidence is forged too | `custom-rule-given-the-librarys-name-and-class` |
+| the statement, the label on a rule's assumptions or its caveats edited in a record of a rule of someone else's | `rule.text` | same | `custom-rule-statement-replaced-by-the-librarys`, `custom-rule-assumptions-unlabelled`, `custom-rule-caveat-removed` |
+| a certified record rewritten into an uncertified one (unknown rule, `certified: false`, consistent texts) | not detected, and not a forgery: it claims less. The level, decision and replay checks are `skipped` and the report's notes say that nothing in it is certified | the same | `TestDocumentedLimits` |
+| corpus identity | `consistency.identities`; if the combined digest is refreshed: not detected. Vector or document counts: `consistency.candidate` | `binding.corpus` | `corpus-*` |
+| byte figures | `consistency.candidate` for what is tied to something else (parts and totals, the size key, the corpus); the serving-state and append-state figures: not detected | `binding.bytes`; the copies in `sizes`: `evidence.fields` | `bytes-*`, `sizes-vectors-per-doc` |
+| statement, an assumption, caveats, rule configuration (built-in rule) | `rule.text` (`fail`, or `differs` if `code.digest` was also changed) | same | `statement-text`, `assumption-*`, `rule-configuration`, `agreement-caveat-removed`, `all-caveats-removed`, `statement-and-code-identity` |
+| sample statistics | `consistency.sample` (internal arithmetic) | `evidence.sample` | `sample-*` |
+| `created_utc`, `package`, `encoder`, `space.name` | not detected | not detected | `created-time`, `package-version`, `encoder-declared`, `space-name` |
+| any field, under an HMAC key | `signature` | `signature` | every case |
 
 Supplying objects that are not the certified ones is caught by the binding checks of level 3: a
 corpus, queries or labels that differ in one value, a reordered id list, a pipeline fitted on other
@@ -238,40 +297,88 @@ data (`binding.pipeline`), codes, offsets or ids that differ (`binding.codes`). 
 value changed fails `evidence.digest` and the replay.
 
 A party who rewrites the certificate **and** supplies matching forged evidence and objects is
-not detected by levels 1-3: a certificate issued honestly from forged evidence verifies. Only a
-signature from a key they do not hold closes that gap.
+not detected by levels 1-3: a certificate issued honestly from forged evidence verifies. Such a
+party cannot make a rule of their own pass as certified (a record that says so fails whatever else
+it contains), and can always make a record claim less. Only a signature from a key they do not hold
+closes the first gap. Without an HMAC key nothing in the record or the bundle is a root of trust.
 
 ## 5. The statement a certificate carries
 
-For the fixed-sequence betting rule (the port of the research's Method C):
+For the library's own rules (the fixed-sequence betting rule, the port of the research's Method C,
+and the Bonferroni rule), `statement` is `optivision.core.selection.STATEMENT` verbatim:
 
-> P( a compressed candidate is selected and its retention under Q is below T ) <= delta,
-> over the draw of the calibration queries.
+> For the target T and the error level delta of this decision: P(a compressed candidate is selected
+> and its retention under Q is below T) <= delta. The probability is over the draw of the
+> calibration queries; the corpus, the candidate list and its order, T and delta are fixed, not
+> random. Q is the distribution the calibration queries are drawn from, and retention under Q is
+> E_Q[metric of the candidate] / E_Q[metric of the uncompressed index]. This is a joint probability.
+> It is NOT the probability, given that a candidate was selected, that its retention is below T: a
+> rule that rarely selects can satisfy it while most of its selections are below T. It is not a
+> statement about the retention measured on the calibration queries, not a statement about a finite
+> batch of future queries, and not a statement about power (it also holds if the rule always
+> abstains). The project derived it for every sample size, with no large-sample approximation, under
+> assumptions A1-A6 and conditions C1-C4. They are sufficient conditions: nothing is claimed if one
+> of them fails. It is an application of published tools; the derivation is this project's own and
+> has not been externally reviewed.
 
-It holds for every sample size and is conditional on all of: (A1) the calibration queries are
-independent draws from one distribution Q, the distribution the index will serve; (A2) the
-corpus is fixed; (A3) the candidate list, its families and its order were fixed before the
-queries were seen, and every fitted stage was fitted on documents only; (A4) the per-query
-metric lies in [0, 1] and the baseline's mean is positive; (A5) the order in which queries
-enter the test was fixed before their outcomes were seen; (A6) the reference is taken as
-given (labels, or the uncompressed index's own top document).
+and `assumptions` are the ten sentences below (the Bonferroni rule's A3 does not ask for an order
+inside a family). A1 to A6 are the six assumptions of the research's statement, numbered as in the
+preregistration (section 16.2); C1 to C4 are conditions of use that the research protocol satisfied
+by construction and that the user must satisfy:
 
-It is not a conditional probability given that something was selected, not a statement about
-the retention measured on the sample, not a statement about a finite batch of future queries,
-and not a statement about power: the rule may abstain every time. The rule is an application
-of published tools (testing by betting; fixed-sequence testing; a union bound). The derivation
-that combines them is the project's own and has not been externally reviewed. Under the
-`agreement@1` construct, "retention" means agreement with the uncompressed ranking, which is
-not retrieval quality.
+> A1: the calibration queries are independent draws from one distribution Q, the distribution of the
+> queries the deployed index will serve. Repeated or near-duplicate queries, queries from one
+> session or one author, and a sample sorted or filtered by anything related to difficulty are not
+> independent draws.
+>
+> A2: the corpus is fixed; retention moves with corpus size, so the statement is about this corpus.
+>
+> A3: the candidate list, its family labels and chains, and the order inside each chain are fixed
+> before the calibration queries are seen, and no fitted stage uses the calibration queries (in this
+> library stages are fitted on documents only).
+>
+> A4: the per-query metric lies in [0, 1] and the expected metric of the uncompressed index under Q
+> is positive.
+>
+> A5: the order in which queries enter the sequential test is fixed before their outcomes are seen
+> and is unrelated to them: the arrival order of independent draws, or a random permutation drawn
+> without reference to the data. An order sorted by any query attribute, or picked among several
+> orders after looking, is not.
+>
+> A6: the reference is taken as given (the labels under the label construct, the uncompressed
+> index's own top document under the agreement construct); errors in the reference are not modelled.
+>
+> C1: one look. One target, one error level, one rule, one metric, one reference and one candidate
+> list are fixed before the outcomes are seen, and the procedure is run once on this sample;
+> re-running it with other choices on the same queries is outside the statement.
+>
+> C2: the baseline and every candidate are scored on the same queries with the same metric and the
+> same reference.
+>
+> C3: the reference (the labels, or the uncompressed ranking) is fixed without regard to the
+> candidates' results.
+>
+> C4: the index that is deployed is the one that was evaluated: the same corpus, the same pipeline,
+> the same fitted state and the same scoring procedure.
 
-The certificate cannot check A1, A2, A5 or A6: they are properties of how the caller obtained
-the queries and labels. It records what the caller supplied. A3 is supported, not proven, by
-the code path: the default list depends only on the dimension, and stages are fitted by
-`Pipeline.compress(corpus)` without queries.
+The statement is a joint probability over the draw of the calibration queries. It is not a
+conditional probability given that something was selected, not a statement about the retention
+measured on the sample, not a statement about a finite batch of future queries, and not a statement
+about power: the rule may abstain every time. It says how often the procedure goes wrong, not how
+reliable one selection is. The rule is an application of published tools (testing by betting;
+fixed-sequence testing; a union bound). The derivation that combines them is the project's own and
+has not been externally reviewed (`STATISTICAL_REVIEW.md` is an internal second reading, not an
+external review). Under the `agreement@1` construct, "retention" means agreement with the
+uncompressed ranking, which is not retrieval quality.
 
-The wording above paraphrases the text the certificate records in `statement` and `assumptions`
-(the library's own, verbatim, with the same conditions); the sentence about the agreement
-construct is recorded in `caveats`.
+The certificate cannot check A1, A2, A5, A6 or C1 to C4: they are properties of how the caller
+obtained the queries and labels and of what the caller deploys. It records what the caller supplied,
+counts exact duplicate queries (`queries.exact_duplicates`), records how the queries were ordered
+and whether the vectors have unit norm, and says in `caveats` what each of those requires. A3 is
+supported, not proven, by the code path: the default list depends only on the dimension, and stages
+are fitted by `Pipeline.compress(corpus)` without queries.
+
+For any other rule `statement` is the fixed text of section 2, never this one (section 3).
 
 ## 6. Signing
 
@@ -325,8 +432,9 @@ per-array hash is kept. `evidence.npz` is `Evidence.to_npz` output re-packed in 
 
 **What the manifest is.** It detects accidental damage and naive edits of one file (the zip
 format's own CRC-32 also refuses a damaged entry). Anyone who can write the directory can write a
-matching manifest, so it is not the root of trust: the certificate is (its digest, the codes and
-fitted-state digests it records, an optional HMAC), and `load_artifact` checks those too.
+matching manifest, and anyone who can edit the certificate can recompute its digest: without an
+HMAC key nothing in the bundle is a root of trust. `load_artifact` checks the certificate too (its
+digest, the codes and fitted-state digests it records, an optional HMAC).
 
 `load_artifact(path, *, verify=True, key=None, strict_code=False) -> Artifact` rebuilds the
 pipeline from the certified specification, restores the fitted state, and rebuilds the
@@ -352,8 +460,10 @@ state (a PCA basis, a codec's mean). That format stays readable and is not chang
 ## 8. Limits
 
 - A certificate is as good as its inputs. It cannot tell whether the queries were an honest
-  sample of the deployment distribution, whether several targets were tried on the same sample
-  and one reported, or whether the candidate list was edited after a look at the results.
+  sample of the deployment distribution (it counts exact duplicates; near-duplicates, sessions,
+  authors and curation are invisible to it), whether the order was unrelated to the outcomes,
+  whether several targets, seeds or lists were tried on the same sample and one reported, or
+  whether the candidate list was edited after a look at the results.
 - The `code` field identifies source files, not the numerical libraries beneath them. Replay
   compares p-values at a relative tolerance for that reason.
 - The byte figures follow the library's accounting: the size key counts codes and codec
@@ -361,10 +471,13 @@ state (a PCA basis, a codec's mean). That format stays readable and is not chang
 - Schema version 1 has no revocation, expiry or chaining.
 - The `code` file set (section 2.1) leaves out modules outside the decision path (page encoders,
   the command line, backends, adapters, storage); a change there does not change the identity.
-- The decision step, the level and the replay can be recomputed only for the built-in rules
-  named in section 4; for any other rule those checks are `skipped`. A rule that declares itself
-  certifying gets the library's `STATEMENT` recorded, which is the statement of the built-in rules:
-  a rule that makes a different statement must not be issued a certificate with this function.
+- The decision step, the level and the replay can be recomputed only for the library's own rules
+  named in section 4. A rule written by anyone else is never certified: its record carries the
+  fixed text of section 2 instead of the library's statement, its assumptions are labelled as its
+  author's, and verification fails any claim of `certified: true` for it (a record that claims
+  nothing skips those checks and says so in the report's notes). The library does not vouch for such
+  a rule: its author must publish the rule's statement and derivation with it.
+- Without an HMAC key the digest and the manifest are integrity checks, not roots of trust.
 - Evidence is checked only when it is supplied (or stored in a bundle). A certificate verified
   without it has had its internal consistency and bindings checked, not its p-values.
 
@@ -410,3 +523,15 @@ Every point where what is built differs from, or settles something left open in,
     evidence's ids, the reference's construct, and the encoder's dimension against the corpus.
 14. `Certificate.from_json` refuses duplicate keys and NaN or infinity; `save` writes ASCII JSON with
     LF line endings.
+15. After the internal and statistical reviews (`RESEARCH_INTEGRITY_AUDIT.md` RI-01 to RI-06 and
+    RI-13, `STATISTICAL_REVIEW.md` SR-1 to SR-5): `rule` records its class, whether it is built in
+    and what it declared, and `certified` is true only for the library's own rules; a record that
+    claims otherwise fails `rule.text`, `consistency.level`, `consistency.decision` and the replay
+    instead of skipping them, and the report has `notes`; `statement` and `assumptions` are the
+    reworded ones (ten sentences: A1-A6 and C1-C4); `queries.exact_duplicates`, the new top-level
+    field `norms` and the order, duplicate, norm and removed-query caveats were added, all checked by
+    `rule.text` and, with the live objects, by `binding.corpus` and `binding.queries`. The field count
+    is 25. Nothing was released with the earlier shape of the record, so the schema is still version 1.
+16. `certify()` and the command line test the queries in a seeded random order by default (seed
+    0); the lower-level `select()` keeps the order given as its default, and the certificate says
+    which was used and what it requires.

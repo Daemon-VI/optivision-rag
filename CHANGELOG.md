@@ -51,6 +51,35 @@ research results (`reports/research/`) was changed or re-run.
   `test_golden_formats.py` (files written by v0.3.0 keep reading back); the user guide in
   `docs/package/guide/` with examples that the tests run; the design and audit documents in
   `docs/package/`.
+- **After the internal reviews** (`docs/package/RESEARCH_INTEGRITY_AUDIT.md`,
+  `docs/package/STATISTICAL_REVIEW.md`; internal, not external):
+  - *Certified only for the library's own rules.* A decision and a certificate record the rule's
+    class and whether it is one of the library's own (the exact types `FixedSequenceBetting` and
+    `BonferroniBetting`). A rule written by anyone else is recorded with what it declared, its
+    assumptions are labelled as its author's, its selection is never `certified`, and the
+    certificate carries a fixed text saying the library has not examined it instead of the
+    library's statement. `verify` fails a record that says `certified: true` for a rule it does
+    not know, instead of skipping the level, decision, text and replay checks, and the report
+    has `notes`.
+  - *The statement and the assumptions were reworded*: the stored statement says that it is a
+    joint probability and not the probability that a selection is below the target, not about the
+    retention on the sample, not about a finite batch of future queries, not about power, and that
+    A1-A6 and C1-C4 are sufficient conditions. A1, A3 and A5 are stricter, and four conditions of
+    use were added (one look, same queries and metric, a reference fixed independently of the
+    candidates, deployed equals evaluated): ten sentences in all.
+  - *`certify()` and `optivision certify` test the queries in a seeded random order by default*
+    (`order_seed=0`; `--order-seed`, and `--given-order` for the order of the file).
+    `select()` keeps the order given. The certificate says what a given order requires and when
+    the seed was chosen by the caller.
+  - *Exact duplicate queries are counted* (`queries.exact_duplicates`,
+    `report()["n_exact_duplicate_queries"]`, a caveat, and one `UserWarning` from `certify`; none
+    is refused). *Vector norms are recorded* (new top-level field `norms`; a caveat when the
+    vectors are not unit-norm). The certificate has 25 fields; `verify` recounts both from the
+    live queries and vectors.
+  - Wording: the headline of the command line no longer says "certified" on its own, the abstain
+    note no longer suggests a lower target on the same queries, "conditional on" no longer sits
+    beside a probability, and the guide and the specification say what each assumption asks of
+    you.
 
 ## Unreleased (branch `research-investigation`)
 

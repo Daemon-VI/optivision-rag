@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import datetime
+import inspect
 import json
 import warnings
 
@@ -23,8 +24,10 @@ from optivision.adapters import corpus_from_arrays
 from optivision.compose import CompressedCorpus, Pipeline
 from optivision.core.artifact import ArtifactError, sign_certificate
 from optivision.core.evaluate import LabelReference, RankingReference
+from optivision.core.identity import array_digest
 from optivision.core.retrieve import CompressedRetriever, ExactRetriever, Ranking
 from optivision.core.selection import (
+    DEFAULT_ORDER_SEED,
     BonferroniBetting,
     CandidateSpace,
     ErrorLevelError,
@@ -146,7 +149,12 @@ def test_the_abstention_says_what_it_means_and_what_it_does_not(abstained):
     assert rep["selected"] is None and rep["compression_ratio"] == 1.0
     assert rep["basis_sensitive"] is None
     note = rep["not_certified_note"]
-    assert "uncompressed index" in note and "safe outcome" in note and "before looking again" in note
+    assert "uncompressed index" in note and "safe outcome" in note
+    # more queries means NEW queries, and another target is a decision taken before looking
+    assert "new, independent queries" in note and "chosen before they are looked at" in note
+    assert "Every further look at the same queries" in note and "outside the statement" in note
+    assert "order or seed" in note and "3 to 14" in note
+    assert "a lower target" not in note and "more queries" not in note
     assert "nothing certified: use the uncompressed index" in repr(abstained)
 
 
@@ -333,9 +341,37 @@ def test_query_budget_and_order_seed_are_recorded(data):
     assert r.evidence.n_queries == 120  # the evidence keeps every query; the rule tests a prefix
 
 
-def test_the_order_of_the_queries_is_the_order_given_unless_a_seed_says_otherwise(selected):
-    assert dict(selected.decision.query_order)["kind"] == "given"
-    assert selected.report()["query_order"] == {"kind": "given", "seed": None, "budget": None}
+def test_the_queries_are_tested_in_a_seeded_random_order_unless_the_given_order_is_asked_for(
+        selected, data):
+    corpus, queries, qrels = data
+    order = dict(selected.decision.query_order)
+    assert (order["kind"], order["seed"]) == ("seeded_permutation", 0)  # the default: seed 0
+    assert order["indices_sha256"] == array_digest(
+        np.random.default_rng(0).permutation(len(queries)).astype(np.int64))
+    assert order["indices_sha256"] != array_digest(np.arange(len(queries), dtype=np.int64))
+    assert selected.report()["query_order"] == {"kind": "seeded_permutation", "seed": 0,
+                                                "budget": None}
+    given = run(corpus, queries, qrels, order_seed=None)  # None: the order the file has
+    assert dict(given.decision.query_order)["kind"] == "given"
+    assert given.report()["query_order"] == {"kind": "given", "seed": None, "budget": None}
+    assert given.decision.p_values != selected.decision.p_values  # the order matters to the test
+
+
+def test_what_the_order_requires_is_recorded_and_said_where_the_caller_reads(data, selected):
+    corpus, queries, qrels = data
+    assert selected.report()["caveats"] == []  # the default seed asks nothing of the caller
+    given = run(corpus, queries, qrels, order_seed=None)
+    assert any("order supplied" in c and "unrelated to the outcomes" in c
+               for c in given.report()["caveats"])
+    chosen = run(corpus, queries, qrels, order_seed=7)
+    assert any("order seed (7) was chosen by the caller" in c and "outside the statement" in c
+               for c in chosen.report()["caveats"])
+    doc = " ".join((certify.__doc__ or "").split())
+    assert "The default shuffle exists so that a sorted input file cannot break assumption A5" in doc
+    assert "valid only if that order is unrelated to the outcomes" in doc
+    assert "never an order sorted by difficulty, date, source or any other query attribute" in doc
+    assert "trying several seeds and reporting one is outside the statement" in doc
+    assert inspect.signature(certify).parameters["order_seed"].default == DEFAULT_ORDER_SEED == 0
 
 
 def test_a_budget_larger_than_the_queries_given_is_refused_before_any_work(data, monkeypatch):
@@ -364,7 +400,9 @@ def test_the_rule_can_be_chosen(data):
     corpus, queries, qrels = data
     r = run(corpus, queries, qrels, rule=BonferroniBetting())
     assert r.certificate.rule_name == "bonferroni_betting"
-    assert r.report()["rule"] == {"name": "bonferroni_betting", "certifying": True}
+    assert r.report()["rule"] == {
+        "name": "bonferroni_betting", "class": "optivision.core.selection.rules.BonferroniBetting",
+        "builtin": True, "certifying": True, "declared_certifying": True}
     assert r.decision.level == pytest.approx(0.05 / 6)
     assert verify(r.certificate, evidence=r.evidence).ok
 
@@ -546,9 +584,10 @@ def test_a_float32_only_selection_ranks_exactly_as_the_uncompressed_index_does(d
 def test_the_report_is_json_native_and_holds_no_retention_figure(selected, abstained):
     expected_keys = {
         "outcome", "certified", "construct", "metric", "target", "error", "level", "rule", "n_queries",
-        "n_queries_given", "n_queries_without_relevant_document", "query_order", "space", "selected",
-        "compression_ratio", "basis_sensitive", "basis_invariance", "statement", "assumptions",
-        "caveats", "not_certified_note", "certificate_digest"}
+        "n_queries_given", "n_queries_without_relevant_document", "n_exact_duplicate_queries",
+        "query_order", "space", "selected", "compression_ratio", "basis_sensitive",
+        "basis_invariance", "statement", "assumptions", "caveats", "not_certified_note",
+        "certificate_digest"}
     for result in (selected, abstained):
         rep = result.report()
         assert set(rep) == expected_keys
@@ -562,15 +601,111 @@ def test_the_report_is_json_native_and_holds_no_retention_figure(selected, absta
     assert rep["selected"]["pipeline"] == selected.pipeline.to_dict()
     assert isinstance(rep["basis_sensitive"], bool)
     assert rep["basis_sensitive"] == selected.certificate.basis_sensitive
-    assert rep["statement"] == selected.certificate.statement and len(rep["assumptions"]) == 6
+    assert rep["statement"] == selected.certificate.statement and len(rep["assumptions"]) == 10
+    assert rep["n_exact_duplicate_queries"] == 0
     assert rep["compression_ratio"] == selected.compression_ratio
 
 
 def test_the_statement_comes_with_its_assumptions_in_every_report(selected, abstained):
     for result in (selected, abstained):
         rep = result.report()
-        assert "A1-A6" in rep["statement"] and "no statement about power" in rep["statement"]
-        assert [a[:2] for a in rep["assumptions"]] == ["A1", "A2", "A3", "A4", "A5", "A6"]
+        assert "assumptions A1-A6 and conditions C1-C4" in rep["statement"]
+        assert "not a statement about power" in rep["statement"]
+        assert "NOT the probability, given that a candidate was selected" in rep["statement"]
+        assert [a[:2] for a in rep["assumptions"]] == [
+            "A1", "A2", "A3", "A4", "A5", "A6", "C1", "C2", "C3", "C4"]
+
+
+# ------------------------------------------------- repeated queries and rules of other people
+
+
+def doubled_queries(queries, qrels):
+    arrays = [queries.vectors[queries.offsets[i]:queries.offsets[i + 1]] for i in range(len(queries))]
+    ids = [*queries.ids, *[f"{q}_copy" for q in queries.ids]]
+    labels = {**qrels, **{f"{q}_copy": docs for q, docs in qrels.items()}}
+    return MultiVectorCorpus.from_arrays(arrays + arrays, ids=ids), labels
+
+
+def test_every_query_twice_is_counted_recorded_and_warned_about_once(data):
+    corpus, queries, qrels = data
+    doubled, labels = doubled_queries(queries, qrels)
+    with pytest.warns(UserWarning) as caught:
+        r = run(corpus, doubled, labels, target=0.5)
+    repeats = [w for w in caught if "repeat an earlier query" in str(w.message)]
+    assert len(repeats) == 1 and issubclass(repeats[0].category, UserWarning)
+    message = str(repeats[0].message)
+    assert message.startswith("120 of the 240 queries tested repeat an earlier query exactly")
+    assert "assumption A1 does not hold" in message and "does not apply" in message
+    assert repeats[0].filename == __file__  # attributed to the caller of certify()
+    assert r.certificate.to_dict()["queries"]["exact_duplicates"] == 120
+    assert r.report()["n_exact_duplicate_queries"] == 120
+    assert any("120 of the 240 queries tested repeat an earlier query exactly" in c
+               for c in r.report()["caveats"])
+    assert verify(r.certificate, evidence=r.evidence, corpus=corpus, queries=doubled).ok  # not refused
+
+
+def test_distinct_queries_give_zero_no_caveat_and_no_warning(data):
+    corpus, queries, qrels = data
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        r = run(corpus, queries, qrels)
+    assert r.report()["n_exact_duplicate_queries"] == 0
+    assert not any("repeat an earlier query" in c for c in r.report()["caveats"])
+
+
+def test_a_graded_qrels_mapping_with_a_zero_grade_warns_once(data):
+    corpus, queries, qrels = data
+    few = queries.select(range(8))
+    positive = {q: {d: 1 for d in docs} for q, docs in qrels.items()}  # read correctly: no warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        run(corpus, few, positive, target=0.999)
+    first = next(iter(qrels))
+    zero = {**positive, first: {**positive[first], "d000039": 0}}
+    other = next(q for q in qrels if q != first)
+    zero[other] = {**positive[other], "d000038": -1}
+    with pytest.warns(UserWarning, match="grade of 0 or less") as caught:
+        r = run(corpus, few, zero, target=0.999)
+    assert len([w for w in caught if "grade of 0 or less" in str(w.message)]) == 1
+    assert f"qrels of query {first!r}" in str(caught[0].message)
+    assert "grade 0 included" in str(caught[0].message)
+    assert r.outcome is Outcome.ABSTAIN  # nothing is refused or changed: the labels are used as given
+
+
+def test_a_rule_of_someone_elses_is_not_certified_through_certify_either(data):
+    corpus, queries, qrels = data
+
+    class AlwaysSmallest:
+        name = "always_smallest"
+        certifying = True
+
+        def config(self):
+            return {"name": self.name}
+
+        def assumptions(self):
+            return ("none: trust me",)
+
+        def decide(self, candidates, baseline, families, bytes_per_doc, vectors_per_doc, target,
+                   error):
+            from optivision.core.selection import RuleResult
+
+            k = int(np.argmin(bytes_per_doc))
+            return RuleResult(k, (k,), tuple(1.0 for _ in bytes_per_doc), error)
+
+    r = run(corpus, queries, qrels, rule=AlwaysSmallest(), target=0.999)
+    assert r.outcome is Outcome.SELECT and r.certified is False
+    assert r.decision.certified is False and r.certificate.certified is False
+    rep = r.report()
+    assert rep["certified"] is False and rep["rule"]["builtin"] is False
+    assert rep["rule"]["certifying"] is False and rep["rule"]["declared_certifying"] is True
+    assert "not part of this library" in rep["statement"] and "STATEMENT" not in rep["statement"]
+    assert rep["assumptions"] == [("Declared by the rule's author, not examined by this library: "
+                                   "none: trust me")]
+    assert "NOT certified" in repr(r) and "certified=False" in repr(r)
+    report = verify(r.certificate, evidence=r.evidence, corpus=corpus, queries=queries,
+                    reference=LabelReference(qrels), pipeline=r.pipeline, compressed=r.compressed)
+    assert report.ok and report.status("replay.decision") == "skipped"
+    assert report.notes and "nothing in this record is certified" in report.notes[0]
 
 
 def test_the_repr_names_the_outcome_the_reference_and_the_settings(selected, abstained):

@@ -98,8 +98,10 @@ def test_select_returns_the_smallest_certified_candidate_and_records_everything(
     assert len(d.p_values) == 4 and all(0.0 < p <= 1.0 for p in d.p_values)
     assert d.n_queries == N and d.metric == "ndcg@5" and d.construct == "labels"
     assert d.space_identity == space.identity and d.evidence_digest == ev.digest()
-    assert d.rule == {"name": rule.name, "certifying": True, "config": rule.config()}
-    assert d.assumptions == rule.assumptions() and len(d.assumptions) == 6
+    assert d.rule == {"name": rule.name, "class": "optivision.core.selection.rules."
+                      "FixedSequenceBetting", "builtin": True, "certifying": True,
+                      "declared_certifying": True, "config": rule.config()}
+    assert d.assumptions == rule.assumptions() and len(d.assumptions) == 10
     assert d.query_order["kind"] == "given"
 
 
@@ -202,6 +204,81 @@ def test_a_non_certifying_rule_never_produces_a_certified_decision():
     d = select(space, evidence_for(space, "ssss"), target=T, error=ERR, rule=PointRetentionRule())
     assert d.outcome is Outcome.SELECT and d.selected.position == 3
     assert d.certified is False and d.rule["certifying"] is False
+
+
+class DeclaringRule(PointRetentionRule):
+    """A rule of someone else's that declares itself certifying and tests nothing."""
+
+    name = "declaring"
+    certifying = True
+
+    def assumptions(self):
+        return ("none: trust me.",)
+
+
+class SneakyRule(FixedSequenceBetting):
+    """A subclass of the built-in rule: same name, same configuration, its own decision."""
+
+    def decide(self, candidates, baseline, families, bytes_per_doc, vectors_per_doc, target,
+               error):
+        return RuleResult(3, (3,), (0.0,) * 4, error / 2)
+
+
+@pytest.mark.parametrize("rule", [DeclaringRule(), SneakyRule()], ids=["declaring", "subclass"])
+def test_a_rule_that_declares_certifying_is_not_certified_by_the_library(rule):
+    space = space4()
+    d = select(space, evidence_for(space, "ssss"), target=T, error=ERR, rule=rule)
+    assert d.outcome is Outcome.SELECT and d.selected.position == 3  # it did select ...
+    assert d.certified is False  # ... and that is all: the library has not examined the rule
+    assert d.rule["builtin"] is False and d.rule["certifying"] is False
+    assert d.rule["declared_certifying"] is True  # the declaration is recorded, as the author's
+    assert d.rule["class"].endswith(type(rule).__qualname__)
+    assert d.rule["name"] == rule.name
+    assert d.assumptions and all(a.startswith("Declared by the rule's author, not examined by "
+                                              "this library: ") for a in d.assumptions)
+    assert Decision.from_dict(json.loads(json.dumps(d.to_dict()))) == d
+
+
+def test_a_decision_cannot_be_built_that_certifies_another_rule():
+    d = select(space4(), evidence_for(space4(), "ssss"), target=T, error=ERR, rule=DeclaringRule())
+    record = d.to_dict()
+    for over, message in (
+        ({"certified": True}, "certifying flag"),
+        ({"rule": {**record["rule"], "certifying": True}}, "built in and declares"),
+        ({"certified": True, "rule": {**record["rule"], "certifying": True, "builtin": True}},
+         "one of the library's own"),
+        ({"rule": {**record["rule"], "builtin": True}}, "built in and declares"),
+        ({"rule": {**record["rule"], "class": ""}}, "class"),
+        ({"rule": {**record["rule"], "builtin": "yes"}}, "builtin"),
+    ):
+        with pytest.raises((ValueError, TypeError), match=message):
+            Decision.from_dict({**record, **over})
+    honest = decisions()[0].to_dict()  # the built-in rule's own record is accepted ...
+    Decision.from_dict(honest)
+    for edit in ({"name": "my_rule"}, {"class": "my.module.MyRule"}):  # ... a renamed one is not
+        with pytest.raises(ValueError, match="one of the library's own"):
+            Decision.from_dict({**honest, "rule": {**honest["rule"], **edit}})
+
+
+def test_a_non_certifying_rule_that_abstains_or_falls_back_records_the_same_fields():
+    space = space4()
+    d = select(space, evidence_for(space, "wwww"), target=T, error=ERR, rule=DeclaringRule(),
+               fallback=Pipeline([Float16Quantizer()]))
+    assert d.outcome is Outcome.FALLBACK
+    assert d.certified is False and d.rule["builtin"] is False
+
+
+def test_the_engine_default_is_the_order_given_and_the_high_level_default_is_seed_zero():
+    import inspect
+
+    from optivision.core.selection import DEFAULT_ORDER_SEED
+
+    assert inspect.signature(select).parameters["order_seed"].default is None
+    assert DEFAULT_ORDER_SEED == 0
+    doc = " ".join((select.__doc__ or "").split())
+    assert "valid for the rule's statement only if it is unrelated to the outcomes" in doc
+    assert "never an order sorted by difficulty, date, source or any other query attribute" in doc
+    assert "trying several seeds and reporting one is outside the statement" in doc
 
 
 def test_a_rule_that_returns_a_position_outside_the_space_is_refused():
@@ -518,9 +595,10 @@ def test_abstain_and_fallback_records_are_checked_for_consistency():
         Decision.from_dict({**fallback, "certified_positions": [0]})
 
 
-def test_a_decision_states_what_it_is_conditional_on():
+def test_a_decision_states_what_it_is_claimed_under():
     d = decisions()[0]
-    assert len(d.assumptions) == 6 and d.assumptions[0].startswith("A1")
+    assert len(d.assumptions) == 10 and d.assumptions[0].startswith("A1")
+    assert d.assumptions[-1].startswith("C4")
     assert d.rule["config"]["bet_cap"] == 0.9
     assert d.space_identity and d.evidence_digest and d.metric and d.construct
 
