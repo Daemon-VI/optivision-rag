@@ -18,6 +18,31 @@ Every known model carries one of three statuses:
 
 The most general path needs no adapter at all: hand
 :meth:`MultiVectorCorpus.from_arrays` the ``[n_i, d]`` arrays any model produced.
+
+Three ways in
+-------------
+``ArrayAdapter`` takes arrays some model already produced and checks them;
+``CallableAdapter`` wraps two functions that produce such arrays; ``load_adapter`` builds
+the adapter of a model family this repository has a loader for. A custom adapter can reuse
+the checked conversion, :func:`optivision.adapters.arrays.corpus_from_arrays`.
+
+What an adapter is, and is not
+------------------------------
+An adapter encodes, returns a :class:`~optivision.representation.MultiVectorCorpus`, and
+can describe the model behind the vectors (:meth:`EncoderAdapter.identity`,
+:attr:`EncoderAdapter.dimension`). Adapters produce vectors and descriptive identity
+only. An adapter never chooses or alters compression settings by model, never moves data
+between devices or changes its dtype unless the caller said so, and nothing in the core
+branches on the identity it reports. That an adapter exists for a model says nothing about
+how well any pipeline compresses that model's vectors: that has to be measured on those
+vectors, in the basis they are in.
+
+Where layout lives
+------------------
+Model-specific layout (patch grids, protected instruction tokens, page images) is not part
+of the adapter interface. ``PageEncoderAdapter`` carries it into the corpus it returns: the
+aligned arrays ``positions`` and ``protected``, the per-document ``metadata`` and ``images``.
+The core reads those arrays and never sees a ``PatchGrid`` or a page type.
 """
 
 from __future__ import annotations
@@ -30,6 +55,7 @@ from typing import Any
 
 import numpy as np
 
+from ..core.vectors import MODALITIES, EncoderIdentity
 from ..representation import MultiVectorCorpus
 
 MEASURED = "measured"
@@ -95,8 +121,50 @@ def supported_models(status: str | None = None) -> list[ModelInfo]:
 # ------------------------------------------------------------------ adapters
 
 
+def _positive_int(value: Any) -> int | None:
+    """``value`` as a Python int if it is a positive integer (bool excluded), else None."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        return None
+    return int(value) if value > 0 else None
+
+
+def _text(value: Any) -> str | None:
+    """``value`` if it is a non-empty string, else None."""
+    return value if isinstance(value, str) and value else None
+
+
+def _dtype_name(dtype: Any) -> str | None:
+    """A dtype object as a plain name (``torch.float32`` -> ``"float32"``), or None."""
+    return None if dtype is None else str(dtype).removeprefix("torch.")
+
+
+def _identity_from_info(info: ModelInfo | None) -> EncoderIdentity | None:
+    """What a registry entry states about a model, or None without a known dimension.
+
+    The revision, the normalisation flag and the inference dtype are not in the registry
+    (its evidence text is prose and is never parsed), so they stay None. The registry
+    status is not part of an identity: it says how well a model has been tested here, not
+    which model it is.
+    """
+    if info is None or _positive_int(info.dimension) is None:
+        return None
+    return EncoderIdentity(
+        model_id=info.model_id,
+        dimension=int(info.dimension),
+        modality=info.modality if info.modality in MODALITIES else "other",
+        extra={"family": info.family, "loader": info.loader},
+    )
+
+
 class EncoderAdapter(abc.ABC):
-    """Anything that turns documents and queries into multi-vector corpora."""
+    """Anything that turns documents and queries into multi-vector corpora.
+
+    ``encode_documents`` and ``encode_queries`` are the contract: each returns a
+    :class:`~optivision.representation.MultiVectorCorpus` with one document per input,
+    with the padding rows of a batch already dropped. ``identity()`` and ``dimension``
+    describe the model behind the vectors; they are concrete, with defaults built from
+    ``info``, so a subclass written without them keeps working.
+    """
 
     info: ModelInfo | None = None
 
@@ -105,6 +173,32 @@ class EncoderAdapter(abc.ABC):
 
     @abc.abstractmethod
     def encode_queries(self, queries: Sequence[str], ids: Sequence[str] | None = None) -> MultiVectorCorpus: ...
+
+    def identity(self) -> EncoderIdentity | None:
+        """Descriptive identity of the model behind the vectors, or None when not known.
+
+        The default is built from ``info`` when it names a model with a known dimension.
+        Subclasses override it with whatever they can state; a field they cannot state
+        stays None, and a revision or a normalisation flag is never guessed. Nothing in
+        the core branches on the result.
+        """
+        return _identity_from_info(self.info)
+
+    @property
+    def dimension(self) -> int | None:
+        """Vector dimension the adapter produces, or None when it is not known up front.
+
+        Taken from :meth:`identity` unless the subclass assigned ``self.dimension``.
+        """
+        declared = _positive_int(getattr(self, "_declared_dimension", None))
+        if declared is not None:
+            return declared
+        identity = self.identity()
+        return None if identity is None else identity.dimension
+
+    @dimension.setter
+    def dimension(self, value: int | None) -> None:
+        self._declared_dimension = value
 
 
 class PageEncoderAdapter(EncoderAdapter):
@@ -128,6 +222,8 @@ class PageEncoderAdapter(EncoderAdapter):
             encodings.extend(self.encoder.encode_pages([img], [ref]))
         corpus = MultiVectorCorpus.from_page_encodings(encodings, images=images, attrs=self._attrs())
         if ids is not None:
+            if len(ids) != len(corpus):
+                raise ValueError(f"got {len(ids)} ids for {len(corpus)} encoded pages")
             corpus.ids = [str(i) for i in ids]
         return corpus
 
@@ -143,6 +239,41 @@ class PageEncoderAdapter(EncoderAdapter):
         if self.info is not None:
             attrs["model_status"] = self.info.status
         return attrs
+
+    def identity(self) -> EncoderIdentity | None:
+        """From the wrapped encoder where it states a fact, else from ``info``.
+
+        Model id: the encoder's ``checkpoint``, else ``info.model_id``, else its ``name``.
+        Dimension: the encoder's ``dim``, else ``info.dimension``. Modality: ``info`` if
+        given, else ``"image"`` (this adapter encodes page images). Revision and inference
+        dtype are read only if the encoder carries them (``revision``, ``torch_dtype``).
+        The normalisation flag stays None: the ``BaseEncoder`` contract asks for unit-norm
+        rows but an arbitrary wrapped encoder is not checked here.
+        """
+        enc, info = self.encoder, self.info
+        model_id = _text(getattr(enc, "checkpoint", None)) or (info.model_id if info else None)
+        name = _text(getattr(enc, "name", None))
+        model_id = model_id or name
+        try:
+            dim = _positive_int(enc.dim)
+        except Exception:  # noqa: BLE001 -- a property of an arbitrary encoder may fail to answer
+            dim = None
+        dim = dim or (_positive_int(info.dimension) if info else None)
+        if model_id is None or dim is None:
+            return None
+        modality = ("image" if info is None
+                    else info.modality if info.modality in MODALITIES else "other")
+        extra = {"encoder": name} if name else {}
+        if info is not None:
+            extra["family"] = info.family
+        return EncoderIdentity(
+            model_id=model_id,
+            revision=_text(getattr(enc, "revision", None)),
+            dimension=dim,
+            modality=modality,
+            inference_dtype=_dtype_name(getattr(enc, "torch_dtype", None)),
+            extra=extra,
+        )
 
 
 class SentenceTransformersAdapter(EncoderAdapter):
@@ -189,12 +320,19 @@ class SentenceTransformersAdapter(EncoderAdapter):
     def encode_queries(self, queries: Sequence[str], ids: Sequence[str] | None = None) -> MultiVectorCorpus:
         return self._to_corpus(self.model.encode_query(list(queries)), ids)
 
+    def identity(self) -> EncoderIdentity | None:
+        """From the registry entry only. The wrapped model's API is unverified in this
+        repository, so it is not asked for a dimension or a revision."""
+        return _identity_from_info(self.info)
+
 
 def load_adapter(model_id: str, **kwargs: Any) -> EncoderAdapter:
     """Build the adapter a known model id calls for.
 
     colpali-engine models go through the repository's own encoder (which knows
-    the patch grid); everything else goes through sentence-transformers.
+    the patch grid); the NVIDIA ColEmbed models (loader ``"nemotron"``) go through
+    :class:`~optivision.adapters.nemotron.NemotronAdapter`, with the registry's width as
+    the width the checkpoint must have; everything else goes through sentence-transformers.
     """
     info = MODELS.get(model_id)
     if info is not None and info.loader.startswith("colpali-engine:"):
@@ -202,4 +340,14 @@ def load_adapter(model_id: str, **kwargs: Any) -> EncoderAdapter:
 
         backend = info.loader.split(":", 1)[1]
         return PageEncoderAdapter(ColVLMEncoder(backend=backend, model_name=model_id, **kwargs), info=info)
+    if info is not None and info.loader == "nemotron":
+        from ..encoders.nemotron import NemotronColEmbedEncoder  # needs torch + transformers
+
+        kwargs.setdefault("expected_dim", info.dimension)
+        return NemotronAdapter(NemotronColEmbedEncoder(model_id, **kwargs), info=info)
     return SentenceTransformersAdapter(model_id, **kwargs)
+
+
+# The adapters below subclass ``EncoderAdapter``, so they are imported once it exists.
+from .arrays import ArrayAdapter, CallableAdapter, corpus_from_arrays  # noqa: F401
+from .nemotron import NemotronAdapter
