@@ -486,6 +486,8 @@ def test_the_declared_invariance_is_reported_next_to_the_measured_change():
     sign_report = basis_probe(Pipeline([BinaryQuantizer()]), corpus, queries, seeds=(0,))
     assert float_report["declared_basis_invariance"] == "orthogonal"
     assert sign_report["declared_basis_invariance"] == "signed_permutation"
+    assert float_report["declared_conditions"] == []
+    assert any(c.startswith("binary: ") for c in sign_report["declared_conditions"])
 
 
 def test_the_probe_works_without_the_traits_module(monkeypatch):
@@ -493,6 +495,7 @@ def test_the_probe_works_without_the_traits_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "optivision.core.stages", None)  # an import now fails
     report = basis_probe(Pipeline([]), corpus, queries, seeds=(0,))
     assert report["declared_basis_invariance"] is None and report["valid_symmetry"] is True
+    assert report["declared_conditions"] is None
 
 
 def test_a_transform_that_is_not_a_symmetry_is_caught_by_the_float_baseline(monkeypatch):

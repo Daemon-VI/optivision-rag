@@ -16,7 +16,7 @@ from optivision.core.identity import canonical_json
 
 DOCS = [f"d{i}" for i in range(8)]
 QUERIES = ["q0", "q1", "q2", "q3"]
-QRELS = {"q0": ["d1", "d4"], "q1": {"d2": 1, "d3": 0}, "q2": ("d7",), "q3": []}
+QRELS = {"q0": ["d1", "d4"], "q1": {"d2": 1, "d3": 2}, "q2": ("d7",), "q3": []}
 
 
 def base_scores(seed=0, n_q=4, n_d=8):
@@ -45,9 +45,34 @@ def test_label_reference_matches_the_calibration_helper_for_labels():
         assert np.array_equal(a, b)
 
 
-def test_labels_are_binary_every_listed_document_counts_whatever_its_grade():
-    ref = LabelReference({"q1": {"d2": 1, "d3": 0}})
-    assert ref.relevant(DOCS, ["q1"], None)[0].tolist() == [2, 3]
+def test_labels_are_binary_every_grade_above_zero_counts_as_relevant():
+    ref = LabelReference({"q1": {"d2": 1, "d3": 0.25, "d4": np.int64(7), "d5": True}})
+    assert ref.relevant(DOCS, ["q1"], None)[0].tolist() == [2, 3, 4, 5]
+
+
+@pytest.mark.parametrize("grade", [0, 0.0, -1, -0.5, False, float("nan"), np.int64(0)])
+def test_a_grade_of_zero_or_below_is_refused_with_the_remedy(grade):
+    with pytest.raises(ValueError, match=r"qrels\['q1'\]\['d3'\].*Drop the entries that are not relevant"):
+        LabelReference({"q0": ["d1"], "q1": {"d2": 1, "d3": grade}})
+
+
+@pytest.mark.parametrize("grade", ["2", None, "high", [1]])
+def test_a_grade_that_is_not_a_number_is_refused(grade):
+    with pytest.raises(TypeError, match="must be a number"):
+        LabelReference({"q1": {"d2": grade}})
+
+
+def test_the_remedy_in_the_message_works():
+    graded = {"q1": {"d2": 2, "d3": 0}, "q2": {"d7": 1}}
+    with pytest.raises(ValueError):
+        LabelReference(graded)
+    binary = {q: {d: g for d, g in docs.items() if g > 0} for q, docs in graded.items()}
+    assert [r.tolist() for r in LabelReference(binary).relevant(DOCS, ["q1", "q2"], None)] == [[2], [7]]
+
+
+def test_lists_and_sets_are_not_graded_so_nothing_is_refused():
+    ref = LabelReference({"q0": ["d1"], "q1": {"d2", "d3"}, "q2": ("d7",)})
+    assert [r.tolist() for r in ref.relevant(DOCS, ["q0", "q1", "q2"], None)] == [[1], [2, 3], [7]]
 
 
 def test_unknown_documents_are_ignored_and_unlabelled_queries_get_an_empty_set():
@@ -176,3 +201,29 @@ def test_documentation_says_agreement_is_not_retrieval_quality():
     assert "not retrieval quality" in doc and "including its mistakes" in doc
     assert "Only ``depth = 1`` was studied" in doc
     assert "never merged" in " ".join(reference_module.__doc__.split())
+
+
+def test_ranking_reference_refuses_nan_and_names_the_first_query():
+    scores = base_scores(1)
+    scores[2, 5] = np.nan
+    scores[3, 0] = np.nan
+    with pytest.raises(ValueError, match=r"NaN \(first at query 2, id 'q2'\)"):
+        RankingReference().relevant(DOCS, QUERIES, scores)
+
+
+def test_ranking_reference_refuses_a_row_without_a_finite_score():
+    scores = base_scores(1)
+    scores[1, :] = -np.inf
+    with pytest.raises(ValueError, match=r"no finite score for query 1 \(id 'q1'\)"):
+        RankingReference().relevant(DOCS, QUERIES, scores)
+    scores[1, :] = np.inf
+    with pytest.raises(ValueError, match="no finite score for query 1"):
+        RankingReference().relevant(DOCS, QUERIES, scores)
+
+
+def test_ranking_reference_accepts_minus_infinity_next_to_finite_scores():
+    scores = base_scores(1)
+    scores[:, 0] = -np.inf  # an empty document
+    got = RankingReference().relevant(DOCS, QUERIES, scores)
+    assert all(g.size == 1 and g[0] != 0 for g in got)
+    assert RankingReference().relevant(DOCS, QUERIES, scores.astype(np.float64))[0].size == 1

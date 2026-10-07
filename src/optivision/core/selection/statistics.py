@@ -17,6 +17,10 @@ This is an application of published tools, not a new statistical method:
   Angelopoulos et al., 2021, arXiv:2110.01052);
 * a union bound over chains, which splits the error level equally.
 
+The citations above are given from memory and were not checked against the sources; the
+research record cites Waudby-Smith and Ramdas and "learn-then-test-style" testing
+(``reports/research/Q10/REPORT.md``) and does not cite the other two.
+
 The derivation that combines them for this setting is the project's own and has not
 been externally reviewed (see ``METHOD_C_SPEC.md`` section 6).
 """

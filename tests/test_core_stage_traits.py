@@ -36,6 +36,7 @@ import dataclasses
 import json
 import warnings
 from collections import namedtuple
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -759,6 +760,219 @@ class TestPcaCondition:
         assert relative_change(base, moved, reference) > 0.1
 
 
+# ------------------------------------------------------------------ the conditions
+
+
+def stage_conditions(stages):
+    """The pipeline's conditions that start with the name of ``stage``."""
+    traits = pipeline_traits(Pipeline(stages))
+    return traits, {t.name: [c for c in traits.conditions if c.startswith(f"{t.name}: ")]
+                    for t in traits.stages}
+
+
+def orthonormal_rows(d=16, n_docs=20, rows=4, seed=0):
+    """Documents whose rows are distinct standard basis vectors: every pair is exactly
+    orthogonal (cosine exactly 0, Euclidean distance exactly sqrt(2)), so every similarity the
+    merge and prune stages compare is an exact tie. Queries are generic."""
+    rng = np.random.default_rng(seed)
+    docs = []
+    for _ in range(n_docs):
+        block = np.zeros((rows, d), dtype=np.float32)
+        block[np.arange(rows), rng.choice(d, rows, replace=False)] = 1.0
+        docs.append(block)
+    q = rng.standard_normal((10, 4, d))
+    q = (q / np.linalg.norm(q, axis=2, keepdims=True)).astype(np.float32)
+    return MultiVectorCorpus.from_arrays(docs), MultiVectorCorpus.from_arrays(list(q))
+
+
+#: a stage that is ORTHOGONAL on generic data and what breaks it: (id, stages that tie)
+TIE_CASES = [
+    pytest.param(lambda: [hierarchical(ratio=0.5)], "hierarchical_merge", "Ward", id="ward"),
+    pytest.param(
+        lambda: [AdaptiveMerge(radius=None, ratio=0.5)], "adaptive_merge", "exact ties",
+        id="adaptive_merge(ratio)",
+    ),
+    pytest.param(
+        lambda: [AdaptiveMerge(radius=0.0)], "adaptive_merge", "radius",
+        id="adaptive_merge(radius at the tie)",
+    ),
+    pytest.param(
+        lambda: [RedundancyPruner(0.0)], "redundancy", "threshold",
+        id="redundancy(threshold at the tie)",
+    ),
+]
+
+
+class TestTheConditionsAreReportedWhereTheDeclarationBreaks:
+    """The audit's counterexamples (RI-07): data on which a declared invariance fails. Each
+    test shows that the scores move there and that the pipeline lists the condition."""
+
+    def test_a_tied_pca_cut_moves_the_scores_and_the_pipeline_reports_the_condition(self):
+        docs, queries = TestPcaCondition._isotropic()  # every eigenvalue equal: the cut is a tie
+        reference = maxsim_matrix(queries, docs)
+
+        def cut():
+            return [PCAProjector(16)]
+
+        base = pipeline_scores(cut, docs, queries)
+        moved = [
+            pipeline_scores(cut, rotation_map(docs, s), rotation_map(queries, s)) for s in SEEDS
+        ]
+        assert min(relative_change(base, m, reference) for m in moved) > 0.1
+        traits, by_stage = stage_conditions(cut())
+        assert traits.basis_invariance is O and traits.basis_sensitive is False  # as declared
+        assert not traits.unconditional and traits.conditions == tuple(by_stage["pca"])
+        assert any("eigenvalue gap at the cut" in c and "tie" in c for c in traits.conditions)
+
+    def test_tied_retained_eigenvalues_break_a_codec_after_pca_but_not_pca_alone(self):
+        """Eight equal eigenvalues kept, a clear gap below them: the retained subspace is fixed
+        but its coordinates are an arbitrary rotation, which a sign code then sees. The rows
+        are columns of a Hadamard matrix, so the tie is exact and no coordinate is zero."""
+        d, kept = D, 8
+        rng = np.random.default_rng(1)
+        hadamard = np.ones((1, 1))
+        for _ in range(8):
+            hadamard = np.block([[hadamard, hadamard], [hadamard, -hadamard]])  # 256 x 256
+        scale = np.where(np.arange(d) < kept, 1.0, 0.5)  # second moments 1 (x8) and 0.25 (x40)
+        rows = (hadamard[:, :d] * scale)[rng.permutation(256)].astype(np.float32)
+        x = rows.astype(np.float64)
+        assert np.array_equal(x.T @ x / 256, np.diag(scale**2))  # eight equal moments, a gap
+        assert (rows != 0).all()
+        docs = MultiVectorCorpus(rows, np.arange(0, 257, 16))
+        q = rng.standard_normal((40, d))
+        queries = MultiVectorCorpus(
+            (q / np.linalg.norm(q, axis=1, keepdims=True)).astype(np.float32), np.arange(0, 41, 4)
+        )
+        reference = maxsim_matrix(queries, docs)
+        assert np.ptp(reference, axis=1).min() > 0.05
+
+        def alone():
+            return [PCAProjector(kept)]
+
+        def with_codec():
+            return [PCAProjector(kept), BinaryQuantizer()]
+
+        base_alone, base_codec = (pipeline_scores(f, docs, queries) for f in (alone, with_codec))
+        for s in SEEDS:
+            g_docs, g_queries = rotation_map(docs, s), rotation_map(queries, s)
+            moved_alone = pipeline_scores(alone, g_docs, g_queries)
+            moved_codec = pipeline_scores(with_codec, g_docs, g_queries)
+            assert relative_change(base_alone, moved_alone, reference) <= EQUAL_EIGEN
+            assert relative_change(base_codec, moved_codec, reference) > 0.1
+        traits, _ = stage_conditions(with_codec())
+        assert traits.conditionally_invariant and not traits.unconditional
+        assert any("distinct from one another" in c and c.startswith("pca: ")
+                   for c in traits.conditions)
+
+    @pytest.mark.parametrize(("factory", "name", "key"), TIE_CASES)
+    def test_exact_ties_move_the_scores_of_the_merge_and_prune_stages_and_are_reported(
+        self, factory, name, key
+    ):
+        """Rows that are exactly equidistant (orthonormal rows) are a tie that row order
+        resolves in the stored basis and float32 rounding resolves otherwise."""
+        docs, queries = orthonormal_rows()
+        reference = maxsim_matrix(queries, docs)
+        assert np.ptp(reference, axis=1).min() > 0.1
+        check_witness(factory, World(docs, queries, reference), rotation_map)
+        traits, by_stage = stage_conditions(factory())
+        assert traits.basis_invariance is O and traits.basis_sensitive is False  # as declared
+        assert not traits.unconditional and by_stage[name]
+        assert any(key in c for c in by_stage[name]), (key, by_stage[name])
+
+    @pytest.mark.parametrize("centre", [None, "mean"])
+    def test_a_zero_coordinate_moves_the_scores_of_a_sign_code_and_is_reported(self, centre):
+        d = 16
+        rng = np.random.default_rng(3)
+        flips = np.where(np.arange(d) < d // 2, -1.0, 1.0).astype(np.float32)
+
+        def flipped(corpus):
+            return corpus.with_vectors(np.ascontiguousarray(corpus.vectors * flips))
+
+        def move(rows):
+            docs = MultiVectorCorpus(rows, np.arange(0, rows.shape[0] + 1, 20))
+            q = rng.standard_normal((12, d)).astype(np.float32)
+            queries = MultiVectorCorpus(q, np.arange(0, 13, 3))
+
+            def make():
+                return [BinaryQuantizer(center=centre)]
+
+            a = pipeline_scores(make, docs, queries)
+            b = pipeline_scores(make, flipped(docs), flipped(queries))
+            return float(np.abs(a - b).max())
+
+        dense = rng.standard_normal((200, d)).astype(np.float32)
+        degenerate = dense.copy()
+        # a coordinate that equals the (fitted) mean exactly: 0 without centring, 0.5 with it
+        degenerate[:, 0] = 0.0 if centre is None else 0.5
+        assert move(dense) < 1e-4 and move(degenerate) > 0.1
+        traits, by_stage = stage_conditions([BinaryQuantizer(center=centre)])
+        assert traits.basis_invariance is S and traits.basis_sensitive is True
+        assert not traits.unconditional and len(by_stage["binary"]) == 1
+        assert "exactly zero" in by_stage["binary"][0] and "center='mean'" in by_stage["binary"][0]
+
+
+class TestConditionsOfPipelines:
+    def test_the_conditions_are_the_union_in_stage_order_prefixed_by_the_stage_name(self):
+        stages = [HierarchicalMerge(ratio=0.5), PCAProjector(8), BinaryQuantizer()]
+        traits = pipeline_traits(Pipeline(stages))
+        expected = tuple(f"{t.name}: {c}" for t in traits.stages for c in t.conditions)
+        assert traits.conditions == expected and len(expected) == 4
+        assert [c.split(":")[0] for c in expected] == [
+            "hierarchical_merge", "pca", "pca", "binary"
+        ]
+        reversed_ = pipeline_traits(Pipeline([PCAProjector(8), HierarchicalMerge(ratio=0.5)]))
+        assert [c.split(":")[0] for c in reversed_.conditions] == [
+            "pca", "pca", "hierarchical_merge"
+        ]
+
+    def test_unconditional_is_true_only_when_there_are_no_conditions(self):
+        for stages in (
+            [], [Float32Quantizer()], [Float16Quantizer()], [Int8Quantizer("per_vector")],
+            [RotationProjector(1), Int4Quantizer()], [TruncateProjector(8)], [Lloyd2Quantizer()],
+            [RandomPruner(0.5), Int8Quantizer("per_dimension")],
+        ):
+            traits = pipeline_traits(Pipeline(stages))
+            assert traits.conditions == () and traits.unconditional, stages
+        for stages in (
+            [BinaryQuantizer()], [PCAProjector(8)], [HierarchicalMerge(ratio=0.5)],
+            [AdaptiveMerge(radius=0.9), Float32Quantizer()], [RedundancyPruner(0.9)],
+            [DimensionProjector(8, "pca")],
+        ):
+            traits = pipeline_traits(Pipeline(stages))
+            assert traits.conditions and not traits.unconditional, stages
+        assert pipeline_traits(Pipeline([DimensionProjector(8, "random")])).unconditional
+
+    def test_an_orthogonal_pipeline_with_conditions_is_a_conditional_statement(self):
+        traits = pipeline_traits(Pipeline([AdaptiveMerge(radius=0.9), Float32Quantizer()]))
+        assert traits.basis_invariance is O and traits.basis_sensitive is False
+        assert not traits.unconditional  # "not sensitive" holds for data that meet the conditions
+        sensitive = pipeline_traits(Pipeline([TruncateProjector(8)]))
+        assert sensitive.basis_sensitive and sensitive.unconditional  # the cautious statement
+
+    def test_the_new_keys_are_added_and_no_existing_key_is_removed_or_renamed(self):
+        traits = pipeline_traits(Pipeline([PCAProjector(8), BinaryQuantizer()]))
+        d = json.loads(json.dumps(traits.to_dict()))
+        assert {
+            "stages", "basis_invariance", "conditionally_invariant", "basis_sensitive",
+            "has_fitted_state", "stochastic", "notes",
+        } <= set(d)
+        assert d["conditions"] == list(traits.conditions) and d["unconditional"] is False
+        assert d["all_library_declared"] is True
+        for stage in d["stages"]:
+            assert {"name", "kind", "basis_invariance", "canonicalises_basis", "randomised_basis",
+                    "reads_vector_values", "has_fitted_state", "fit_uses_queries", "stochastic",
+                    "lossless", "notes"} <= set(stage)
+            assert isinstance(stage["conditions"], list) and stage["declared_by"] == "library"
+        assert d["stages"][0]["conditions"] == [
+            c.removeprefix("pca: ") for c in traits.conditions if c.startswith("pca: ")
+        ]
+
+    def test_the_basis_sensitive_definition_is_unchanged_by_conditions(self):
+        for stages in ([PCAProjector(8)], [BinaryQuantizer()], [RedundancyPruner(0.9)], []):
+            traits = pipeline_traits(Pipeline(stages))
+            assert traits.basis_sensitive is (traits.basis_invariance is not O)
+
+
 # ------------------------------------------------------------ the declarations
 
 _GENERIC = {
@@ -1171,3 +1385,96 @@ class TestUnknownAndThirdParty:
     def test_traits_of_refuses_other_objects(self):
         with pytest.raises(TypeError):
             traits_of(42)
+
+
+class TestWhoDeclaredIt:
+    """RI-16: a declaration made outside the library's table is recorded as declared."""
+
+    CONDITION_KEYS: ClassVar[dict] = {
+        "redundancy": ("threshold",),
+        "adaptive_merge": ("exact ties", "radius"),
+        "hierarchical_merge": ("Ward", "max_distance"),
+        "pca": ("eigenvalue gap at the cut", "distinct"),
+        "binary": ("exactly zero",),
+    }
+
+    @pytest.mark.parametrize("name", list(_GENERIC))
+    def test_the_librarys_own_table_is_declared_by_the_library(self, name):
+        t = traits_of(name)
+        assert t.declared_by == "library"
+        keys = self.CONDITION_KEYS.get(name, ())
+        assert bool(t.conditions) == bool(keys)
+        for key in keys:
+            assert any(key in c for c in t.conditions), (name, key)
+        assert all(c.isascii() and "guaranteed" not in c for c in t.conditions)
+
+    def test_a_pipeline_of_library_stages_is_all_library_declared(self):
+        t = pipeline_traits(Pipeline([AdaptiveMerge(radius=0.9), BinaryQuantizer()]))
+        assert t.all_library_declared and t.to_dict()["all_library_declared"] is True
+        assert pipeline_traits(Pipeline([])).all_library_declared
+
+    def test_register_traits_is_third_party_whatever_the_value_says(self, clean_traits_registry):
+        forged = StageTraits(
+            name=_Plain.name, kind="tokens", basis_invariance=O, declared_by="library"
+        )
+        register_traits(_Plain.name, forged)
+        assert traits_of(_Plain()).declared_by == "third_party"
+        assert traits_of(_Plain.name).declared_by == "third_party"
+        p = pipeline_traits(Pipeline([_Plain(), Float32Quantizer()]))
+        assert p.basis_invariance is O and p.basis_sensitive is False  # as declared
+        assert not p.all_library_declared and p.to_dict()["all_library_declared"] is False
+        assert [s["declared_by"] for s in p.to_dict()["stages"]] == ["third_party", "library"]
+        assert any("third-party" in n and "not examined" in n for n in p.notes)
+
+    def test_a_function_registration_is_third_party_too(self, clean_traits_registry):
+        register_traits(
+            "test_fn_reducer",
+            lambda stage: StageTraits(
+                name="test_fn_reducer", kind="tokens", basis_invariance=O, declared_by="library"
+            ),
+            generic=StageTraits(name="test_fn_reducer", kind="tokens", basis_invariance=N),
+        )
+
+        class Fn(_Plain):
+            name = "test_fn_reducer"
+
+        assert traits_of(Fn()).declared_by == "third_party"
+        assert traits_of("test_fn_reducer").declared_by == "third_party"
+
+    def test_a_class_declaration_is_third_party_for_every_form(self):
+        t = StageTraits(name="declared", kind="tokens", basis_invariance=O, declared_by="library")
+
+        class ByAttribute(_Plain):
+            traits = t
+
+        class ByMethod(_Plain):
+            def traits(self):
+                return t
+
+        for cls in (ByAttribute, ByMethod):
+            assert traits_of(cls()).declared_by == "third_party"
+
+    def test_a_subclass_of_a_library_stage_that_declares_itself_is_marked(self):
+        """The audit's probe: a BinaryQuantizer subclass that claims ORTHOGONAL."""
+
+        class Claims(BinaryQuantizer):
+            traits = StageTraits(name="binary", kind="bits", basis_invariance=O)
+
+        p = pipeline_traits(Pipeline([Claims()]))
+        assert p.basis_sensitive is False and p.stages[0].declared_by == "third_party"
+        assert not p.all_library_declared and p.unconditional  # nothing is claimed about it
+        assert any("third-party" in n for n in p.notes)
+
+    def test_an_undeclared_stage_is_not_library_declared(self):
+        t = traits_of(_Plain())
+        assert t.declared_by == "undeclared"
+        assert not pipeline_traits(Pipeline([_Plain()])).all_library_declared
+
+    def test_declared_by_and_conditions_are_validated(self):
+        with pytest.raises(ValueError, match="declared_by"):
+            StageTraits(name="x", kind="bits", basis_invariance=O, declared_by="me")
+        with pytest.raises(TypeError, match="conditions"):
+            StageTraits(name="x", kind="bits", basis_invariance=O, conditions="one sentence")
+        t = StageTraits(name="x", kind="bits", basis_invariance=O, conditions=["a", "b"])
+        assert t.conditions == ("a", "b") and t.to_dict()["conditions"] == ["a", "b"]
+        assert hash(t) == hash(dataclasses.replace(t))

@@ -653,7 +653,8 @@ def test_distinct_queries_give_zero_no_caveat_and_no_warning(data):
     assert not any("repeat an earlier query" in c for c in r.report()["caveats"])
 
 
-def test_a_graded_qrels_mapping_with_a_zero_grade_warns_once(data):
+def test_a_graded_qrels_mapping_with_a_zero_grade_is_refused(data):
+    """LabelReference refuses a grade of 0 or below (RI-14); the older warning is not reached."""
     corpus, queries, qrels = data
     few = queries.select(range(8))
     positive = {q: {d: 1 for d in docs} for q, docs in qrels.items()}  # read correctly: no warning
@@ -662,14 +663,8 @@ def test_a_graded_qrels_mapping_with_a_zero_grade_warns_once(data):
         run(corpus, few, positive, target=0.999)
     first = next(iter(qrels))
     zero = {**positive, first: {**positive[first], "d000039": 0}}
-    other = next(q for q in qrels if q != first)
-    zero[other] = {**positive[other], "d000038": -1}
-    with pytest.warns(UserWarning, match="grade of 0 or less") as caught:
-        r = run(corpus, few, zero, target=0.999)
-    assert len([w for w in caught if "grade of 0 or less" in str(w.message)]) == 1
-    assert f"qrels of query {first!r}" in str(caught[0].message)
-    assert "grade 0 included" in str(caught[0].message)
-    assert r.outcome is Outcome.ABSTAIN  # nothing is refused or changed: the labels are used as given
+    with pytest.raises(ValueError, match="Drop the entries that are not relevant"):
+        run(corpus, few, zero, target=0.999)
 
 
 def test_a_rule_of_someone_elses_is_not_certified_through_certify_either(data):

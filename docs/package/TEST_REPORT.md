@@ -16,8 +16,11 @@ the uncompressed ranking is not retrieval quality, and no test here merges the t
 
 * Integration tests added: 1370 tests in five files (`tests/test_integration_*.py`),
   1359 passing and 11 expected failures (`xfail(strict=True)`, each one a
-  defect of section 6). The five files together take about 130 s on this shared
-  machine.
+  defect of section 6) when they were written. D1, D2 (the retriever cases) and D3 were fixed
+  afterwards (section 6): the 7 tests that expected them now pass, so
+  `test_integration_layers.py` gives 548 passed and 4 xfailed, and the 4 left are the pinned
+  `compose.py` cases (D4 and the `Pipeline.transform_queries` width). The five files together took
+  about 130 s on this shared machine.
 * Existing tests of the new layers (written by the engineers of those layers, not changed here):
   2926 tests in 35 files.
 * Strength check: 62 one-line mutations of a scratch copy of `src/`, each run against the
@@ -26,7 +29,8 @@ the uncompressed ranking is not retrieval quality, and no test here merges the t
   killed by a test of this work.
 * Defects: 3 in the new layers and 1 in a pinned file (section 6); none touches the selection
   arithmetic. The first (`ExactRetriever` does not validate documents) is the one that can give a
-  wrong ranking without a message.
+  wrong ranking without a message. The three in the new layers were fixed after this report was
+  first written; the one in the pinned file stays.
 * Parity of the selection arithmetic with the frozen research functions: bitwise on 352 random
   problems and 3 stacked shapes, exact on more than 300 boundary trials, exact on 100,800
   selections of the stored E1 results by default and on 504,000 with `OPTIVISION_FULL_PARITY=1`
@@ -311,8 +315,23 @@ made on the first copy; every test that ran before the killing test passed on it
 
 ## 6. Defects found
 
-Each is kept out of the suite with `xfail(strict=True)`; the reason string starts with `DEFECT`.
+Each was kept out of the suite with `xfail(strict=True)`; the reason string starts with `DEFECT`.
 When one is fixed its test turns into an unexpected pass, which fails the suite and says so.
+
+**Status after the fixes.** D1, D2 (the `CompressedRetriever` and `TwoTierRetriever` cases) and D3
+were fixed in `core/retrieve` and `core/evaluate/reference.py`, their `xfail` entries were removed
+from `KNOWN_DEFECTS` and the tests pass. D4 and the `Pipeline.transform_queries` wrong-width case
+are in the byte-pinned `compose.py`: they are not fixed, and their four entries stay in
+`KNOWN_DEFECTS` as expected failures.
+
+| id | status | how |
+|---|---|---|
+| D1 | fixed | `ExactRetriever` and `CompressedRetriever` scan a float store once, at construction, in blocks and in the stored dtype, and refuse NaN or infinity with a message naming the first document; integer code stores are not scanned. Tests: `test_core_retrieve.py::TestDocumentsAreScannedOnce` and the three `ExactRetriever(corpus)` rows of the bad-input table |
+| D2 | fixed for `CompressedRetriever` and `TwoTierRetriever`; not fixable for `Pipeline.transform_queries` (pinned) | the query dimension is compared with the width the pipeline's first dimension stage was fitted on when its fitted state shows it, else one projected query vector is compared with the store; the `ValueError` names the queries and both dimensions. Tests: `test_core_retrieve.py::TestQueryWidthThroughAPipeline` and the three rows of the bad-input table |
+| D3 | fixed | `RankingReference.relevant` refuses NaN and a row without a finite score, naming the first query. Tests: `test_core_reference.py`, `test_integration_layers.py::TestDtypesAreNeverChangedSilently::test_the_agreement_reference_refuses_nan_scores` |
+| D4 | not fixed (pinned `compose.py`) | reported only |
+
+The table below is the original finding.
 
 | id | where | what | severity | tests |
 |---|---|---|---|---|
@@ -348,8 +367,8 @@ that is meant to report it.
 
 * **Real encoder output.** All vectors are seeded Gaussian draws (unit norm, with a controllable
   anisotropy), queries are noisy cuts of documents. No ColPali, ColQwen, ColBERT or Nemotron
-  vectors, no real qrels and no real query distribution. None of the assumptions A1-A6 of the rule
-  can be checked on synthetic data, and no coverage or power claim follows from the simulations.
+  vectors, no real qrels and no real query distribution. None of the assumptions and conditions
+  of the rule's statement can be checked on synthetic data, and no coverage or power claim follows from the simulations.
 * **Cross-platform bit-reproducibility.** Determinism is shown on this machine, in two processes,
   with one NumPy, one BLAS and one thread configuration; digests are compared bitwise. On another
   CPU, BLAS or NumPy the fitted-state digests (PCA, Lloyd-2) may differ and `compress_selected`
@@ -387,7 +406,9 @@ PYTHONPATH=src ../optivision-rag-v2/.venv/Scripts/python -m pytest \
     tests/test_integration_end_to_end.py -q
 ```
 
-Result: `1359 passed, 11 xfailed in 128.15s (0:02:08)`
+Result when written: `1359 passed, 11 xfailed in 128.15s (0:02:08)`. After D1 to D3 were fixed,
+`test_integration_layers.py` alone gives `548 passed, 4 xfailed`; the other four files were not
+re-run for this note.
 
 ```
 PYTHONPATH=src ../optivision-rag-v2/.venv/Scripts/python -m pytest tests/test_core_layering.py tests/test_x_harness.py -q

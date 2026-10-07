@@ -18,7 +18,8 @@ between package and research), `../METHOD_C_SPEC.md`, `../ARCHITECTURE_AUDIT.md`
   pages and 5,183 abstracts (same section; section 25 lists the non-claims).
 - The vector contract does not require unit length (`MultiVectorRepresentation`), and several
   codecs assume it. What happens with unnormalised vectors, or with another scoring function, is
-  not known.
+  not known. The certificate records the norms of the vectors it was issued for and carries a
+  caveat when they are not unit.
 - Only nDCG@k, with binary relevance, was evaluated by the registered experiments. `recall@k`,
   `mrr@k` and `hit@k` are available and are an engineering option.
 
@@ -53,8 +54,14 @@ The `wide` list was not evaluated as a selection list.
 
 ## 4. Assumptions the software cannot check
 
-A1 (independent queries from the deployment distribution), A5 (an order fixed before outcomes)
-and A6 (labels taken as given) are properties of how you obtained the queries and labels. A2 (a
+The rule's statement is claimed under assumptions and conditions that the certificate lists
+(`SELECTION_AND_CERTIFICATION.md`). Among them, A1 (independent queries from the deployment
+distribution), A5 (an order fixed before outcomes) and A6 (labels taken as given) are properties
+of how you obtained the queries and labels. The software counts exact duplicate queries and
+records the count, with a caveat, but it cannot see near-duplicates or queries that are clustered
+by session or author. `certify` and the command line test the queries in a seeded random order
+by default, and record whether the order was seeded or given and whether the seed was chosen
+by you; trying several seeds and keeping the best is outside the statement. A2 (a
 fixed corpus) is bound by a digest, but the software cannot know that the corpus you serve is the
 one you certified unless you pass it to `verify`. A3 (a list fixed before the queries are seen)
 is supported by the code path and not proven: the default list depends only on the dimension, the
@@ -96,11 +103,13 @@ different corpus identity, and the certificate does not cover it.
 ## 9. Relevance labels
 
 `LabelReference` and `optivision.evaluation.relevant_from_qrels` use binary relevance: every
-document listed for a query counts as relevant, whatever its grade. A grade of 0 listed in the
-labels counts. A document id that is not in the corpus is ignored without a warning, so an id
-mismatch removes queries instead of raising. A query with no relevant document is removed, for the
-uncompressed index and every candidate together, and is listed in `Evidence.dropped_queries`.
-Check `report()["n_queries_without_relevant_document"]`.
+document listed for a query counts as relevant. When the labels of a query are a mapping
+`{document id: grade}`, every grade above zero is treated as relevant and the size of the grade is
+not read; an entry with a grade of 0 or below is refused with a `ValueError` (it would be counted
+as relevant), and a grade that is not a number with a `TypeError`. A document id that is not in the
+corpus is ignored without a warning, so an id mismatch removes queries instead of raising. A query
+with no relevant document is removed, for the uncompressed index and every candidate together, and
+is listed in `Evidence.dropped_queries`. Check `report()["n_queries_without_relevant_document"]`.
 
 A user with graded labels must choose the grade that counts as relevant and pass only those
 documents. The nDCG here has binary gain, so it differs from published graded nDCG.
@@ -110,19 +119,22 @@ from optivision.core.evaluate import LabelReference
 
 doc_ids = ["d1", "d3", "d7", "d9"]
 graded = {"q1": {"d1": 2, "d7": 0, "d9": 1}, "q2": {"zz": 3}}  # {query id: {document id: grade}}
-print(LabelReference(graded).relevant(doc_ids, ["q1", "q2", "q3"]))
+try:
+    LabelReference(graded)
+except ValueError as error:
+    print("refused:", str(error).split(",")[0])
 
-binary = {q: [d for d, grade in docs.items() if grade >= 1] for q, docs in graded.items()}
+binary = {q: {d: g for d, g in docs.items() if g > 0} for q, docs in graded.items()}
 print(LabelReference(binary).relevant(doc_ids, ["q1", "q2", "q3"]))
 ```
 
 ```text
-[array([0, 2, 3]), array([], dtype=int64), array([], dtype=int64)]
+refused: qrels['q1']['d7'] has grade 0
 [array([0, 3]), array([], dtype=int64), array([], dtype=int64)]
 ```
 
-In the first call `d7`, with grade 0, counts as relevant; `q2` lists a document the corpus does
-not hold; `q3` has no labels. The second call keeps grades of 1 and above.
+In the first call `d7`, with grade 0, is refused. In the second, the entries with a grade of 1 and
+above are kept: `q2` lists a document the corpus does not hold, and `q3` has no labels.
 
 ## 10. Speed and scale
 
@@ -189,7 +201,8 @@ engine.
 | `NumpyIndex` | `add` is quadratic and not idempotent; `get_index` prefers on-disk metadata over its arguments; its decoded cache holds about 26,000 vectors at 2,560-d, then decodes per query |
 | `MultiVectorCorpus.load(mmap=True)` | does not memory-map |
 | `OptiVisionRAG` rerank | reloads a pickled cache with `allow_pickle=True` on every query and mixes score scales |
-| `relevant_from_qrels` | drops unknown ids silently |
+| `relevant_from_qrels` | drops unknown ids silently, and counts a grade of 0 as relevant (`LabelReference` refuses that) |
+| `Pipeline` (pinned `compose.py`) | `fit`, `compress` and `transform_queries` given a raw array raise `AttributeError`; `transform_queries` with queries of the wrong width fails inside NumPy's matmul. The retrievers check the width before they reach it |
 | `TieredIndex` | `last_timing` is shared state; it fails on an empty corpus and gives NaN below the shortlist if every hot document is empty for a query |
 | `to_legacy_pages` | re-splits ids at the first `::p` (`abc` returns as `abc::p1`) and crashes on an id whose suffix is a superscript digit |
 | `QdrantIndex` local | rejects an empty query with an opaque `ValueError` and a NaN query with an `AssertionError` |

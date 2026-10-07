@@ -1016,22 +1016,11 @@ ACCEPTED = {
     ("ExactRetriever(corpus)", "no_documents"): "a store with no documents has an empty ranking",
 }
 
-_PROMISE = (
-    "although checks.py promises a message that names the problem instead of a failure inside "
-    "a matrix product")
-
-#: (entry point, kind) -> the defect; docs/package/TEST_REPORT.md lists them all
+#: (entry point, kind) -> the defect; docs/package/TEST_REPORT.md lists them all. The retriever
+#: defects of the first version of this table (documents not validated, query width not compared
+#: through a pipeline) were fixed in core/retrieve and their entries removed. What is left is in
+#: the byte-pinned compose.py, which cannot be edited.
 KNOWN_DEFECTS = {
-    ("CompressedRetriever.search", "other_dimension"): (
-        "DEFECT: CompressedRetriever given a pipeline skips the query-dimension check "
-        "(exact.py sets _query_dim=None whenever a pipeline is given), so wrong-width queries "
-        "fail inside NumPy's matmul with a message that does not name the queries, " + _PROMISE),
-    ("CompressedRetriever(projected).search", "other_dimension"): (
-        "DEFECT: same root cause: the projected queries are never compared with the store's "
-        "dimension, " + _PROMISE),
-    ("TwoTierRetriever.search", "other_dimension"): (
-        "DEFECT: same root cause: the first stage here is a CompressedRetriever with a "
-        "pipeline, so wrong-width queries fail inside NumPy's matmul, " + _PROMISE),
     ("Pipeline.transform_queries", "other_dimension"): (
         "DEFECT (pinned compose.py, reached through the core.pipeline facade): a projector "
         "fails inside NumPy's matmul with a message that does not name the queries"),
@@ -1041,15 +1030,6 @@ KNOWN_DEFECTS = {
         "DEFECT (pinned compose.py): a raw array raises AttributeError, not TypeError/ValueError"),
     ("Pipeline.compress", "raw_array"): (
         "DEFECT (pinned compose.py): a raw array raises AttributeError, not TypeError/ValueError"),
-    ("ExactRetriever(corpus)", "nan"): (
-        "DEFECT: ExactRetriever validates the queries but not the documents; a NaN document "
-        "vector gives that document a NaN score, so search(k < n_docs) never returns it and says "
-        "nothing (k >= n_docs raises 'scores contain NaN')"),
-    ("ExactRetriever(corpus)", "inf"): (
-        "DEFECT: ExactRetriever does not validate documents; an infinite document vector gives "
-        "infinite or NaN scores that are returned or dropped without a message"),
-    ("ExactRetriever(corpus)", "negative_inf"): (
-        "DEFECT: ExactRetriever does not validate documents; see the NaN case"),
 }
 
 
@@ -1303,7 +1283,8 @@ class TestDtypesAreNeverChangedSilently:
             Ranking(ids=[["a", "b", "c"][: array.shape[1]]], scores=array)
 
     def test_a_retriever_over_nothing_but_nan_scores_refuses_to_rank_them(self):
-        """Every document holds a NaN, so every score is NaN: depth one has a single column."""
+        """Every document holds a NaN, so every score would be NaN. The store is refused at
+        construction (D1); a Ranking still refuses NaN on its own (the test above)."""
         base = make_corpus(6, 8, tokens=(3, 4), seed=0)
         v = np.array(base.vectors, copy=True)
         v[base.offsets[:-1], 0] = np.nan  # the first vector of every document
@@ -1318,9 +1299,6 @@ class TestDtypesAreNeverChangedSilently:
         with pytest.raises(TypeError, match="not one string"):
             strings_digest("12")
 
-    @pytest.mark.xfail(strict=True, reason=(
-        "DEFECT: RankingReference.relevant does not check that the baseline scores are finite; "
-        "NaN scores give an index-order 'reference' (the first documents) without a message"))
     def test_the_agreement_reference_refuses_nan_scores(self):
         scores = np.full((2, 5), np.nan)
         with pytest.raises((ValueError, TypeError), match="(?i)nan|finite"):

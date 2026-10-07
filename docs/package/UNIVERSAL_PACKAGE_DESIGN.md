@@ -1,4 +1,4 @@
-# OptiVision package design: a universal interface and decision framework
+# OptiVision package design: a model-agnostic interface and decision framework
 
 Status: design contract, 2026-10-06. Branch `package-universal`, based on `research-investigation`
 at `91564fd`. This document is the contract the implementation is built against. It rests on
@@ -10,7 +10,8 @@ quality is out of scope of this document; see `FINAL_RESEARCH_BOUNDARY.md`.
 
 ## 1. What "universal" means here
 
-It does **not** mean that one compression configuration works on every encoder. The research
+In this document "universal" is said only of the interface and the decision framework, never of
+compression quality or of an operator. It does **not** mean that one compression configuration works on every encoder. The research
 record does not support that (X3: the registered basis-invariance hypothesis H5 failed), and the
 package must not imply it.
 
@@ -34,10 +35,10 @@ supports that split only after two corrections, so the package uses five layers:
 
 | layer | what it is | status |
 |---|---|---|
-| A. Interface contracts | shapes, dtypes, identities, serialisation | universal by construction; enforced by validation and tests |
-| B. Structural operator properties | what an operator reads and which transformations leave its scores unchanged (derived from code) | universal per operator; checked by property tests; says nothing about quality |
+| A. Interface contracts | shapes, dtypes, identities, serialisation | the same contract for every encoder; enforced for arrays that pass validation (finite values, unique ids, consistent shapes). L2-normalised vectors are the only regime studied |
+| B. Structural operator properties | what an operator reads and which transformations leave its scores unchanged (derived from the code) | declared per operator for data that meet the conditions it lists, in exact arithmetic; derived from the code and checked by tests on synthetic data, with a witness for each condition; says nothing about quality |
 | C. Development-informed defaults | the default candidate space, the chain order, the bet cap | frozen and declared, but **not neutral**: they were shaped by the development encoders |
-| D. Decision procedure: validity | the error statement of the selection rule | does not depend on the encoder, **given its assumptions**; conditional, not unconditional |
+| D. Decision procedure: validity | the error statement of the selection rule | does not depend on the encoder, **given its assumptions and conditions**; the derivation is the project's own and has not been externally reviewed (`STATISTICAL_REVIEW.md`) |
 | E. Empirical outcome | whether anything is selected, how much compression, what retention | depends on encoder, coordinate basis, corpus, query distribution, query budget, target and reference |
 
 Corrections to the four-way split:
@@ -48,7 +49,7 @@ Corrections to the four-way split:
   met on any store at pool-sized budgets; X3: the certified outcome on some stores changed
   materially under rotation).
 - "Model-dependent operators" conflates code with effect. The operators run on any float array
-  (A) and have structural properties that can be proven from code (B); their effect on quality is
+  (A) and have structural properties derived from the code and checked by tests on synthetic data (B); their effect on quality is
   empirical (E).
 - The default candidate space is neither universal nor chosen per model: it is a frozen list that
   earlier development results shaped (C). "Model-blind" describes what the procedure may inspect.
@@ -75,15 +76,15 @@ Corrections to the four-way split:
 | D1 | Additive layering. Pinned files stay where they are. No physical moves except `adapters.py` -> `adapters/__init__.py` (`git mv`). | Constraint 1; alias moves of unpinned modules buy little and risk monkeypatched names. |
 | D2 | `import optivision` stays eager for the 40 existing names; the new top-level names resolve on first use (PEP 562), and `core.stages` is imported eagerly so the `rotation` stage is always registered. Core purity is enforced at source level by an `ast` test with an explicit allow-list. A numpy-only import closure is deferred. | A lazy `__init__` changes import side effects and the `optivision.optimize` function/module binding; it also needs the dependency extras split. Both are release decisions. |
 | D3 | The selection package is `optivision.core.selection` (not `select`). | `calibration.select` already exists; avoids a stdlib-looking name. |
-| D4 | The certifying rule is a line-for-line port of the research's Method C, named for what it is: `FixedSequenceBetting`. Parity with the frozen functions is tested. It is described as an application of published tools, never as a new method. | `METHOD_C_SPEC.md`. |
-| D5 | Outcomes are `SELECT`, `ABSTAIN`, `FALLBACK`. Nothing certified means `ABSTAIN` and the uncompressed index. `FALLBACK` exists only when the caller passes an explicit fallback pipeline; it is recorded as uncertified. There is no silent float16 fallback. | Spec section 4: the research has no float16 fallback; float16 must itself be certified. |
+| D4 | The certifying rule is a line-for-line port of the research's Method C, named for what it is: `FixedSequenceBetting`. Parity with the frozen functions is tested. It is described as an application of published tools, never as a new method. Only the library's own rule classes (exact type) are ever certifying. | `METHOD_C_SPEC.md`. |
+| D5 | Outcomes are `SELECT`, `ABSTAIN`, `FALLBACK`. Nothing certified means `ABSTAIN` and the uncompressed index. `FALLBACK` exists only when the caller passes an explicit fallback pipeline; it is recorded as uncertified. A selection by a rule that is not the library's own is never marked certified, whatever the rule declares. There is no silent float16 fallback. | Spec section 4: the research has no float16 fallback; float16 must itself be certified. |
 | D6 | The rule raises on non-finite or out-of-range input, on a zero-mean baseline, on `n = 0`, on `T` outside (0, 1], on `delta` outside (0, 1). | The frozen functions return NaN or plausible values silently; the harness stops the run. |
-| D7 | Queries enter the test in the order given. An optional seeded permutation (independent of the data) is recorded. A query budget takes a prefix of that order and raises if it exceeds the pool. | Assumption A5; spec section 1.4. |
+| D7 | `select()` tests queries in the order given unless `order_seed` is passed; `certify()` and the CLI default to a seeded permutation (`order_seed=0`; `--given-order` and `order_seed=None` keep the order given). The order kind and seed are recorded, with a caveat for a given order or a chosen seed. A query budget takes a prefix of that order and raises if it exceeds the pool. | Assumption A5; spec section 1.4. A seed chosen after looking is outside the statement. |
 | D8 | One `(target, error)` per call. | Several looks at one sample are outside the statement. |
 | D9 | The size key is the library's `bytes_per_doc` (codes plus codec overhead), as in the research. Fitted-state bytes are reported separately and are not in the key. | Parity; spec ambiguity 13. |
 | D10 | A candidate space has an identity: sha256 of the canonical JSON of its ordered `{position, family, pipeline}` list, the same canonical form as the research, so the default space at d = 96 or 128 with SciPy hashes to the registered value. | Cross-check without importing research code. |
 | D11 | Every stage has declared structural traits, including the group of basis changes that leaves its scores unchanged. A pipeline is `basis_sensitive` unless every stage is invariant under any orthogonal change of basis. The certificate records it. Unknown stages are treated as sensitive. `float16` is declared `SIGNED_PERMUTATION`: its rounding is per coordinate. | X3; no invariance is assumed. |
-| D12 | A certificate is canonical JSON with a SHA-256 content digest and identity digests of everything the decision depended on. Verification has three levels: integrity, replay from evidence, binding to live objects. An optional HMAC is available; without a secret key the format gives integrity checking, not security. | Brief; no cryptographic claim beyond what is implemented. |
+| D12 | A certificate is canonical JSON with a SHA-256 content digest and identity digests of everything the decision depended on. Verification has three levels: integrity, replay from evidence, binding to live objects. An optional HMAC is available; without a secret key the format gives integrity checking, not security. The record has 25 fields, including the norms of the vectors and the count of exact duplicate queries (`CERTIFICATE_SPEC.md`). | Brief; no cryptographic claim beyond what is implemented. |
 | D13 | A new artifact bundle stores fitted stage state, which `save_compressed` (pinned) cannot. The v1 formats stay readable. | Audit finding 9. |
 | D14 | Retrieval seam: `Ranking`, `Retriever`, `DenseScorer`, `Reranker`; retrievers delegate to `ExactIndex` / `TieredIndex`. Metrics from a ranking are a new function with parity tests; pinned `evaluation.py` is not refactored. | Retrieval audit section 6. |
 | D15 | `optivision.backends`: `Backend` protocol, `BackendInfo`, wrappers over `NumpyIndex` and `QdrantIndex`, which are not changed. `BackendInfo` records score kind and tie-break so scores from different backends are never compared. | Retrieval audit findings 3-5. |
@@ -223,6 +224,8 @@ class StageTraits:
     stochastic: bool = False           # uses a seeded RNG
     lossless: bool = False
     notes: str = ""
+    conditions: tuple[str, ...] = ()   # what must hold of the data for the declared invariance (no exact ties at a PCA cut, ...)
+    declared_by: str = "third_party"   # "library" (the built-in table) | "third_party" (register_traits, a class's own traits) | "undeclared"
 
 def register_traits(name: str, traits: StageTraits | Callable[[Stage], StageTraits]) -> None
 def traits_of(stage: Stage | str) -> StageTraits          # unknown name -> UNKNOWN traits, never an error
@@ -232,6 +235,9 @@ class PipelineTraits: stages: tuple[StageTraits, ...]
                       conditionally_invariant: bool       # every non-ORTHOGONAL stage follows a canonicalising stage
                       basis_sensitive: bool                # basis_invariance != ORTHOGONAL (conservative)
                       has_fitted_state: bool; stochastic: bool; notes: tuple[str, ...]
+                      conditions: tuple[str, ...]          # union over the stages, in order, each prefixed with the stage name
+                      @property unconditional              # True only when conditions is empty
+                      @property all_library_declared       # every stage's traits are the library's own
 def pipeline_traits(pipeline: Pipeline) -> PipelineTraits
 ```
 
@@ -253,6 +259,11 @@ codec then sees coordinates fixed by the data rather than by the input basis, pr
 retained principal directions are well separated (equal eigenvalues leave the basis
 arbitrary). `basis_sensitive` stays True for such a pipeline, because the condition is on the
 data.
+
+A declared level is a statement for data that meet the stage's `conditions` (`ORTHOGONAL` means
+"for data that meet the listed conditions"); `basis_sensitive=False` with `unconditional=False`
+is a conditional statement, and nothing checks the conditions against the data. A declaration
+made outside the library's table is recorded as `third_party`: recorded as declared, not examined.
 
 These are statements about code, verified on synthetic data by property tests (apply a group
 element to documents and queries, refit, compare score matrices; and, for every stage declared
@@ -281,15 +292,17 @@ are pinned). A new stage may instead implement `get_state()` / `set_state(state)
 
 Re-exports (`Pipeline`, `CompressedCorpus`, `save_compressed`, `load_compressed`;
 `maxsim_matrix`, `maxsim_pair`, `rank`, `segment_reduce`). Adds
-`pipeline_identity(pipeline) -> str` (digest of `to_dict()`) and
-`fitted_identity(pipeline) -> dict[str, str | None]`.
+`pipeline_identity(pipeline) -> str` (digest of `to_dict()`). The fitted-state digests are in
+`core.stages`: `pipeline_fitted_identity(pipeline) -> list[str | None]`, one per stage, in order.
 
 ### 5.5 `core.retrieve`
 
 As in `RETRIEVAL_BACKEND_AUDIT.md` section 6.1: `Ranking`, protocols `Retriever`, `DenseScorer`,
 `Reranker`; `ExactRetriever`, `CompressedRetriever`, `TieredRetriever` (delegates to
 `TieredIndex`, checks that both tiers hold the same ids in the same order), `TwoTierRetriever`
-(any first stage plus any reranker). Invariants I1-I9 of that section hold. Scoring is
+(any first stage plus any reranker). Invariants I1-I9 of that section hold. A float store is scanned once at construction and refused
+if it holds NaN or infinity; queries of another dimension than the pipeline or store expects are
+refused with a message that names both. Scoring is
 decode-first; no native compressed kernel is added.
 
 ### 5.6 `core.evaluate`
@@ -353,7 +366,7 @@ class RuleResult: selected: int | None; certified: tuple[int, ...]; p_values: tu
 class Decision:
     outcome: Outcome
     selected: CandidateSpec | None      # None on ABSTAIN; the fallback spec on FALLBACK
-    certified: bool                     # True only for SELECT under a certifying rule
+    certified: bool                     # True only for SELECT under one of the library's own certifying rules (exact type)
     certified_positions: tuple[int, ...]
     p_values: tuple[float, ...]; level: float
     target: float; error: float
@@ -371,8 +384,8 @@ testing inside each family in list order, choice by `(bytes, vectors, position)`
 `BonferroniBetting` is method D of E1 (level `error / K`, no ordering needed), for candidate lists
 without a meaningful order. Both use the same betting p-values. Neither is a new method.
 
-The statement a certifying rule makes is the one in `METHOD_C_SPEC.md` section 6, with its six
-assumptions, quoted in `Decision.assumptions`. The package never rephrases it as a conditional
+The statement a certifying rule makes is the one in `METHOD_C_SPEC.md` section 6, with its
+assumptions and conditions as the rule's text lists them, quoted in `Decision.assumptions`. The package never rephrases it as a conditional
 probability, as guaranteed retention, or without its conditions.
 
 ### 5.8 `core.artifact`
@@ -384,7 +397,7 @@ VerificationReport`, `save_artifact`, `load_artifact`, `code_identity()`.
 
 ```python
 def certify(vectors, queries, qrels=None, *, target=0.97, error=0.05, metric="ndcg@5", reference="auto",
-            space=None, rule=None, query_budget=None, order_seed=None, fallback=None, encoder=None,
+            space=None, rule=None, query_budget=None, order_seed=0, fallback=None, encoder=None,
             progress=None, created=None) -> CertifiedResult
 ```
 
@@ -402,7 +415,10 @@ was passed in (unlike `optimize()`, which returns a float32 copy when nothing is
   vectors yields a different corpus identity, so a certificate never transfers across bases.
 - `RotationProjector` and `optivision.testing.basis_probe` are diagnostics. X3 measured that
   rotation changes certified compression (downward on SciFact, in both directions on one
-  extension dataset); a rotation stage is not presented as an improvement.
+  extension dataset); a rotation stage is not presented as an improvement. Its matrix is built
+  as the experiment's was, but the stage applies it as `x @ R` where the experiment applied
+  `v -> U v`, so for one seed the two maps are inverses and `RotationProjector` does not
+  reproduce the registered rotations.
 - Candidate families that are less basis-sensitive by construction (a canonicalising projection
   before the codec, learned transforms, basis search) are design possibilities, not results.
 

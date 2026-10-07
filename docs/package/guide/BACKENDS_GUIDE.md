@@ -38,6 +38,11 @@ held and scored.
 - **Ties.** In-process retrievers and `NumpyBackend.search_many` break ties by ascending position.
   The legacy `NumpyIndex.search` and Qdrant local do not say how.
 - **Empty documents** score `-inf` and rank last. An empty query scores 0.
+- **Checks at the door.** `ExactRetriever(corpus)` scans a float corpus once, when it is built,
+  and refuses NaN or infinity with a message that names the first document (a NaN document would
+  otherwise be scored NaN and never returned). Queries must be finite and of the dimension the
+  store, or the pipeline's projection, expects: a retriever with a pipeline names the queries and
+  both dimensions when they differ.
 - **Codecs.** `to_legacy_pages`, the bridge to the page backends, accepts float32, plain binary
   and fixed-scale int8 only, and raises for the rest.
 - **Ids.** A page backend names a page `<doc_id>::p<page_no>`. The bridge rebuilds each page from

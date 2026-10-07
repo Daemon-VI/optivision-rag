@@ -127,6 +127,38 @@ class TestMatrix:
             seeded_rotation(dim, 2), (q * np.sign(np.diag(rr))).astype(np.float32)
         )
 
+    @pytest.mark.parametrize("seed", [0, 1, 2])
+    def test_the_stage_applies_the_inverse_of_the_registered_experiments_map(self, seed):
+        """Same matrix, opposite application (RI-08). The experiment's two functions are
+        restated from scripts/research/x3_symmetry.py, which is read, not run."""
+        dim = 24
+        q, r = np.linalg.qr(np.random.default_rng(seed).standard_normal((dim, dim)))
+        u = q * np.sign(np.diag(r))  # x3_symmetry.rotation(dim, seed)
+        assert np.array_equal(seeded_rotation(dim, seed), u.astype(np.float32))
+        x = np.random.default_rng(9).standard_normal((11, dim))
+        experiment = x @ u.T  # x3_symmetry.apply_matrix: every row v becomes U v
+        stage = RotationProjector(seed)
+        stage.matrix = seeded_rotation(dim, seed)
+        ours = stage.project(x.astype(np.float32)).astype(np.float64)
+        assert np.allclose(ours, x @ u, atol=1e-5)  # x @ R
+        assert np.allclose(ours, (u.T @ x.T).T, atol=1e-5)  # U^T v
+        assert np.abs(ours - experiment).max() > 0.1  # not the experiment's map
+        assert np.allclose(stage.project(experiment.astype(np.float32)), x, atol=1e-5)
+        assert np.allclose(ours @ u.T, x, atol=1e-5)  # the experiment undoes the stage
+
+    def test_the_experiments_script_still_reads_as_the_docstring_says(self):
+        from pathlib import Path
+
+        script = Path(__file__).resolve().parents[1] / "scripts" / "research" / "x3_symmetry.py"
+        if not script.is_file():
+            pytest.skip("the research scripts are not part of this checkout")
+        text = script.read_text(encoding="utf-8")
+        assert "q * np.sign(np.diag(r))" in text and "@ m.T" in text
+        from optivision.core.stages import rotation as rotation_module
+
+        doc = " ".join(rotation_module.__doc__.split())
+        assert "inverses of each other" in doc and "x @ U.T" in doc
+
     def test_the_matrix_does_not_depend_on_which_signs_lapack_returns(self, monkeypatch):
         real_qr = np.linalg.qr
         flips = np.where(np.random.default_rng(9).integers(0, 2, 40) == 0, -1.0, 1.0)

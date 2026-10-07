@@ -18,6 +18,7 @@ Both delegate to the library's own functions (``evaluation.relevant_from_qrels``
 
 from __future__ import annotations
 
+import numbers
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
@@ -39,11 +40,29 @@ class Reference(Protocol):
     def identity(self) -> dict[str, Any]: ...
 
 
+def _check_grades(query_id: Any, docs: Mapping[Any, Any]) -> None:
+    """Refuse a grade that is not a number above zero: binary labels would count it as relevant."""
+    for doc_id, grade in docs.items():
+        if isinstance(grade, str) or not isinstance(grade, numbers.Real):
+            raise TypeError(f"qrels[{query_id!r}][{doc_id!r}] has grade {grade!r}: a grade "
+                            "must be a number")
+        if not grade > 0:
+            raise ValueError(
+                f"qrels[{query_id!r}][{doc_id!r}] has grade {grade!r}, but relevance is binary "
+                "here and every listed document counts as relevant. Drop the entries that are "
+                "not relevant (grade 0 or below) before passing the labels, for example "
+                "{d: g for d, g in docs.items() if g > 0}")
+
+
 class LabelReference:
     """Relevance labels: ``qrels[query_id]`` is an iterable of relevant document ids.
 
     Relevance is binary, as in ``relevant_from_qrels``: every document listed for a query
-    is relevant whatever its grade, and a document id missing from the corpus is ignored.
+    counts as relevant, and a document id missing from the corpus is ignored. When a query's
+    labels are a mapping ``{document id: grade}``, every grade above zero is treated as
+    relevant, the size of the grade is not read, and an entry whose grade is 0 or negative is
+    refused with ``ValueError``: it would be counted as relevant. Drop the non-relevant
+    entries before passing the labels, for example ``{d: g for d, g in docs.items() if g > 0}``.
     A query without a listed relevant document gets an empty relevant set, which the
     caller removes for every candidate and the baseline together. ``base_scores`` is not
     used. The mapping is copied at construction, so later changes to it have no effect.
@@ -60,6 +79,8 @@ class LabelReference:
             if isinstance(docs, (str, bytes)):
                 raise TypeError(f"qrels[{query_id!r}] must be a collection of document ids, "
                                 "not a single string")
+            if isinstance(docs, Mapping):
+                _check_grades(query_id, docs)
             snapshot[query_id] = tuple(docs)
         self._qrels = snapshot
         # what the metric reads: which documents are listed per query, not their grades
@@ -76,6 +97,27 @@ class LabelReference:
 
     def __repr__(self) -> str:
         return f"LabelReference(n_queries={len(self._qrels)})"
+
+
+def _check_baseline_scores(scores: np.ndarray, query_ids: Sequence[str]) -> None:
+    """Refuse NaN, and a row without a finite score; name the first query. A NaN row would
+    otherwise be ranked in document order and read as a reference. ``-inf`` (an empty
+    document) is a legitimate score as long as some score in the row is finite."""
+    if scores.dtype.kind != "f" or scores.size == 0:
+        return
+    step = max(1, 4_000_000 // scores.shape[1])
+    for lo in range(0, scores.shape[0], step):
+        block = scores[lo : lo + step]
+        nan = np.isnan(block).any(axis=1)
+        if nan.any():
+            q = lo + int(np.argmax(nan))
+            raise ValueError(f"base_scores holds NaN (first at query {q}, id {query_ids[q]!r}): "
+                             "the agreement reference needs the uncompressed scores of every query")
+        none = ~np.isfinite(block).any(axis=1)
+        if none.any():
+            q = lo + int(np.argmax(none))
+            raise ValueError(f"base_scores has no finite score for query {q} "
+                             f"(id {query_ids[q]!r}): its top document would be arbitrary")
 
 
 class RankingReference:
@@ -113,6 +155,7 @@ class RankingReference:
                              f"queries and {len(corpus_ids)} documents")
         if self.depth > scores.shape[1]:
             raise ValueError(f"depth {self.depth} exceeds the corpus size {scores.shape[1]}")
+        _check_baseline_scores(scores, query_ids)
         return relevant_from_baseline(scores, depth=self.depth)
 
     def identity(self) -> dict[str, Any]:

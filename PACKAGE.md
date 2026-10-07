@@ -55,7 +55,8 @@ branch. It is engineering capability, tested on synthetic data and against the r
 code for numerical equality; no registered experiment evaluated it as a package.
 
 What was added, for any late-interaction encoder that hands over one `[n_vectors, dim]`
-float array per document and per query, scored by MaxSim:
+float array per document and per query, scored by MaxSim (the research record covers
+L2-normalised vectors only):
 
 - **a vector interface** (`optivision.core`): validation and content identities, the same
   for every encoder;
@@ -77,7 +78,7 @@ float array per document and per query, scored by MaxSim:
 model-independent compression quality: whether a pipeline keeps retrieval quality depends
 on the encoder, the coordinate basis of its vectors, the corpus and the queries, and is
 measured each time; the procedure may abstain. A certificate carries the selection rule's
-own statement, conditional on the assumptions it lists. It is not a statement that the
+own statement, claimed only if the assumptions and conditions it lists hold. It is not a statement that the
 compressed index keeps retrieval quality, and it does not carry over to another encoder,
 corpus or coordinate basis.
 

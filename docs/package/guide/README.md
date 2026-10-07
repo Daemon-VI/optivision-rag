@@ -40,7 +40,7 @@ decision procedure may abstain, and abstaining is a correct outcome.
 | [QUICKSTART.md](QUICKSTART.md) | from vectors to a decision, a verifiable artifact and a search, on synthetic data; labels against no labels; what an abstain looks like |
 | [CONCEPTS.md](CONCEPTS.md) | the mental model and one definition of every term; the five layers of what is and is not the same for every encoder |
 | [SELECTION_AND_CERTIFICATION.md](SELECTION_AND_CERTIFICATION.md) | how a decision is made, the statement with its assumptions, how to read it, what you must supply, what to do on abstain |
-| [BASIS_DEPENDENCE.md](BASIS_DEPENDENCE.md) | why some stages depend on the coordinate basis, what X3 found, how stage traits represent it, diagnostics, open possibilities |
+| [BASIS_DEPENDENCE.md](BASIS_DEPENDENCE.md) | why some stages depend on the coordinate basis, what X3 found, how stage traits represent it (with the data conditions each holds under and who declared it), diagnostics, open possibilities |
 | [LIMITATIONS.md](LIMITATIONS.md) | what to know before relying on the package: scope, what was measured, assumptions, labels, speed, known defects |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | the tree as built, the dependency rule and its test, pinned files, the data flow, extension checklists |
 | [BACKENDS_GUIDE.md](BACKENDS_GUIDE.md) | which retriever or backend to use when |

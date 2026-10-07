@@ -171,12 +171,26 @@ def basis_probe(
         "summary": summary,
         "valid_symmetry": valid,
         "declared_basis_invariance": _declared(pipeline),
+        "declared_conditions": _declared_conditions(pipeline),
     }
     if not valid:
         result["note"] = ("the float scores changed beyond the tolerance under at least one "
                           "transform; the pipeline numbers describe a broken transform or very "
                           "low precision data and should not be interpreted")
     return result
+
+
+def _declared_conditions(pipeline: Pipeline) -> list[str] | None:
+    """The data conditions under which the declared invariance holds (``None`` if unavailable).
+
+    The declared invariance is a statement for data that meet these conditions; a probe run on
+    data that break one can move the scores although the pipeline is declared invariant.
+    """
+    try:
+        from ..core.stages import pipeline_traits
+    except ImportError:
+        return None
+    return list(pipeline_traits(pipeline).conditions)
 
 
 def _declared(pipeline: Pipeline) -> str | None:

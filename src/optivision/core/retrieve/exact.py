@@ -41,7 +41,14 @@ from ...compose import Pipeline
 from ...representation import MultiVectorCorpus
 from ...scoring import DEFAULT_MAX_BLOCK_BYTES, rank
 from ...storage import ExactIndex
-from .checks import as_int, as_queries, check_k, check_positions
+from .checks import (
+    as_int,
+    as_queries,
+    check_finite_store,
+    check_k,
+    check_positions,
+    check_projection,
+)
 from .types import SCORE_MAXSIM_IP, TIE_INDEX, Ranking
 
 
@@ -100,6 +107,12 @@ class ExactRetriever:
     ``index`` is the :class:`~optivision.storage.ExactIndex` that does the work; ``ids`` are the
     document ids in store order. Queries are validated (finite values, matching dimension) and
     otherwise passed through unchanged: vectors are neither normalised nor projected here.
+
+    Documents are validated once, at construction: a store with a floating-point ``vectors``
+    array (a ``MultiVectorCorpus``) is scanned in blocks, in its own dtype and without a copy,
+    and a NaN or an infinite component raises ``ValueError`` that names the first document.
+    The scan is not repeated by ``score``, ``search`` or ``rescore``. A store of integer codes
+    decodes to finite values and is not scanned.
     """
 
     score_kind = SCORE_MAXSIM_IP
@@ -128,9 +141,11 @@ class ExactRetriever:
         if not all(isinstance(i, str) for i in self.ids):
             raise TypeError("document ids must be strings")
         self._ids = _ids_array(self.ids)
+        check_finite_store(store, self.ids)
         self.index = ExactIndex(store, pipeline, max_block_bytes)
         dim = getattr(store, "dim", getattr(store, "dimension", None))
-        self._query_dim = None if pipeline is not None or dim is None else int(dim)
+        self._store_dim = None if dim is None else int(dim)
+        self._query_dim = None if pipeline is not None else self._store_dim
 
     # ------------------------------------------------------------ shape
 
@@ -150,7 +165,10 @@ class ExactRetriever:
     # ------------------------------------------------------------- work
 
     def _prepare(self, queries: Any) -> MultiVectorCorpus:
-        return as_queries(queries, dim=self._query_dim)
+        q = as_queries(queries, dim=self._query_dim)
+        if self.pipeline is not None:
+            check_projection(q, self.pipeline, self._store_dim)
+        return q
 
     def score(self, queries: MultiVectorCorpus) -> np.ndarray:
         """Dense float32 ``[n_queries, n_docs]`` MaxSim scores (``ExactIndex.score``)."""
@@ -191,8 +209,14 @@ class CompressedRetriever(ExactRetriever):
             project the queries exactly as ``ExactIndex`` does (``Pipeline.transform_queries``,
             which also rejects non-finite queries); token stages and the quantizer never touch
             queries. With ``None`` the queries are used as given, so they must already have the
-            store's dimension.
+            store's dimension. With a pipeline, queries of another dimension raise
+            ``ValueError`` that names the queries and both dimensions: they are compared with
+            the width the pipeline's first dimension stage was fitted on when its fitted state
+            shows it, else one projected query vector is compared with the store's dimension.
         max_block_bytes: budget for the live similarity block.
+
+    A float store given here (a ``MultiVectorCorpus``) is scanned once at construction for NaN
+    and infinity, as in :class:`ExactRetriever`; a store of integer codes is not.
 
     Scores are inner products against the *decoded* codes, so they are exact over the stored
     representation and on the scale of that codec.

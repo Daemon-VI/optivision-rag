@@ -3,10 +3,19 @@
 The question a trait answers is narrow: if every document and query vector is multiplied
 by the same orthogonal matrix ``G`` and the stage is fitted again on the result, do the
 scores that come out stay the same? ``BasisInvariance`` records for which matrices ``G``
-the answer is yes. The answer is a statement about the code, taken in exact arithmetic and
+the answer is yes. The answer is a statement about the code, read in exact arithmetic and
 checked on synthetic data by ``tests/test_core_stage_traits.py``; it says nothing about
 retrieval quality, and in float32 a value that sits within rounding of a quantisation
 boundary can still change level.
+
+A declared level holds for data that meet the stage's ``conditions``: data without the
+exact ties and degeneracies at which the stage's code decides by row position, by sign
+convention or by rounding (equal eigenvalues at a PCA cut, rows that are exactly
+equidistant for Ward clustering, a coordinate that is exactly zero for a sign code). The
+conditions are plain sentences. Nothing in the package checks them against the data, and
+they are carried to ``PipelineTraits``, so ``ORTHOGONAL`` means "for data that meet the
+listed conditions" and ``basis_sensitive=False`` with ``unconditional=False`` is a
+conditional statement.
 
 Nothing in the package may assume ``codec(x)`` behaves like ``codec(xG)``. Most codecs act
 on the stored coordinates (sign bits, fixed or per-vector steps, a leading-coordinate cut),
@@ -15,8 +24,11 @@ any orthogonal ``G``. A stage without declared traits is ``UNKNOWN`` and is trea
 basis dependent.
 
 Traits are registered by stage name (``register_traits``) or declared by the stage class
-through a ``traits`` attribute or method; ``traits_of`` reads both. The trait registry is the
-only global state here, as the stage registry is in ``optivision.stages.base``.
+through a ``traits`` attribute or method; ``traits_of`` reads both. Only the table at the end
+of this module is the library's own (``declared_by="library"``). A declaration made by any
+other code is recorded as declared (``declared_by="third_party"``) and is not examined by
+the library. The trait registry is the only global state here, as the stage registry is in
+``optivision.stages.base``.
 """
 
 from __future__ import annotations
@@ -43,7 +55,14 @@ __all__ = [
 
 
 class BasisInvariance(str, Enum):
-    """For which orthogonal changes of basis a stage's scores stay the same (after refit)."""
+    """For which orthogonal changes of basis a stage's scores stay the same (after refit).
+
+    Each level is a statement for data that meet the stage's ``conditions``
+    (``StageTraits.conditions``): ``ORTHOGONAL`` means "unchanged under any orthogonal
+    matrix, for data that meet the listed conditions", and the other levels read the same
+    way. A stage that lists no condition makes its statement for all data, in exact
+    arithmetic.
+    """
 
     ORTHOGONAL = "orthogonal"  # any orthogonal matrix
     SIGNED_PERMUTATION = "signed_permutation"  # only axis permutations and sign flips
@@ -59,11 +78,22 @@ _O, _S, _N, _U = (
 )
 _RANK = {_O: 2, _S: 1, _N: 0, _U: 0}
 _KINDS = ("tokens", "dimensions", "bits", "unknown")
+#: values of ``StageTraits.declared_by``
+LIBRARY = "library"
+THIRD_PARTY = "third_party"
+UNDECLARED = "undeclared"
+_DECLARED_BY = (LIBRARY, THIRD_PARTY, UNDECLARED)
 
 
 @dataclass(frozen=True)
 class StageTraits:
     """What is declared about one stage, for the parameters it was built with.
+
+    The declared ``basis_invariance`` is a statement for data that meet ``conditions``; with
+    no condition listed it is made for all data, in exact arithmetic. Nothing here checks
+    the data. A declaration that did not come from the library's own table
+    (``declared_by="third_party"``) is recorded as declared and is not examined by the
+    library: the library does not test that the stage behaves as the declaration says.
 
     Attributes:
         name: registry name of the stage.
@@ -86,7 +116,19 @@ class StageTraits:
             parameters, including a fixed-seed row sample taken only above a size cap.
             Same seed and same input always give the same output.
         lossless: stores its input exactly (float32 input to the float32 codec).
-        notes: the conditions behind the declaration, in plain words.
+        notes: the reasons behind the declaration, in plain words.
+        conditions: sentences that name what must hold for the declared invariance: no exact
+            ties in the quantities that decide a merge or a kept row, distinct eigenvalues at
+            a PCA cut, no coordinate that is exactly zero for a sign code. Empty when the
+            declaration needs none. They describe the data; nothing in the package checks
+            them.
+        declared_by: who made the declaration. ``"library"``: the library's own table at the
+            end of this module, which ``tests/test_core_stage_traits.py`` exercises on
+            synthetic data. ``"third_party"`` (the default for a value you build): a
+            ``register_traits`` call or a ``traits`` attribute or method of a stage class,
+            made outside that table; recorded as declared and not examined by the library.
+            ``"undeclared"``: nothing was declared (``UNKNOWN``). ``traits_of`` sets it, and
+            replaces what a registered or class-declared value says about itself.
     """
 
     name: str
@@ -100,6 +142,8 @@ class StageTraits:
     stochastic: bool = False
     lossless: bool = False
     notes: str = ""
+    conditions: tuple[str, ...] = ()
+    declared_by: str = THIRD_PARTY
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -107,10 +151,18 @@ class StageTraits:
         if self.kind not in _KINDS:
             raise ValueError(f"kind must be one of {_KINDS}, got {self.kind!r}")
         object.__setattr__(self, "basis_invariance", BasisInvariance(self.basis_invariance))
+        if isinstance(self.conditions, (str, bytes)) or not all(
+            isinstance(c, str) and c for c in self.conditions
+        ):
+            raise TypeError("conditions must be a sequence of non-empty sentences")
+        object.__setattr__(self, "conditions", tuple(self.conditions))
+        if self.declared_by not in _DECLARED_BY:
+            raise ValueError(f"declared_by must be one of {_DECLARED_BY}, got {self.declared_by!r}")
 
     def to_dict(self) -> dict[str, Any]:
         out = dataclasses.asdict(self)
         out["basis_invariance"] = self.basis_invariance.value
+        out["conditions"] = list(self.conditions)
         return out
 
 
@@ -121,9 +173,40 @@ class StageTraits:
 class _Entry:
     generic: StageTraits  # what ``traits_of(name)`` returns: the weakest case over the parameters
     for_stage: Callable[[Stage], StageTraits] | None  # None: ``generic`` applies to every instance
+    declared_by: str  # applied to whatever the entry hands out
 
 
 _REGISTRY: dict[str, _Entry] = {}
+
+
+def _declared_by(value: StageTraits, who: str) -> StageTraits:
+    """``value`` as declared by ``who``: what a value says about its own origin is ignored."""
+    return value if value.declared_by == who else dataclasses.replace(value, declared_by=who)
+
+
+def _register(
+    name: str,
+    traits: StageTraits | Callable[[Stage], StageTraits],
+    generic: StageTraits | None,
+    who: str,
+) -> None:
+    if isinstance(traits, StageTraits):
+        if traits.name != name:
+            raise ValueError(f"traits registered under {name!r} declare the name {traits.name!r}")
+        entry = _Entry(_declared_by(traits, who), None, who)
+    elif callable(traits):
+        bare = (
+            _declared_by(generic, who)
+            if generic is not None
+            else _unknown(name, "unknown", _PER_INSTANCE)
+        )
+        entry = _Entry(bare, traits, who)
+    else:
+        raise TypeError("traits must be a StageTraits or a function of the stage instance")
+    old = _REGISTRY.get(name)
+    if old is not None and old != entry:
+        raise ValueError(f"traits for stage {name!r} are already registered")
+    _REGISTRY[name] = entry
 
 
 def register_traits(
@@ -139,21 +222,13 @@ def register_traits(
     for the bare name (the weakest case over the parameters); without it a function leaves
     the bare name ``UNKNOWN``. Registering the same value again is a no-op; a different one
     for the same name raises, as for stage names.
+
+    A declaration made through this function is third-party: ``traits_of`` and
+    ``pipeline_traits`` record it as ``declared_by="third_party"`` whatever the value says,
+    as declared and not examined by the library. List in ``conditions`` the data for which
+    the declared ``basis_invariance`` holds.
     """
-    if isinstance(traits, StageTraits):
-        if traits.name != name:
-            raise ValueError(f"traits registered under {name!r} declare the name {traits.name!r}")
-        entry = _Entry(traits, None)
-    elif callable(traits):
-        entry = _Entry(
-            generic if generic is not None else _unknown(name, "unknown", _PER_INSTANCE), traits
-        )
-    else:
-        raise TypeError("traits must be a StageTraits or a function of the stage instance")
-    old = _REGISTRY.get(name)
-    if old is not None and old != entry:
-        raise ValueError(f"traits for stage {name!r} are already registered")
-    _REGISTRY[name] = entry
+    _register(name, traits, generic, THIRD_PARTY)
 
 
 _PER_INSTANCE = "traits depend on the parameters: ask for them with a stage instance"
@@ -167,6 +242,7 @@ def _unknown(name: str, kind: str, why: str) -> StageTraits:
         basis_invariance=_U,
         fit_uses_queries=True,
         notes=f"{why}. {_NOT_DECLARED}.",
+        declared_by=UNDECLARED,
     )
 
 
@@ -198,7 +274,10 @@ def traits_of(stage: Stage | str) -> StageTraits:
 
     For a name the result is the weakest case over the parameters. A stage that declares
     nothing, or a subclass of a registered class that was not registered itself, gets
-    ``BasisInvariance.UNKNOWN``; this is never an error.
+    ``BasisInvariance.UNKNOWN`` with ``declared_by="undeclared"``; this is never an error.
+    A ``traits`` attribute or method of the stage class, and a ``register_traits`` call,
+    give ``declared_by="third_party"``: recorded as declared, not examined by the library.
+    Only the library's own table gives ``"library"``.
     """
     if isinstance(stage, str):
         entry = _REGISTRY.get(stage)
@@ -211,11 +290,19 @@ def traits_of(stage: Stage | str) -> StageTraits:
         raise TypeError(f"traits_of expects a Stage or a stage name, got {type(stage).__name__}")
     declared = _declared(stage)
     if declared is not None:
-        return declared
+        return _declared_by(declared, THIRD_PARTY)
     entry = _REGISTRY.get(stage.name)
     registered = STAGES.get(stage.name)
     if entry is not None and registered in (None, type(stage)):
-        return entry.for_stage(stage) if entry.for_stage is not None else entry.generic
+        if entry.for_stage is None:
+            return entry.generic
+        value = entry.for_stage(stage)
+        if not isinstance(value, StageTraits):
+            raise TypeError(
+                f"the traits registered for {stage.name!r} must give a StageTraits, "
+                f"got {type(value).__name__}"
+            )
+        return _declared_by(value, entry.declared_by)
     why = "traits are not inherited by a subclass" if entry is not None else "no traits registered"
     unknown = _unknown(stage.name, _kind_of(stage), why)
     return dataclasses.replace(
@@ -230,14 +317,26 @@ def traits_of(stage: Stage | str) -> StageTraits:
 class PipelineTraits:
     """Basis behaviour of a whole pipeline.
 
-    ``basis_invariance`` is unconditional: canonicalisation is recorded but not credited
-    in it. ``conditionally_invariant`` is True when the pipeline is not unconditionally
-    ORTHOGONAL but every stage that is not ORTHOGONAL is a SIGNED_PERMUTATION stage that
-    receives coordinates fixed by the data (up to the sign of each component) from a
-    canonicalising stage (PCA) before it, with no seeded random map in between. That holds
-    only if the retained principal directions are well separated, which is a condition on
-    the data and is not checked here. ``basis_sensitive`` is True unless the pipeline is
-    unconditionally ORTHOGONAL.
+    ``basis_invariance`` is the weakest level the stages declare; canonicalisation (PCA) is
+    recorded but not credited in it. Every level is a statement for data that meet
+    ``conditions``: the conditions of every stage, in stage order, each prefixed with the
+    stage name. ``unconditional`` is True only when there is none. So ``basis_sensitive=False``
+    with ``unconditional=False`` is a conditional statement ("not sensitive, for data that
+    meet the listed conditions"), not a property of every data set. ``basis_sensitive=True``
+    is the cautious statement and needs no condition. Nothing checks the conditions against
+    the data.
+
+    ``conditionally_invariant`` is True when the pipeline is not ORTHOGONAL but every stage
+    that is not ORTHOGONAL is a SIGNED_PERMUTATION stage that receives coordinates fixed by
+    the data (up to the sign of each component) from a canonicalising stage (PCA) before it,
+    with no seeded random map in between. That holds only if the retained principal
+    directions are well separated, which is among the ``conditions``. ``basis_sensitive`` is
+    True unless the pipeline is ORTHOGONAL.
+
+    ``all_library_declared`` is True when every stage's traits come from the library's own
+    table (``StageTraits.declared_by``). A third-party declaration is recorded as declared
+    and is not examined by the library; the flag is False for a pipeline that holds one, and
+    for a stage that declares nothing.
     """
 
     stages: tuple[StageTraits, ...]
@@ -247,6 +346,17 @@ class PipelineTraits:
     has_fitted_state: bool
     stochastic: bool
     notes: tuple[str, ...]
+    conditions: tuple[str, ...] = ()
+
+    @property
+    def unconditional(self) -> bool:
+        """True only when no stage lists a condition."""
+        return not self.conditions
+
+    @property
+    def all_library_declared(self) -> bool:
+        """True when every stage's traits are the library's own declarations."""
+        return all(t.declared_by == LIBRARY for t in self.stages)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -257,6 +367,9 @@ class PipelineTraits:
             "has_fitted_state": self.has_fitted_state,
             "stochastic": self.stochastic,
             "notes": list(self.notes),
+            "conditions": list(self.conditions),
+            "unconditional": self.unconditional,
+            "all_library_declared": self.all_library_declared,
         }
 
 
@@ -298,6 +411,14 @@ def pipeline_traits(pipeline: Pipeline | Iterable[Stage]) -> PipelineTraits:
     ``randomised_basis`` switches the state to ``mixed``. The pipeline's invariance is the
     weakest value met (ORTHOGONAL > SIGNED_PERMUTATION > NONE); an undeclared stage counts
     as NONE and, when no declared stage is NONE, the pipeline is reported as UNKNOWN.
+
+    The result is a statement for data that meet its ``conditions`` (those of every stage,
+    prefixed with the stage name): ``ORTHOGONAL`` means "for data that meet the listed
+    conditions", and ``basis_sensitive=False`` with ``unconditional=False`` is a
+    conditional statement. Nothing checks the conditions against the data. A stage's
+    traits are those of ``traits_of``: declarations made outside the library's own table
+    are recorded as third-party (``all_library_declared`` is then False, and a note says
+    so) and are not examined by the library.
     """
     stages = tuple(traits_of(s) for s in _stages_of(pipeline))
     mixed = False
@@ -305,6 +426,11 @@ def pipeline_traits(pipeline: Pipeline | Iterable[Stage]) -> PipelineTraits:
     notes: list[str] = []
     for t in stages:
         inv = t.basis_invariance
+        if t.declared_by == THIRD_PARTY and inv is not _U:
+            notes.append(
+                f"{t.name}: traits declared by third-party code; recorded as declared, "
+                "not examined by the library"
+            )
         if inv is _U:
             eff = _N
             notes.append(
@@ -339,6 +465,7 @@ def pipeline_traits(pipeline: Pipeline | Iterable[Stage]) -> PipelineTraits:
         has_fitted_state=any(t.has_fitted_state for t in stages),
         stochastic=any(t.stochastic for t in stages),
         notes=tuple(notes),
+        conditions=tuple(f"{t.name}: {c}" for t in stages for c in t.conditions),
     )
 
 
@@ -353,15 +480,68 @@ def _builtin(
     refine: Callable[[Stage, StageTraits], StageTraits] | None = None,
     **flags: Any,
 ) -> None:
-    generic = StageTraits(name=name, kind=kind, basis_invariance=invariance, notes=notes, **flags)
+    generic = StageTraits(
+        name=name,
+        kind=kind,
+        basis_invariance=invariance,
+        notes=notes,
+        declared_by=LIBRARY,
+        **flags,
+    )
     if refine is None:
-        register_traits(name, generic)
+        _register(name, generic, None, LIBRARY)
     else:
-        register_traits(name, lambda stage, g=generic: refine(stage, g), generic=generic)
+        _register(name, lambda stage, g=generic: refine(stage, g), generic, LIBRARY)
 
 
 def _centred(stage: Stage) -> bool:
     return getattr(stage, "center", None) == "mean"
+
+
+# The conditions of the declarations below. Each is a sentence about the data; a witness test
+# in tests/test_core_stage_traits.py builds data that break it and shows the scores move.
+_TIES_OVERTURNED = (
+    "ties go to row order, which float32 rounding after a change of basis can overturn"
+)
+_REDUNDANCY_CONDITIONS = (
+    (
+        "no cosine between two rows of one document lies within float32 rounding of the "
+        "threshold (an exact tie with the threshold is the extreme case: rounding after a change "
+        "of basis can move it to either side)"
+    ),
+)
+_ADAPTIVE_MERGE_CONDITIONS = (
+    (
+        "no exact ties among the cosines that choose a seed, the next centre or the nearest "
+        f"centre of a row ({_TIES_OVERTURNED}), and no cosine within float32 rounding of the "
+        "radius"
+    ),
+)
+_HIERARCHICAL_MERGE_CONDITIONS = (
+    (
+        "no exact ties among the Ward merge distances of a document (rows that are exactly "
+        f"equidistant, for example orthonormal rows; {_TIES_OVERTURNED}), and no merge height "
+        "within float32 rounding of max_distance"
+    ),
+)
+_PCA_CONDITIONS = (
+    (
+        "eigenvalue gap at the cut: the last retained eigenvalue is larger than the next one, by "
+        "more than float32 rounding in the second-moment matrix (with a tie the retained subspace "
+        "is arbitrary)"
+    ),
+    (
+        "the retained eigenvalues are distinct from one another; this matters to a coordinate "
+        "stage after this one (with a tie its input coordinates are an arbitrary rotation within "
+        "the tied group)"
+    ),
+)
+_SIGN_CODE_CONDITIONS = (
+    (
+        "no coordinate of a stored vector is exactly zero (exactly equal to the fitted mean when "
+        "center='mean'): a zero is coded as -1 whichever sign convention is used"
+    ),
+)
 
 
 _builtin(
@@ -382,6 +562,7 @@ _builtin(
     "its mean, so one orthogonal matrix applied to every vector keeps the same rows and "
     "rotates the pooled ones. Exact only in exact arithmetic: a pair whose cosine lies within "
     "float32 rounding of the threshold can fall on the other side.",
+    conditions=_REDUNDANCY_CONDITIONS,
 )
 
 
@@ -396,12 +577,14 @@ _builtin(
     _O,
     "Measures similarity by cosines (of the vectors, or of the vectors minus a fitted mean "
     "when center='mean') and pools members by their mean; all of these follow an orthogonal "
-    "change of basis, so the same rows are merged. Exact ties go to the lowest row index. "
+    "change of basis, so the same rows are merged. Exact ties go to the lowest row index, "
+    "which holds in exact arithmetic and not after float32 rounding (see the conditions). "
     "With center='mean' the fitted mean (of a fixed-seed row sample above the fit-sample cap) "
     "rotates with the data.",
     refine=_adaptive_merge,
     has_fitted_state=True,
     stochastic=True,
+    conditions=_ADAPTIVE_MERGE_CONDITIONS,
 )
 
 _builtin(
@@ -411,7 +594,9 @@ _builtin(
     "Ward clustering of unit vectors depends only on pairwise Euclidean distances (taken from "
     "the vectors, or from their Gram matrix from 512 dimensions up), which an orthogonal "
     "change of basis leaves unchanged; clusters are pooled by their mean. Needs SciPy. Exact "
-    "ties between merge heights are resolved by row order.",
+    "ties between merge heights are resolved by row order, which holds in exact arithmetic "
+    "and not after float32 rounding (see the conditions).",
+    conditions=_HIERARCHICAL_MERGE_CONDITIONS,
 )
 
 _builtin(
@@ -449,6 +634,7 @@ _builtin(
     has_fitted_state=True,
     stochastic=True,
     fit_uses_queries=True,
+    conditions=_PCA_CONDITIONS,
 )
 
 _builtin(
@@ -631,6 +817,7 @@ _builtin(
     refine=_binary,
     has_fitted_state=True,
     stochastic=True,
+    conditions=_SIGN_CODE_CONDITIONS,
 )
 
 _builtin(

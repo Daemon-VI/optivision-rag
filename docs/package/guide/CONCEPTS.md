@@ -37,8 +37,8 @@ The seven steps:
 4. Evidence: every candidate is run on every query and scored against a stated reference.
 5. A decision: a rule reads the evidence, a target and an error level, and selects one candidate
    or abstains.
-6. A certificate: a record of the decision, of what it was computed from, and of the assumptions
-   it is conditional on.
+6. A certificate: a record of the decision, of what it was computed from, and of the
+   assumptions and conditions its statement is claimed under.
 7. An index: the compressed corpus, searched by a retriever, possibly behind a backend.
 
 ## 2. What is the same for every encoder, and what is not
@@ -56,7 +56,7 @@ in other words.
 | layer | in plain words | depends on the encoder? | how it is checked | what it says about retrieval quality |
 |---|---|---|---|---|
 | A. Interface contracts | what a corpus, a pipeline, an evidence array and a certificate must look like: shapes, dtypes, identifiers, saved formats | no | input validation and tests | nothing |
-| B. Structural properties of operators | what each stage reads, and which changes to the vectors (a rotation, a permutation of axes) leave its scores unchanged; read from the code | no, per stage | tests that apply the change to synthetic data and compare scores | nothing: statements about code |
+| B. Structural properties of operators | what each stage reads, and which changes to the vectors (a rotation, a permutation of axes) leave its scores unchanged; read from the code | no, per stage | tests that apply the change to synthetic data and compare scores; each stage lists the data conditions it holds under | nothing: statements about code |
 | C. Development-informed defaults | the default candidate list, the order inside each family, the bet cap: fixed in advance, but shaped by the encoders used while they were designed | the list is the same for all, but not neutral | declared and frozen; the list has a registered hash | nothing; they decide what can be found |
 | D. Validity of the decision procedure | the error statement of the rule: how often it can select a candidate whose retention is below the target | no, given its assumptions: it sees arrays only | a derivation, parity tests against the research code, resampling checks | a conditional statement about the procedure, not about any one encoder |
 | E. Empirical outcome | whether anything is selected, how much compression, what retention | yes: encoder, coordinate basis, corpus, queries, number of queries, target, reference | measured on your vectors, each time | this layer is where quality is measured |
@@ -176,8 +176,9 @@ Agreement is fidelity to the uncompressed ranking, including its mistakes. A com
 corrects a mistake of the uncompressed index loses agreement. No statistical statement connects
 the two constructs. On the seven development stores of the registered experiments they behaved
 differently. The constructs were not equivalent (X1, H4b; MEASURED). Agreement was materially
-stricter: in 26 of 37 pool-supported cells the median certified compression under agreement was
-at most half that under labels (X1, N10; SIMULATED, pool-supported;
+stricter: in 26 of 37 pool-supported cells where the labels arm deploys non-trivially at a rate
+of at least 0.90, the median certified compression under agreement was at most half that under
+labels (X1, N10; SIMULATED, pool-supported;
 `reports/research/X_RESULTS.md`, sections 3 and 5). Those statements are about those stores.
 
 **Evidence.** For one corpus, one query sample, one metric and one reference: the per-query
@@ -196,7 +197,7 @@ decision uses one pair per sample of queries.
 
 | outcome | meaning | certified? | index to use |
 |---|---|---|---|
-| `SELECT` | the rule certified at least one candidate and chose the smallest | yes, under a certifying rule | the chosen candidate |
+| `SELECT` | the rule certified at least one candidate and chose the smallest | yes, under one of the library's own rules | the chosen candidate |
 | `ABSTAIN` | nothing was certified. This is the safe outcome, not an error | no | the uncompressed index |
 | `FALLBACK` | nothing was certified and the caller had supplied a fallback pipeline | no | the caller's pipeline |
 
@@ -204,8 +205,10 @@ There is no default fallback, and no silent float16 fallback: float16 is a candi
 other and must itself be certified.
 
 **Certified.** A candidate is certified when the rule has rejected the hypothesis that its
-retention under Q is at most `T`. "Certified" says that the rule's statement, with its
-assumptions, covers this selection. It is not a measured retention.
+retention under Q is at most `T`, at the level stated. "Certified" says that the rule rejected
+"retention <= T" for this candidate at that level; the rule's statement bounds how often the rule
+does so wrongly, under its assumptions and conditions. It is not a measured retention. Only the
+library's own rules produce a certified selection.
 
 ### 3.6 Recording and serving
 
@@ -234,15 +237,17 @@ query vector by one orthogonal matrix changes every coordinate and no inner prod
 MaxSim scores do not change (up to rounding). A stage is **basis sensitive** when its result can
 change under such a change of basis. Sign codes and per-coordinate integer codes are. Merging by
 cosine is not. A pipeline is flagged `basis_sensitive` unless every stage is declared invariant
-under any orthogonal change of basis. `BASIS_DEPENDENCE.md` has the detail.
+under any orthogonal change of basis. Each declared invariance holds for data that meet the
+conditions the stage lists (no exact ties at a PCA cut, no coordinate exactly zero for a sign
+code), and the pipeline's traits carry them. `BASIS_DEPENDENCE.md` has the detail.
 
 ## 4. Pairs that are easy to confuse
 
 | not this | but this | difference |
 |---|---|---|
-| model-agnostic interface | model-independent quality | the first is true by construction; the second is not claimed |
+| model-agnostic interface | model-independent quality | the first is what the interface offers for arrays that pass validation; the second is not claimed |
 | compression ratio | retention | one is a size, the other a measured quality ratio |
 | certified | measured on the sample | the statement covers the procedure; the sample figure is optimistic by selection |
 | agreement | retrieval quality | agreement rewards copying the uncompressed index's mistakes |
 | abstain | failure | the rule is allowed not to select, and the statement holds if it never does |
-| a certificate | a proof of quality, or a security token | it records a conditional statement; the digest detects edits only |
+| a certificate | a proof of quality, or a security token | it records a statement claimed only under its assumptions and conditions; the digest detects edits only |

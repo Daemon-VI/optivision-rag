@@ -10,8 +10,15 @@ The matrix is the orthogonal factor of a QR decomposition of a standard normal m
 drawn from ``np.random.default_rng(seed)``, with each column multiplied by the sign of
 the corresponding diagonal entry of ``R``. LAPACK is free to return ``R`` with either
 sign on its diagonal; without that last step the matrix would depend on the library
-build. The step also makes the factor Haar-distributed over seeds. The same convention
-is used by the registered symmetry experiment for its rotation maps.
+build. The step also makes the factor Haar-distributed over seeds.
+
+The matrix is built the same way as the rotation of the registered symmetry experiment
+(``rotation`` in ``scripts/research/x3_symmetry.py``, read-only), but it is applied
+differently. This stage multiplies row vectors as ``x @ R``. The experiment applied its
+matrix ``U`` as ``v -> U v``, which for row vectors is ``x @ U.T``. For the same seed
+``R == U``, so the two maps are inverses of each other: both are rotations, and results
+for one seed do not transfer to the other. ``RotationProjector`` does not reproduce the
+experiment's rotations.
 """
 
 from __future__ import annotations

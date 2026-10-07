@@ -13,7 +13,8 @@ data; not a research result).
 ## 1. What OptiVision currently supports
 
 For any late-interaction encoder whose output is one `[n_vectors, dim]` float array per
-document and per query, scored by MaxSim:
+document and per query, scored by MaxSim (L2-normalised vectors are the only regime the research
+record studied):
 
 - a vector contract with validation and content identities;
 - composable compression stages (token reducers, projections, codecs), each with declared
@@ -70,8 +71,10 @@ encoder on SciFact), one query pool per corpus, the registered list of 40 pipeli
   T_A = 0.95, delta = 0.05 at the pool-capped budget was 1.000 on the six visual stores and
   0.999 on SciFact (SIMULATED, pool-supported).
 - The registered negative-result sentence N10 applies: agreement is materially stricter than
-  labelled retention; using it cost at least a factor of 2 in compression (26 of 37
-  pool-supported cells).
+  labelled retention; using it cost at least a factor of 2 in compression (in 26 of 37
+  pool-supported cells where the labels arm deploys non-trivially at a rate of at least 0.90,
+  the median certified compression under agreement was at most half that under labels;
+  `reports/research/X_RESULTS.md`, sections 3 and 5).
 
 What X1 did not show: that agreement is retrieval quality. It is not, and there is no
 statistical statement connecting the two constructs. The CP1/CP2 conditions are empirical
@@ -101,7 +104,7 @@ observations on these stores.
   SciFact under both.
 - The largest change in labelled retention on a primary pair is 0.043 (MEASURED on the
   transformed vectors).
-- On SciFact at T = 0.97, n = 300, the non-trivial deployment rate of the procedure was 0.9175
+- On SciFact at T = 0.97, delta = 0.05, n = 300, the non-trivial deployment rate of the procedure was 0.9175
   in the native basis and 0.0995 and 0.1415 under the two rotations, with median certified
   compression 6.6x against 2.0x (SIMULATED, pool-supported; `reports/research/X3/x3_scifact.json`).
 - The direction is not uniform. On the extension dataset ColPali InfoVQA the procedure
@@ -154,15 +157,16 @@ package work encoded no model and scored no real encoder output.
    a corpus size, a modality or a coordinate basis that was not measured.
 2. Anything for the shipped `optimize()` / `calibrate()` rule. It is an empirical rule with a
    held-out check and no post-selection statement.
-3. More than the certifying rule's own statement: the probability that a compressed candidate
-   is selected and its retention under the query distribution is below the target is at most
-   the error level, over the draw of the calibration queries, **conditional on** independent
-   queries from the deployment distribution, a fixed corpus, a candidate list and order fixed
-   before the queries were seen with stages fitted on documents only, a bounded metric with a
-   positive baseline mean, a query order fixed in advance, and the reference taken as given.
-   It is not a probability conditional on a selection, not a statement about a finite batch of
-   future queries, and not a statement about power. The rule applies published tools; the
-   derivation that combines them is the project's own and has not been externally reviewed.
+3. Anything beyond the certifying rule's own statement, which is: the probability that a
+   compressed candidate is selected and its retention under the query distribution is below the
+   target is at most the error level, over the draw of the calibration queries. The derivation
+   holds only if the assumptions and conditions that the statement lists hold; they are
+   recorded in every certificate and set out in `guide/SELECTION_AND_CERTIFICATION.md`, and
+   nothing is claimed when one fails. The statement is a joint probability. It is not a
+   probability conditional on a selection, not a statement about the retention measured on the
+   sample, not a statement about a finite batch of future queries, and not a statement about
+   power. The rule applies published tools; the derivation that combines them is the project's
+   own and has not been externally reviewed. Only the library's own rules are ever certified.
 4. That the rule selects anything. It may abstain, and at strict targets with the query
    budgets studied it did.
 5. That agreement with the uncompressed ranking is retrieval quality.

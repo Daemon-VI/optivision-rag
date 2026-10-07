@@ -114,8 +114,8 @@ wraps them.
 
 - `core/identity.py`: canonical JSON (the same bytes as `json.dumps(obj, sort_keys=True,
   separators=(",", ":"))` for JSON-native input) and digests.
-- `core/stages/traits.py`, `state.py`, `accounting.py`, `rotation.py`: declared basis traits and
-  the pipeline rule; fitted state as arrays with digests and a checked restore; the size key beside
+- `core/stages/traits.py`, `state.py`, `accounting.py`, `rotation.py`: declared basis traits (with
+  the data conditions they hold under and who declared them) and the pipeline rule; fitted state as arrays with digests and a checked restore; the size key beside
   what it leaves out; a seeded rotation stage.
 - `core/selection/`: the candidate list, the arithmetic of the rule (a port of the research's
   Method C, tested against the frozen functions), the two rules, the decision record, `select`.
@@ -165,23 +165,29 @@ from `optivision.stages`. `optivision.legacy` lists the original recipe in the s
 2. Declare its traits with `register_traits(name, StageTraits(...))`, or as a function of the
    instance when they depend on parameters. State `fit_uses_queries` truthfully: an undeclared
    stage is `unknown`, and the evidence collector refuses a stage that reads queries when fitted.
+   List in `conditions` the data your declared invariance holds for. The certificate records your
+   declaration as `declared_by = "third_party"`: declared, not examined by the library.
 3. If it holds fitted state, implement `get_state()` and `set_state(state)` with arrays and
    JSON-native scalars, so that artifacts can store it. `fitted` stays false until `set_state` ran.
 4. Run `optivision.testing.check_stage(stage, corpus, queries)`: description round trip,
    determinism, input unchanged, traits declared.
 5. Add a test of the declared invariance (apply the group element to documents and queries, refit,
-   compare score matrices) and, below `orthogonal`, a witness that a rotation changes the scores.
+   compare score matrices), below `orthogonal` a witness that a rotation changes the scores, and
+   for each condition a witness: data that break it and move the scores.
 
 **A new selection rule**
 
 1. Provide `name`, `certifying`, `config()`, `assumptions()` and `decide(...)` returning a
    `RuleResult`, as `FixedSequenceBetting` does. Call `validate_evidence_arrays` first; never
    coerce or drop input.
-2. Set `certifying=False` unless you have a derived statement. Then the decision is not marked
-   certified, and the certificate says so.
-3. Put the statement and every assumption in `assumptions()`; the certificate records them.
+2. A rule that is not one of the library's own classes (exact type; a subclass is not) is
+   never certified, whatever `certifying` says: `Decision.certified` is false, and the
+   certificate records the class and the declaration as the author's. Declare `certifying`
+   truthfully for your own records.
+3. Put your statement and every assumption in `assumptions()`; the certificate records them as
+   declared by the rule's author and not examined by the library.
 4. `rule_from_name` knows only the two built-in rules, so for any other rule the replay and
-   rule-text checks of `verify_certificate` are reported as skipped.
+   rule-text checks of `verify_certificate` are reported as skipped; the record is not certified.
 5. Test it against a reference implementation, and say what has and has not been reviewed.
 
 **A new reference**

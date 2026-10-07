@@ -820,3 +820,147 @@ class TestSourceProperties:
             text = path.read_text(encoding="utf-8").lower()
             for phrase in banned:
                 assert phrase not in text, f"{path.name}: {phrase!r}"
+
+
+# --------------------------------------------- documents and query widths (D1, D2)
+
+
+def _poison(corpus, value, docs=(4,), dtype=None):
+    v = np.array(corpus.vectors if dtype is None else corpus.vectors.astype(dtype))
+    for d in docs:
+        v[corpus.offsets[d] + 1, 2] = value
+    return MultiVectorCorpus(v, corpus.offsets, ids=corpus.ids)
+
+
+class TestDocumentsAreScannedOnce:
+    @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
+    @pytest.mark.parametrize("make", [ExactRetriever, CompressedRetriever])
+    def test_a_float_store_with_nan_or_infinity_is_refused_naming_the_first_document(
+        self, make, value
+    ):
+        docs = _corpus()
+        bad = _poison(docs, value, docs=(9, 4, 20))
+        with pytest.raises(ValueError, match=r"non-finite.*document 4 \('doc4::p1'\)"):
+            make(bad)
+
+    def test_the_scan_runs_in_blocks_in_the_stored_dtype(self, monkeypatch):
+        from optivision.core.retrieve import checks
+
+        docs = _corpus()
+        half = MultiVectorCorpus(docs.vectors.astype(np.float16), docs.offsets, ids=docs.ids)
+        seen = []
+        real = np.isfinite
+        monkeypatch.setattr(
+            checks.np, "isfinite", lambda a, *x, **k: (seen.append((a.dtype, a.shape[0])), real(a))[1]
+        )
+        monkeypatch.setattr(checks, "_FINITE_BLOCK_ROWS", 50)
+        retriever = ExactRetriever(half)
+        assert seen and {dt for dt, _ in seen} == {np.dtype(np.float16)}
+        assert max(n for _, n in seen) <= 50 and sum(n for _, n in seen) == half.num_vectors
+        calls = len(seen)
+        retriever.search(_queries(), 3)
+        retriever.score(_queries())
+        assert len(seen) > calls  # the queries are scanned, once per call
+        with pytest.raises(ValueError, match="non-finite"):
+            ExactRetriever(_poison(docs, np.nan, dtype=np.float16))
+
+    def test_the_documents_are_not_scanned_again_by_a_search(self, monkeypatch):
+        from optivision.core.retrieve import checks
+
+        retriever = ExactRetriever(_corpus())
+        monkeypatch.setattr(checks, "check_finite_store", lambda *a: pytest.fail("scanned"))
+        monkeypatch.setattr(
+            "optivision.core.retrieve.exact.check_finite_store", lambda *a: pytest.fail("scanned")
+        )
+        retriever.search(_queries(), 3)
+        retriever.score(_queries())
+        retriever.rescore(_queries(), np.zeros((7, 2), dtype=np.int64))
+
+    def test_a_store_of_integer_codes_is_not_scanned(self, monkeypatch):
+        docs = _corpus()
+        store = Pipeline([BinaryQuantizer()]).compress(docs)
+        monkeypatch.setattr(
+            "optivision.core.retrieve.checks.first_non_finite_row", lambda v: pytest.fail("scanned")
+        )
+        assert CompressedRetriever(store).n_docs == 30
+        assert CompressedRetriever(store, Pipeline([BinaryQuantizer()])).n_docs == 30
+
+    def test_a_clean_or_empty_store_and_a_store_without_vectors_pass(self):
+        assert ExactRetriever(_corpus()).n_docs == 30
+        empty = MultiVectorCorpus(np.zeros((0, 16), dtype=np.float32), [0])
+        assert ExactRetriever(empty).n_docs == 0
+
+
+class TestQueryWidthThroughAPipeline:
+    @staticmethod
+    def _projected(stages):
+        docs = _corpus()
+        pipeline = Pipeline(stages)
+        return docs, pipeline, pipeline.compress(docs)
+
+    @pytest.mark.parametrize("wrong", [8, 20])
+    def test_a_fitted_projection_names_the_queries_and_both_dimensions(self, wrong):
+        _docs, pipeline, store = self._projected([PCAProjector(6), BinaryQuantizer()])
+        retriever = CompressedRetriever(store, pipeline)
+        assert retriever.search(_queries(), 3).width == 3
+        with pytest.raises(ValueError, match=rf"queries have dimension {wrong} .*fitted on 16"):
+            retriever.search(_queries(dim=wrong), 3)
+        with pytest.raises(ValueError, match="queries have dimension"):
+            retriever.score(_queries(dim=wrong))
+
+    def test_a_pipeline_without_a_projection_compares_with_the_store(self):
+        _docs, pipeline, store = self._projected([BinaryQuantizer()])
+        with pytest.raises(ValueError, match=r"dimension 8 .*16-dimensional"):
+            CompressedRetriever(store, pipeline).search(_queries(dim=8), 3)
+
+    def test_a_truncation_gives_a_projected_width_that_is_compared_with_the_store(self):
+        from optivision.stages import TruncateProjector
+
+        _docs, pipeline, store = self._projected([TruncateProjector(12), BinaryQuantizer()])
+        retriever = CompressedRetriever(store, pipeline)
+        assert retriever.search(_queries(), 3).width == 3
+        with pytest.raises(ValueError, match=r"dimension 8 .*projects them to dimension 8.*12"):
+            retriever.search(_queries(dim=8), 3)
+
+    def test_a_projection_that_keeps_no_known_array_gets_its_shape_error_re_raised(self):
+        from optivision.stages.base import DimensionReducer
+
+        class Opaque(DimensionReducer):
+            name = "test_opaque_projection"
+
+            def params(self):
+                return {}
+
+            @property
+            def fitted(self):
+                return True
+
+            def output_dim(self, d):
+                return 4
+
+            def project(self, vectors):
+                return np.asarray(vectors, np.float32) @ np.ones((16, 4), np.float32)
+
+        docs = _corpus()
+        pipeline = Pipeline([Opaque()])
+        retriever = CompressedRetriever(pipeline.compress(docs), pipeline)
+        assert retriever.search(_queries(), 3).width == 3
+        with pytest.raises(ValueError, match=r"queries have dimension 8, which the pipeline cannot"):
+            retriever.search(_queries(dim=8), 3)
+
+    def test_the_two_tier_and_tiered_paths_report_it_too(self):
+        docs, pipeline, store = self._projected([PCAProjector(6), BinaryQuantizer()])
+        first = CompressedRetriever(store, pipeline)
+        for retriever in (
+            TwoTierRetriever(first, ExactRetriever(docs), candidates=5),
+            TieredRetriever(first, ExactRetriever(docs), candidates=5),
+        ):
+            with pytest.raises(ValueError, match=r"queries have dimension 8 .*fitted on 16"):
+                retriever.search(_queries(dim=8), 3)
+
+    def test_the_check_lets_a_query_set_without_vectors_pass(self):
+        from optivision.core.retrieve.checks import check_projection
+
+        _docs, pipeline, _store = self._projected([PCAProjector(6), BinaryQuantizer()])
+        none = MultiVectorCorpus(np.zeros((0, 3), dtype=np.float32), [0])
+        check_projection(none, pipeline, 6)

@@ -64,7 +64,13 @@ engine to count its points.
 | I9 | protocols check presence only; behaviour is tested | `TestProtocols` |
 
 Added checks (not in the audit): queries must be finite and of the store's dimension (the scorer returns
-an all-NaN row for a NaN token, and `rank` turns it into index order); the two-tier path rejects a
+an all-NaN row for a NaN token, and `rank` turns it into index order); with a pipeline the query
+dimension is compared with the width its first dimension stage was fitted on when the fitted state shows
+it, else one projected query is compared with the store, and the message names the queries and both
+dimensions; a float store is scanned once at construction and refused if it holds NaN or infinity
+(a NaN document would score NaN and never be returned, an infinite one would rank first), while a
+store of integer codes is not scanned. `Pipeline.transform_queries` itself (pinned) still fails inside
+matmul on a wrong width; the two-tier path rejects a
 document proposed twice, a position past the store, an id the store does not hold (`KeyError`), and
 proposed ids that disagree with the reranker's ids.
 

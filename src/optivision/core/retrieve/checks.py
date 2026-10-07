@@ -71,17 +71,97 @@ def as_queries(queries: Any, dim: int | None = None) -> MultiVectorCorpus:
             "vectors (if the documents were projected, pass the fitted pipeline so that queries "
             "are projected the same way)"
         )
-    vectors = corpus.vectors
+    row = first_non_finite_row(corpus.vectors)
+    if row is not None:
+        query = int(np.searchsorted(corpus.offsets, row, side="right")) - 1
+        raise ValueError(f"queries contain non-finite values (first at vector {row}, query {query})")
+    return corpus
+
+
+def first_non_finite_row(vectors: Any) -> int | None:
+    """Index of the first row of a 2-D float array that holds NaN or infinity, else ``None``.
+
+    The scan runs in blocks of ``_FINITE_BLOCK_ROWS`` rows in the array's own dtype: nothing is
+    converted and no copy of the whole array is made.
+    """
     for lo in range(0, vectors.shape[0], _FINITE_BLOCK_ROWS):
         block = np.asarray(vectors[lo : lo + _FINITE_BLOCK_ROWS])
         finite_rows = np.isfinite(block).all(axis=1)
         if not finite_rows.all():
-            row = lo + int(np.argmin(finite_rows))
-            query = int(np.searchsorted(corpus.offsets, row, side="right")) - 1
-            raise ValueError(
-                f"queries contain non-finite values (first at vector {row}, query {query})"
-            )
-    return corpus
+            return lo + int(np.argmin(finite_rows))
+    return None
+
+
+def check_finite_store(store: Any, ids: Any) -> None:
+    """Refuse a store of float vectors that holds NaN or infinity, naming the first document.
+
+    Only a store with a floating-point ``vectors`` array is scanned (a ``MultiVectorCorpus``).
+    A store of integer codes decodes to finite values and a store without ``vectors`` has
+    nothing to scan, so neither is read. ``ValueError`` names the vector and the document.
+    """
+    vectors = getattr(store, "vectors", None)
+    if not isinstance(vectors, np.ndarray) or vectors.dtype.kind != "f" or vectors.ndim != 2:
+        return
+    row = first_non_finite_row(vectors)
+    if row is not None:
+        doc = int(np.searchsorted(np.asarray(store.offsets), row, side="right")) - 1
+        raise ValueError(
+            "the store contains non-finite values (NaN or infinity): first at vector "
+            f"{row}, document {doc} ({ids[doc]!r}); a NaN document would be scored NaN and "
+            "silently never returned, an infinite one would rank first"
+        )
+
+
+def _fitted_input_dim(pipeline: Any) -> tuple[int, str] | None:
+    """Width and name of the first dimension stage, when its fitted state shows the width.
+
+    PCA components, a random-projection matrix and a rotation matrix are ``[d_in, ...]``
+    arrays. ``None`` when that stage keeps no such array (truncation, a third-party stage).
+    """
+    for stage in getattr(pipeline, "stages", ()):
+        if getattr(stage, "kind", None) != "dimension":
+            continue
+        inner = getattr(stage, "inner", stage)  # the ``project`` facade holds the real stage
+        for attr in ("components", "matrix"):
+            array = getattr(inner, attr, None)
+            if isinstance(array, np.ndarray) and array.ndim == 2:
+                return int(array.shape[0]), str(stage.name)
+        return None
+    return None
+
+
+def check_projection(queries: MultiVectorCorpus, pipeline: Any, store_dim: int | None) -> None:
+    """``ValueError`` that names the queries and both dimensions when they cannot be scored.
+
+    The query dimension is compared with the width the pipeline's first dimension stage was
+    fitted on when its fitted state shows it. Otherwise one query vector is projected and its
+    dimension compared with the store's, and a shape error raised inside the projection is
+    re-raised with a message that says what was compared. Queries without vectors pass.
+    """
+    if queries.num_vectors == 0:
+        return
+    fitted = _fitted_input_dim(pipeline)
+    if fitted is not None and queries.dimension != fitted[0]:
+        raise ValueError(
+            f"queries have dimension {queries.dimension} but the pipeline's first dimension "
+            f"stage ({fitted[1]}) was fitted on {fitted[0]}-dimensional vectors: pass queries "
+            "in the same space as the documents the pipeline was fitted on"
+        )
+    if store_dim is None:
+        return
+    probe = MultiVectorCorpus(np.asarray(queries.vectors[:1]), [0, 1])
+    try:
+        width = pipeline.transform_queries(probe).dimension
+    except ValueError as exc:
+        raise ValueError(
+            f"queries have dimension {queries.dimension}, which the pipeline cannot project "
+            f"for a store of {store_dim}-dimensional vectors ({exc})"
+        ) from exc
+    if width != store_dim:
+        raise ValueError(
+            f"queries have dimension {queries.dimension} and the pipeline projects them to "
+            f"dimension {width}, but the store holds {store_dim}-dimensional vectors"
+        )
 
 
 def check_positions(candidates: Any, n_queries: int, n_docs: int) -> np.ndarray:
