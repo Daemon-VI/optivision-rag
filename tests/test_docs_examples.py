@@ -60,6 +60,7 @@ def _empty_dir(tmp_path: Path, name: str) -> Path:
     return path
 
 
+@pytest.mark.skipif(not GUIDE.is_dir(), reason="the repository layout (docs/) is absent")
 def test_the_guide_has_the_documented_files():
     expected = {"README.md", "CONCEPTS.md", "SELECTION_AND_CERTIFICATION.md", "BASIS_DEPENDENCE.md",
                 "LIMITATIONS.md", "ARCHITECTURE.md", "QUICKSTART.md", "BACKENDS_GUIDE.md",

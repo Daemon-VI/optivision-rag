@@ -296,6 +296,8 @@ def test_optimize_is_still_the_function_not_the_module():
     assert sys.modules["optivision.optimize"].optimize is optivision.optimize
 
 
+@pytest.mark.skipif(not (SRC / "optivision" / "__init__.py").is_file(),
+                    reason="the repository layout (src/) is absent")
 def test_version_is_still_0_3_0_and_a_literal():
     assert optivision.__version__ == "0.3.0"
     text = (SRC / "optivision" / "__init__.py").read_text(encoding="utf-8")

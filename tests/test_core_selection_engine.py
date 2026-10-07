@@ -345,7 +345,7 @@ def test_a_seeded_order_is_a_data_independent_permutation_that_is_recorded():
     space = space4()
     ev = random_evidence(space)
     d = select(space, ev, target=0.95, error=0.05, order_seed=11)
-    perm = np.random.default_rng(11).permutation(300)
+    perm = np.random.default_rng(11).permutation(300).astype(np.int64)
     assert d.query_order["kind"] == "seeded_permutation" and d.query_order["seed"] == 11
     assert d.query_order["indices_sha256"] == array_digest(perm)
     direct = select(space, ev.subset(perm), target=0.95, error=0.05)
@@ -370,7 +370,7 @@ def test_a_budget_applies_to_the_prefix_of_the_seeded_order():
     space = space4()
     ev = random_evidence(space)
     d = select(space, ev, target=0.95, error=0.05, order_seed=3, query_budget=120)
-    prefix = np.random.default_rng(3).permutation(300)[:120]
+    prefix = np.random.default_rng(3).permutation(300).astype(np.int64)[:120]
     assert d.query_order["indices_sha256"] == array_digest(prefix)
     assert d.query_order["budget"] == 120 and d.query_order["n_used"] == 120
     direct = select(space, ev.subset(prefix), target=0.95, error=0.05)

@@ -736,6 +736,8 @@ BUILT_IN = [
 
 @pytest.mark.parametrize("stage", BUILT_IN, ids=[repr(s)[:40] for s in BUILT_IN])
 def test_the_built_in_stages_conform(stage):
+    if isinstance(stage, HierarchicalMerge):
+        pytest.importorskip("scipy")  # the Ward merge needs SciPy
     corpus, queries = _stage_data()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

@@ -195,6 +195,7 @@ def certify(
     """
     from .api import certify as run_certify
     from .core.selection import DEFAULT_ORDER_SEED, CandidateSpace
+    from .evaluation import parse_metric
 
     if reference not in REFERENCES:
         raise typer.BadParameter(f"reference must be one of {', '.join(REFERENCES)}; got {reference!r}",
@@ -202,6 +203,10 @@ def certify(
     if space not in SPACES:
         raise typer.BadParameter(f"space must be one of {', '.join(SPACES)}; got {space!r}",
                                  param_hint="--space")
+    try:
+        parse_metric(metric)  # before any candidate list is built
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--metric") from exc
     if reference == "agreement" and qrels is not None:
         raise typer.BadParameter("--qrels is not used by reference=agreement; drop it, or use "
                                  "reference=labels", param_hint="--qrels")

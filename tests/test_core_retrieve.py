@@ -765,6 +765,7 @@ def _imports(path: Path):
             yield module, tuple(a.name for a in node.names)
 
 
+@pytest.mark.skipif(not SRC.is_dir(), reason="the repository layout (src/) is absent")
 class TestSourceProperties:
     def test_core_retrieve_imports_only_what_the_brief_allows(self):
         import sys

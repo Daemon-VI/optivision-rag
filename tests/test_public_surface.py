@@ -208,6 +208,8 @@ def test_the_names_in_all_are_the_same_objects_as_in_their_modules(name, module)
     assert getattr(optivision, name) is getattr(importlib.import_module(module), name)
 
 
+@pytest.mark.skipif(not (SRC / "optivision" / "__init__.py").is_file(),
+                    reason="the repository layout (src/) is absent")
 def test_version_is_a_string_literal_in_init():
     """The publish workflow greps this line, and setuptools reads the attribute."""
     assert isinstance(optivision.__version__, str)
@@ -328,6 +330,8 @@ def test_python_dash_m_optivision_cli_runs():
     assert done.stdout.strip() == f"optivision-rag {optivision.__version__}"
 
 
+@pytest.mark.skipif(not (ROOT / "pyproject.toml").is_file(),
+                    reason="the repository layout (pyproject.toml) is absent")
 def test_the_console_script_entry_point_is_declared():
     tomllib = pytest.importorskip("tomllib")  # Python 3.11+
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
