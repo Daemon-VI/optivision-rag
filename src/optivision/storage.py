@@ -62,7 +62,10 @@ class ExactIndex:
         tokens of every query that listed it (one product per document, chunked to
         ``max_block_bytes``), rather than decoding every query's candidates anew.
         The arithmetic is unchanged: the same decode, float32 products, maximum
-        over the document's vectors and sum over each query's tokens. Column ``j``
+        over the document's vectors and sum over each query's tokens. Scores can
+        differ from a per-query evaluation in the last float32 bits, because BLAS
+        orders the additions of a dot product by product shape and CPU kernel; they
+        are not guaranteed bitwise equal across batchings or machines. Column ``j``
         of the result is candidate column ``j`` (duplicates included); a query with
         no tokens scores 0 and a document with no vectors scores -inf.
         """

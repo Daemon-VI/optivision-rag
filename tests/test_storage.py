@@ -115,9 +115,57 @@ def _rescore_per_query(index, queries, candidates):
     return out
 
 
+_U = 2.0 ** -24  # float32 unit roundoff
+
+
+def _gamma(n):
+    return n * _U / (1.0 - n * _U)
+
+
+def _rescore_tolerance(index, queries):
+    """Per-query bound on |batched - per-query| rescore, derived from the operation count.
+
+    Both paths compute every score as: a d-term float32 dot product per (query token,
+    document vector) pair, the maximum over the document's vectors, then a float32 sum
+    over the query's T tokens. The only thing batching changes is the shape of the BLAS
+    product, hence the order and fusion of the d additions inside each dot product. For
+    any order, |fl(a.b) - a.b| <= gamma_d * sum|a_i b_i| <= gamma_d |a||b|, so two orders
+    differ by at most 2 gamma_d |a||b|. A maximum is 1-Lipschitz in the sup norm, so each
+    token's best score moves by at most 2 gamma_d |q_t| B (B = largest document-vector
+    norm). The token sum adds at most 2 gamma_{T-1} sum_t |x_t| more. Total:
+    2 (gamma_d + gamma_{T-1}) * B * sum_t |q_t|. Rigorous worst case, not a fit.
+    """
+    q = index._q(queries)
+    qv = q.decode_rows(0, q.num_vectors)
+    dv = index.store.decode_rows(0, index.store.num_vectors)
+    big = float(np.linalg.norm(dv, axis=1).max())
+    qn, off = np.linalg.norm(qv, axis=1), np.asarray(q.offsets)
+    d = qv.shape[1]
+    tol = np.zeros(len(off) - 1)
+    for i in range(len(tol)):
+        t = int(off[i + 1] - off[i])
+        if t:
+            tol[i] = 2 * (_gamma(d) + _gamma(max(t - 1, 0))) * big * float(qn[off[i]:off[i + 1]].sum())
+    return tol
+
+
+def _assert_scores_agree(got, want, tol):
+    """Scores equal within the per-query bound, and rankings identical except between
+    candidates whose reference scores are within 2*tol of each other."""
+    got, want = np.asarray(got, dtype=np.float64), np.asarray(want, dtype=np.float64)
+    assert got.shape == want.shape
+    finite = np.isfinite(want)
+    np.testing.assert_array_equal(np.isfinite(got), finite)  # -inf (empty doc) must agree exactly
+    err = np.where(finite, np.abs(got - want), 0.0)
+    assert (err <= tol[:, None]).all(), f"max error {err.max():.3e} exceeds bound {tol.max():.3e}"
+    ordered = np.take_along_axis(want, np.argsort(-got, axis=1, kind="stable"), axis=1)
+    rise = np.diff(np.where(np.isfinite(ordered), ordered, -1e30), axis=1)
+    assert (rise <= 2 * tol[:, None]).all(), "ranking differs beyond near-ties"
+
+
 @pytest.mark.parametrize("store_kind", ["float", "int8", "binary"])
 @pytest.mark.parametrize("m", [1, 6, 30])
-def test_batched_rescore_is_bitwise_the_per_query_rescore(data, rng, store_kind, m):
+def test_batched_rescore_agrees_with_the_per_query_rescore(data, rng, store_kind, m):
     docs, queries = data
     store = {"float": docs, "int8": Pipeline([Int8Quantizer("per_vector")]).compress(docs),
              "binary": Pipeline([BinaryQuantizer()]).compress(docs)}[store_kind]
@@ -125,7 +173,7 @@ def test_batched_rescore_is_bitwise_the_per_query_rescore(data, rng, store_kind,
     cand = np.stack([rng.choice(len(docs), m, replace=False) for _ in range(len(queries))])
     got = idx.rescore(queries, cand)
     assert got.dtype == np.float32 and got.shape == cand.shape
-    np.testing.assert_array_equal(got, _rescore_per_query(idx, queries, cand))
+    _assert_scores_agree(got, _rescore_per_query(idx, queries, cand), _rescore_tolerance(idx, queries))
 
 
 def test_batched_rescore_keeps_column_order_and_duplicates(data):
@@ -133,9 +181,11 @@ def test_batched_rescore_keeps_column_order_and_duplicates(data):
     idx = ExactIndex(docs)
     cand = np.tile(np.array([3, 3, 0, 7]), (len(queries), 1))
     got = idx.rescore(queries, cand)
-    np.testing.assert_array_equal(got[:, 0], got[:, 1])
-    np.testing.assert_array_equal(got, _rescore_per_query(idx, queries, cand))
-    np.testing.assert_array_equal(got[:, 2], idx.rescore(queries, cand[:, 2:3])[:, 0])
+    tol = _rescore_tolerance(idx, queries)
+    # a repeated document is the same score up to the kernel's rounding, not necessarily the same bits
+    _assert_scores_agree(got[:, :2], np.stack([got[:, 0], got[:, 0]], axis=1), tol)
+    _assert_scores_agree(got, _rescore_per_query(idx, queries, cand), tol)
+    _assert_scores_agree(got[:, 2:3], idx.rescore(queries, cand[:, 2:3]), tol)
 
 
 def test_batched_rescore_edge_cases(rng):
@@ -146,7 +196,7 @@ def test_batched_rescore_edge_cases(rng):
     idx = ExactIndex(docs)
     cand = np.array([[0, 1, 2], [2, 0, 1], [1, 1, 1]])
     got = idx.rescore(queries, cand)
-    np.testing.assert_array_equal(got, _rescore_per_query(idx, queries, cand))
+    _assert_scores_agree(got, _rescore_per_query(idx, queries, cand), _rescore_tolerance(idx, queries))
     assert np.all(got[1] == 0.0)  # no tokens: 0, as before
     assert np.isneginf(got[0, 1]) and np.all(np.isneginf(got[2]))  # empty document: -inf
     empty = idx.rescore(queries, np.zeros((3, 0), dtype=np.int64))
@@ -159,10 +209,20 @@ def test_batched_rescore_chunks_within_the_block_budget(data, rng):
     small = ExactIndex(docs, max_block_bytes=64)  # forces one query token per product
     got, want = small.rescore(queries, cand), _rescore_per_query(small, queries, cand)
     # Not bitwise: BLAS takes a different kernel for products with very few rows (a
-    # one-row product is a matrix-vector call), so the last bit can differ. The old
-    # per-query code had the same shape dependence for very short queries.
-    np.testing.assert_allclose(got, want, rtol=1e-6)
-    np.testing.assert_array_equal(rank(got), rank(want))
+    # one-row product is a matrix-vector call), so the last bits can differ.
+    _assert_scores_agree(got, want, _rescore_tolerance(small, queries))
+
+
+def test_agreement_check_rejects_real_batching_errors(data, rng):
+    """The tolerance is far below any logic error: wrong column, wrong query, dropped token."""
+    docs, queries = data
+    idx = ExactIndex(docs)
+    cand = np.stack([rng.choice(len(docs), 12, replace=False) for _ in range(len(queries))])
+    want, tol = _rescore_per_query(idx, queries, cand), _rescore_tolerance(idx, queries)
+    _assert_scores_agree(want + 0.5 * tol[:, None].astype(np.float32), want, tol)  # within bound: accepted
+    for bad in (np.roll(want, 1, axis=1), np.roll(want, 1, axis=0), want - 0.3, want + 10 * tol[:, None]):
+        with pytest.raises(AssertionError):
+            _assert_scores_agree(bad, want, tol)
 
 
 def test_batched_rescore_with_projection_and_reload(data, tmp_path):
@@ -171,7 +231,7 @@ def test_batched_rescore_with_projection_and_reload(data, tmp_path):
     comp = pipe.compress(docs)
     cand = np.tile(np.arange(len(docs))[::-3][:6], (len(queries), 1))
     idx = ExactIndex(comp, query_transform=pipe)
-    np.testing.assert_array_equal(idx.rescore(queries, cand), _rescore_per_query(idx, queries, cand))
+    _assert_scores_agree(idx.rescore(queries, cand), _rescore_per_query(idx, queries, cand), _rescore_tolerance(idx, queries))
     cold = Pipeline([Int8Quantizer("per_vector")]).compress(docs)
     NpzStorage(tmp_path).write("cold", cold)
     reloaded = ExactIndex(NpzStorage(tmp_path).read("cold"))
