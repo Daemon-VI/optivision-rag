@@ -556,7 +556,7 @@ def create_certificate(
         "sizes": {"bytes_per_doc": evidence.bytes_per_doc.tolist(),
                   "vectors_per_doc": evidence.vectors_per_doc.tolist()},
         "rule": thaw_json(decision.rule),
-        "statement": statement_for(thaw_json(decision.rule)),
+        "statement": statement_for(thaw_json(decision.rule), outcome.value),
         "assumptions": list(decision.assumptions),
         "caveats": [],
         "target": decision.target,

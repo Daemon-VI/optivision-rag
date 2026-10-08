@@ -369,6 +369,14 @@ class TestOutcomes:
         assert any("fallback" in s and "not certified" in s for s in c.caveats)
         assert d["candidate"]["pipeline"] == c.selected.to_dict()["pipeline"]
 
+    def test_a_fallback_statement_starts_by_saying_it_was_not_established_for_the_pipeline(
+            self, fell_back, selected):
+        statement = fell_back.certificate.statement
+        assert statement.startswith("The statement below was NOT established for the pipeline")
+        assert statement.endswith(STATEMENT) and statement != STATEMENT
+        assert selected.certificate.statement == STATEMENT  # a selection is unchanged
+        assert fell_back.verify().status("rule.text") == "pass"
+
     def test_fallback_state_is_in_the_record(self, fell_back):
         # a per-dimension int8 codec keeps ranges and a mean: both are fitted state
         assert fell_back.certificate.to_dict()["candidate"]["fitted_state"][0] is not None

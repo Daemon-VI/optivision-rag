@@ -614,7 +614,7 @@ def _check_rule_text(ctx: _Ctx) -> Result:
     record = rule_record(rule)
     wanted = {
         "rule": record,
-        "statement": statement_for(record),
+        "statement": statement_for(record, d["result"]["outcome"]),
         "assumptions": list(assumptions_of(rule)),
         "caveats": caveats_for(d),
     }

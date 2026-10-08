@@ -54,6 +54,11 @@ STATEMENT_UNEXAMINED = (
     "has not examined that rule and makes no statement about it, and nothing in this record is "
     "certified. Any statement the rule makes is its author's."
 )
+STATEMENT_NOT_ESTABLISHED = (
+    "The statement below was NOT established for the pipeline recorded in this certificate: that "
+    "pipeline is a fallback supplied by the caller, not a candidate the rule selected, and it is "
+    "not certified. The rule's general statement follows only for reference. "
+)
 CAVEAT_UNEXAMINED_RULE = (
     "The selection rule that produced this record is not part of this library. The library has "
     "not examined it, so a selected candidate is not certified, whatever the rule declares about "
@@ -118,13 +123,17 @@ def signature_value(key: bytes, digest_hex: str) -> str:
     return hmac.new(bytes(key), digest_hex.encode("ascii"), hashlib.sha256).hexdigest()
 
 
-def statement_for(rule: Mapping[str, Any]) -> str:
+def statement_for(rule: Mapping[str, Any], outcome: str | None = None) -> str:
     """The statement recorded for ``rule`` (an entry as ``rules.rule_record`` writes it).
 
     The library's ``STATEMENT`` only for one of its own certifying rules. For any other rule a
-    fixed text that says the library has not examined it and makes no statement about it.
+    fixed text that says the library has not examined it and makes no statement about it. For
+    the outcome ``"fallback"`` the rule's statement is preceded by a sentence saying that it was
+    not established for the recorded (caller-supplied) pipeline.
     """
-    return STATEMENT if rule["certifying"] else STATEMENT_UNEXAMINED
+    if not rule["certifying"]:
+        return STATEMENT_UNEXAMINED
+    return STATEMENT_NOT_ESTABLISHED + STATEMENT if outcome == "fallback" else STATEMENT
 
 
 def _norm_sentence(norms: Mapping[str, Any]) -> str | None:
