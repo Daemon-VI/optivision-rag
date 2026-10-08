@@ -315,7 +315,9 @@ def _warn_if_graded(qrels: Mapping[Any, Any] | None) -> None:
     ``LabelReference`` counts every listed document as relevant, grade 0 included: the labels
     are binary. A mapping of positive grades is read correctly and raises nothing.
     """
-    for query_id, relevant in (qrels or {}).items():
+    if not isinstance(qrels, Mapping):
+        return  # None, or a wrong type that LabelReference refuses with a message naming qrels
+    for query_id, relevant in qrels.items():
         if not isinstance(relevant, Mapping):
             continue
         try:

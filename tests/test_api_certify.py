@@ -940,3 +940,11 @@ def test_verify_says_when_ok_does_not_mean_a_certified_index(selected, abstained
         assert report.notes and word in report.notes[0] and "not that" in report.notes[0]
         assert word in report.summary() and word in report.to_dict()["notes"][0]
     assert verify(selected.certificate, evidence=selected.evidence).notes == ()
+
+
+@pytest.mark.parametrize("bad", [[("q00000", ["d000001"])], ["d000001"], 3])
+def test_qrels_of_the_wrong_type_are_refused_by_name_not_with_an_attribute_error(data, bad):
+    corpus, queries, _ = data
+    with pytest.raises(TypeError, match="qrels must be a mapping"):
+        certify(corpus, queries, bad, target=0.9, space=CandidateSpace.from_families(
+            {"f": [Pipeline([Float16Quantizer()])]}))
