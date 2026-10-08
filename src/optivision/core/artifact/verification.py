@@ -217,6 +217,9 @@ def structure_problems(d: Mapping[str, Any]) -> list[str]:
     if isinstance(d["queries"], dict):
         _require(d["queries"].get("identity"), _IDENTITY, "queries.identity", problems)
         _require(d["queries"].get("order"), _ORDER, "queries.order", problems)
+        if ("duplicates_asserted_independent" in d["queries"]
+                and not isinstance(d["queries"]["duplicates_asserted_independent"], bool)):
+            problems.append("queries.duplicates_asserted_independent must be true or false")
     if isinstance(d["norms"], dict):
         for key in ("documents", "queries"):
             _require(d["norms"].get(key), _NORM, f"norms.{key}", problems)

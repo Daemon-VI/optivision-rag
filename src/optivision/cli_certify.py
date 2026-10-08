@@ -179,6 +179,12 @@ def certify(
         help="test the queries in the order of the file instead of a random order; valid only if "
              "that order is unrelated to the outcomes (never sorted by difficulty, date, source "
              "or any query attribute)"),
+    allow_duplicate_queries: bool = typer.Option(
+        False, "--allow-duplicate-queries",
+        help="accept tested queries that exactly repeat an earlier one; refused by default "
+             "(assumption A1 is independent draws). Use only if the repeats are genuinely "
+             "independent draws of the query distribution; the assertion is recorded in the "
+             "certificate"),
     out: str | None = typer.Option(None, "--out", help="write the artifact to this new directory"),
     as_json: bool = typer.Option(False, "--json", help="print the report as JSON on stdout"),
     trust_pickle: bool = typer.Option(False, "--trust-pickle", help=TRUST_PICKLE_HELP),
@@ -191,7 +197,7 @@ def certify(
 
     Queries are tested in a seeded random order; a sorted file cannot break the order assumption.
 
-    Exact duplicate queries are counted and reported.
+    Exact duplicate queries are refused unless --allow-duplicate-queries is given.
     """
     from .api import certify as run_certify
     from .core.selection import DEFAULT_ORDER_SEED, CandidateSpace
@@ -248,7 +254,8 @@ def certify(
         chosen_space = None if space == "default" else CandidateSpace.wide(docs.dimension)
         result = run_certify(docs, qs, labels, target=target, error=error, metric=metric,
                              reference=reference, space=chosen_space, query_budget=budget,
-                             order_seed=seed, progress=progress)
+                             order_seed=seed, progress=progress,
+                             allow_duplicate_queries=allow_duplicate_queries)
     except ImportError as exc:
         raise _fail(str(exc), code=1) from exc
     except ValueError as exc:  # invalid input, including every ContractError

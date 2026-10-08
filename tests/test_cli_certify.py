@@ -226,7 +226,7 @@ def test_the_help_says_what_the_order_requires():
 
 
 @needs_scipy
-def test_repeated_queries_are_counted_in_the_output_and_never_refused(files, tmp_path):
+def test_repeated_queries_are_refused_unless_the_flag_asserts_independence(files, tmp_path):
     from optivision.representation import MultiVectorCorpus
 
     queries = MultiVectorCorpus.load(files.queries)
@@ -237,9 +237,14 @@ def test_repeated_queries_are_counted_in_the_output_and_never_refused(files, tmp
     doubled.save(tmp_path / "doubled.npz")
     labels = {**qrels, **{f"{q}_copy": docs for q, docs in qrels.items()}}
     (tmp_path / "doubled.json").write_text(json.dumps(labels), encoding="utf-8")
+    refused = invoke("certify", files.docs, tmp_path / "doubled.npz", "--qrels",
+                     tmp_path / "doubled.json", "--target", "0.9", "--json")
+    assert refused.exit_code != 0
+    assert "allow_duplicate_queries=True" in refused.output
     with pytest.warns(UserWarning, match="120 of the 240 queries tested repeat an earlier query"):
         r = invoke("certify", files.docs, tmp_path / "doubled.npz", "--qrels",
-                   tmp_path / "doubled.json", "--target", "0.9", "--json")
+                   tmp_path / "doubled.json", "--target", "0.9", "--json",
+                   "--allow-duplicate-queries")
     assert r.exit_code == 0, r.output
     rep = json.loads(r.stdout)
     assert rep["n_exact_duplicate_queries"] == 120 and rep["n_queries"] == 240
@@ -247,7 +252,8 @@ def test_repeated_queries_are_counted_in_the_output_and_never_refused(files, tmp
                for c in rep["caveats"])
     with pytest.warns(UserWarning):
         text = invoke("certify", files.docs, tmp_path / "doubled.npz", "--qrels",
-                      tmp_path / "doubled.json", "--target", "0.9").output
+                      tmp_path / "doubled.json", "--target", "0.9",
+                      "--allow-duplicate-queries").output
     assert "120 repeat an earlier query exactly" in text
 
 

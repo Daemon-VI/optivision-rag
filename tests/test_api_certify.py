@@ -626,22 +626,36 @@ def doubled_queries(queries, qrels):
     return MultiVectorCorpus.from_arrays(arrays + arrays, ids=ids), labels
 
 
-def test_every_query_twice_is_counted_recorded_and_warned_about_once(data):
+def test_every_query_twice_is_refused_by_default(data):
+    corpus, queries, qrels = data
+    doubled, labels = doubled_queries(queries, qrels)
+    with pytest.raises(ValueError) as exc:
+        run(corpus, doubled, labels, target=0.5)
+    message = str(exc.value)
+    assert message.startswith("120 of the 240 queries tested repeat an earlier query exactly")
+    assert "assumption A1" in message and "allow_duplicate_queries=True" in message
+
+
+def test_every_query_twice_with_the_flag_is_counted_recorded_asserted_and_warned_about_once(data):
     corpus, queries, qrels = data
     doubled, labels = doubled_queries(queries, qrels)
     with pytest.warns(UserWarning) as caught:
-        r = run(corpus, doubled, labels, target=0.5)
+        r = run(corpus, doubled, labels, target=0.5, allow_duplicate_queries=True)
     repeats = [w for w in caught if "repeat an earlier query" in str(w.message)]
     assert len(repeats) == 1 and issubclass(repeats[0].category, UserWarning)
     message = str(repeats[0].message)
     assert message.startswith("120 of the 240 queries tested repeat an earlier query exactly")
-    assert "assumption A1 does not hold" in message and "does not apply" in message
+    assert "the caller asserted" in message and "does not apply" in message
     assert repeats[0].filename == __file__  # attributed to the caller of certify()
-    assert r.certificate.to_dict()["queries"]["exact_duplicates"] == 120
+    record = r.certificate.to_dict()
+    assert record["queries"]["exact_duplicates"] == 120
+    assert record["queries"]["duplicates_asserted_independent"] is True
     assert r.report()["n_exact_duplicate_queries"] == 120
-    assert any("120 of the 240 queries tested repeat an earlier query exactly" in c
-               for c in r.report()["caveats"])
-    assert verify(r.certificate, evidence=r.evidence, corpus=corpus, queries=doubled).ok  # not refused
+    sentence = next(c for c in r.report()["caveats"] if "repeat an earlier query" in c)
+    assert sentence.startswith("120 of the 240 queries tested repeat an earlier query exactly")
+    assert "The caller asserted that they are independent draws" in sentence
+    assert "If they are copies" in sentence
+    assert verify(r.certificate, evidence=r.evidence, corpus=corpus, queries=doubled).ok
 
 
 def test_distinct_queries_give_zero_no_caveat_and_no_warning(data):

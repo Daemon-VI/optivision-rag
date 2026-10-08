@@ -481,6 +481,7 @@ def create_certificate(
     compressed: CompressedCorpus | None = None,
     encoder: EncoderIdentity | Mapping[str, Any] | None = None,
     created: str | _dt.datetime | None = None,
+    duplicates_asserted_independent: bool = False,
 ) -> Certificate:
     """The certificate of ``decision``, bound to the objects it was computed from.
 
@@ -535,6 +536,7 @@ def create_certificate(
             "order": thaw_json(decision.query_order),
             "exact_duplicates": exact_duplicates(queries, evidence.dropped_queries,
                                                  decision.query_order),
+            "duplicates_asserted_independent": bool(duplicates_asserted_independent),
         },
         "norms": norms_record(corpus, queries),
         "reference": {

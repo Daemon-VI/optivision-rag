@@ -54,6 +54,7 @@ from .core.artifact import (
     save_artifact,
     verify_certificate,
 )
+from .core.artifact.record import exact_duplicates
 from .core.artifact.report import FAIL, INTEGRITY, PASS
 from .core.evaluate import Evidence, LabelReference, RankingReference, Reference
 from .core.evaluate.collect import collect_evidence, compress_selected
@@ -439,6 +440,7 @@ def certify(
     encoder: EncoderIdentity | Mapping[str, Any] | None = None,
     progress: Callable[[int, int, str], None] | None = None,
     created: Any = None,
+    allow_duplicate_queries: bool = False,
 ) -> CertifiedResult:
     """Select the smallest candidate the rule certifies at ``(target, error)``, or abstain.
 
@@ -463,7 +465,7 @@ def certify(
             many, and what is a floor for any valid test). The statement is about the
             distribution these are drawn from (assumption A1): a random sample of the queries
             the index will serve, with exact and near-duplicates removed. Exact duplicates are
-            counted, recorded in the certificate and warned about; they are not refused.
+            refused with ``ValueError`` unless ``allow_duplicate_queries=True``.
         qrels: ``{query id: [relevant document ids]}``. Query and document ids are the ids of
             the two corpora (``"0"``, ``"1"``, ... for a list of arrays). The labels are binary:
             every listed document is relevant. A ``{document: grade}`` mapping is read as its
@@ -504,6 +506,11 @@ def certify(
             aware ``datetime``; checked when the certificate is made, after the evidence); the
             clock when omitted. With the same inputs and ``created``, the certificate is
             identical.
+        allow_duplicate_queries: if some tested queries repeat an earlier one exactly,
+            ``certify`` raises ``ValueError`` (assumption A1 is independent draws). Pass True
+            only if the repeats are genuinely independent draws of the query distribution: the
+            assertion is then recorded in the certificate (``queries.duplicates_asserted_independent``)
+            and the caveat and the warning say that the caller made it.
 
     Obligations that no code can check, and which the statement assumes: the candidate list,
     its families and its order were fixed before these queries were looked at (this function
@@ -516,8 +523,8 @@ def certify(
 
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original
-    corpus. ``certify`` gives a ``UserWarning`` when some tested queries repeat an earlier query
-    exactly (that breaks assumption A1). A graded ``qrels`` mapping that lists a grade of 0 or
+    corpus. With ``allow_duplicate_queries=True``, ``certify`` gives a ``UserWarning`` when some
+    tested queries repeat an earlier query exactly (that breaks assumption A1 if they are copies). A graded ``qrels`` mapping that lists a grade of 0 or
     less warns and is then refused with ``ValueError``.
 
     Raises ``ValueError`` (``ContractError`` for invalid vectors) on invalid input,
@@ -548,6 +555,15 @@ def certify(
                                 progress=progress)
     decision = select(candidate_space, evidence, target=target, error=error, rule=rule,
                       fallback=fallback, query_budget=query_budget, order_seed=order_seed)
+    repeats = exact_duplicates(query_corpus, evidence.dropped_queries, decision.query_order)
+    if repeats and not allow_duplicate_queries:
+        raise ValueError(
+            f"{repeats} of the {decision.n_queries} queries tested repeat an earlier query "
+            "exactly. The statement assumes the tested queries are independent draws from the "
+            "query distribution (assumption A1), which exact copies are not. Remove the "
+            "duplicate queries, or pass allow_duplicate_queries=True if the repeats are "
+            "genuinely independent draws of the query distribution (the assertion is then "
+            "recorded in the certificate).")
 
     pipeline = compressed = None
     if decision.outcome is not Outcome.ABSTAIN:
@@ -559,15 +575,15 @@ def certify(
     certificate = create_certificate(
         decision, evidence=evidence, space=candidate_space, corpus=corpus, queries=query_corpus,
         reference=ref, pipeline=pipeline, compressed=compressed, encoder=identity,
-        created=created)
-    repeats = certificate.data["queries"]["exact_duplicates"]
+        created=created, duplicates_asserted_independent=bool(repeats))
     if repeats:
         warnings.warn(
             f"{repeats} of the {decision.n_queries} queries tested repeat an earlier query "
-            "exactly. Repeated queries count as independent draws only if they really are; if "
-            "they come from failed de-duplication, logs replayed twice or augmentation, "
-            "assumption A1 does not hold and the stated error level does not apply. The count "
-            "is recorded in the certificate.", UserWarning, stacklevel=2)
+            "exactly; the caller asserted (allow_duplicate_queries=True) that they are "
+            "independent draws. If they are copies (failed de-duplication, logs replayed twice "
+            "or augmentation), assumption A1 does not hold and the stated error level does not "
+            "apply. The count and the assertion are recorded in the certificate.",
+            UserWarning, stacklevel=2)
     return CertifiedResult(decision=decision, certificate=certificate, evidence=evidence,
                            corpus=corpus, pipeline=pipeline, compressed=compressed)
 

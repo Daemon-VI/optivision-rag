@@ -42,6 +42,7 @@ from optivision.core.artifact.record import (
     FIELD_ORDER,
     NORM_TOLERANCE,
     STATEMENT_UNEXAMINED,
+    caveats_for,
     exact_duplicates,
     norm_record,
 )
@@ -568,6 +569,28 @@ class TestExactDuplicateQueriesAreCounted:
         assert report.ok, report.summary()
         assert report.status("binding.queries") == "pass"
         assert "exact-duplicate count" in report.get("binding.queries").detail
+
+    def test_the_sentence_is_conditional_and_says_the_assertion_was_not_made_at_this_level(
+            self, space):
+        corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))
+        out = issue((corpus, doubled, labels), space, order_seed=0, target=0.7)
+        record = out.certificate.to_dict()
+        assert record["queries"]["duplicates_asserted_independent"] is False
+        sentence = next(c for c in record["caveats"] if "repeat an earlier query" in c)
+        assert "was not asserted by the caller. If they are copies" in sentence
+        assert "independent draws of the query distribution" not in sentence
+
+    def test_a_record_written_before_the_assertion_existed_still_verifies(self, space):
+        from optivision.core.artifact.record import CAVEAT_DUPLICATES
+        corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))
+        out = issue((corpus, doubled, labels), space, order_seed=0, target=0.7)
+        d = out.certificate.to_dict()
+        del d["queries"]["duplicates_asserted_independent"]
+        d["caveats"] = caveats_for(d)
+        assert CAVEAT_DUPLICATES.format(n=80, m=160) in d["caveats"]
+        d["digest"] = digest({k: v for k, v in d.items() if k not in ("digest", "signature")})
+        report = out.verify(Certificate.from_dict(d))
+        assert report.status("rule.text") == "pass", report.summary()
 
     def test_the_count_is_the_same_whatever_the_order_and_is_over_the_queries_tested(self, space):
         corpus, doubled, labels = with_copies(make_problem(n_unlabelled=0))

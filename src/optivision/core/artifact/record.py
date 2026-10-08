@@ -86,6 +86,13 @@ CAVEAT_DUPLICATES = (
     "de-duplication, logs replayed twice or augmentation, assumption A1 does not hold and the "
     "stated error level does not apply."
 )
+CAVEAT_DUPLICATES_CONDITIONAL = (
+    "{n} of the {m} queries tested repeat an earlier query exactly (the same vectors). "
+    "{who} If they are copies (failed de-duplication, logs replayed twice or augmentation), "
+    "assumption A1 does not hold and the stated error level does not apply."
+)
+DUPLICATES_ASSERTED = "The caller asserted that they are independent draws of the query distribution."
+DUPLICATES_NOT_ASSERTED = "Whether they are independent draws was not asserted by the caller."
 CAVEAT_NORMS = (
     "Not every vector has unit L2 norm (tolerance {tolerance:g}): {which}. The research studied "
     "only MaxSim over L2-normalised vectors, and nothing is known outside that scope."
@@ -156,8 +163,14 @@ def caveats_for(d: Mapping[str, Any]) -> list[str]:
     elif order["seed"] != DEFAULT_ORDER_SEED:
         out.append(CAVEAT_ORDER_SEED.format(seed=order["seed"]))
     if d["queries"]["exact_duplicates"] > 0:
-        out.append(CAVEAT_DUPLICATES.format(n=d["queries"]["exact_duplicates"],
-                                            m=d["queries"]["n_used"]))
+        asserted = d["queries"].get("duplicates_asserted_independent")
+        if asserted is None:  # a record written before the assertion was recorded
+            out.append(CAVEAT_DUPLICATES.format(n=d["queries"]["exact_duplicates"],
+                                                m=d["queries"]["n_used"]))
+        else:
+            out.append(CAVEAT_DUPLICATES_CONDITIONAL.format(
+                n=d["queries"]["exact_duplicates"], m=d["queries"]["n_used"],
+                who=DUPLICATES_ASSERTED if asserted else DUPLICATES_NOT_ASSERTED))
     sentence = _norm_sentence(d["norms"])
     if sentence is not None:
         out.append(sentence)
