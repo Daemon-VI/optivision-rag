@@ -21,8 +21,11 @@ JSON bytes in a ``uint8`` array (as ``representation.py`` writes its headers).
 
 Manifest rule. ``.npz`` files are written by this module with fixed zip metadata (the
 timestamp is the zip epoch and the creating system is a constant; ``np.savez`` leaves the
-latter to the operating system), so the same arrays give the same bytes on every platform for
-one NumPy version and the manifest can hash the files themselves. A ``.json`` file is hashed
+latter to the operating system). What is stable is the array content, and the digests of the
+arrays that the manifest and the certificate record. The bytes of an ``.npz`` container also
+depend on the Python version (zip header fields) and may depend on the NumPy version, so the
+same arrays are not promised to give the same file bytes in every environment; the manifest
+hashes the files as written here. A ``.json`` file is hashed
 after CRLF is turned into LF, so a checkout that converts line endings does not break it.
 
 What the manifest is. It detects accidental damage and naive edits of a file. Anyone who can

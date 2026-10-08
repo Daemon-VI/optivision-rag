@@ -324,6 +324,19 @@ from `KNOWN_DEFECTS` and the tests pass. D4 and the `Pipeline.transform_queries`
 are in the byte-pinned `compose.py`: they are not fixed, and their four entries stay in
 `KNOWN_DEFECTS` as expected failures.
 
+**The four strict expected failures are known defects that are preserved on purpose.** `compose.py`
+is one of the files whose content hash the research harness pins (`scripts/research/x_common.py`);
+editing it to fix them would break that pin. A normal run of the suite therefore reports four
+`xfailed` and no failure; a statement that "all tests pass" without that count is incomplete.
+Because they are `xfail(strict=True)`, fixing one makes it an unexpected pass, which fails the suite.
+The four, all in `tests/test_integration_layers.py::TestBadVectorInputs`:
+
+* `test_queries[Pipeline.transform_queries|other_dimension]` (a projector fails inside NumPy's matmul
+  with a message that does not name the queries);
+* `test_queries[Pipeline.transform_queries|raw_array]`, `test_documents[Pipeline.fit|raw_array]` and
+  `test_documents[Pipeline.compress|raw_array]` (a raw array raises `AttributeError`, not
+  `TypeError` or `ValueError`).
+
 | id | status | how |
 |---|---|---|
 | D1 | fixed | `ExactRetriever` and `CompressedRetriever` scan a float store once, at construction, in blocks and in the stored dtype, and refuse NaN or infinity with a message naming the first document; integer code stores are not scanned. Tests: `test_core_retrieve.py::TestDocumentsAreScannedOnce` and the three `ExactRetriever(corpus)` rows of the bad-input table |

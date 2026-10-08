@@ -32,7 +32,7 @@ function; none adds arithmetic.
 (imported on first access) `QdrantIndex` as the canonical import place. They are the same objects as
 in `optivision.index`, which keeps working. `core/retrieve` imports only NumPy, the standard library,
 `optivision.core.*`, `scoring`, `compose`, `representation` and `ExactIndex`/`TieredIndex`;
-`backends` imports `core.retrieve`, `index.*` and `types`. Both are checked by tests.
+`backends` imports `core.retrieve`, `index.*` and `types`. Both are checked by tests. `qdrant-client` is a declared dependency of the package (`pyproject.toml`, installed with `pip install optivision-rag`); what is optional is using it: nothing imports it until a Qdrant index or backend is constructed, and no server is needed otherwise (Qdrant local mode runs in process).
 
 ## 2. The types
 
@@ -175,7 +175,7 @@ testable here"). Nothing general is claimed (W2). Decode-first scoring is theref
 and no kernel is shipped. Further constraints on package text: W1: codes are decoded to float32 before
 scoring, scan time follows the vector count (0.53, 0.28, 0.16 of the float32 scan at 1/2, 1/4, 1/8 of the
 vectors; codecs 1.01 to 1.04x, `Q4/REPORT.md` section 11), so no "faster search from compression". W3: the batched
-`rescore` (5.5 to 9.3x on rescoring, 2.9 to 3.7x end to end, bit-identical rankings) is an engineering result on six
+`rescore` (5.5 to 9.3x on rescoring, 2.9 to 3.7x end to end; same rankings except between scores closer than float32 rounding of the dot products, scores equal to within a few float32 ulps, bitwise equal on some BLAS kernels only: `docs/package/MIGRATION.md`) is an engineering result on six
 128-d datasets, one laptop, all-query batches of 451 to 494 queries
 (`reports/engineering/batched_rescore/RESULTS.md`); it is not hardware-independent, not a single-query claim, not
 research. W7: Qdrant is "tested separately ... the deployment path, not the measurement path" (`docs/RESULTS.md`),

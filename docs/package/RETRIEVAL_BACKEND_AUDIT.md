@@ -211,7 +211,7 @@ point; the default search spaces are single-tier (`calibration.py:332-361`). The
 1. `hot = hot_index.score(queries)`: dense `[n_q, n_docs]`, an exhaustive scan of the hot store (a RAM saving, not fewer documents scanned).
 2. `m = min(candidates, n_docs)`; `shortlist = rank(hot, m)` (stable).
 3. `cold = cold_index.rescore(queries, shortlist)`: exact decode-first MaxSim of each query against its own `m` documents, batched per distinct document (`:58-102`, commit `198f83a`;
-   bit-identical to the earlier per-query body, `reports/engineering/batched_rescore/RESULTS.md`).
+   equal to the earlier per-query body on that stack; in general equal to within a few float32 ulps, with the same ranking except between scores closer than float32 rounding of the dot products, and bitwise equal on some BLAS kernels only (equal on an AVX-512 kernel, about 1 ulp different on an AVX2-class kernel in a later check), `reports/engineering/batched_rescore/RESULTS.md`).
 4. Dense output: `out = hot.copy()`; `floor` = row minimum of finite `cold`; `top_hot` = row maximum of finite `hot`; `shift = top_hot - floor + 1` (0 when `floor` is not finite);
    `out -= shift`; `out[shortlist] = cold` (`:130-135`): shortlisted documents keep cold scores, the rest sit at least 1.0 below the lowest finite cold score.
 5. `search(queries, k)` = `rank(score(queries), k)` plus `take_along_axis` (`:139-142`). MEASURED-HERE: the final ranking is [shortlist sorted by cold score, ties by document position]
@@ -262,7 +262,7 @@ scores for uncached hits, and reports `reranked=len(hits)` even when no cache wa
 | Memory | transient peak 266-272 MB at the 256 MiB cap; lookup-table path 403 MB; XOR path 567 MB; resident float32 191.6 MB, binary hot 1.57 MB, int8 cold 48.6 MB (`:150-177`) |
 
 Follow-up (`reports/engineering/batched_rescore/RESULTS.md`): batched `ExactIndex.rescore` kept; six 128-d datasets, rescoring 5.5-9.3x faster (median 6.7x), end to end 2.9-3.7x
-(median 3.25x), bit-identical scores; the gain falls with candidate overlap (7.4x to 2.8x, `reports/research/Q10/REPORT.md:81`).
+(median 3.25x), scores bit-identical on that stack (equal to within a few float32 ulps in general, see above); the gain falls with candidate overlap (7.4x to 2.8x, `reports/research/Q10/REPORT.md:81`).
 
 ### 5.3 Not shown, and constraints for package text
 
@@ -401,7 +401,7 @@ All run on CPU numpy in milliseconds; hand values below were checked against the
 - T7. `CompressedRetriever` over float32 `Pipeline()` equals `ExactRetriever` bitwise; over binary and per-vector int8 equals `rank(maxsim_matrix(Q, compressed), k)`.
 - T8. Budget invariance: `max_block_bytes` of 64, 4096 and default give equal rankings up to float32 near-ties (`assert_close_modulo_ties`: allclose scores, order equal outside gaps
   below ~1e-5 relative), not `array_equal` (`tests/test_scoring.py:43-49` uses `rtol=1e-6`).
-- T9. One query vs the same query inside a batch: bitwise equal when queries have enough tokens (14-30 here), allclose for 1-3 tokens (`batched_rescore/RESULTS.md` section 1;
+- T9. One query vs the same query inside a batch: bitwise equal on the AVX-512 kernel used here when queries have enough tokens (14-30 here), and only equal to within a few float32 ulps on some other BLAS kernels; allclose for 1-3 tokens (`batched_rescore/RESULTS.md` section 1;
   `tests/test_storage.py:156-165`).
 - T10. Two-tier with `candidates >= n_docs` equals the cold ranking; with `candidates = 1` column 0 is the hot top-1 and the rest is the hot ranking; in general shortlist-by-cold + rest-by-hot.
 - T11. Generic `TwoTierRetriever` equals `TieredRetriever.search` for `k <= m`, including exact cold ties among shortlisted documents (hot ranks `d2` above `d0`, cold ties them: `[0, 2, 1]`).

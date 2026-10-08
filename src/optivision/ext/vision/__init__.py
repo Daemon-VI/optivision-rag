@@ -1,7 +1,9 @@
 """The page and vision-language surface of OptiVision, in one namespace.
 
 Everything that knows about page images, patch grids or a vision encoder is listed here,
-and nothing in ``optivision.core`` depends on it:
+and no module in ``optivision.core`` imports it (true of source imports; at run time
+``import optivision`` loads the vision modules through the top-level package, so they are
+loaded whether or not core needs them):
 
 * page types: ``PageRef``, ``PatchGrid``, ``PageEncoding``, ``PrunedPage``;
 * pixel-space and grid pruning: ``SpatialPruner`` (a stage that needs page images and

@@ -64,7 +64,7 @@ Corrections to the four-way split:
    edited, moved or reformatted. New layers are facades over them plus new files.
 2. The hash of the default candidate space (`S0_SPEC_SHA256`) is pinned; stage names, parameter
    names and defaults that enter `Pipeline.to_dict()` are not changed.
-3. v0.3.0 compatibility surface: the 40 names of `optivision.__all__`, 201 `(module, name)` import
+3. v0.3.0 compatibility surface: the 40 names of `optivision.__all__` in v0.3.0 (it has 51 now: those 40 plus 11 new), 201 `(module, name)` import
    pairs used by tests, scripts and apps, the CLI entry points, file formats, registry names.
 4. `reports/research/**`, `scripts/research/**`, `paper/**`, `reports/universal/**` and the
    registered inputs are never written by package work.

@@ -232,11 +232,12 @@ Bytes per document from `byte_accounting`: pure arithmetic of each format (vecto
 
 ## Pre-existing compute paths: not re-measured
 
-`git diff 91564fd HEAD --stat -- src/optivision/calibration.py src/optivision/compose.py src/optivision/scoring.py src/optivision/evaluation.py src/optivision/representation.py src/optivision/stages src/optivision/compression src/optivision/storage.py src/optivision/optimize.py` printed nothing, and the same command against the working tree printed nothing: those files are byte-identical to the base commit, so the compute paths that existed before the package layer were not modified by it and were not timed again here.
+`git diff 91564fd HEAD --stat` on `src/optivision/calibration.py`, `compose.py`, `scoring.py`, `evaluation.py`, `representation.py`, `stages`, `compression` and `optimize.py` printed nothing when this section was written: those files are byte-identical to the base commit. `src/optivision/storage.py` is not: after the hardening pass it differs from the base commit by one restored import (`segment_reduce`, kept importable from `optivision.storage` for v0.3.0 import compatibility) and a docstring on `ExactIndex.rescore`; the code of the batched rescoring is the base commit's. The compute paths that existed before the package layer were not otherwise modified by it and were not timed again here.
 
 ## What these numbers do not show
 
 - other hardware, BLAS builds, thread counts, or Python and NumPy versions; this laptop's two CPU speed states mean that even on this machine absolute times differ between runs
+- memory of `certify()` at scale: one measurement on one machine (tracemalloc, d=128, the default 40 candidates, ABSTAIN path) gave a peak of 11.4 times the float32 corpus for a 1.42 MB corpus and 11.1 times for a 2.78 MB one, of which about 8.4 times is the transform cache (default cap 4 GiB, `OPTIVISION_CACHE_BYTES`); a large corpus therefore needs several times its own size in memory, and beyond the cap the cache evicts and recomputes (slower, not different)
 - real corpora or real encoder output: the vectors are Gaussian, so merging, codecs and selection behave as on random data, and a selection outcome here is an output of the code, not a finding
 - larger scale: sizes stop at a few hundred documents, and the dense score matrix and the decoded blocks grow with the corpus; nothing here is a statement about large corpora
 - a GPU or `OPTIVISION_SCORE_DEVICE` (all scoring ran on the CPU through NumPy)

@@ -33,7 +33,10 @@ What it is not:
 All values are JSON-native. Digests are lower-case hex SHA-256. "Canonical JSON" is
 `optivision.core.identity.canonical_json` (sorted keys, separators `,` and `:`, ASCII, finite
 numbers only). A certificate has exactly the 25 fields below; any other top-level field fails
-the `schema` check. In a file they are written in this order (nested keys sorted); the digest
+the `schema` check. That check closes the top-level fields only: an unknown key inside a nested
+object (`result`, `queries`, `space`, `code`, `package`, `evidence`, `sizes`, `norms` and so on) is
+not rejected by it, and is caught only where another check covers that object (for example
+`rule`, `corpus`, `queries.identity`, `space.candidates` and `queries.order`). In a file they are written in this order (nested keys sorted); the digest
 does not depend on the order.
 
 | field | content |
@@ -86,7 +89,9 @@ when not installed). When a required module or a whole directory cannot be read 
 `digest: null`, `files: {}` and a `note`; it never raises. The identity of the running package is
 computed once per process and an explicit `root` (used by tests) is never cached. It identifies
 source files, not the numerical libraries beneath them, and it is not a signature: anyone who can
-edit a certificate can write any identity into it.
+edit a certificate can write any identity into it. The certificate digest covers this recorded
+environment (the Python, NumPy and SciPy versions among it), so two environments give different
+digests for the same decision and evidence.
 
 ### 2.2 Texts recorded beside the statement
 
@@ -146,10 +151,14 @@ The report is a tuple of checks, each `(name, status, detail, level)` with statu
 `skipped` or `differs`. `ok` is true when no check failed (`skipped` and `differs` do not fail a
 report). `level` is the highest of `integrity`, `replay`, `binding` in which at least one check ran
 and `levels` lists all of them; a level can be reached while only some of its checks ran, so read
-the checks. `failed()` lists the failures and `summary()` is a readable account. Verification never
-raises on a bad certificate: a check that cannot be evaluated is reported as failed, and a record
-whose structure is invalid stops after `schema`, `digest` and `signature` with one `remaining`
-check marked skipped. It raises `TypeError` only for wrong argument types. `ok` does not make a
+the checks. `failed()` lists the failures and `summary()` is a readable account.
+`verify_certificate` on a certificate that has been parsed does not raise on a bad one: a check that
+cannot be evaluated is reported as failed, and a record whose structure is invalid stops after
+`schema`, `digest` and `signature` with one `remaining` check marked skipped. It raises `TypeError`
+for wrong argument types. Reading is a different step: `Certificate.load` of a malformed file raises
+`CertificateFormatError`, and `load_artifact` or `verify` on a bundle directory that cannot be read
+(a malformed file, a pipeline that cannot be rebuilt) raises `ArtifactError`, or
+`FileNotFoundError` for a path that is not a directory. `ok` does not make a
 certificate true: it is as good as the queries, labels and corpus it was issued for.
 
 **Level 1, integrity (certificate only).**
@@ -440,7 +449,8 @@ digest, the codes and fitted-state digests it records, an optional HMAC).
 pipeline from the certified specification, restores the fitted state, and rebuilds the
 `CompressedCorpus`. With `verify=True` it checks the manifest (every file listed and
 present, hashes and sizes equal, nothing unknown listed), restores the fitted state with the
-digests the certificate records, then runs `verify_certificate` with the pipeline, the codes and,
+digests the certificate records, checks that the `dim` and `stats` of the `codes.npz` header
+(which no digest covers) agree with the certificate and the pipeline, then runs `verify_certificate` with the pipeline, the codes and,
 when the bundle holds evidence, the evidence (so the replay runs), passing `key` and `strict_code`
 on. Any failed check, or an unreadable file, raises `ArtifactError` listing it (a path that is
 not a directory raises `FileNotFoundError`). `Artifact` has

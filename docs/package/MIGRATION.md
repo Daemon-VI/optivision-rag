@@ -22,7 +22,9 @@ who run the registered research scripts. The design of `certify` is in `API_DESI
 | two new CLI commands | `optivision certify` and `optivision verify`, registered by `optivision.cli` (so also under `python -m optivision.cli`). No existing command or option changed | you parse the output of `optivision --help` |
 | new packages and modules | `optivision.core` (identity, vectors, pipeline, similarity, stages, retrieve, evaluate, selection, artifact), `optivision.backends`, `optivision.api`, `optivision.cli_certify`, `optivision.testing`, and the namespaces `optivision.ext.vision` and `optivision.legacy`. Nothing was moved or copied: `optivision.backends.NumpyIndex is optivision.index.numpy_index.NumpyIndex`, and so on | you build your own wheel list (new subpackages carry `__init__.py`) |
 | import time | `import optivision` now also imports `optivision.core.stages`, which registers `rotation` and the stage traits. It still loads numpy, PIL and yaml and no other third-party package: not SciPy, torch or qdrant_client. Measured (below): no change beyond noise. Accessing one of the new names loads the certificate layer on demand | you are sensitive to start-up time |
-| `ExactIndex.rescore` is batched | Present in the base of this branch, not in the tag: each candidate document is decoded once. Arithmetic, column order and API unchanged (see the `research-investigation` entry of `CHANGELOG.md`) | you compared timings |
+| `ExactIndex.rescore` is batched | Present in the base of this branch, not in the tag: each candidate document is decoded once. Arithmetic, column order and API unchanged (see the `research-investigation` entry of `CHANGELOG.md`). The scores are not bitwise those of v0.3.0 in general: batched and per-query rescoring give the same rankings except between scores closer than the float32 rounding of the dot products, and scores equal to within a few float32 ulps (largest absolute difference seen in a synthetic comparison with v0.3.0: 3.8e-6, binary codes). Bitwise equality holds on some BLAS kernels only: measured equal on the AVX-512 kernel of the development laptop, about one ulp different on an AVX2-class kernel (the CI runner), so `TieredIndex.score` values can differ in the last bits as well | you compared timings, or compare scores with `==` or hash them |
+| `PageEncoderAdapter` checks the ids | `encode_documents` raises `ValueError` when `len(ids)` differs from the number of encoded pages. v0.3.0 returned a corpus whose `ids` did not match its length without complaint | you passed an `ids` list of the wrong length |
+| `python -m optivision.adapters` | A no-op in v0.3.0 (the module ran silently); it is a package without `__main__` now, so the command fails with "No module named optivision.adapters.__main__" | you ran it |
 | documentation edits only | `index/numpy_index.py` and `index/qdrant_index.py` differ from the tag in docstrings and comments, not in code | never |
 
 Import time, `python -c "import optivision"` in a fresh interpreter, median of 25 runs
@@ -70,9 +72,12 @@ What changes in meaning:
   statement.
 - **Warnings.** `calibrate` warns below 100 informative queries and, without SciPy, continues
   with a smaller default list. `certify` never warns about few queries (it abstains) and
-  raises `ImportError` without SciPy instead of reducing the list. It gives one `UserWarning`
-  when some of the queries it tested repeat an earlier query exactly (the count is in the
-  certificate and in `report()`); nothing is refused.
+  raises `ImportError` without SciPy instead of reducing the list. It refuses queries
+  that repeat an earlier query exactly unless you pass `allow_duplicate_queries=True`, which
+  asserts that they are independent draws and is recorded in the certificate (the count is in
+  the certificate and in `report()`). It gives a `UserWarning` when it is called again in the
+  same process on the same queries and corpus with another target, error level, seed or
+  candidate space.
 
 | `OptimizationResult` | `CertifiedResult` |
 |---|---|
