@@ -927,3 +927,16 @@ def test_certify_is_importable_where_the_design_says(selected):
     assert isinstance(selected, optivision.CertifiedResult)
     assert isinstance(selected.decision, optivision.Decision)
     assert isinstance(selected.certificate, optivision.Certificate)
+
+
+def test_verify_says_when_ok_does_not_mean_a_certified_index(selected, abstained, data):
+    # ok means the record is intact; for an ABSTAIN or FALLBACK it must not read as "certified".
+    corpus, queries, qrels = data
+    fallback = run(corpus, queries.select(range(8)), qrels, target=0.999,
+                   fallback=Pipeline([Float16Quantizer()]))
+    for result, word in ((abstained, "ABSTAIN"), (fallback, "FALLBACK")):
+        report = verify(result.certificate, evidence=result.evidence)
+        assert report.ok
+        assert report.notes and word in report.notes[0] and "not that" in report.notes[0]
+        assert word in report.summary() and word in report.to_dict()["notes"][0]
+    assert verify(selected.certificate, evidence=selected.evidence).notes == ()

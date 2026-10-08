@@ -1041,6 +1041,12 @@ def run_checks(
 def _notes(ctx: _Ctx) -> list[str]:
     """Sentences about the whole record that the checks alone do not say."""
     if ctx.builtin is not None:
+        if ctx.outcome == "abstain":
+            return ["this record is an ABSTAIN: it certifies nothing and holds no compressed index; "
+                    "ok means that the record is intact, not that a compressed index was certified"]
+        if ctx.outcome == "fallback":
+            return ["this record is a FALLBACK: its compressed index is NOT certified (certified: "
+                    "false); ok means that the record is intact, not that the index was certified"]
         return []
     cls = ctx.d["rule"]["class"]
     if ctx.claims_certified:
