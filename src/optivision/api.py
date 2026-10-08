@@ -81,6 +81,41 @@ from .core.vectors import (
 
 __all__ = ["CertifiedResult", "certify", "verify"]
 
+#: Looks already taken in this process: (documents digest, queries digest) -> the (target, error,
+#: space identity, query order) of each ``certify`` call on them. Bounded; used only to warn.
+_LOOKS: dict[tuple[str, str], list[tuple[Any, ...]]] = {}
+_MAX_LOOK_KEYS = 64
+_MAX_LOOKS_PER_KEY = 32
+
+
+def _reset_looks() -> None:
+    """Forget the looks ``certify`` remembers in this process (for tests; it has no other use)."""
+    _LOOKS.clear()
+
+
+def _warn_if_repeated_look(record: Mapping[str, Any]) -> None:
+    """Warn when these documents and queries were already used in this process for a different
+    ``(target, error)``, query order or candidate list. Never changes a result."""
+    key = (record["corpus"]["digest"], record["queries"]["identity"]["digest"])
+    order = record["queries"]["order"]
+    look = (record["target"], record["error"], record["space"]["identity"], order["kind"],
+            order["seed"], order["budget"])
+    earlier = _LOOKS.pop(key, [])  # pop and reinsert: the dict stays in least-recently-used order
+    if earlier and look not in earlier:
+        warnings.warn(
+            "certify() was already called in this process on the same documents and the same "
+            "queries with a different target or error level, query order (seed or budget) or "
+            "candidate list. Each additional look at the same calibration queries spends error "
+            "level that the statement does not account for (docs/package/STATISTICAL_REVIEW.md, "
+            "section 7.7: trying several seeds or targets and reporting one can multiply the "
+            "false-selection frequency several times over). Fresh queries are needed for each "
+            "target; this call's result is unchanged.", UserWarning, stacklevel=3)
+    if look not in earlier:
+        earlier.append(look)
+    _LOOKS[key] = earlier[-_MAX_LOOKS_PER_KEY:]
+    while len(_LOOKS) > _MAX_LOOK_KEYS:
+        del _LOOKS[next(iter(_LOOKS))]
+
 _ABSTAIN_NOTE = (
     "Nothing was certified at this target and error level on these queries, so the uncompressed "
     "index is the outcome. This is the safe outcome, not an error. It does not say that no "
@@ -519,7 +554,9 @@ def certify(
     the reference was fixed without regard to the candidates; the index you deploy is the one
     that was evaluated. Call this once per ``(target, error)``: trying several targets on the
     same queries and reporting one is outside the statement. If you want another look, collect
-    new queries.
+    new queries. A second call in the same process on the same documents and queries with a
+    different target, error level, query order or candidate list gives a ``UserWarning`` (it
+    never changes the result).
 
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original
@@ -584,6 +621,7 @@ def certify(
             "or augmentation), assumption A1 does not hold and the stated error level does not "
             "apply. The count and the assertion are recorded in the certificate.",
             UserWarning, stacklevel=2)
+    _warn_if_repeated_look(certificate.data)
     return CertifiedResult(decision=decision, certificate=certificate, evidence=evidence,
                            corpus=corpus, pipeline=pipeline, compressed=compressed)
 

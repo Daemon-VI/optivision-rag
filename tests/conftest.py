@@ -7,6 +7,16 @@ from PIL import Image, ImageDraw
 from optivision.types import PageRef
 
 
+@pytest.fixture(autouse=True)
+def _forget_certify_looks():
+    """certify() remembers, per process, which queries it has looked at (to warn about repeated
+    looks); each test starts without that memory."""
+    from optivision.api import _reset_looks
+
+    _reset_looks()
+    yield
+
+
 @pytest.fixture
 def rng() -> np.random.Generator:
     return np.random.default_rng(0)
