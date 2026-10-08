@@ -294,18 +294,40 @@ def facade_costs(add, d, reps):
 
 
 def backend_costs(add, group, binary, queries, dim, k, reps):
+    """Legacy ``NumpyIndex.search`` loop against ``NumpyBackend.search_many`` on one index.
+
+    ``NumpyIndex`` builds a float32 expansion of its codes on the first search and keeps it, so a
+    peak-memory figure depends on which path ran first. ``peak_bytes`` is therefore measured on a
+    fresh index for each path (cold cache, the same state for both) and ``peak_bytes_warm`` on a
+    shared index whose cache the timing rounds have already built.
+    """
+    pages = to_legacy_pages(binary)
+
+    def search_loop(index):
+        return [index.search(queries.decode_rows(*queries.span(i)), k)
+                for i in range(len(queries))]
+
     with tempfile.TemporaryDirectory() as tmp:  # NumpyIndex touches its path only on save()
-        index = NumpyIndex(tmp, dim, method="binary")
-        index.add(to_legacy_pages(binary))
+        def fresh():
+            index = NumpyIndex(tmp, dim, method="binary")
+            index.add(pages)
+            return index
+
+        cold = {}
+        index = fresh()
+        cold["legacy NumpyIndex.search loop"] = peak_of(lambda: search_loop(index))
+        backend = NumpyBackend(fresh())
+        cold["NumpyBackend.search_many"] = peak_of(lambda: backend.search_many(queries, k))
+
+        index = fresh()  # shared by both paths for the timing rounds and the warm peaks
         backend = NumpyBackend(index)
-
-        def legacy():
-            return [index.search(queries.decode_rows(*queries.span(i)), k)
-                    for i in range(len(queries))]
-
-        rows = compare({"legacy NumpyIndex.search loop": legacy,
+        rows = compare({"legacy NumpyIndex.search loop": lambda: search_loop(index),
                         "NumpyBackend.search_many": lambda: backend.search_many(queries, k)}, reps)
-        old = [[hit.ref.page_id for hit in hits] for hits in legacy()]
+        for name, fn in (("legacy NumpyIndex.search loop", lambda: search_loop(index)),
+                         ("NumpyBackend.search_many", lambda: backend.search_many(queries, k))):
+            rows[name]["peak_bytes_warm"] = peak_of(fn)  # the cache exists now
+            rows[name]["peak_bytes"] = cold[name]
+        old = [[hit.ref.page_id for hit in hits] for hits in search_loop(index)]
         new = backend.search_many(queries, k).ids
         add(group, "legacy NumpyIndex.search loop", rows["legacy NumpyIndex.search loop"],
             same_topk=1.0)
@@ -734,6 +756,7 @@ COLUMNS = {  # record key -> (column header, text of the cell for a record that 
     "ratio": ("ratio", lambda r: f"{r['ratio']:.3f}"),
     "share": ("share", lambda r: pct(r["share"])),
     "peak_bytes": ("peak memory", lambda r: fb(r["peak_bytes"])),
+    "peak_bytes_warm": ("peak memory, warm cache", lambda r: fb(r["peak_bytes_warm"])),
     "same_topk": ("same top-k", lambda r: pct(r["same_topk"])),
     "vectors_per_doc": ("vectors per doc", lambda r: sig(r["vectors_per_doc"])),
     "code_bytes_per_vector": ("bytes per vector", lambda r: r["code_bytes_per_vector"]),
