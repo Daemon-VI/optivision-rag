@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased (branch `package-universal`, based on `research-investigation` at `91564fd`)
+## Unreleased
+
+Branch `package-universal`, based on `research-investigation` at `91564fd`; this section also
+holds the batched `ExactIndex.rescore` that the base already carried.
 
 `__version__` stays `0.3.0` and nothing below is released. `optimize()`, `calibrate()`, the 40
-names of `optivision.__all__`, the CLI commands that existed, every old import path and the v1
+names of v0.3.0's `optivision.__all__` (it has 51 now, 11 new), the CLI commands that existed, every old import path and the v1
 file formats are unchanged; `docs/package/MIGRATION.md` lists the observable differences. The
 additions are engineering capability, tested on synthetic data and against the research code for
 numerical equality; no registered experiment evaluated them as a package, and none of the
@@ -24,8 +27,10 @@ research results (`reports/research/`) was changed or re-run.
   `Decision`, `Outcome`, `EncoderIdentity`. `import optivision` also registers the `rotation`
   stage.
 - **CLI**: `optivision certify VECTORS QUERIES` and `optivision verify PATH`, with `--json`.
-  `certify` exits 0 for every outcome and 2 for invalid input; `verify` exits 1 when a check
-  fails.
+  `certify` exits 0 for every outcome and 2 for invalid input; `verify` exits 0 when every check
+  that ran passed, 1 when a check failed or the file is unreadable or malformed, and 2 for a usage
+  error, a missing path included. `--allow-reduced` (the smaller candidate list, no SciPy) and
+  `--allow-duplicate-queries`.
 - **`optivision.core`**, a model-agnostic layer over the existing modules (which are not moved
   or edited): content identities and the vector contract (`identity`, `vectors`); stage traits
   that state which changes of coordinate basis leave a stage's scores unchanged, fitted-state
@@ -51,6 +56,45 @@ research results (`reports/research/`) was changed or re-run.
   `test_golden_formats.py` (files written by v0.3.0 keep reading back); the user guide in
   `docs/package/guide/` with examples that the tests run; the design and audit documents in
   `docs/package/`.
+- **`ExactIndex.rescore` is batched** (from `research-investigation`).
+  - Each distinct candidate document is decoded once and scored against every query
+    that shortlisted it, instead of re-decoding every query's candidates. The
+    arithmetic (decode, float32 products, max, per-query sum), the column order and
+    the API are unchanged.
+  - On six ViDoRe datasets (500 pages, 50 candidates, all queries scored in one
+    batch), rankings and per-query nDCG@5 were identical and the scores were equal on the
+    stack used. In general batched and per-query rescoring give the same rankings except
+    between scores closer than the float32 rounding of the dot products, and scores equal to
+    within a few float32 ulps; bitwise equality holds on some BLAS kernels only (measured equal
+    on an AVX-512 kernel, about one ulp different on an AVX2-class kernel). The same holds for a
+    comparison with v0.3.0 scores.
+  - Rescoring was 5.5-9.3x faster and the two-tier query 2.9-3.7x faster, on one
+    laptop CPU. Evidence: `reports/engineering/batched_rescore/RESULTS.md`.
+- **After the hardening pass** (an internal audit of the package before a possible release):
+  - `certify(..., allow_duplicate_queries=False)`: exact duplicate queries among the tested
+    queries now raise an error unless the caller passes `allow_duplicate_queries=True` (CLI
+    `--allow-duplicate-queries`), which asserts that they are independent draws; the certificate
+    records the assertion.
+  - `certify` gives a `UserWarning` when it is called again in the same process on the same
+    queries and corpus with a different target, error level, seed or candidate space.
+  - `verify` reports the highest level whose checks actually ran and lists the checks it skipped.
+    `verify().ok` on an ABSTAIN or FALLBACK record means that the record is intact, not that an
+    index was certified.
+  - Loading an artifact: a malformed bundle file gives `ArtifactError` or
+    `CertificateFormatError` instead of a raw exception, deeply nested JSON is refused cleanly, and
+    `load_artifact(verify=True)` checks `dim` and `stats` of the codes header against the
+    certificate and the pipeline.
+  - Adapters make their array items C-contiguous, so the memory layout of the input does not change
+    the certificate digest. (A corpus built directly from Fortran-ordered arrays can still give
+    last-bit different norms and a different digest.)
+  - `certify` refuses `qrels` of the wrong type and names the type; a built-in rule instance that
+    carries instance attributes is not treated as built in; note strings were parenthesised.
+  - `from optivision.storage import segment_reduce` works again, as in v0.3.0. The rescoring tests
+    compare batched and per-query scores within a derived float32 bound instead of bitwise.
+  - Documentation: 51 names in `__all__` (the 40 of v0.3.0 plus 11), the `int4(mean)` label, the
+    scope of the platforms that were tested, the `certify` dependency on SciPy, how to write the
+    files the command line reads, and the four expected failures in the pinned `compose.py`
+    (`docs/package/TEST_REPORT.md`).
 - **After the internal reviews** (`docs/package/RESEARCH_INTEGRITY_AUDIT.md`,
   `docs/package/STATISTICAL_REVIEW.md`; internal, not external):
   - *Certified only for the library's own rules.* A decision and a certificate record the rule's
@@ -72,27 +116,14 @@ research results (`reports/research/`) was changed or re-run.
     `select()` keeps the order given. The certificate says what a given order requires and when
     the seed was chosen by the caller.
   - *Exact duplicate queries are counted* (`queries.exact_duplicates`,
-    `report()["n_exact_duplicate_queries"]`, a caveat, and one `UserWarning` from `certify`; none
-    is refused). *Vector norms are recorded* (new top-level field `norms`; a caveat when the
+    `report()["n_exact_duplicate_queries"]`, a caveat; see the hardening entry below for
+    `allow_duplicate_queries`). *Vector norms are recorded* (new top-level field `norms`; a caveat when the
     vectors are not unit-norm). The certificate has 25 fields; `verify` recounts both from the
     live queries and vectors.
   - Wording: the headline of the command line no longer says "certified" on its own, the abstain
     note no longer suggests a lower target on the same queries, "conditional on" no longer sits
     beside a probability, and the guide and the specification say what each assumption asks of
     you.
-
-## Unreleased (branch `research-investigation`)
-
-- **`ExactIndex.rescore` is batched.**
-  - Each distinct candidate document is decoded once and scored against every query
-    that shortlisted it, instead of re-decoding every query's candidates. The
-    arithmetic (decode, float32 products, max, per-query sum), the column order and
-    the API are unchanged.
-  - On six ViDoRe datasets (500 pages, 50 candidates, all queries scored in one
-    batch), rankings and per-query nDCG@5 were identical and the scores
-    bit-identical.
-  - Rescoring was 5.5–9.3x faster and the two-tier query 2.9–3.7x faster, on one
-    laptop CPU. Evidence: `reports/engineering/batched_rescore/RESULTS.md`.
 
 ## 0.3.0 (2026-10-02)
 

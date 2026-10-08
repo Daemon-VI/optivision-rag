@@ -57,8 +57,9 @@ The `wide` list was not evaluated as a selection list.
 The rule's statement is claimed under assumptions and conditions that the certificate lists
 (`SELECTION_AND_CERTIFICATION.md`). Among them, A1 (independent queries from the deployment
 distribution), A5 (an order fixed before outcomes) and A6 (labels taken as given) are properties
-of how you obtained the queries and labels. The software counts exact duplicate queries and
-records the count, with a caveat, but it cannot see near-duplicates or queries that are clustered
+of how you obtained the queries and labels. `certify` refuses exact duplicate queries unless
+you pass `allow_duplicate_queries=True`, which asserts that they are independent draws and is
+recorded in the certificate with a caveat; it cannot see near-duplicates or queries that are clustered
 by session or author. `certify` and the command line test the queries in a seeded random order
 by default, and record whether the order was seeded or given and whether the seed was chosen
 by you; trying several seeds and keeping the best is outside the statement. A2 (a
@@ -67,7 +68,11 @@ one you certified unless you pass it to `verify`. A3 (a list fixed before the qu
 is supported by the code path and not proven: the default list depends only on the dimension, the
 evidence collector never passes queries to `fit`, and it cannot know whether you edited the list
 after a look. The package cannot see several looks at one sample, or several targets tried and one
-reported. `SELECTION_AND_CERTIFICATION.md`, section 6, has the table.
+reported; the one thing it does is a `UserWarning` when `certify` is called again in the same
+process on the same queries and corpus with a different target, error level, seed or candidate
+space (other processes are invisible to it). `verify` reports the highest level whose checks
+actually ran and lists those it skipped; on an ABSTAIN or FALLBACK record `ok` means that the
+record is intact, not that an index was certified. `SELECTION_AND_CERTIFICATION.md`, section 6, has the table.
 
 ## 5. Abstention
 
@@ -152,6 +157,13 @@ above are kept: `q2` lists a document the corpus does not hold, and `q3` has no 
   decoded block and the similarity block. The matrix grows with the corpus. The million-page
   figures of Q8 are projections (`reports/research/Q8/REPORT.md`). Nothing here is a claim about
   million-page corpora.
+- Memory of `certify()` is several times the corpus. One measurement on one machine (the
+  benchmark's synthetic case, d=128, the default 40 candidates, ABSTAIN path, tracemalloc) gave a
+  peak of about 11 times the float32 corpus (11.4 and 11.1 times for two sizes), most of it (about
+  8.4 times) the cache of transformed corpora, whose default cap is 4 GiB
+  (`OPTIVISION_CACHE_BYTES`); past the cap the cache evicts and recomputes, which costs time, not
+  correctness. Plan for a corpus well below a tenth of the memory you have. This is not a
+  scaling law for other data or machines.
 - Two tiers keep the small hot store in RAM and read the cold store for a shortlist. That saves
   resident memory. It does not save total storage, and no speed claim is made.
 - A Qdrant server searches an approximate graph with its own quantisation and rescoring. It was
@@ -218,9 +230,19 @@ required dependencies; SciPy is optional and is needed for the registered defaul
 
 ## 16. Numerics and platforms
 
+What was tested: the full test suite ran on Python 3.11 on one Windows laptop. The tests of the new
+layer ran against the installed wheel on Python 3.10 (NumPy 1.26.4, SciPy 1.13.1), 3.12 (NumPy
+2.0.2) and 3.13 (NumPy 2.5.3), all on the same Windows machine; 3.14 had a smoke test only. Not
+tested: Linux, macOS, big-endian machines, GPUs, a Qdrant server, and real encoder output through
+the new layer.
+
 Replay compares p-values at a relative tolerance of 1e-12 and everything else exactly; bitwise
 equality across platforms is not promised. BLAS kernels, thread counts and block sizes change the
 last bits of float32 sums, so near-ties can swap. A GPU product agrees with the NumPy one only to
 float32 rounding. The `lloyd2` rotation is regenerated from `(dim, seed)` by the local LAPACK, so
 codes written on one platform may refuse to load on another. The `code` field of a certificate
-identifies source files, not the numerical libraries beneath them.
+identifies source files, not the numerical libraries beneath them. The certificate digest covers
+the recorded environment (Python, NumPy and SciPy versions), so two environments give different
+digests for the same decision and evidence. A corpus built directly from Fortran-ordered arrays
+(not through `ArrayAdapter`, which makes its items C-contiguous) can give last-bit different norms
+and therefore a different certificate digest. Known limit, not fixed.

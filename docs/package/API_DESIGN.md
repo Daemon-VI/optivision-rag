@@ -62,14 +62,20 @@ optivision verify cli_artifact --vectors docs.npz --queries queries.npz --qrels 
 
 `certify` prints the outcome plainly and exits 0 for every outcome, an abstention included
 (`--json` prints `report()` on stdout; read `outcome` to branch); invalid input exits 2.
-`verify` prints every check and exits 1 when one fails. Further options: `--reference`,
+`verify` prints every check. Its exit codes: 0 when every check that ran passed, 1 when a check failed or the file cannot be read or is malformed, 2 for a usage error, a missing path included. Further options: `--reference`,
 `--space default|wide`, `--budget`, `--order-seed` (default 0), `--given-order`, `--metric`,
-`--error`, and for `verify` `--evidence`, `--key-file`, `--strict-code`. The queries are tested in
+`--error`, `--allow-reduced` (the smaller candidate list, for an environment without SciPy),
+`--allow-duplicate-queries`, and for `verify` `--evidence`, `--key-file`, `--strict-code`. The queries are tested in
 a seeded random order unless `--given-order` asks for the order of the file.
 
-`verify` accepts an artifact directory, a `certificate.json` path or a `Certificate`. It reports
-and never raises on a bad certificate; `report.ok` means no check failed, which does not make
-the certificate true. The levels are integrity (the certificate alone), replay (the decision is
+`verify` accepts an artifact directory, a `certificate.json` path or a `Certificate`. A bad
+certificate is reported, not raised (`verify_certificate` on a parsed certificate returns a report);
+a bundle directory that cannot be read at all raises `ArtifactError` (or `CertificateFormatError`
+for a malformed certificate file, `FileNotFoundError` for a missing directory). `report.ok` means
+no check failed, which does not make the certificate true. `report.level` is the highest level
+whose checks actually ran, and the report lists the checks that were skipped, so read them: a level
+can be reached while only some of its checks ran. On an ABSTAIN or FALLBACK record, `ok` means that
+the record is intact, not that any index was certified. The levels are integrity (the certificate alone), replay (the decision is
 recomputed from the stored evidence) and binding (the live `corpus`, `queries`, `reference`,
 pipeline and codes are the ones certified). `verify_certificate(cert, evidence=..., ...)` is the
 same check on a `Certificate` you already hold.
@@ -78,20 +84,21 @@ same check on a `Certificate` you already hold.
 
 `certify(vectors, queries, qrels=None, *, target=0.97, error=0.05, metric="ndcg@5",
 reference="auto", space=None, rule=None, query_budget=None, order_seed=0, fallback=None,
-encoder=None, progress=None, created=None) -> CertifiedResult`
+encoder=None, progress=None, created=None, allow_duplicate_queries=False) -> CertifiedResult`
 
 | parameter | meaning |
 |---|---|
-| `vectors`, `queries` | A `MultiVectorCorpus` or a list of `[n_i, d]` float arrays, as `optimize()` takes them; checked with `validate_corpus` (finite, unique ids, one dimension); never modified; the dtype is kept. One query is enough to run, but certification needs far more: a perfect candidate at target 0.95, error 0.05 and 7 families needs about 116 queries if the uncompressed index scores 1 on every query and about 195 if it scores 0.6 on average, and target 0.99 needs about 600 to 1,000 (`STATISTICAL_REVIEW.md`, section 9). The queries are the sample the statement is about: draw them at random from what the index will serve and remove exact and near-duplicates first. Exact duplicates are counted, recorded in the certificate and warned about once (`UserWarning`), not refused. |
+| `vectors`, `queries` | A `MultiVectorCorpus` or a list of `[n_i, d]` float arrays, as `optimize()` takes them; checked with `validate_corpus` (finite, unique ids, one dimension); never modified; the dtype is kept. One query is enough to run, but certification needs far more: a perfect candidate at target 0.95, error 0.05 and 7 families needs about 116 queries if the uncompressed index scores 1 on every query and about 195 if it scores 0.6 on average, and target 0.99 needs about 600 to 1,000 (`STATISTICAL_REVIEW.md`, section 9). The queries are the sample the statement is about: draw them at random from what the index will serve and remove exact and near-duplicates first. Exact duplicates among the tested queries are an error unless `allow_duplicate_queries=True` (see the parameter); near-duplicates are not detected. |
 | `qrels` | `{query id: [relevant document ids]}`; ids are those of the two corpora (`"0"`, `"1"`, ... for lists). |
 | `target`, `error` | The retention to be exceeded, in (0, 1], and the level of the statement, in (0, 1). One pair per call (section 5). |
 | `metric` | `ndcg@k`, `recall@k`, `mrr@k` or `hit@k`. Only nDCG@k was evaluated by the registered experiments. |
 | `reference` | `"auto"` (labels if `qrels` is given, else agreement), `"labels"`, `"agreement"`, or a `LabelReference` / `RankingReference`. Agreement is agreement with the uncompressed ranking's own top document, which is not retrieval quality; the result, the report and the certificate say which was tested. `qrels` together with `"agreement"` or with a reference object is refused, not ignored. |
-| `space` | `None`: the library's default list (raises `ImportError` with advice without SciPy; never reduced silently). Or a `CandidateSpace`, or a dict `{family: [Pipeline, ...]}` as `calibrate(search_space=...)` takes it, each family ordered from least to most aggressive. |
+| `space` | `None`: the library's default list (raises `ImportError` with advice without SciPy; never reduced silently; `space=CandidateSpace.default(dim, allow_reduced=True)` is the explicit, smaller 4-chain list that needs no SciPy, with another identity and test level). Or a `CandidateSpace`, or a dict `{family: [Pipeline, ...]}` as `calibrate(search_space=...)` takes it, each family ordered from least to most aggressive. |
 | `rule` | `FixedSequenceBetting()` by default; `BonferroniBetting()` for a list without a meaningful order. These two are the only rules the library certifies for. Any other object with the protocol's attributes is accepted and recorded with its class and what it declared, but its selection is never `certified`: the certificate says the library has not examined it. |
 | `query_budget`, `order_seed` | Test a prefix of the order; and the seed of the random permutation the queries are tested in (default `0`, recorded). `order_seed=None` tests them in the order given, which is valid only if that order is unrelated to the outcomes (the arrival order of independent draws; never sorted by difficulty, date, source or any other query attribute). The default shuffle exists so that a sorted input file cannot break assumption A5. Choose the seed before you look and use it once: trying several seeds and reporting one is outside the statement (in a simulation the best of 20 seeds had an error of 0.076 where 0.05 was stated, `STATISTICAL_REVIEW.md`, section 7.1). A budget keeps a prefix of the order and is safe to choose after looking; a seed is not. |
 | `fallback` | A `Pipeline` (or its dict) returned, uncertified, when nothing is certified. No default. |
 | `encoder` | An `EncoderIdentity` or its dict, recorded in the certificate and used for nothing else. If omitted, `vectors.attrs["encoder_identity"]` (written by the adapters) is recorded. |
+| `allow_duplicate_queries` | `False`: exact duplicate queries among the tested queries raise `ValueError`. Pass `True` (CLI `--allow-duplicate-queries`) only to assert that the repeats are independent draws of the query distribution; the certificate records the assertion and says in `caveats` that the caller made it. |
 | `progress`, `created` | `progress(position, n_candidates, family)` after each candidate; the creation time to record (ISO string ending in `Z`, or an aware `datetime`). With the same inputs and `created` the certificate is identical. |
 
 Caller obligations, which no code can check and the statement assumes (the assumptions A1-A6 and
@@ -193,7 +200,8 @@ Arguments are checked before any candidate is scored, so a typo costs nothing.
 | a candidate cannot be evaluated | `CandidateEvaluationError` (a `RuntimeError`); a candidate is never skipped |
 | no query has a relevant document; the uncompressed index scores 0 on all of them | `ValueError`; `ZeroBaselineError` |
 | the chosen pipeline fits differently than it was evaluated | `FittedStateMismatchError` |
-| some tested queries repeat an earlier query exactly | a `UserWarning` (once per call); nothing is refused |
+| some tested queries repeat an earlier query exactly | `ValueError`, unless `allow_duplicate_queries=True`; then a `UserWarning` and the assertion is recorded in the certificate |
+| `certify` is called again in the same process on the same queries and corpus with a different target, error level, seed or candidate space | a `UserWarning` (a second look at one sample is outside the statement); nothing is refused, and the package cannot see calls made in other processes |
 | `save` into a non-empty directory; an unreadable or failing artifact | `FileExistsError`; `ArtifactError` |
 
 ```python
