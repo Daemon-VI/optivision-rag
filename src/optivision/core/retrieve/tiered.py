@@ -173,6 +173,10 @@ class TwoTierRetriever:
     ) -> None:
         if not callable(getattr(first, "search", None)):
             raise TypeError(f"first must provide search(queries, k), got {type(first).__name__}")
+        if callable(getattr(first, "search_many", None)) and not hasattr(first, "n_docs"):
+            raise TypeError(
+                f"first is a {type(first).__name__}, which looks like a Backend (its search takes "
+                "one query); wrap it in optivision.backends.BackendRetriever(first)")
         if not callable(getattr(reranker, "rescore", None)):
             raise TypeError(
                 f"reranker must provide rescore(queries, candidates), got {type(reranker).__name__}"

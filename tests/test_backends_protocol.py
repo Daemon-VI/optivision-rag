@@ -245,6 +245,15 @@ class TestIdConvention:
             two.search(_queries(), 3)
 
 
+def test_a_raw_backend_as_the_first_stage_is_refused_at_construction(tmp_path):
+    corpus = _corpus()
+    backend = _numpy_backend(tmp_path, DIM, "none")
+    backend.add(_pages(corpus))
+    with pytest.raises(TypeError, match="BackendRetriever"):
+        TwoTierRetriever(backend, ExactRetriever(corpus), candidates=4)
+    TwoTierRetriever(BackendRetriever(backend), ExactRetriever(corpus), candidates=4)  # accepted
+
+
 # ------------------------------------------------------- BackendRetriever
 
 
