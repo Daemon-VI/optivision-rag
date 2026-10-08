@@ -471,6 +471,22 @@ def test_verify_of_something_that_is_not_there_or_not_a_certificate(tmp_path):
     assert invoke("verify", empty_dir).exit_code == 1
 
 
+def test_verify_exit_codes_are_documented_and_json_is_printed_for_codes_0_and_1(
+        selected_run, tmp_path):
+    help_text = squash(invoke("verify", "--help").output)
+    for phrase in ("0=verified", "1=verificationfailed", "unreadableormalformed",
+                   "2=usageerror", "paththatdoesnotexist"):
+        assert phrase in help_text
+    ok = invoke("verify", selected_run.artifact, "--json")
+    assert ok.exit_code == 0 and json.loads(ok.stdout)["ok"] is True
+    bad_evidence = tmp_path / "evidence.npz"
+    bad_evidence.write_bytes(b"not an npz")  # exists, cannot be read: 1, with the JSON object
+    r = invoke("verify", selected_run.artifact, "--evidence", bad_evidence, "--json")
+    assert r.exit_code == 1 and json.loads(r.stdout)["ok"] is False
+    assert invoke("verify", selected_run.artifact, "--evidence", bad_evidence).exit_code == 1
+    assert invoke("verify", tmp_path / "nothing", "--json").exit_code == 2
+
+
 # ------------------------------------------------------------ the real entry point
 
 

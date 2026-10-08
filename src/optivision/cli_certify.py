@@ -51,6 +51,15 @@ def _fail(message: str, code: int = 2) -> typer.Exit:
     return typer.Exit(code)
 
 
+def _verification_failed(message: str, as_json: bool) -> typer.Exit:
+    """Report a verification that could not be carried out (exit 1); JSON on stdout if asked."""
+    if as_json:
+        typer.echo(json.dumps({"ok": False, "error": message}, indent=2))
+    else:
+        typer.echo(f"FAILED: {message}", err=True)
+    return typer.Exit(1)
+
+
 def _need_file(path: str, what: str) -> None:
     if not Path(path).is_file():
         raise typer.BadParameter(f"{what} {path!r} does not exist or is not a file")
@@ -299,6 +308,10 @@ def verify(
 ) -> None:
     """Check a certificate: integrity, replay from the evidence, binding to the live objects.
 
+    Exit codes: 0 = verified (no check failed); 1 = verification failed, or the certificate or a
+    supplied file is unreadable or malformed; 2 = usage error (including a path that does not
+    exist). With --json a JSON object is always printed on stdout for exit codes 0 and 1.
+
     Prints every check and exits 1 if any failed. Pass --vectors, --queries and --qrels to check
     that the certificate was issued for exactly those; an artifact alone cannot show that. A
     pass means that no check failed; it does not make the certificate true.
@@ -326,17 +339,12 @@ def verify(
         if key_file is not None:
             _need_file(key_file, "the key file")
             key = Path(key_file).read_bytes()
-    except (OSError, ValueError) as exc:
-        raise _fail(f"cannot read the inputs: {exc}") from exc
+    except (OSError, ValueError) as exc:  # a supplied file that exists but cannot be read
+        raise _verification_failed(f"cannot read the inputs: {exc}", as_json) from exc
     try:
         report = run_verify(target, key=key, strict_code=strict_code, **objects)
     except (OSError, ValueError) as exc:  # an unreadable artifact or certificate is a failed check
-        message = f"cannot load {path!r}: {exc}"
-        if as_json:
-            typer.echo(json.dumps({"ok": False, "error": message}, indent=2))
-        else:
-            typer.echo(f"FAILED: {message}", err=True)
-        raise typer.Exit(1) from exc
+        raise _verification_failed(f"cannot load {path!r}: {exc}", as_json) from exc
 
     if as_json:
         typer.echo(json.dumps(report.to_dict(), indent=2, allow_nan=False))
