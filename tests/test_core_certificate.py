@@ -1111,6 +1111,26 @@ class TestLevelsAreReportedByWhatIsSupplied:
                                     evidence=selected.evidence)
         assert report.status("binding.evidence_queries") == "pass"
 
+    def test_a_binding_without_the_data_is_not_reported_as_binding(self, selected):
+        """Pipeline, codes and bytes alone do not tie the certificate to the corpus, the queries
+        or the reference, so the level stays below binding and the skipped checks are listed."""
+        report = verify_certificate(selected.certificate, evidence=selected.evidence,
+                                    pipeline=selected.pipeline, compressed=selected.compressed)
+        assert report.ok and report.level == "replay"
+        assert report.levels == ("integrity", "replay", "binding")  # some binding checks ran
+        assert {"binding.corpus", "binding.queries", "binding.reference",
+                "binding.evidence_queries"} <= set(report.skipped)
+        assert "skipped (not run): " in report.summary()
+        assert "level reached: replay" in report.summary()
+        as_dict = report.to_dict()
+        assert as_dict["level"] == "replay" and "binding.corpus" in as_dict["skipped"]
+
+    def test_a_failed_check_withdraws_its_level(self, selected, abstained):
+        report = verify_certificate(abstained.certificate, evidence=abstained.evidence,
+                                    corpus=abstained.corpus, queries=abstained.queries,
+                                    reference=abstained.reference, pipeline=selected.pipeline)
+        assert not report.ok and report.level == "replay"
+
     def test_everything_is_level_binding(self, selected):
         report = selected.verify()
         assert report.levels == ("integrity", "replay", "binding") and report.level == "binding"

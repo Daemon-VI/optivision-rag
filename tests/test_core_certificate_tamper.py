@@ -925,8 +925,10 @@ def test_with_the_digest_recomputed_everything_supplied_catches_what_the_table_s
 def test_with_the_digest_recomputed_the_certificate_alone_catches_what_the_table_says(request, c):
     out = request.getfixturevalue(c.fixture)
     report = verify_certificate(edited(out, c, digest_too=True))
-    assert report.status("digest") == "pass" and report.level == "integrity"
+    assert report.status("digest") == "pass"
     failed = failed_names(report)
+    # the integrity level is reached only if none of its checks failed
+    assert report.level == ("none" if failed else "integrity")
     if c.alone is None:
         assert report.ok and not failed, (
             f"{c.id} is documented as not detectable from the certificate alone, yet "

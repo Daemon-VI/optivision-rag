@@ -352,7 +352,8 @@ def test_verify_reports_every_check_and_passes_a_fresh_artifact(selected_run):
                  "binding.pipeline", "binding.codes"):
         assert name in r.output
     assert "[pass   ] digest" in r.output and "[skipped] binding.corpus" in r.output
-    assert "OK: no check failed (level reached: binding)" in r.output
+    # corpus, queries and reference were not passed: the certificate is not bound to any data
+    assert "OK: no check failed (level reached: replay)" in r.output
     assert "does not make the certificate true" in r.output
 
 

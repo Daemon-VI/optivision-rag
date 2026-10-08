@@ -41,6 +41,7 @@ PASS, FAIL, SKIPPED, DIFFERS = "pass", "fail", "skipped", "differs"
 STATUSES = (PASS, FAIL, SKIPPED, DIFFERS)
 INTEGRITY, REPLAY, BINDING = "integrity", "replay", "binding"
 LEVELS = (INTEGRITY, REPLAY, BINDING)
+_BOUND_DATA_CHECKS = ("binding.corpus", "binding.queries", "binding.reference")
 
 
 @dataclass(frozen=True)
@@ -92,10 +93,32 @@ class VerificationReport:
 
     @property
     def level(self) -> str:
-        """The highest level in which at least one check ran: ``integrity``, ``replay`` or
-        ``binding``. A level can be reached while only some of its checks ran: read ``checks``
-        (or ``summary()``) for which ones."""
-        return self.levels[-1] if self.levels else INTEGRITY
+        """The highest level that was reached: its checks ran and none failed.
+
+        ``integrity`` and ``replay`` are reached when at least one check of the level ran and no
+        check of the level failed. ``binding`` is reached only when the checks that tie the
+        certificate to the live data (``binding.corpus``, ``binding.queries`` and
+        ``binding.reference``) all ran and no binding check failed: with the corpus, the queries
+        or the reference left out, nothing says the certificate was issued for the data you
+        serve. ``"none"`` when even the integrity level did not pass. ``skipped`` lists what did
+        not run.
+        """
+        status = {c.name: c.status for c in self.checks}
+        reached = "none"
+        for level in LEVELS:
+            mine = [c for c in self.checks if c.level == level]
+            if any(c.status == FAIL for c in mine) or not any(c.status != SKIPPED for c in mine):
+                continue
+            if level == BINDING and any(
+                    status.get(name, SKIPPED) == SKIPPED for name in _BOUND_DATA_CHECKS):
+                continue
+            reached = level
+        return reached
+
+    @property
+    def skipped(self) -> tuple[str, ...]:
+        """The names of the checks that were not run."""
+        return tuple(c.name for c in self.checks if c.status == SKIPPED)
 
     def failed(self) -> tuple[Check, ...]:
         return tuple(c for c in self.checks if c.status == FAIL)
@@ -115,7 +138,7 @@ class VerificationReport:
 
     def to_dict(self) -> dict[str, Any]:
         return {"ok": self.ok, "level": self.level, "levels": list(self.levels),
-                "checks": [c.to_dict() for c in self.checks], "notes": list(self.notes)}
+                "skipped": list(self.skipped), "checks": [c.to_dict() for c in self.checks], "notes": list(self.notes)}
 
     def summary(self) -> str:
         """A readable multi-line account of what was checked and what was not."""
@@ -125,6 +148,8 @@ class VerificationReport:
             f"Certificate verification: {head}",
             f"  level reached: {self.level} (levels with checks run: {', '.join(self.levels)})",
         ]
+        if self.skipped:
+            lines.append(f"  skipped (not run): {', '.join(self.skipped)}")
         width = max((len(c.name) for c in self.checks), default=0)
         for c in self.checks:
             lines.append(f"  [{c.status:<7}] {c.name:<{width}}  {c.detail}".rstrip())
