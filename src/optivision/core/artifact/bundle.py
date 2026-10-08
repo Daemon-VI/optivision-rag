@@ -51,6 +51,7 @@ from optivision.core.identity import canonical_json
 from optivision.core.pipeline import pipeline_spec
 from optivision.core.selection.spaces import thaw_json
 from optivision.core.stages.state import pipeline_fitted_state, restore_pipeline_state
+from optivision.stages.base import DimensionReducer
 
 from .certificate import Certificate, CertificateFormatError, verify_certificate
 from .report import VerificationReport
@@ -123,7 +124,7 @@ def _read_header(arrays: Mapping[str, np.ndarray], name: str, expected_format: s
         raise ArtifactError(f"{name} has no header array")
     try:
         header = json.loads(arrays["header"].tobytes().decode("utf-8"))
-    except (UnicodeDecodeError, ValueError) as exc:
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         raise ArtifactError(f"the header of {name} is not JSON: {exc}") from exc
     if not isinstance(header, dict) or header.get("format") != expected_format:
         raise ArtifactError(f"{name} is not an {expected_format!r} file")
@@ -166,7 +167,7 @@ def _check_manifest(root: Path) -> None:
                             "written by save_artifact")
     try:
         manifest = json.loads(path.read_bytes().decode("utf-8"))
-    except (UnicodeDecodeError, ValueError) as exc:
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         raise ArtifactError(f"{MANIFEST_FILE} is not readable JSON: {exc}") from exc
     if (not isinstance(manifest, dict) or manifest.get("format") != MANIFEST_FORMAT
             or manifest.get("version") != FORMAT_VERSION
@@ -317,16 +318,45 @@ def _states_from_file(root: Path, pipeline: Pipeline, expected: list[str | None]
     states = []
     for i, (stage, entry) in enumerate(zip(pipeline.stages, entries, strict=True)):
         if not isinstance(entry, dict) or entry.get("stage") != stage.name:
-            raise ArtifactError(f"{FITTED_FILE}: stage {i} is {entry.get('stage')!r}, the "
+            found = entry.get("stage") if isinstance(entry, dict) else entry
+            raise ArtifactError(f"{FITTED_FILE}: stage {i} is {found!r}, the "
                                 f"pipeline has {stage.name!r}")
-        state = dict(entry.get("scalars", {}))
-        for key in entry.get("arrays", []):
+        scalars, names = entry.get("scalars", {}), entry.get("arrays", [])
+        if (not isinstance(scalars, dict) or not isinstance(names, list)
+                or not all(isinstance(key, str) for key in names)):
+            raise ArtifactError(f"{FITTED_FILE}: the entry of stage {i} is malformed")
+        state = dict(scalars)
+        for key in names:
             name = f"s{i}.{key}"
             if name not in arrays:
                 raise ArtifactError(f"{FITTED_FILE} lacks the array {name!r}")
             state[key] = arrays[name]
         states.append(state)
     return states
+
+
+def _check_layout(cert: Certificate, pipeline: Pipeline, compressed: CompressedCorpus) -> None:
+    """The header fields of ``codes.npz`` that no digest covers (``dim``, ``stats``) against what
+    the certificate and the pipeline imply: a changed ``dim`` would change how the codes decode."""
+    corpus = cert.data.get("corpus")
+    try:
+        dim_before, vectors_before = int(corpus["dimension"]), int(corpus["n_vectors"])
+        dim = dim_before
+        for stage in pipeline.stages:
+            if isinstance(stage, DimensionReducer):
+                dim = stage.output_dim(dim)
+        stats = compressed.stats
+        problems = []
+        if compressed.dim != dim:
+            problems.append(f"dim is {compressed.dim}, the certified pipeline gives {dim}")
+        if compressed.codes.ndim != 2 or compressed.codes.shape[1] != pipeline.quantizer.code_bytes(dim):
+            problems.append("the codes do not have the width the certified quantizer writes")
+        if stats.get("vectors_before") != vectors_before or stats.get("dim_before") != dim_before:
+            problems.append("stats.vectors_before or stats.dim_before differ from the certified corpus")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ArtifactError(f"{CODES_FILE} cannot be checked against the certificate: {exc!r}") from exc
+    if problems:
+        raise ArtifactError(f"{CODES_FILE} does not match the certified layout: " + "; ".join(problems))
 
 
 def _load_deployed(root: Path, cert: Certificate, verify: bool) -> tuple[Pipeline, CompressedCorpus]:
@@ -340,14 +370,17 @@ def _load_deployed(root: Path, cert: Certificate, verify: bool) -> tuple[Pipelin
     for key in ("codes", "offsets"):
         if key not in arrays:
             raise ArtifactError(f"{CODES_FILE} lacks the array {key!r}")
-    spec = thaw_json(candidate["pipeline"])
+    try:
+        spec = thaw_json(candidate["pipeline"])
+        expected = list(candidate["fitted_state"])
+    except (KeyError, TypeError) as exc:
+        raise ArtifactError(f"the candidate record of the certificate is malformed: {exc!r}") from exc
     if verify and canonical_json(header.get("pipeline")) != canonical_json(spec):
         raise ArtifactError(f"the pipeline recorded in {CODES_FILE} is not the certified one")
     try:
         pipeline = Pipeline.from_dict(spec)
     except Exception as exc:  # unknown stage name or bad parameters
         raise ArtifactError(f"the certified pipeline cannot be rebuilt: {exc}") from exc
-    expected = list(candidate["fitted_state"])
     states = _states_from_file(root, pipeline, expected)
     try:
         restore_pipeline_state(pipeline, states, expected_digests=expected if verify else None)
@@ -359,6 +392,8 @@ def _load_deployed(root: Path, cert: Certificate, verify: bool) -> tuple[Pipelin
             header["ids"], stats=header.get("stats"), pipeline=header.get("pipeline"))
     except (KeyError, TypeError, ValueError) as exc:
         raise ArtifactError(f"the compressed corpus cannot be rebuilt: {exc}") from exc
+    if verify:
+        _check_layout(cert, pipeline, compressed)
     return pipeline, compressed
 
 
@@ -367,7 +402,8 @@ def _load_evidence(path: Path) -> Evidence | None:
         return None
     try:
         return Evidence.from_npz(path)  # checks the digest stored in the file against its content
-    except (ValueError, OSError, zipfile.BadZipFile) as exc:  # EvidenceFormatError is a ValueError
+    except (ValueError, OSError, zipfile.BadZipFile, KeyError, TypeError, AttributeError,
+            RecursionError) as exc:  # EvidenceFormatError is a ValueError; the rest: a malformed header
         raise ArtifactError(f"{EVIDENCE_FILE} cannot be read: {exc}") from exc
 
 

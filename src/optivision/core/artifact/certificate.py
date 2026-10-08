@@ -127,6 +127,8 @@ class Certificate:
             frozen = freeze_json(self.data)
         except (TypeError, ValueError) as exc:
             raise CertificateFormatError(f"not a JSON-native certificate record: {exc}") from exc
+        except RecursionError:
+            raise CertificateFormatError("not a certificate record: nested too deeply") from None
         object.__setattr__(self, "data", frozen)
 
     # ------------------------------------------------------------------ access
@@ -296,6 +298,8 @@ class Certificate:
                               parse_constant=_reject_constant)
         except ValueError as exc:  # JSONDecodeError and the refusals above
             raise CertificateFormatError(f"not a readable certificate: {exc}") from exc
+        except RecursionError:
+            raise CertificateFormatError("not a readable certificate: nested too deeply") from None
         return cls(data)
 
     def save(self, path: str | Path) -> Path:
