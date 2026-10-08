@@ -255,3 +255,10 @@ def test_tiered_ranking_and_ndcg_unchanged_by_batching(data):
         np.testing.assert_array_equal(rank(new), rank(old))
         np.testing.assert_array_equal(per_query_metrics(new, rel, ["ndcg@5"])["ndcg@5"],
                                       per_query_metrics(old, rel, ["ndcg@5"])["ndcg@5"])
+
+
+def test_names_v030_exposed_on_the_storage_module_still_import():
+    """``segment_reduce`` was importable from ``optivision.storage`` in v0.3.0 (it used it)."""
+    from optivision import scoring, storage
+
+    assert storage.segment_reduce is scoring.segment_reduce
