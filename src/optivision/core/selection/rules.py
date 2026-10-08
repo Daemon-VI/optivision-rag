@@ -309,9 +309,12 @@ def is_builtin_rule(rule: object) -> bool:
 
     The exact type is compared, not ``isinstance`` and not ``rule.name``: a subclass that
     overrides ``decide`` and keeps the name is a different rule, and the library has not
-    examined it.
+    examined it. The built-in rules have no fields, so an instance that carries any instance
+    attribute is not built in either: an attribute set on the instance (for example with
+    ``object.__setattr__(rule, "decide", f)``) would shadow the method of the class, and the
+    library would be certifying a function it never examined.
     """
-    return type(rule) in _BUILTIN_TYPES
+    return type(rule) in _BUILTIN_TYPES and not getattr(rule, "__dict__", None)
 
 
 def rule_record(rule: SelectionRule) -> dict[str, Any]:

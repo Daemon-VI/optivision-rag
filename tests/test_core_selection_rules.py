@@ -228,6 +228,19 @@ def test_only_the_exact_types_of_the_two_library_rules_are_built_in():
     assert not is_builtin_rule(FixedSequenceBetting)  # the class is not an instance
 
 
+def test_a_builtin_instance_with_a_shadowing_instance_attribute_is_not_built_in():
+    """An instance-level ``decide`` shadows the class method; it must not be certified."""
+    for cls in (FixedSequenceBetting, BonferroniBetting):
+        for attribute in ("decide", "config", "assumptions", "certifying"):
+            rule = cls()
+            assert is_builtin_rule(rule)
+            object.__setattr__(rule, attribute, getattr(rule, attribute))
+            assert not is_builtin_rule(rule), (cls.__name__, attribute)
+            record = rule_record(rule)
+            assert record["builtin"] is False and record["certifying"] is False
+            assert all(s.startswith(DECLARED_PREFIX) for s in assumptions_of(rule))
+
+
 def test_the_record_of_a_builtin_rule_names_its_class_and_says_it_is_built_in():
     for rule, cls in ((FS, "FixedSequenceBetting"), (BON, "BonferroniBetting")):
         record = rule_record(rule)

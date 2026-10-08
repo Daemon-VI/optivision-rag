@@ -239,6 +239,15 @@ def test_a_rule_that_declares_certifying_is_not_certified_by_the_library(rule):
     assert Decision.from_dict(json.loads(json.dumps(d.to_dict()))) == d
 
 
+def test_a_builtin_instance_whose_decide_is_shadowed_on_the_instance_is_not_certified():
+    space = space4()
+    rule = FixedSequenceBetting()
+    object.__setattr__(rule, "decide", lambda *a, **k: RuleResult(3, (3,), (0.0,) * 4, ERR / 2))
+    d = select(space, evidence_for(space, "wwww"), target=T, error=ERR, rule=rule)
+    assert d.outcome is Outcome.SELECT and d.certified is False  # weak candidates, fake rule
+    assert d.rule["builtin"] is False and d.rule["certifying"] is False
+
+
 def test_a_decision_cannot_be_built_that_certifies_another_rule():
     d = select(space4(), evidence_for(space4(), "ssss"), target=T, error=ERR, rule=DeclaringRule())
     record = d.to_dict()

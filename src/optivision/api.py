@@ -465,7 +465,8 @@ def certify(
         qrels: ``{query id: [relevant document ids]}``. Query and document ids are the ids of
             the two corpora (``"0"``, ``"1"``, ... for a list of arrays). The labels are binary:
             every listed document is relevant. A ``{document: grade}`` mapping is read as its
-            keys, grade 0 included, and warns once if it lists a grade of 0 or less.
+            keys when every grade is above zero; a grade of 0 or less is refused with
+            ``ValueError`` (after a ``UserWarning``), because it would count as relevant.
         target: the retention to be exceeded, in (0, 1].
         error: the level of the statement, in (0, 1).
         metric: ``ndcg@k``, ``recall@k``, ``mrr@k`` or ``hit@k``. Only nDCG@k was evaluated by
@@ -513,9 +514,9 @@ def certify(
 
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original
-    corpus. ``certify`` gives a ``UserWarning`` in two cases, both about the input: some tested
-    queries repeat an earlier query exactly (that breaks assumption A1), or a graded ``qrels``
-    mapping lists a grade of 0 or less.
+    corpus. ``certify`` gives a ``UserWarning`` when some tested queries repeat an earlier query
+    exactly (that breaks assumption A1). A graded ``qrels`` mapping that lists a grade of 0 or
+    less warns and is then refused with ``ValueError``.
 
     Raises ``ValueError`` (``ContractError`` for invalid vectors) on invalid input,
     ``ImportError`` if the default list needs SciPy, and ``CandidateEvaluationError`` if a
