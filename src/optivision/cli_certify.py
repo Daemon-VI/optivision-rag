@@ -177,6 +177,11 @@ def certify(
     space: str = typer.Option("default", "--space",
                               help="default | wide (wide is an engineering option the registered "
                                    "experiments did not evaluate)"),
+    allow_reduced: bool = typer.Option(
+        False, "--allow-reduced",
+        help="without SciPy, use the reduced candidate list (4 chains, no Ward-merge families) "
+             "instead of failing: a different space with a different identity and test level, "
+             "both recorded in the certificate. With SciPy installed it changes nothing"),
     budget: int | None = typer.Option(None, "--budget", help="test only a prefix of N queries of the order"),
     order_seed: int | None = typer.Option(
         None, "--order-seed",
@@ -260,13 +265,19 @@ def certify(
 
         bar.start()
     try:
-        chosen_space = None if space == "default" else CandidateSpace.wide(docs.dimension)
+        if space == "wide":
+            chosen_space = CandidateSpace.wide(docs.dimension, allow_reduced=allow_reduced)
+        else:
+            chosen_space = (CandidateSpace.default(docs.dimension, allow_reduced=True)
+                            if allow_reduced else None)
         result = run_certify(docs, qs, labels, target=target, error=error, metric=metric,
                              reference=reference, space=chosen_space, query_budget=budget,
                              order_seed=seed, progress=progress,
                              allow_duplicate_queries=allow_duplicate_queries)
     except ImportError as exc:
-        raise _fail(str(exc), code=1) from exc
+        hint = "" if allow_reduced else (" On the command line, --allow-reduced runs the reduced "
+                                         "candidate list instead (recorded as a different space).")
+        raise _fail(str(exc) + hint, code=1) from exc
     except ValueError as exc:  # invalid input, including every ContractError
         raise _fail(str(exc)) from exc
     except RuntimeError as exc:  # a candidate that could not be evaluated

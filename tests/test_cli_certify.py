@@ -331,6 +331,20 @@ def test_without_scipy_the_cli_says_how_to_get_it_and_does_not_reduce_the_list(f
     assert r.stdout == ""
 
 
+def test_allow_reduced_runs_the_reduced_list_without_scipy_and_records_it(files, monkeypatch):
+    monkeypatch.setattr(spaces_module, "_have_scipy", lambda: False)
+    refused = invoke("certify", files.docs, files.queries, "--qrels", files.qrels)
+    assert refused.exit_code == 1 and "--allow-reduced" in refused.stderr
+    r = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--target", "0.9",
+               "--allow-reduced", "--json")
+    assert r.exit_code == 0, r.output
+    space = json.loads(r.stdout)["space"]
+    assert space["name"] == "default-reduced" and space["registered_default"] is False
+    wide = invoke("certify", files.docs, files.queries, "--qrels", files.qrels, "--space", "wide",
+                  "--allow-reduced", "--target", "0.9", "--json")
+    assert wide.exit_code == 0, wide.output
+
+
 def test_the_existing_commands_and_the_two_new_ones_are_listed():
     r = invoke("--help")
     assert r.exit_code == 0
