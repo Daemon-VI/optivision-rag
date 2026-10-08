@@ -30,7 +30,12 @@ import numpy as np
 
 from .compose import CompressedCorpus, Pipeline, load_compressed, save_compressed
 from .representation import MultiVectorCorpus
-from .scoring import DEFAULT_MAX_BLOCK_BYTES, maxsim_matrix, rank, segment_reduce  # noqa: F401  (segment_reduce: v0.3.0 exposed it here)
+from .scoring import (  # noqa: F401  (segment_reduce: v0.3.0 exposed it here)
+    DEFAULT_MAX_BLOCK_BYTES,
+    maxsim_matrix,
+    rank,
+    segment_reduce,
+)
 from .types import CompressedPage, PageRef
 
 
