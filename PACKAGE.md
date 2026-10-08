@@ -99,6 +99,14 @@ result.save("artifact/")           # certificate, codes, fitted state, evidence
 verify("artifact/").ok             # integrity, replay from stored evidence (built-in rules), binding to stored codes
 ```
 
+`certify` needs SciPy for its default candidate list: `pip install "optivision-rag[merge]"` (from a
+checkout, `pip install -e ".[merge]"`). In the API, `space=CandidateSpace.default(dim, allow_reduced=True)` and, on the command line, the flag
+`--allow-reduced` use a smaller candidate list that does not need SciPy; the certificate records which
+list was used. The command line reads `.npz` files (a corpus saved with `MultiVectorCorpus.save`, the
+same for the queries) and a JSON file of `{query id: [relevant document ids]}`; section 6 of the
+quickstart (`docs/package/guide/QUICKSTART.md`) writes them and runs `optivision certify` and
+`optivision verify` on them.
+
 What the research record shows, and does not show:
 
 - X1-X3 were run on the seven development stores (three visual encoders on DocVQA and
@@ -159,6 +167,14 @@ Full results, the ablations and the analysis are in the
 ## Install
 
 Python 3.10 or newer.
+
+What was tested: the full test suite ran on Python 3.11 on one Windows laptop. The tests of the
+new layer ran against the installed wheel on Python 3.10 (NumPy 1.26.4, SciPy 1.13.1), 3.12
+(NumPy 2.0.2) and 3.13 (NumPy 2.5.3), all on the same Windows machine, and 3.14 had a smoke test
+only. Not tested: Linux, macOS, big-endian machines, GPUs, a Qdrant server, and real encoder output
+through the new layer. `qdrant-client` is a declared dependency of the package; what is optional is
+using it: nothing imports it until a Qdrant index or backend is constructed, and no server is needed
+otherwise.
 
 ```bash
 pip install optivision-rag                  # core pipeline + CLI

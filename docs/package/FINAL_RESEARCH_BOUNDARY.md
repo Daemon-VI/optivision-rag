@@ -391,9 +391,11 @@ The package layer:
   selection arithmetic, for numerical equality with the frozen research code (including the stored
   selections of the E1 runs). `certify`, the certificate and the artifact were not run on real
   encoder vectors.
-- Platforms: the verified set is Python 3.11 on one Windows laptop and a fresh wheel install.
-  Other Python versions (3.10, 3.12 and 3.13), Linux and macOS, other BLAS
-  builds, a real Qdrant server, GPUs and the `vlm` extra were not run
+- Platforms. The full test suite ran on Python 3.11 on one Windows laptop. The tests of the new
+  layer ran against the installed wheel on Python 3.10 (NumPy 1.26.4, SciPy 1.13.1), 3.12
+  (NumPy 2.0.2) and 3.13 (NumPy 2.5.3), all on the same Windows machine; 3.14 had a smoke test
+  only. Not tested: Linux, macOS, big-endian machines, GPUs, a Qdrant server, other BLAS builds on
+  the full suite, the `vlm` extra, and real encoder output through the new layer
   (`BUILD_AND_PORTABILITY_REPORT.md`, section 7). Bitwise equality across platforms is not
   promised.
 - A Qdrant server (its approximate graph, its own quantisation and rescoring), GPUs, and compiled

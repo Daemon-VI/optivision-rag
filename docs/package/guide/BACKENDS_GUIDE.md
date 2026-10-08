@@ -22,6 +22,8 @@ held and scored.
 | a NumPy page index on disk | `NumpyBackend(NumpyIndex(path, dim=..., method=...))` | exact over the stored codes; ties by ascending position |
 | Qdrant | `QdrantBackend(QdrantIndex(...))` | its score is a sum of cosines, not an inner product; a server searches an approximate graph, which was not measured here |
 
+`qdrant-client` is a declared dependency of the package (`pyproject.toml`, installed with `pip install optivision-rag`); what is optional is using it: nothing imports it until a Qdrant index or backend is constructed, and no server is needed otherwise (Qdrant local mode runs in process).
+
 ## 2. What to know first
 
 - **Scoring is decode-first.** Compressed codes become float32 before the inner products. No

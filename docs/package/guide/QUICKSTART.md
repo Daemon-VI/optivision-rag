@@ -8,7 +8,10 @@ The data are synthetic, made by `optivision.testing`. They only exercise the cod
 here is a result about any encoder or about retrieval quality, and the outputs shown come from one
 machine, so the last digits can differ on yours. The entry point is `optivision.certify()`; its
 design is in [API_DESIGN.md](../API_DESIGN.md), and the ideas are in [CONCEPTS.md](CONCEPTS.md).
-Install SciPy (`pip install "optivision-rag[merge]"`) for the default candidate list.
+`certify` needs SciPy for the default candidate list: install it with `pip install "optivision-rag[merge]"`
+(or `pip install scipy`). Without SciPy `certify` raises `ImportError`; the API argument
+`space=CandidateSpace.default(dim, allow_reduced=True)` (CLI flag `--allow-reduced`) gives a smaller
+candidate list that does not need it, and the certificate records which list was used.
 
 ## 1. Your vectors in
 
@@ -46,7 +49,8 @@ print(len(docs), "documents,", docs.num_vectors, "vectors;", len(queries), "quer
 corpora. `target` is the retention a selected candidate must exceed; `error` is the level of the
 rule's statement. Choose both before you look at any result, and use one pair per sample of
 queries. The queries should be a random sample of what the index will serve, with exact and
-near-duplicates removed: `certify` counts and warns about exact duplicates, and cannot see
+near-duplicates removed: `certify` refuses exact duplicates unless you pass `allow_duplicate_queries=True` (CLI
+`--allow-duplicate-queries`), which asserts that they are independent draws and is recorded, and cannot see
 near-duplicates. They are tested in a seeded random order (`order_seed=0`, recorded), so that a
 file sorted by difficulty, date or source cannot break the rule's assumption about the order.
 
@@ -233,7 +237,45 @@ workdir.cleanup()
 after the edit ok: False | failed: ['artifact files', 'digest', 'replay.decision']
 ```
 
-## 6. Where next
+## 6. The same from a shell
+
+`optivision certify` reads files, not Python objects: a corpus `.npz` for the documents, a queries
+`.npz`, and for labels a JSON object that maps each query id to a list of relevant document ids.
+The `.npz` files are what `MultiVectorCorpus.save` writes, so a corpus made by `ArrayAdapter` (as
+in section 1) saves directly, and the ids in the three files must be the same ids.
+
+```python
+import json
+import tempfile
+from pathlib import Path
+
+shell_dir = Path(tempfile.mkdtemp())
+docs.save(shell_dir / "docs.npz")
+queries.save(shell_dir / "queries.npz")
+with open(shell_dir / "qrels.json", "w", encoding="utf-8") as handle:
+    json.dump({q: sorted(d) for q, d in qrels.items()}, handle)
+print(sorted(p.name for p in shell_dir.iterdir()))
+```
+
+```text
+['docs.npz', 'qrels.json', 'queries.npz']
+```
+
+Then, from that directory:
+
+```bash
+optivision certify docs.npz queries.npz --qrels qrels.json --target 0.95 --out artifact
+optivision verify artifact --vectors docs.npz --queries queries.npz --qrels qrels.json
+```
+
+`certify` exits 0 for every outcome, an abstention included, and 2 for invalid input; add `--json`
+to read the outcome from the output. `verify` exits 0 when every check that ran passed, 1 when a
+check failed or the file cannot be read or is malformed, and 2 for a usage error, a missing path
+included. Without `--vectors`, `--queries` and `--qrels`, `verify` checks the artifact against
+its own files only. `certify` needs SciPy as in the note at the top; `--allow-reduced` uses the
+smaller list.
+
+## 7. Where next
 
 - Runnable scripts: [examples/](examples/), one per task, each printing a short result.
 - Your own candidate list: `examples/custom_candidate_space.py`.
