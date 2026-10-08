@@ -46,7 +46,7 @@ between package and research), `../METHOD_C_SPEC.md`, `../ARCHITECTURE_AUDIT.md`
 It is frozen and the same for every encoder, and it was shaped by results on the development
 encoders. It holds centred int4 and plain binary because of results on ColPali and the text
 ColBERT (`../METHOD_C_SPEC.md`, section 5.1). It is model-blind in what the procedure inspects,
-not neutral in how it was built. 39 of its 40 slots end in `int8(per_vector)`, `int4(centred)` or
+not neutral in how it was built. 39 of its 40 slots end in `int8(per_vector)`, `int4(mean)` or
 `binary`, and the other is `float16`, so every default candidate is basis sensitive
 (`BASIS_DEPENDENCE.md`). Without SciPy the Ward families cannot be built, and the default list
 raises unless `allow_reduced=True` gives a smaller list with another identity and another level.

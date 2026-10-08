@@ -3,7 +3,7 @@
 Status: 2026-10-06, branch `package-universal`. `__version__` is still `"0.3.0"`: nothing here
 is released (decision D18), and no deprecation is made by this work.
 
-**A v0.3.0 program needs no change.** `optimize()`, `calibrate()`, the 40 names of
+**A v0.3.0 program needs no change.** `optimize()`, `calibrate()`, the 40 v0.3.0 names of
 `optivision.__all__`, every old import path, the CLI commands and options, the registry names
 and the v1 file formats are as they were. What follows lists every observable difference found
 (by comparing the source tree with tag `v0.3.0`), how to move from `optimize()` to the new

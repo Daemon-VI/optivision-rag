@@ -98,6 +98,69 @@ def test_python_blocks_of_a_page_run_in_order(page, tmp_path):
     assert not list(cwd.iterdir()), "a snippet writes only to a temporary directory"
 
 
+PACKAGE_DOCS = ROOT / "docs" / "package"
+#: Pages outside the guide that say their Python blocks run as written, in order, in one session.
+RUNNABLE_PAGES = [PACKAGE_DOCS / "API_DESIGN.md", PACKAGE_DOCS / "MIGRATION.md"]
+FENCE = re.compile(r"^```(\w*)\n(.*?)^```", re.DOTALL | re.MULTILINE)
+
+
+def _cli(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(SRC), env.get("PYTHONPATH")]))
+    env["PYTHONIOENCODING"] = "utf-8"
+    code = "from optivision.cli import app; app()"
+    return subprocess.run([sys.executable, "-c", code, *args], cwd=cwd, env=env,
+                          capture_output=True, text=True, timeout=TIMEOUT, check=False)
+
+
+@pytest.mark.skipif(not PACKAGE_DOCS.is_dir(), reason="the repository layout (docs/) is absent")
+@pytest.mark.parametrize("page", RUNNABLE_PAGES, ids=lambda p: p.name)
+def test_python_blocks_of_the_design_pages_run_in_order(page, tmp_path):
+    pytest.importorskip("scipy")
+    blocks = [code for lang, code in FENCE.findall(page.read_text(encoding="utf-8")) if lang == "python"]
+    assert blocks
+    script = _empty_dir(tmp_path, "script") / "blocks.py"
+    script.write_text("\n\n".join(blocks), encoding="utf-8")
+    cwd = _empty_dir(tmp_path, "cwd")  # API_DESIGN.md writes an artifact and the files the CLI reads
+    proc = _run(script, cwd)
+    assert proc.returncode == 0, f"{page.name}\n{proc.stdout}\n{proc.stderr}"
+
+
+@pytest.mark.skipif(not PACKAGE_DOCS.is_dir(), reason="the repository layout (docs/) is absent")
+def test_the_documented_command_line_runs_on_the_files_the_python_block_writes(tmp_path):
+    pytest.importorskip("scipy")
+    page = (PACKAGE_DOCS / "API_DESIGN.md").read_text(encoding="utf-8")
+    fences = FENCE.findall(page)
+    python_code = next(code for lang, code in fences if lang == "python" and "docs.save(" in code)
+    commands = next(code for lang, code in fences if lang == "bash" and "optivision certify" in code)
+    script = _empty_dir(tmp_path, "script") / "make_files.py"
+    script.write_text(python_code, encoding="utf-8")
+    cwd = _empty_dir(tmp_path, "cwd")
+    proc = _run(script, cwd)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    lines = [ln.split() for ln in commands.strip().splitlines()]
+    assert [ln[0] for ln in lines] == ["optivision", "optivision"]
+    certify_run = _cli(lines[0][1:], cwd)
+    assert certify_run.returncode == 0, certify_run.stdout + certify_run.stderr
+    verify_run = _cli(lines[1][1:], cwd)
+    assert verify_run.returncode == 0, verify_run.stdout + verify_run.stderr
+    assert "no check failed" in verify_run.stdout
+
+
+@pytest.mark.skipif(not (ROOT / "README.md").is_file(), reason="the repository layout is absent")
+@pytest.mark.parametrize("name", ["README.md", "PACKAGE.md"])
+def test_the_certify_snippet_of_the_readmes_runs(name, tmp_path):
+    pytest.importorskip("scipy")
+    text = (ROOT / name).read_text(encoding="utf-8")
+    code = next(c for lang, c in FENCE.findall(text) if lang == "python" and "from optivision import certify" in c)
+    script = _empty_dir(tmp_path, "script") / "snippet.py"
+    script.write_text(code, encoding="utf-8")
+    cwd = _empty_dir(tmp_path, "cwd")
+    proc = _run(script, cwd)
+    assert proc.returncode == 0, f"{name}\n{proc.stdout}\n{proc.stderr}"
+    assert (cwd / "artifact" / "certificate.json").is_file()
+
+
 def test_guide_files_are_ascii():
     for path in _guide_files():
         data = path.read_bytes()

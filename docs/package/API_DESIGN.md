@@ -231,7 +231,7 @@ certificate formats (both version 1, versioned by their `schema_version`), and t
 top-level names (`certify`, `verify`, `verify_certificate`, `load_artifact`, `save_artifact`,
 `CertifiedResult`, `Certificate`, `CandidateSpace`, `Decision`, `Outcome`, `EncoderIdentity`),
 which load on demand so that `import optivision` does not pay for the certificate modules.
-Unchanged: `optimize`, `calibrate`, the 40 names of `__all__`, the v1 file formats, the
+Unchanged: `optimize`, `calibrate`, the 40 v0.3.0 names in `__all__` (it now lists 51 with the 11 new ones), the v1 file formats, the
 existing CLI commands. Certificates record the library version and a digest of the
 decision-relevant source files.
 
