@@ -364,3 +364,15 @@ def test_corpus_from_arrays_is_the_one_place_that_checks_and_takes_metadata_and_
         corpus_from_arrays(_arrays((2, 3)), name="pages", metadata=[{}])
     with pytest.raises(ContractError, match="^pages\\[0\\] must be 2-D"):
         corpus_from_arrays([np.zeros(3, np.float32)], name="pages")
+
+
+def test_fortran_ordered_items_give_the_same_memory_layout_as_c_ordered_ones():
+    # Same values and the same array_digest, but a Fortran-ordered corpus makes float reductions
+    # differ in the last bits, which changed the norms and so the certificate digest.
+    c_items = _arrays()
+    f_items = [np.asfortranarray(a) for a in c_items]
+    assert not all(a.flags.c_contiguous for a in f_items)
+    c_corpus = ArrayAdapter().encode_documents(c_items)
+    f_corpus = ArrayAdapter().encode_documents(f_items)
+    assert f_corpus.vectors.flags.c_contiguous
+    assert np.array_equal(f_corpus.vectors, c_corpus.vectors)

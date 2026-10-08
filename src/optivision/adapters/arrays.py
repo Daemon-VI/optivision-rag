@@ -130,7 +130,10 @@ def corpus_from_arrays(
             )
         if not np.issubdtype(array.dtype, np.floating):
             raise ContractError(f"{name}[{i}] must be floating point, got {array.dtype}")
-        host.append(array)
+        # a Fortran-ordered item would make the concatenated corpus Fortran-ordered, and the
+        # float reductions downstream then differ in the last bits from the C-ordered corpus of
+        # the same values (same array_digest, different certificate digest)
+        host.append(np.ascontiguousarray(array))
 
     dtype = host[0].dtype
     dim = host[0].shape[1] if identity is None else identity.dimension
