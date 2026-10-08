@@ -264,7 +264,7 @@ for k in 0..K-1 (list order):  f = families[k]
   guarantee text. Float16 measured 99.7-100% retention on the development corpora (`docs/UNIVERSAL.md:254, 557`) but that is an empirical figure, not a certificate, and on one model the per-vector cosine minimum was 0.923 (`docs/UNIVERSAL.md:870-872, 1081`: "float16 encoding is not free").
 - **Is the fallback certified?** The uncompressed index is the reference itself (R = 1 under labels, R_A = 1 under agreement); no hypothesis is tested
   for it and a miss requires a *compressed* deployment, so abstention can never be a miss. Abstention is the safe outcome, not an error: the research reports
-  frequent abstention (at n = 50 and 100 no valid method deploys in more than 0.25% of resamples; none can certify T = 0.99 with <= 225 queries, `RES:70-71, 171-173`).
+  frequent abstention (at n = 50 and 100 no valid method deploys in more than 0.25% of resamples; none can be expected to certify T = 0.99 with <= 225 queries, `RES:70-71, 171-173`; see section 6.3).
 
 ## 5. Data splitting, calibration, what may be looked at
 
@@ -293,7 +293,7 @@ for k in 0..K-1 (list order):  f = families[k]
 - **Encoder knowledge already inside S0** is "kind C" and declared (`PRE:1121-1126`): S0 contains centred int4 and plain binary because of results on ColPali and the text ColBERT. **P0 is not a held-out test on any development encoder**; applying it to those encoders again "says nothing about model-blind transfer" (X1-X3 do exactly that: they are development analyses, `PRE:1130-1137`). XH (held-out encoders) was not run (`XRES:235`).
   Model-blindness is **not** invariance to symmetries of the representation (`PRE:1140-1144`; X3).
 
-## 6. The statistical guarantee
+## 6. The statistical statement (a conditional, finite-sample guarantee, not externally reviewed)
 
 ### 6.1 Statement, verbatim
 
@@ -331,7 +331,7 @@ Documented consequence of a failure (`PRE:1173-1178`, third column): A1 "reporte
 - Anything about a distribution other than Q, a different or growing corpus, a different corpus size (`DES:99-100`, `PRE:1563-1565`, `RES:177-179`).
 - The realised retention on a finite batch of future queries (it fluctuates around R_Q); anything per query; anything conditional on the sample at hand: the statement is marginal over calibration samples (`DES:101-105`, `PRE:1180-1182`).
 - Any property of A / `calibrate()` / `optimize()` (`PRE:1566`, `RES:168-170`).
-- **Power.** The guarantee holds even if the procedure always abstains. No valid method can certify T = 0.99 with <= 225 queries (`DES:109-117`, `RES:171-173`); a lossless candidate needs
+- **Power.** The guarantee holds even if the procedure always abstains. No valid test can reject a lossless candidate with probability >= 1/2 at T = 0.99, delta = 0.05 with fewer than 229 queries (`DES:109-117`, `RES:171-173`; `STATISTICAL_REVIEW.md`, W12); a lossless candidate needs
   `n >= log(1/(2 delta)) / (-log(1-eps))`, `eps = beta (1-T) / (T + beta (1-T))`, `beta = E_Q[b]` (`DES:112-117`). Deterministic best case (b = c = 1) for the frozen test: TV3.
 - **Agreement is not retrieval quality**: certifying `R_A >= T_A` says nothing statistical about `R_L` (the cross-construct miss rate "is an empirical test", `PRE:447-451`; section 8).
 - The coordinate basis: H5 failed under two registered rotations (`XRES:115-129, 143-147`): what is certified is the retention of the actual pipeline on the actual stored vectors.
@@ -342,8 +342,8 @@ Documented consequence of a failure (`PRE:1173-1178`, third column): A1 "reporte
 
 ### 6.4 Evidence in the research (does not widen the claim, `RES:285-287`)
 
-Consistent with the proof in 288 real and 720 synthetic checks (`RES:156-157`); confirmation: 27 of 27 held-back cells, maximum miss rate 0.05%, 95% CI [0.0%, 0.28%] (`RES:251-255`); X1-X3 validity check over 2,800 cells, no confirmed failure (`XRES:102-105`).
-All are resamples of one pool per corpus (Q = Q_pool): they check the implementation against the proof, they do not replace it.
+Consistent with the project's derivation (not externally reviewed) in 288 real and 720 synthetic checks (`RES:156-157`); confirmation: 27 of 27 held-back cells, maximum miss rate 0.05%, 95% CI [0.0%, 0.28%] (`RES:251-255`); X1-X3 validity check over 2,800 cells, no confirmed failure (`XRES:102-105`).
+All are resamples of one pool per corpus (Q = Q_pool): they check the implementation against the derivation, they do not replace it.
 
 ## 7. `method_c_config()` and identification
 

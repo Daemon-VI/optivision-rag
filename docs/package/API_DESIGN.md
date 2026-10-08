@@ -142,7 +142,7 @@ independent queries, to choose another target for that new sample, or to keep th
 uncompressed. Each is a decision to take before looking at the new queries: the statement covers one
 `(target, error)` on one sample, so trying several targets, error levels, lists, orders or seeds on
 the same queries and reporting one spends error level that the statement does not account for (in
-simulations such looks multiplied the false-selection probability by 3 to 14,
+simulations such looks multiplied the false-selection probability by up to 14,
 `STATISTICAL_REVIEW.md`, section 7.7). After an abstention, a new run needs new queries. Several
 targets cannot be passed to one call: a list is refused.
 

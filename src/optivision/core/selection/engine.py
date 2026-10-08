@@ -12,7 +12,7 @@ Exactly one ``(target, error)`` pair per call. The rule's statement is about one
 sample; looking at the same sample under several targets or error levels, or after changing
 the list, order or seed, spends error level that the statement does not account for
 (``docs/package/METHOD_C_SPEC.md`` section 6.3; in simulations such looks multiplied the
-false-selection probability by 3 to 14, ``docs/package/STATISTICAL_REVIEW.md`` section 7.7). A
+false-selection probability by up to 14, ``docs/package/STATISTICAL_REVIEW.md`` section 7.7). A
 caller who needs several targets needs fresh calibration queries for each, or a rule built for
 that.
 

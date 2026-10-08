@@ -14,7 +14,7 @@ short_description: Visual-token pruning and binary quantization for document ret
 
 # OptiVision RAG
 
-**Quality-constrained multi-vector compression behind a model-agnostic interface.**
+**Quality-constrained multi-vector compression behind a model-agnostic interface.** (Model-agnostic here means one interface for any encoder's `[n, d]` float vectors; how well a pipeline compresses depends on the encoder and is measured each time.)
 
 > The YAML block above is Hugging Face Space metadata. It is ignored by GitHub
 > and by every tool in this repo; see [docs/DEPLOY.md](docs/DEPLOY.md) for how
@@ -203,7 +203,8 @@ and the [certificate format](docs/package/CERTIFICATE_SPEC.md).
 
 Everything below this point describes the first release: one fixed recipe for
 page-image encoders. It still ships unchanged, and the universal layer wraps its
-stages.
+stages. ("Universal" in this README names the encoder-independent interface of that
+layer, not a compression result that holds for every encoder.)
 
 ### The problem
 

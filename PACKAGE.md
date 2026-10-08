@@ -1,6 +1,6 @@
 # OptiVision RAG
 
-**Quality-constrained multi-vector compression behind a model-agnostic interface.**
+**Quality-constrained multi-vector compression behind a model-agnostic interface.** (Model-agnostic here means one interface for any encoder's `[n, d]` float vectors; how well a pipeline compresses depends on the encoder and is measured each time.)
 
 OptiVision compresses the index of a late-interaction (multi-vector, MaxSim)
 retriever, such as a ColPali-style page encoder or a ColBERT-style text encoder,

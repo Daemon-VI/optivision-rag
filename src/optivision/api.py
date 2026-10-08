@@ -86,7 +86,7 @@ _ABSTAIN_NOTE = (
     "candidate would pass: a later run on new, independent queries, with a target chosen before "
     "they are looked at, may certify one. Every further look at the same queries, with another "
     "target, error level, list, order or seed, is outside the statement of the rule; in "
-    "simulations such looks multiplied the false-selection probability by 3 to 14 "
+    "simulations such looks multiplied the false-selection probability by up to 14 "
     "(docs/package/STATISTICAL_REVIEW.md, section 7.7)."
 )
 _FALLBACK_NOTE = (

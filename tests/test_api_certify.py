@@ -153,7 +153,7 @@ def test_the_abstention_says_what_it_means_and_what_it_does_not(abstained):
     # more queries means NEW queries, and another target is a decision taken before looking
     assert "new, independent queries" in note and "chosen before they are looked at" in note
     assert "Every further look at the same queries" in note and "outside the statement" in note
-    assert "order or seed" in note and "3 to 14" in note
+    assert "order or seed" in note and "up to 14" in note
     assert "a lower target" not in note and "more queries" not in note
     assert "nothing certified: use the uncompressed index" in repr(abstained)
 

@@ -290,7 +290,7 @@ the statement does not account for (`../METHOD_C_SPEC.md`, section 6.3).
    beforehand. A larger new sample can certify a candidate that a small one could not, if the
    candidate really keeps more than the target. Nothing says it will. Another look at the same
    queries, with another target, error level, list, order or seed, is outside the statement: in
-   simulations such looks multiplied the false-selection probability by 3 to 14
+   simulations such looks multiplied the false-selection probability by up to 14
    (`../STATISTICAL_REVIEW.md`, section 7.7).
 4. To accept a compressed index without certification, pass an explicit `fallback` pipeline. The
    outcome is then `FALLBACK`, recorded as not certified, and the statement does not cover it.

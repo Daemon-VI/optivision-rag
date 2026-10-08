@@ -148,7 +148,7 @@ print("smallest p-value:", round(min(stopped.decision.p_values), 4), "| level:",
 
 ```text
 abstain | certified: False | compressed: None | ratio: 1.0
-Nothing was certified at this target and error level on these queries, so the uncompressed index is the outcome. This is the safe outcome, not an error. It does not say that no candidate would pass: a later run on new, independent queries, with a target chosen before they are looked at, may certify one. Every further look at the same queries, with another target, error level, list, order or seed, is outside the statement of the rule; in simulations such looks multiplied the false-selection probability by 3 to 14 (docs/package/STATISTICAL_REVIEW.md, section 7.7).
+Nothing was certified at this target and error level on these queries, so the uncompressed index is the outcome. This is the safe outcome, not an error. It does not say that no candidate would pass: a later run on new, independent queries, with a target chosen before they are looked at, may certify one. Every further look at the same queries, with another target, error level, list, order or seed, is outside the statement of the rule; in simulations such looks multiplied the false-selection probability by up to 14 (docs/package/STATISTICAL_REVIEW.md, section 7.7).
 ExactRetriever searches the original vectors
 smallest p-value: 0.7295 | level: 0.0071
 ```
@@ -157,7 +157,7 @@ Abstaining is a correct outcome, not an error. What to do:
 
 1. Use the uncompressed index.
 2. Do not change the target, the error level, the list, the order or the seed and run again on the
-   same queries: in simulations such looks multiplied the false-selection probability by 3 to 14.
+   same queries: in simulations such looks multiplied the false-selection probability by up to 14.
 3. For another attempt, collect new, independent queries, and choose the target and the list
    beforehand. A larger new sample can certify what a smaller one could not, if a candidate
    really keeps more than the target. Nothing says how many are enough.
