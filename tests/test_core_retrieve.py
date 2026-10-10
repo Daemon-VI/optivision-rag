@@ -44,6 +44,8 @@ from optivision.stages import (
 )
 from optivision.storage import ExactIndex
 
+from .test_storage import _assert_scores_agree, _rescore_tolerance
+
 SRC = Path(__file__).resolve().parents[1] / "src" / "optivision"
 
 
@@ -417,16 +419,21 @@ class TestEquivalence:
         assert_close_modulo_ties(small, reference)
 
     @pytest.mark.parametrize("tokens", [14, 20, 30])
-    def test_t9_one_query_alone_or_in_a_batch_is_bitwise_equal_on_this_stack(self, tokens):
-        # MEASURED-HERE in the audit and re-checked on this stack; BLAS kernel choice for other
-        # shapes or machines can change the last bit, which is why only the ranking is promised.
+    def test_t9_one_query_alone_or_in_a_batch_agrees_within_the_rounding_bound(self, tokens):
+        # Not bitwise. A query scored alone and the same query scored in a batch go through
+        # BLAS products of different shapes, and the kernel a shape gets decides the order of
+        # the additions inside each dot product. On the development machine (AVX-512 kernel)
+        # the two were equal bit for bit; with an AVX2-class kernel
+        # (OPENBLAS_CORETYPE=Haswell) they differ by up to about 1e-6 at scores of 4 to 12.
+        # What holds on every kernel is the bound derived from the operation count in
+        # tests/test_storage.py, and the same ranking except between scores closer than it.
         docs = _corpus()
         batch = _queries(n=5, tokens=tokens)
         retriever = ExactRetriever(docs)
         together = retriever.score(batch)
-        for i in range(len(batch)):
-            alone = retriever.score(MultiVectorCorpus.from_arrays([batch[i].vectors]))
-            np.testing.assert_array_equal(alone[0], together[i])
+        alone = np.stack([retriever.score(MultiVectorCorpus.from_arrays([batch[i].vectors]))[0]
+                          for i in range(len(batch))])
+        _assert_scores_agree(alone, together, _rescore_tolerance(ExactIndex(docs), batch))
 
     @pytest.mark.parametrize("tokens", [1, 2, 3])
     def test_t9_very_short_queries_agree_to_rounding(self, tokens):
