@@ -1131,6 +1131,34 @@ class TestLevelsAreReportedByWhatIsSupplied:
                                     reference=abstained.reference, pipeline=selected.pipeline)
         assert not report.ok and report.level == "replay"
 
+    @pytest.mark.parametrize("statuses,expected", [
+        (("fail", "pass", "pass"), "none"),  # an integrity failure: nothing is reached
+        (("pass", "fail", "pass"), "integrity"),  # a failed replay caps the level below it
+        (("pass", "pass", "fail"), "replay"),
+        (("pass", "skipped", "pass"), "binding"),  # no evidence: a skipped level does not cap
+        (("pass", "skipped", "skipped"), "integrity"),
+        (("differs", "pass", "pass"), "binding"),  # a difference is not a failure
+    ])
+    def test_no_level_at_or_above_a_failed_check_is_reached(self, statuses, expected):
+        from optivision.core.artifact.report import Check, VerificationReport
+
+        integrity, replay, binding = statuses
+        checks = [Check("digest", integrity, level="integrity"),
+                  Check("replay.decision", replay, level="replay")]
+        checks += [Check(name, binding, level="binding")
+                   for name in ("binding.corpus", "binding.queries", "binding.reference")]
+        assert VerificationReport(tuple(checks)).level == expected
+
+    def test_a_broken_digest_reaches_no_level_even_when_the_replay_passes(self, selected):
+        """An edit that the replay does not see (the creation time) breaks the digest: the report
+        failed at the integrity level, so it must not read as ``level reached: replay``."""
+        d = selected.certificate.to_dict()
+        d["created_utc"] = "2000-01-01T00:00:00Z"
+        report = verify_certificate(Certificate.from_dict(d), evidence=selected.evidence)
+        assert report.status("digest") == "fail" and report.status("replay.decision") == "pass"
+        assert not report.ok and report.level == "none"
+        assert "level reached: none" in report.summary()
+
     def test_everything_is_level_binding(self, selected):
         report = selected.verify()
         assert report.levels == ("integrity", "replay", "binding") and report.level == "binding"

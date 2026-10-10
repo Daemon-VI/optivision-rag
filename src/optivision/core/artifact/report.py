@@ -100,14 +100,19 @@ class VerificationReport:
         certificate to the live data (``binding.corpus``, ``binding.queries`` and
         ``binding.reference``) all ran and no binding check failed: with the corpus, the queries
         or the reference left out, nothing says the certificate was issued for the data you
-        serve. ``"none"`` when even the integrity level did not pass. ``skipped`` lists what did
-        not run.
+        serve. A failed check stops the count: no level at or above a failed one is reached, so
+        the value is ``"none"`` when an integrity check failed and never names a level above a
+        failure. A level whose checks were all skipped is not reached and does not stop the
+        count (``binding`` can be reached without the evidence that ``replay`` needs).
+        ``skipped`` lists what did not run.
         """
         status = {c.name: c.status for c in self.checks}
         reached = "none"
         for level in LEVELS:
             mine = [c for c in self.checks if c.level == level]
-            if any(c.status == FAIL for c in mine) or not any(c.status != SKIPPED for c in mine):
+            if any(c.status == FAIL for c in mine):
+                break
+            if not any(c.status != SKIPPED for c in mine):
                 continue
             if level == BINDING and any(
                     status.get(name, SKIPPED) == SKIPPED for name in _BOUND_DATA_CHECKS):
