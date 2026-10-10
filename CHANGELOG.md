@@ -104,6 +104,9 @@ research results (`reports/research/`) was changed or re-run.
     scope of the platforms that were tested, the `certify` dependency on SciPy, how to write the
     files the command line reads, and the four expected failures in the pinned `compose.py`
     (`docs/package/TEST_REPORT.md`).
+  - `docs/package/RELEASE_READINESS_REPORT.md`: the release-candidate gate, the disposition of
+    every finding and the steps a release still needs; the audit reports are in
+    `docs/package/hardening/`.
 - **After the internal reviews** (`docs/package/RESEARCH_INTEGRITY_AUDIT.md`,
   `docs/package/STATISTICAL_REVIEW.md`; internal, not external):
   - *Certified only for the library's own rules.* A decision and a certificate record the rule's
