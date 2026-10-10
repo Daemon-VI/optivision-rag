@@ -20,6 +20,7 @@ section failed.
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime
 import functools
 import gc
@@ -59,6 +60,13 @@ BASE = "91564fd"
 FROZEN = [f"src/optivision/{p}" for p in (
     "calibration.py", "compose.py", "scoring.py", "evaluation.py", "representation.py", "stages",
     "compression", "storage.py", "optimize.py")]
+#: What a difference from the base commit in one of the FROZEN paths is, where it is known and
+#: confined to imports and docstrings (``regression_check`` verifies that part on every run).
+KNOWN_DIFFERENCES = {
+    "src/optivision/storage.py": (
+        "the hardening pass restored the v0.3.0 import of `segment_reduce` and added a sentence "
+        "to the docstring of `ExactIndex.rescore`"),
+}
 SEED, NOISE, TARGET, ERROR, CREATED = 20261006, 2.5, 0.97, 0.05, "2026-10-06T00:00:00Z"
 TOKENS, QUERY_TOKENS = {"full": (30, 60), "quick": (6, 12)}, (4, 8)  # vectors per document / query
 SIZES = {"full": {"narrow": (128, 500, 450), "wide": (1024, 200, 200), "e2e": (128, 200, 200)},
@@ -599,12 +607,77 @@ def git(*args):
     return done.stdout.strip()
 
 
+def code_only(source):
+    """``ast.dump`` of a module with its import statements and docstrings removed."""
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if not isinstance(body, list):
+            continue
+        kept = [n for n in body if not isinstance(n, (ast.Import, ast.ImportFrom))]
+        if (kept and isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                       ast.AsyncFunctionDef))
+                and isinstance(kept[0], ast.Expr) and isinstance(kept[0].value, ast.Constant)
+                and isinstance(kept[0].value.value, str)):
+            kept = kept[1:]
+        node.body = kept
+    return ast.dump(tree)
+
+
 def regression_check():
-    """Whether the pre-existing compute paths differ from the base commit (not re-timed here)."""
+    """Whether the pre-existing compute paths differ from the base commit (not re-timed here).
+
+    For every file that differs, ``imports_and_docstrings_only`` says whether the two syntax
+    trees are equal once import statements and docstrings are removed, i.e. whether the code
+    that runs is the base commit's.
+    """
     head = git("diff", BASE, "HEAD", "--stat", "--", *FROZEN)
     tree = git("diff", BASE, "--stat", "--", *FROZEN)
+    names = sorted(set(git("diff", BASE, "HEAD", "--name-only", "--", *FROZEN).splitlines())
+                   | set(git("diff", BASE, "--name-only", "--", *FROZEN).splitlines()))
+    changed = {}
+    for name in names:
+        try:
+            same = code_only(git("show", f"{BASE}:{name}")) == code_only(
+                (ROOT / name).read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, ValueError):
+            same = False
+        changed[name] = {"imports_and_docstrings_only": same}
     return {"base": BASE, "paths": FROZEN, "head_diff_stat": head, "worktree_diff_stat": tree,
-            "identical": head == "" and tree == ""}
+            "identical": head == "" and tree == "", "changed": changed}
+
+
+def regression_text(r):
+    """The paragraph on the pre-existing compute paths, from a ``regression_check`` record."""
+    command = f"`git diff {r['base']} HEAD --stat -- {' '.join(r['paths'])}` printed "
+    if r["identical"]:
+        return command + (
+            "nothing, and the same command against the working tree printed nothing: those "
+            "files are byte-identical to the base commit, so the compute paths that existed "
+            "before the package layer were not modified by it and were not timed again here.")
+    stat = "\n".join(x for x in dict.fromkeys((r["head_diff_stat"], r["worktree_diff_stat"])) if x)
+    changed = r.get("changed")
+    if changed is None:  # a record written before the per-file comparison existed
+        return command + ("the following, so those files differ from the base commit and their "
+                          f"timings may differ too:\n\n```\n{stat}\n```")
+    quiet = [n for n, c in changed.items() if c["imports_and_docstrings_only"]]
+    loud = [n for n in changed if n not in quiet]
+    out = command + ("the following; every listed path that does not appear in it is "
+                     f"byte-identical to the base commit:\n\n```\n{stat}\n```\n")
+    if quiet:
+        notes = "; ".join(f"`{n}`" + (f" ({KNOWN_DIFFERENCES[n]})" if n in KNOWN_DIFFERENCES
+                                      else "") for n in quiet)
+        out += ("\nDiffering in import statements and docstrings only (the two syntax trees are "
+                f"equal once those are removed; checked when this file was generated): {notes}. "
+                "The code that runs in those files is the base commit's.")
+    if loud:
+        out += ("\n\nDiffering in code as well, so timings of these paths may differ from the "
+                "base commit's and were NOT re-measured here: " + ", ".join(f"`{n}`" for n in loud)
+                + ".")
+    else:
+        out += (" The compute paths that existed before the package layer therefore run the same "
+                "code as at the base commit and were not timed again here.")
+    return out
 
 
 def cpu_model():
@@ -928,7 +1001,24 @@ def shows_end_to_end(B):
                          "which makes it the dominant cost of a certify() call at these sizes"
                          if share > 0.5 else "")
             + (" (a share at or above 100% is timing noise, since certify() does the same "
-               "collection plus its other steps)." if share >= 1 else "."))
+               "collection plus its other steps)." if share >= 1 else ".")
+            + certify_memory(B, cert))
+
+
+def certify_memory(B, cert):
+    """The sentence on the traced peak of certify() against the float32 corpus it was given."""
+    if cert.get("peak_bytes") is None:
+        return ""
+    size = B["sizes"]["e2e"]
+    corpus, block = size["n_vectors"] * size["dim"] * 4, size["n_vectors"] * size["n_query_vectors"] * 4
+    return (f" Peak traced memory during certify() was {fb(cert['peak_bytes'])}, "
+            f"{cert['peak_bytes'] / corpus:.1f} times the float32 corpus ({fb(corpus)}). The "
+            "multiple belongs to these sizes and is not a constant: the peak holds the transform "
+            "cache that the candidates share (one whole transformed corpus per distinct merge or "
+            "projection prefix; cap `OPTIVISION_CACHE_BYTES`, 4 GiB by default), the live block of "
+            f"query-vector by document-vector similarities ({fb(block)} if all of it is one block, "
+            "as it is at this size; capped by `max_block_bytes`, 256 MiB by default), and smaller "
+            "terms.")
 
 
 def shows_import(B):
@@ -1006,6 +1096,9 @@ LIMITS = (
      "not a finding"),
     ("larger scale: sizes stop at a few hundred documents, and the dense score matrix and the "
      "decoded blocks grow with the corpus; nothing here is a statement about large corpora"),
+    ("memory of `certify()` on a large corpus: section 7 gives one traced peak at one small size; "
+     "the transform cache alone can hold several whole transformed corpora until its cap, beyond "
+     "which it evicts and recomputes (slower, same results), and that regime was not measured"),
     "a GPU or `OPTIVISION_SCORE_DEVICE` (all scoring ran on the CPU through NumPy)",
     "single-query latency: no timing here is of one query alone",
     "concurrency, memory outside tracemalloc's view, or disk speed beyond one temporary directory",
@@ -1094,13 +1187,7 @@ def build_doc(B, E):
                 f"**What this shows.** {shows(B)}", ""]
     r = B["regression_check"]
     out += ["## Pre-existing compute paths: not re-measured", "",
-            f"`git diff {r['base']} HEAD --stat -- {' '.join(r['paths'])}` printed "
-            + ("nothing, and the same command against the working tree printed nothing: those "
-               "files are byte-identical to the base commit, so the compute paths that existed "
-               "before the package layer were not modified by it and were not timed again here."
-               if r["identical"] else "the following, so those files differ from the base commit "
-               f"and their timings may differ too:\n\n```\n{r['head_diff_stat']}\n"
-               f"{r['worktree_diff_stat']}\n```"), "",
+            regression_text(r), "",
             "## What these numbers do not show", "", *(f"- {x}" for x in LIMITS), ""]
     return "\n".join(out)
 
