@@ -157,13 +157,18 @@ above are kept: `q2` lists a document the corpus does not hold, and `q3` has no 
   decoded block and the similarity block. The matrix grows with the corpus. The million-page
   figures of Q8 are projections (`reports/research/Q8/REPORT.md`). Nothing here is a claim about
   million-page corpora.
-- Memory of `certify()` is several times the corpus. One measurement on one machine (the
-  benchmark's synthetic case, d=128, the default 40 candidates, ABSTAIN path, tracemalloc) gave a
-  peak of about 11 times the float32 corpus (11.4 and 11.1 times for two sizes), most of it (about
-  8.4 times) the cache of transformed corpora, whose default cap is 4 GiB
-  (`OPTIVISION_CACHE_BYTES`); past the cap the cache evicts and recomputes, which costs time, not
-  correctness. Plan for a corpus well below a tenth of the memory you have. This is not a
-  scaling law for other data or machines.
+- Memory of `certify()` is many times the corpus, and the multiple is not a constant. Two separate
+  measurements on one machine (tracemalloc, synthetic vectors, d=128, the default 40 candidates):
+  the hardening audit measured peaks of 11.4 and 11.1 times the float32 corpus for corpora of
+  1.42 MB and 2.78 MB (ABSTAIN path), about 8.4 times of it the cache of transformed corpora
+  (`hardening/a10_performance.md`); the engineering benchmark of 2026-10-10 measured 18.8 times
+  for its 4.58 MB corpus tested with 1,220 query vectors (`ENGINEERING_BENCHMARKS.md`, section 7).
+  The peak holds the cache (default cap 4 GiB, `OPTIVISION_CACHE_BYTES`; past the cap it evicts
+  and recomputes, which costs time, not correctness) and one block of query-vector by
+  document-vector similarities, which grows with the number of query vectors until
+  `max_block_bytes` (256 MiB by default) caps it. On a small corpus plan for ten to twenty times
+  its float32 size and measure on your own data; larger corpora were not measured, and this is
+  not a scaling law for other data or machines.
 - Two tiers keep the small hot store in RAM and read the cold store for a shortlist. That saves
   resident memory. It does not save total storage, and no speed claim is made.
 - A Qdrant server searches an approximate graph with its own quantisation and rescoring. It was
