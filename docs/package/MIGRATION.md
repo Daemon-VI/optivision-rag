@@ -76,8 +76,8 @@ What changes in meaning:
   that repeat an earlier query exactly unless you pass `allow_duplicate_queries=True`, which
   asserts that they are independent draws and is recorded in the certificate (the count is in
   the certificate and in `report()`). It gives a `UserWarning` when it is called again in the
-  same process on the same queries and corpus with another target, error level, seed or
-  candidate space.
+  same process on the same queries and corpus with another target, error level,
+  query order (seed or budget), candidate space, metric, reference or rule.
 
 | `OptimizationResult` | `CertifiedResult` |
 |---|---|

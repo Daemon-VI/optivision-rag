@@ -149,9 +149,13 @@ pipeline=None, compressed=None, key=None, strict_code=False) -> VerificationRepo
 
 The report is a tuple of checks, each `(name, status, detail, level)` with status `pass`, `fail`,
 `skipped` or `differs`. `ok` is true when no check failed (`skipped` and `differs` do not fail a
-report). `level` is the highest of `integrity`, `replay`, `binding` in which at least one check ran
-and `levels` lists all of them; a level can be reached while only some of its checks ran, so read
-the checks. `failed()` lists the failures and `summary()` is a readable account.
+report). `level` is the highest level that was reached: at least one of its checks ran, none of
+its checks failed and no check of a lower level failed. A level whose checks were all skipped is
+not reached but does not stop the count, so `binding` can be reached without the evidence that
+`replay` needs. `binding` is reached only when `binding.corpus`, `binding.queries` and
+`binding.reference` all ran, and the value is `none` when an integrity check failed. `levels` lists
+the levels in which at least one check ran and `skipped` the checks that did not run; a level can
+be reached while some of its optional checks were skipped, so read the checks. `failed()` lists the failures and `summary()` is a readable account.
 `verify_certificate` on a certificate that has been parsed does not raise on a bad one: a check that
 cannot be evaluated is reported as failed, and a record whose structure is invalid stops after
 `schema`, `digest` and `signature` with one `remaining` check marked skipped. It raises `TypeError`
@@ -519,8 +523,10 @@ Every point where what is built differs from, or settles something left open in,
    difference in Python, NumPy or SciPy versions is `differs` and never fails a report.
 9. A key supplied for an unsigned certificate is a failure (the draft was silent), as is an unknown
    algorithm; `key_id` is not authenticated.
-10. A report's `level` is the highest level with a check that ran and `levels` lists them (the draft
-    did not define "level reached" when objects are supplied without evidence).
+10. A report's `level` is the highest level reached as section 4 defines it (its checks ran, none
+    failed, no lower level failed; `binding` needs the corpus, the queries and the reference) and
+    `levels` lists the levels in which a check ran (the draft did not define "level reached" when
+    objects are supplied without evidence).
 11. `verify_certificate` reports unexpected top-level fields as a `schema` failure and stops after
     `schema`, `digest` and `signature` when the structure is invalid.
 12. Bundle: `save_artifact` takes `overwrite` and verifies before writing; `load_artifact` takes

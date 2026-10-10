@@ -73,8 +73,9 @@ certificate is reported, not raised (`verify_certificate` on a parsed certificat
 a bundle directory that cannot be read at all raises `ArtifactError` (or `CertificateFormatError`
 for a malformed certificate file, `FileNotFoundError` for a missing directory). `report.ok` means
 no check failed, which does not make the certificate true. `report.level` is the highest level
-whose checks actually ran, and the report lists the checks that were skipped, so read them: a level
-can be reached while only some of its checks ran. On an ABSTAIN or FALLBACK record, `ok` means that
+whose checks ran with no failure at that level or below (`none` if an integrity check failed;
+`binding` only when the corpus, the queries and the reference were all supplied), and
+`report.skipped` lists the checks that did not run, so read them. On an ABSTAIN or FALLBACK record, `ok` means that
 the record is intact, not that any index was certified. The levels are integrity (the certificate alone), replay (the decision is
 recomputed from the stored evidence) and binding (the live `corpus`, `queries`, `reference`,
 pipeline and codes are the ones certified). `verify_certificate(cert, evidence=..., ...)` is the
@@ -201,7 +202,7 @@ Arguments are checked before any candidate is scored, so a typo costs nothing.
 | no query has a relevant document; the uncompressed index scores 0 on all of them | `ValueError`; `ZeroBaselineError` |
 | the chosen pipeline fits differently than it was evaluated | `FittedStateMismatchError` |
 | some tested queries repeat an earlier query exactly | `ValueError`, unless `allow_duplicate_queries=True`; then a `UserWarning` and the assertion is recorded in the certificate |
-| `certify` is called again in the same process on the same queries and corpus with a different target, error level, seed or candidate space | a `UserWarning` (a second look at one sample is outside the statement); nothing is refused, and the package cannot see calls made in other processes |
+| `certify` is called again in the same process on the same queries and corpus with a different target, error level, query order (seed or budget), candidate space, metric, reference or rule | a `UserWarning` (a second look at one sample is outside the statement); nothing is refused, and the package cannot see calls made in other processes |
 | `save` into a non-empty directory; an unreadable or failing artifact | `FileExistsError`; `ArtifactError` |
 
 ```python

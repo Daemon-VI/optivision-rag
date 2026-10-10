@@ -76,12 +76,15 @@ research results (`reports/research/`) was changed or re-run.
     `--allow-duplicate-queries`), which asserts that they are independent draws; the certificate
     records the assertion.
   - `certify` gives a `UserWarning` when it is called again in the same process on the same
-    queries and corpus with a different target, error level, seed or candidate space.
+    queries and corpus with a different target, error level,
+    query order (seed or budget), candidate space, metric, reference or rule.
   - `certify` gives a `UserWarning` with the counts when some of the queries given have no
     relevant document under the reference and are therefore not tested (labels whose ids match
     only part of the queries used to shrink the sample without a word; the count was, and is, in
     the certificate). The error for labels that match no query now names the likely cause.
-  - `verify` reports the highest level whose checks actually ran and lists the checks it skipped.
+  - `verify` reports the highest level whose checks ran without a failure at that level or below
+    (`binding` only with the corpus, the queries and the reference supplied; `none` when an
+    integrity check failed) and lists the checks it skipped.
     `verify().ok` on an ABSTAIN or FALLBACK record means that the record is intact, not that an
     index was certified.
   - Loading an artifact: a malformed bundle file gives `ArtifactError` or

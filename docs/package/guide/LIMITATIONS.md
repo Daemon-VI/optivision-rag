@@ -69,9 +69,9 @@ is supported by the code path and not proven: the default list depends only on t
 evidence collector never passes queries to `fit`, and it cannot know whether you edited the list
 after a look. The package cannot see several looks at one sample, or several targets tried and one
 reported; the one thing it does is a `UserWarning` when `certify` is called again in the same
-process on the same queries and corpus with a different target, error level, seed or candidate
-space (other processes are invisible to it). `verify` reports the highest level whose checks
-actually ran and lists those it skipped; on an ABSTAIN or FALLBACK record `ok` means that the
+process on the same queries and corpus with a different target, error level,
+query order (seed or budget), candidate space, metric, reference or rule (other processes are invisible to it). `verify` reports the highest level whose checks
+ran without a failure at that level or below, and lists the checks it skipped; on an ABSTAIN or FALLBACK record `ok` means that the
 record is intact, not that an index was certified. `SELECTION_AND_CERTIFICATION.md`, section 6, has the table.
 
 ## 5. Abstention
