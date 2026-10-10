@@ -345,6 +345,18 @@ def _check_query_order(query_budget: Any, order_seed: Any, n_given: int) -> None
                               "replacement")
 
 
+def _warn_if_dropped(evidence: Evidence) -> None:
+    """Say so when some of the queries given were not tested (no relevant document)."""
+    dropped = len(evidence.dropped_queries)
+    if dropped:
+        warnings.warn(
+            f"{dropped} of the {dropped + evidence.n_queries} queries given have no relevant "
+            f"document under the reference and were not tested ({evidence.n_queries} were). If "
+            "that is unexpected, check that the query ids and document ids of the labels match "
+            "the ids of the queries and vectors (a plain list gets the ids '0', '1', ...). The "
+            "count is recorded in the certificate.", UserWarning, stacklevel=3)
+
+
 def _warn_if_graded(qrels: Mapping[Any, Any] | None) -> None:
     """Warn once when a ``{document: grade}`` mapping lists a grade of 0 or less.
 
@@ -561,8 +573,10 @@ def certify(
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original
     corpus. With ``allow_duplicate_queries=True``, ``certify`` gives a ``UserWarning`` when some
-    tested queries repeat an earlier query exactly (that breaks assumption A1 if they are copies). A graded ``qrels`` mapping that lists a grade of 0 or
-    less warns and is then refused with ``ValueError``.
+    tested queries repeat an earlier query exactly (that breaks assumption A1 if they are copies).
+    Queries with no relevant document under the reference are not tested: ``certify`` gives a
+    ``UserWarning`` with the count, which the certificate also records. A graded ``qrels``
+    mapping that lists a grade of 0 or less warns and is then refused with ``ValueError``.
 
     Raises ``ValueError`` (``ContractError`` for invalid vectors) on invalid input,
     ``ImportError`` if the default list needs SciPy, and ``CandidateEvaluationError`` if a
@@ -590,6 +604,7 @@ def certify(
 
     evidence = collect_evidence(corpus, query_corpus, candidate_space, ref, metric=metric,
                                 progress=progress)
+    _warn_if_dropped(evidence)
     decision = select(candidate_space, evidence, target=target, error=error, rule=rule,
                       fallback=fallback, query_budget=query_budget, order_seed=order_seed)
     repeats = exact_duplicates(query_corpus, evidence.dropped_queries, decision.query_order)

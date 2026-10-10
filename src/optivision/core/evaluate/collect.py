@@ -182,7 +182,9 @@ def collect_evidence(
                            "document, or finite on queries that have none")
     if not keep.any():
         raise ValueError("no query has a relevant document under this reference: there is "
-                         "nothing to test")
+                         "nothing to test (with labels, check that their query ids and document "
+                         "ids match the ids of the queries and vectors; a plain list gets the "
+                         "ids '0', '1', ...)")
 
     cache: dict = {}
     rows: list[np.ndarray] = []

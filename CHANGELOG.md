@@ -77,6 +77,10 @@ research results (`reports/research/`) was changed or re-run.
     records the assertion.
   - `certify` gives a `UserWarning` when it is called again in the same process on the same
     queries and corpus with a different target, error level, seed or candidate space.
+  - `certify` gives a `UserWarning` with the counts when some of the queries given have no
+    relevant document under the reference and are therefore not tested (labels whose ids match
+    only part of the queries used to shrink the sample without a word; the count was, and is, in
+    the certificate). The error for labels that match no query now names the likely cause.
   - `verify` reports the highest level whose checks actually ran and lists the checks it skipped.
     `verify().ok` on an ABSTAIN or FALLBACK record means that the record is intact, not that an
     index was certified.

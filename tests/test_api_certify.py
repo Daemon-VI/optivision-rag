@@ -262,6 +262,19 @@ def test_queries_without_a_relevant_document_are_dropped_and_counted(data):
     assert r.certificate.to_dict()["evidence"]["dropped_queries"] == list(queries.ids[:10])
 
 
+def test_untested_queries_are_reported_by_a_warning_that_names_the_counts(data):
+    """Labels whose ids match only some queries must not shrink the sample silently."""
+    corpus, queries, qrels = data
+    labelled = {k: v for k, v in qrels.items() if k not in set(queries.ids[:10])}
+    with pytest.warns(UserWarning, match=r"10 of the 120 queries given have no relevant "
+                                         r"document.*\(110 were\).*ids"):
+        run(corpus, queries, labelled)
+    with warnings.catch_warnings(record=True) as caught:  # every query labelled: nothing to say
+        warnings.simplefilter("always")
+        run(corpus, queries, qrels)
+    assert not [w for w in caught if "have no relevant document" in str(w.message)]
+
+
 def test_labels_that_match_no_query_are_an_error_not_an_abstention(data):
     corpus, queries, _ = data
     with pytest.raises(ValueError, match="relevant document"):
