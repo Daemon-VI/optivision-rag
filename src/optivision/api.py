@@ -58,6 +58,7 @@ from .core.artifact.record import exact_duplicates
 from .core.artifact.report import FAIL, INTEGRITY, PASS
 from .core.evaluate import Evidence, LabelReference, RankingReference, Reference
 from .core.evaluate.collect import collect_evidence, compress_selected
+from .core.identity import canonical_json
 from .core.retrieve import CompressedRetriever, ExactRetriever
 from .core.selection import (
     DEFAULT_ORDER_SEED,
@@ -81,8 +82,9 @@ from .core.vectors import (
 
 __all__ = ["CertifiedResult", "certify", "verify"]
 
-#: Looks already taken in this process: (documents digest, queries digest) -> the (target, error,
-#: space identity, query order) of each ``certify`` call on them. Bounded; used only to warn.
+#: Looks already taken in this process: (documents digest, queries digest) -> what each
+#: ``certify`` call on them asked (target, error, candidate list, query order, metric, reference
+#: and rule). Bounded; used only to warn.
 _LOOKS: dict[tuple[str, str], list[tuple[Any, ...]]] = {}
 _MAX_LOOK_KEYS = 64
 _MAX_LOOKS_PER_KEY = 32
@@ -95,21 +97,25 @@ def _reset_looks() -> None:
 
 def _warn_if_repeated_look(record: Mapping[str, Any]) -> None:
     """Warn when these documents and queries were already used in this process for a different
-    ``(target, error)``, query order or candidate list. Never changes a result."""
+    question: another ``(target, error)``, query order, candidate list, metric, reference or
+    rule. Never changes a result."""
     key = (record["corpus"]["digest"], record["queries"]["identity"]["digest"])
     order = record["queries"]["order"]
+    reference = record["reference"]
     look = (record["target"], record["error"], record["space"]["identity"], order["kind"],
-            order["seed"], order["budget"])
+            order["seed"], order["budget"], reference["metric"], reference["construct"],
+            canonical_json(reference["identity"]), canonical_json(record["rule"]))
     earlier = _LOOKS.pop(key, [])  # pop and reinsert: the dict stays in least-recently-used order
     if earlier and look not in earlier:
         warnings.warn(
             "certify() was already called in this process on the same documents and the same "
-            "queries with a different target or error level, query order (seed or budget) or "
-            "candidate list. Each additional look at the same calibration queries spends error "
-            "level that the statement does not account for (docs/package/STATISTICAL_REVIEW.md, "
-            "section 7.7: trying several seeds or targets and reporting one can multiply the "
-            "false-selection frequency several times over). Fresh queries are needed for each "
-            "target; this call's result is unchanged.", UserWarning, stacklevel=3)
+            "queries with a different target or error level, query order (seed or budget), "
+            "candidate list, metric, reference or rule. Each additional look at the same "
+            "calibration queries spends error level that the statement does not account for "
+            "(docs/package/STATISTICAL_REVIEW.md, section 7.7: trying several seeds or targets "
+            "and reporting one can multiply the false-selection frequency several times over). "
+            "Fresh queries are needed for each question; this call's result is unchanged.",
+            UserWarning, stacklevel=3)
     if look not in earlier:
         earlier.append(look)
     _LOOKS[key] = earlier[-_MAX_LOOKS_PER_KEY:]
@@ -567,8 +573,8 @@ def certify(
     that was evaluated. Call this once per ``(target, error)``: trying several targets on the
     same queries and reporting one is outside the statement. If you want another look, collect
     new queries. A second call in the same process on the same documents and queries with a
-    different target, error level, query order or candidate list gives a ``UserWarning`` (it
-    never changes the result).
+    different target, error level, query order, candidate list, metric, reference or rule
+    gives a ``UserWarning`` (it never changes the result).
 
     Nothing certified is the normal, safe outcome and is returned like any other: no exception,
     no warning. ``result.outcome is Outcome.ABSTAIN`` and ``result.store`` is the original

@@ -678,14 +678,18 @@ def test_a_second_look_at_the_same_queries_warns_and_changes_nothing(data):
         first = run(corpus, queries, qrels, target=0.9, created=CREATED)
         again = run(corpus, queries, qrels, target=0.9, created=CREATED)  # the same look
     assert again.certificate.digest == first.certificate.digest
-    for change in ({"target": 0.8}, {"error": 0.1}, {"order_seed": 5}):
+    for change in ({"target": 0.8}, {"error": 0.1}, {"order_seed": 5}, {"metric": "recall@5"},
+                   {"rule": BonferroniBetting()}):
         with pytest.warns(UserWarning, match="spends error level") as caught:
             other = run(corpus, queries, qrels, **{"target": 0.9, "created": CREATED, **change})
         message = str(caught[0].message)
         assert "STATISTICAL_REVIEW.md" in message and "7.7" in message
-        assert "Fresh queries are needed for each target" in message
+        assert "Fresh queries are needed for each question" in message
         assert caught[0].filename == __file__
         assert other.decision.outcome is not None
+    # the same queries judged against another reference are another look as well
+    with pytest.warns(UserWarning, match="metric, reference or rule"):
+        run(corpus, queries, None, target=0.9)  # agreement with the uncompressed ranking
     # other queries are a first look
     with warnings.catch_warnings():
         warnings.simplefilter("error")
