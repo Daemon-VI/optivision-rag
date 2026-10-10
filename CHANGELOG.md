@@ -98,6 +98,8 @@ research results (`reports/research/`) was changed or re-run.
     carries instance attributes is not treated as built in; note strings were parenthesised.
   - `from optivision.storage import segment_reduce` works again, as in v0.3.0. The rescoring tests
     compare batched and per-query scores within a derived float32 bound instead of bitwise.
+    The retrieval test of one query alone against the same query in a batch uses the same bound
+    (the two were equal bit for bit on one BLAS kernel only).
   - Documentation: 51 names in `__all__` (the 40 of v0.3.0 plus 11), the `int4(mean)` label, the
     scope of the platforms that were tested, the `certify` dependency on SciPy, how to write the
     files the command line reads, and the four expected failures in the pinned `compose.py`
