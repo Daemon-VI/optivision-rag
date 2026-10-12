@@ -45,6 +45,16 @@ def main() -> int:
     ap.add_argument("--dtype", default="auto", help="auto | float32 | bfloat16 | float16")
     ap.add_argument("--multi-gpu", action="store_true",
                     help="spread the model over all visible GPUs (keeps float32 for models too big for one card)")
+    ap.add_argument("--loader", default=None,
+                    help="loader for a model that is not in the registry, or to override the registry's "
+                         "(see optivision.adapters.supported_loaders(), e.g. colpali-engine:colqwen3.5, pylate)")
+    ap.add_argument("--trust-remote-code", action="store_true",
+                    help="allow a remote-code model to run its own modelling code on this machine")
+    ap.add_argument("--revision", default=None,
+                    help="commit of a remote-code model to load ('latest' loads and records the current one)")
+    ap.add_argument("--check-pairs", type=int, default=12,
+                    help="pages on which check_retriever runs before the full encode (0 skips it); the run "
+                         "stops if the vectors are not finite, unit-norm and retrieving their own page")
     a = ap.parse_args()
 
     from datasets import load_dataset
@@ -62,7 +72,13 @@ def main() -> int:
         adapter = PageEncoderAdapter(
             ColVLMEncoder(backend=a.backend, model_name=a.model, dtype=a.dtype, multi_gpu=a.multi_gpu), info=info)
     else:
-        adapter = load_adapter(a.model, dtype=a.dtype) if info and info.loader.startswith("colpali-engine:")             else load_adapter(a.model)
+        loader = a.loader or (info.loader if info else "sentence-transformers")
+        options: dict = {}
+        if loader == "nemotron" or loader.startswith(("colpali-engine:", "remote-code:")):
+            options.update(dtype=a.dtype, multi_gpu=a.multi_gpu)
+        if loader.startswith("remote-code:"):
+            options.update(trust_remote_code=a.trust_remote_code, revision=a.revision)
+        adapter = load_adapter(a.model, loader=a.loader, **options)
     encoder = getattr(adapter, "encoder", None)
     run_info = {
         "device": getattr(encoder, "device", None),
@@ -84,6 +100,22 @@ def main() -> int:
             qid = f"q{len(queries):04d}"
             queries.append((qid, q))
             qrels[qid] = [pid]
+
+    if a.check_pairs:
+        from optivision.adapters import check_retriever
+
+        first = {pid: q for qid, q in queries for pid in qrels[qid]}
+        pairs = [(im, first[pid]) for pid, im in zip(ids, images) if pid in first][: a.check_pairs]
+        if len(pairs) >= 2:
+            pages = [im for im, _ in pairs]
+            if isinstance(adapter, PageEncoderAdapter):
+                pages = [(PageRef(f"check{i}", 1), im) for i, im in enumerate(pages)]
+            report = check_retriever(adapter, pages, [q for _, q in pairs],
+                                     expected_dim=info.dimension if info else None)
+            print(json.dumps({"check_retriever": report}, default=str), flush=True)
+            if not report["ok"]:
+                print("CHECK FAILED: the model does not behave like a retriever on these pages; nothing was written")
+                return 1
 
     t0 = time.time()
     if isinstance(adapter, PageEncoderAdapter):

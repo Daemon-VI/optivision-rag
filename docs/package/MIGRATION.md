@@ -1,7 +1,7 @@
 # Migrating from v0.3.0
 
-Status: 2026-10-06, branch `package-universal`. `__version__` is still `"0.3.0"`: nothing here
-is released (decision D18), and no deprecation is made by this work.
+Status: 2026-10-06, updated 2026-10-12 for version 0.4.0 (`__version__` is `"0.4.0"`). No
+deprecation is made by this work.
 
 **A v0.3.0 program needs no change.** `optimize()`, `calibrate()`, the 40 v0.3.0 names of
 `optivision.__all__`, every old import path, the CLI commands and options, the registry names
@@ -15,9 +15,15 @@ who run the registered research scripts. The design of `certify` is in `API_DESI
 | what | detail | matters if |
 |---|---|---|
 | `optivision.adapters` is a package | `adapters/__init__.py` (the old module, moved with `git mv`) plus `arrays.py` and `nemotron.py`. Same names, same objects; `__file__` and `__path__` differ | you read the module's file path, or ship a stub that shadows it |
-| 11 new names in `optivision.__all__` | `CandidateSpace`, `Certificate`, `CertifiedResult`, `Decision`, `EncoderIdentity`, `Outcome`, `certify`, `load_artifact`, `save_artifact`, `verify`, `verify_certificate` (51 names in all). They load on demand (PEP 562) | you run `from optivision import *` (it resolves every name, so it loads the certificate layer) |
+| 12 new names in `optivision.__all__` | `CandidateSpace`, `Certificate`, `CertifiedResult`, `Decision`, `EncoderIdentity`, `Outcome`, `certify`, `encode_and_certify`, `load_artifact`, `save_artifact`, `verify`, `verify_certificate` (52 names in all). They load on demand (PEP 562) | you run `from optivision import *` (it resolves every name, so it loads the certificate layer) |
 | new registered stage `rotation` | `RotationProjector`, from `optivision.core.stages` only (`optivision.stages` and `__all__` do not list it). `STAGES` has 16 entries, the message of `stage_from_dict` for an unknown name lists it, and the shorthand of `optivision compress` accepts `rotation(seed=3)`. No existing stage name, parameter or default changed; the hash of the registered default list is unchanged | you enumerate `STAGES` |
 | `load_adapter` for the NVIDIA ColEmbed family | A model id whose registry loader is `"nemotron"` now returns a `NemotronAdapter` (needs torch and transformers). In v0.3.0 it fell through to `SentenceTransformersAdapter`, which does not know that checkpoint | you called `load_adapter` on such an id |
+| `load_adapter` for `nomic-ai/colnomic-embed-multimodal-7b` | Builds a colpali-engine page adapter (loader `colpali-engine:colqwen2.5`, status `untested`) instead of the sentence-transformers adapter (`unverified`) | you called `load_adapter` on that id |
+| `ModelInfo` has three more optional fields | `license`, `revision` and `notes`, defaulting to None, None and an empty string. Positional construction with the 7 earlier arguments still works | you construct `ModelInfo` or compare it field by field |
+| the registry is larger | `MODELS` and `supported_models()` return 65 entries (12 in v0.3.0): 10 measured, 23 untested, 32 unverified | you iterate the registry and expect the earlier list |
+| the status of `nvidia/nemotron-colembed-vl-8b-v2` | Now `measured` (float16 inference), from the committed runs under `reports/universal/wide/` | you read the status of that id |
+| the certificate records version 0.4.0 | The version field and, through the environment record, the digest of a certificate differ from those of an earlier build for the same decision and evidence | you compare certificate digests across versions |
+| `load_adapter` has a `loader` argument | `load_adapter(model_id, loader=None, **kwargs)`; without it the call behaves as before | nothing, unless you pass a third positional argument |
 | adapters describe themselves | `EncoderAdapter.identity()` and `.dimension` (optional: a subclass without them keeps working); new `ArrayAdapter`, `CallableAdapter`, `corpus_from_arrays` for bringing your own vectors, and `NemotronAdapter`. Corpora they build carry `attrs["encoder_identity"]` (and `attrs["model"]`), which `.npz` files keep in their header | you compare `attrs` dicts exactly |
 | two new CLI commands | `optivision certify` and `optivision verify`, registered by `optivision.cli` (so also under `python -m optivision.cli`). No existing command or option changed | you parse the output of `optivision --help` |
 | new packages and modules | `optivision.core` (identity, vectors, pipeline, similarity, stages, retrieve, evaluate, selection, artifact), `optivision.backends`, `optivision.api`, `optivision.cli_certify`, `optivision.testing`, and the namespaces `optivision.ext.vision` and `optivision.legacy`. Nothing was moved or copied: `optivision.backends.NumpyIndex is optivision.index.numpy_index.NumpyIndex`, and so on | you build your own wheel list (new subpackages carry `__init__.py`) |

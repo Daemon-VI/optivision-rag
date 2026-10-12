@@ -127,12 +127,11 @@ Write-up with every table: [docs/UNIVERSAL.md](docs/UNIVERSAL.md). Release audit
 [docs/RELEASE-AUDIT-2026-09-27.md](docs/RELEASE-AUDIT-2026-09-27.md). CLI:
 `optivision inspect | compress | calibrate | benchmark | compare`.
 
-## On the development branch: a model-agnostic core and certified selection (unreleased)
+## Model-agnostic core and certified selection (0.4.0)
 
-None of this is in a release: the latest release, 0.3.0, does not contain it, and
-`__version__` is still `0.3.0` on this branch. It is engineering capability, tested on
-synthetic data and against the research code for numerical equality; no registered
-experiment evaluated it as a package.
+`pip install "optivision-rag[merge]"` installs it (the extra adds SciPy, which the default
+candidate list needs). It is engineering capability, tested on synthetic data and against the
+research code for numerical equality; no registered experiment evaluated it as a package.
 
 What was added, for any late-interaction encoder that hands over one `[n_vectors, dim]`
 float array per document and per query, scored by MaxSim (the research record covers
@@ -162,8 +161,7 @@ own statement, claimed only if the assumptions and conditions it lists hold. It 
 compressed index keeps retrieval quality, and it does not carry over to another encoder,
 corpus or coordinate basis.
 
-To try it, install a clone of this branch (`pip install -e ".[merge]"`; the default
-candidate list needs SciPy):
+To try it:
 
 ```python
 from optivision import certify, verify
@@ -180,12 +178,34 @@ verify("artifact/").ok             # integrity, replay from stored evidence (bui
 ```
 
 `certify` needs SciPy for its default candidate list: `pip install "optivision-rag[merge]"` (from a
-checkout, `pip install -e ".[merge]"`). In the API, `space=CandidateSpace.default(dim, allow_reduced=True)` and, on the command line, the flag
+clone, `pip install -e ".[merge]"`). In the API, `space=CandidateSpace.default(dim, allow_reduced=True)` and, on the command line, the flag
 `--allow-reduced` use a smaller candidate list that does not need SciPy; the certificate records which
 list was used. The command line reads `.npz` files (a corpus saved with `MultiVectorCorpus.save`, the
 same for the queries) and a JSON file of `{query id: [relevant document ids]}`; section 6 of the
 [quickstart](docs/package/guide/QUICKSTART.md) writes them and runs `optivision certify` and
 `optivision verify` on them.
+
+### Model coverage
+
+The registry (`optivision.adapters.MODELS`, `supported_models()`) lists 65 late-interaction
+models: 50 that take page images and 15 that take text. Each has a status that describes the
+loading path and the measurements, not how well a pipeline compresses that model's vectors:
+
+- `measured` (10): retrieval quality with and without compression was measured by this
+  repository on the model's real output. These are in-sample development measurements on ViDoRe
+  V1 DocVQA and InfoVQA (500 pages each) or SciFact; they are not a statement about another
+  corpus.
+- `untested` (23): the loading code is the one a measured sibling uses, or the model passed a
+  `check_retriever` run here; compression of this checkpoint's vectors was never measured here.
+- `unverified` (32): the loader is written against the model card and was never run here.
+
+`optivision models` prints the registry and the measured catalogue. `encode_and_certify(model,
+documents, queries, qrels)` encodes with a model and then runs `certify` on the vectors;
+`load_adapter(model_id, loader=...)` accepts a checkpoint that is not in the registry, and
+`check_retriever` encodes a dozen matched pairs and reports whether an adapter behaves like a
+retriever (it shows the model was driven correctly, not that compression works). The measured
+catalogue (`measured_models`, `measured_results`, `measured_shortlist`) ships with the package.
+Which models are covered, how, and what was measured: [models guide](docs/package/guide/MODELS.md).
 
 What the research record shows, and does not show:
 
@@ -551,7 +571,7 @@ src/optivision/
   benchmark.py        datasets + result matrices
   cli_universal.py    inspect / compress / calibrate / benchmark / compare
 
-  # model-agnostic core and certified selection: unreleased, see "On the development branch"
+  # model-agnostic core and certified selection (0.4.0)
   core/               vector contract, stages with declared traits, candidate list and
                       selection rule, certificates, retrieval seam
   backends/           Backend protocol; wrappers over NumpyIndex and QdrantIndex
@@ -561,7 +581,7 @@ src/optivision/
   ext/, legacy/       namespaces that say which layer a name belongs to (no code moved)
 app/streamlit_app.py  demo UI
 docs/                 architecture, results, viva notes, AUDIT-2026-09-27, UNIVERSAL,
-                      package/ (design, specifications and guide of the unreleased core)
+                      package/ (design, specifications and guide of the core)
 notebooks/            Colab / Kaggle runner for the ColPali benchmark
 reports/universal/    every measured number of the universal layer (JSON + tables)
 scripts/universal_study/  the scripts that produced them

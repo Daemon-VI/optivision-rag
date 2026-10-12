@@ -1,7 +1,7 @@
 # Public API: `certify()` beside `optimize()`
 
-Status: as built, 2026-10-06, branch `package-universal`. `__version__` stays `"0.3.0"` and
-nothing here is released (decision D18). Contract: `UNIVERSAL_PACKAGE_DESIGN.md`, section 5.9
+Status: as built, 2026-10-06, updated 2026-10-12 for version 0.4.0 (`__version__` is `"0.4.0"`;
+see decision D18 and its note). Contract: `UNIVERSAL_PACKAGE_DESIGN.md`, section 5.9
 and decisions D2, D5, D17, D18. Nothing in this file is a research result; what the research
 does and does not support is in `FINAL_RESEARCH_BOUNDARY.md`. Every Python block below is run
 as written, in order, in one session. They use synthetic data from `optivision.testing`, which
@@ -217,7 +217,7 @@ for bad in ({"target": 1.5}, {"error": 0.0}, {"reference": "labels"}):
 
 - No automatic fallback to float16 or to anything else: float16 is one candidate and has to be
   certified like any other. Without `fallback=`, nothing certified means the uncompressed index.
-- No per-model presets and no `model=` argument: the default list, `target` and `error` are the
+- No per-model presets and no `model=` argument to `certify` (`encode_and_certify` takes a model only to encode with it): the default list, `target` and `error` are the
   same for every encoder. The list was shaped by results on the development encoders; using it
   on another encoder is an untested transfer, not a finding.
 - No "best" configuration: the choice among certified candidates is the smallest by the size
@@ -232,15 +232,34 @@ for bad in ({"target": 1.5}, {"error": 0.0}, {"reference": "labels"}):
 - No silent conversion: dtypes are kept, and a float16 corpus stays float16 (the ratio is vs
   float32). No device selection and no new environment variable.
 
+## 8b. Model coverage (0.4.0)
+
+- `encode_and_certify(model, documents, queries, qrels, *, document_ids, query_ids,
+  adapter_options, **certify_options)` encodes with a model (a registry id or an adapter) and
+  then calls `certify` on the vectors. The decision is the one `certify` makes; the model plays no
+  part in it.
+- `load_adapter(model_id, loader=None, **kwargs)`: `loader` builds an adapter for a checkpoint
+  that is not in the registry (`colpali-engine:<family>`, `remote-code:<recipe>`, `pylate`);
+  `supported_loaders()` lists them. `remote-code` needs `trust_remote_code=True` from the caller.
+- `check_retriever(adapter, documents, queries)` (in `optivision.adapters`) encodes matched pairs
+  and reports whether the adapter behaves like a retriever. It is a check of the loading, not of
+  compression.
+- `measured_models()`, `measured_results(model_id)` and `measured_shortlist(model_id)` read the
+  shipped catalogue of measurements made by this repository. They are in-sample development
+  measurements, not a statement about your corpus.
+- `optivision models` lists the registry (65 models: 10 measured, 23 untested, 32 unverified) and
+  the catalogue. Guide page: `guide/MODELS.md`.
+
 ## 9. Stability
 
-Everything here is new on this branch and may change before a release: the `certify` parameter
+Everything here is new in 0.4.0 and may change in a later release: the `certify` parameter
 set, the keys of `report()`, the CLI options of `certify` and `verify`, the artifact and
 certificate formats (both version 1, versioned by their `schema_version`), and the lazy
 top-level names (`certify`, `verify`, `verify_certificate`, `load_artifact`, `save_artifact`,
-`CertifiedResult`, `Certificate`, `CandidateSpace`, `Decision`, `Outcome`, `EncoderIdentity`),
+`CertifiedResult`, `Certificate`, `CandidateSpace`, `Decision`, `Outcome`, `EncoderIdentity`,
+`encode_and_certify`),
 which load on demand so that `import optivision` does not pay for the certificate modules.
-Unchanged: `optimize`, `calibrate`, the 40 v0.3.0 names in `__all__` (it now lists 51 with the 11 new ones), the v1 file formats, the
+Unchanged: `optimize`, `calibrate`, the 40 v0.3.0 names in `__all__` (it now lists 52 with the 12 new ones), the v1 file formats, the
 existing CLI commands. Certificates record the library version and a digest of the
 decision-relevant source files.
 

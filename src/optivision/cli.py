@@ -353,6 +353,11 @@ from .cli_certify import register as _register_certify
 
 _register_certify(app)
 
+# ``models`` (the model registry and what was measured for each model), same arrangement.
+from .cli_models import register as _register_models
+
+_register_models(app)
+
 
 if __name__ == "__main__":  # pragma: no cover
     app()

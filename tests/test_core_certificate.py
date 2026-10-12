@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+import optivision
 from optivision.compose import Pipeline
 from optivision.core import artifact
 from optivision.core.artifact import (
@@ -214,7 +215,7 @@ class TestFieldsOfTheRecord:
         c = selected.certificate
         assert c.data["schema"] == "optivision-certificate" and c.schema_version == 1
         assert c.created_utc == CREATED
-        assert c.data["package"] == {"name": "optivision", "version": "0.3.0"}
+        assert c.data["package"] == {"name": "optivision", "version": optivision.__version__}
 
     def test_the_decision_is_recorded_as_it_was_made(self, selected):
         c, d = selected.certificate, selected.decision

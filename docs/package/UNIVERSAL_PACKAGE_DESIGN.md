@@ -91,6 +91,7 @@ Corrections to the four-way split:
 | D16 | `optivision.adapters` becomes a package. The model registry and its evidence statuses are not changed. New: `ArrayAdapter` (bring your own vectors), `EncoderIdentity`. | Audit 3.4, 9.3. |
 | D17 | Public API is additive: `optivision.certify()`, `verify_certificate()`, and the types they return. `optimize()` and `calibrate()` are unchanged. | Compatibility. |
 | D18 | `__version__` stays `"0.3.0"` on this branch. No release. Certificates record the version and a digest of the decision-relevant source files. | No release without the owner's decision. |
+| D18a | Note, 2026-10-12: the owner decided to prepare version 0.4.0. `__version__` is `"0.4.0"` and the certificates record that version. The text of D18 above is the decision as taken on 2026-10-06 and is kept as written. | Owner decision on the release. |
 | D19 | New tests are flat files `tests/test_core_*.py`, `tests/test_backends_*.py`, `tests/test_adapters_*.py`, `tests/test_api_*.py`. | `tests/` is a package without sub-packages. |
 | D20 | Design and reference documents live in `docs/package/`. | Separate from `docs/UNIVERSAL.md`, which is a results record. |
 

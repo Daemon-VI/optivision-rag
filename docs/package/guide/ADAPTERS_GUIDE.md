@@ -18,7 +18,15 @@ has to be measured on those vectors, in the basis they are in, and a registry st
 | a function that encodes | `CallableAdapter(encode_documents, encode_queries, identity)` |
 | a `MultiVectorCorpus` already | nothing: pass it to `certify` as it is |
 | a model family the repository has a loader for (ColPali, ColQwen, ColSmol, Nemotron ColEmbed, sentence-transformers models) | `load_adapter(model_id)`; needs the model libraries; the registry status says how far that model was tested |
+| a checkpoint of a known family that is not in the registry | `load_adapter(model_id, loader="colpali-engine:<family>")` (or `remote-code:<recipe>`, which needs `trust_remote_code=True` from you, or `pylate`); `supported_loaders()` lists the names |
+| a token-vector encoder of your own (one `[n, d]` array per input) | `TokenEncoderAdapter`, in `optivision.adapters` |
+| an adapter whose output you want to sanity-check | `check_retriever(adapter, documents, queries)`: encodes matched pairs and reports width, finiteness, row norms and how many queries rank their own document first; it shows the model was driven correctly, not that compression works |
+| a model id and the wish to go straight to a decision | `encode_and_certify(model, documents, queries, qrels)`: encodes, then calls `certify` |
 | something else | subclass `EncoderAdapter`; route arrays through `corpus_from_arrays`; override `identity()` |
+
+Which models are in the registry, what each status means (`measured`, `untested`, `unverified`)
+and what was measured is on one generated page: [MODELS.md](MODELS.md). A registry entry or a
+loader is a way to get vectors in. It is not evidence that compression works for that model.
 
 ## 2. What an adapter does and does not do
 

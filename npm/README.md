@@ -49,7 +49,7 @@ Full results, the ablations and the analysis are in the
 > Every `optivision` command below also works as `npx optivision-rag <command>`.
 >
 > The launcher installs the `corpus` extra by default, which does not include SciPy. The
-> `optivision certify` command (in releases that contain it; 0.3.0 does not) needs SciPy for its
+> `optivision certify` command (added in 0.4.0) needs SciPy for its
 > default candidate list, so through npx set `OPTIVISION_EXTRAS=corpus,merge` (the `merge` extra
 > installs SciPy), or pass `--allow-reduced` to use the smaller candidate list. Each set of extras
 > gets its own environment. Running `certify` from a pip install is the more direct route.

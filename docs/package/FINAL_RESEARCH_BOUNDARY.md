@@ -188,6 +188,18 @@ candidate list and say nothing about transfer. An encoder becomes ineligible for
 of its vectors has been compressed or scored by this project before the registration tag; this
 package work encoded no model and scored no real encoder output.
 
+## 8b. Note of 2026-10-12: models added in 0.4.0
+
+- Three models were measured after the registered runs: `nvidia/nemotron-colembed-vl-8b-v2`,
+  `athrael-soju/colqwen3.5-4.5B-v3` and `TomoroAI/tomoro-colqwen3-embed-4b`. These are
+  development-style measurements on the same two ViDoRe V1 splits (DocVQA and InfoVQA, 500 pages
+  each). They are in-sample, were not run under the selection rule of `certify`, and are not
+  held-out or transfer evidence.
+- The 8B was candidate 9 of the held-out pool and is no longer eligible as a held-out encoder.
+- The 55 registry entries marked untested or unverified are loading paths. They are not evidence
+  of anything about compression.
+- XH has still not been registered and has not been run. H5 failed, as stated above.
+
 ## 9. What the package does not guarantee
 
 1. That any pipeline, codec or candidate list keeps retrieval quality on an encoder, a corpus,

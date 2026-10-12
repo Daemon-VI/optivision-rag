@@ -22,7 +22,8 @@ def test_measured_models_are_exactly_the_benchmarked_ones():
     measured = {m.model_id for m in supported_models(MEASURED)}
     assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M", "answerdotai/answerai-colbert-small-v1",
                         "vidore/colqwen2-v1.0-merged", "vidore/colqwen2-v1.0", "vidore/colqwen2.5-v0.2",
-                        "nvidia/nemotron-colembed-vl-4b-v2"}
+                        "nvidia/nemotron-colembed-vl-4b-v2", "nvidia/nemotron-colembed-vl-8b-v2",
+                        "athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"}
 
 
 def test_every_entry_says_where_its_status_comes_from():

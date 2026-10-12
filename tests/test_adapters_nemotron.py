@@ -154,13 +154,19 @@ def test_other_models_still_take_their_old_paths():
     assert isinstance(adapter, SentenceTransformersAdapter)
 
 
-def test_the_registry_entries_are_what_they_were():
-    """Registry honesty: an adapter does not change a status; only a committed measurement does."""
+def test_the_registry_entries_follow_the_committed_measurements():
+    """Registry honesty: an adapter does not change a status; only a committed measurement does.
+
+    The 8B became ``measured`` with the reports of its run (``reports/universal/wide``,
+    2026-10-05/06), and its evidence says what that run was: float16 inference.
+    """
     assert MODELS[FOUR_B].status == MEASURED and MODELS[FOUR_B].loader == "nemotron"
-    assert MODELS[EIGHT_B].status == UNTESTED and MODELS[EIGHT_B].loader == "nemotron"
+    assert MODELS[EIGHT_B].status == MEASURED and MODELS[EIGHT_B].loader == "nemotron"
     assert MODELS[FOUR_B].dimension == 2560 and MODELS[EIGHT_B].dimension == 4096
     assert "never encoded here" not in MODELS[FOUR_B].evidence
-    assert "not encoded here" in MODELS[EIGHT_B].evidence
+    assert "float16 inference" in MODELS[EIGHT_B].evidence
+    assert "NEMOTRON_8B.md" in MODELS[EIGHT_B].evidence
+    assert UNTESTED in {m.status for m in MODELS.values()}
 
 
 # ------------------------------------------------------- the adapter, end to end

@@ -45,6 +45,7 @@ decision procedure may abstain, and abstaining is a correct outcome.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | the tree as built, the dependency rule and its test, pinned files, the data flow, extension checklists |
 | [BACKENDS_GUIDE.md](BACKENDS_GUIDE.md) | which retriever or backend to use when |
 | [ADAPTERS_GUIDE.md](ADAPTERS_GUIDE.md) | how to bring your own encoder or arrays |
+| [MODELS.md](MODELS.md) | which late-interaction models have a loading path, the three statuses (`measured`, `untested`, `unverified`), what was measured, `encode_and_certify` and `optivision models` (generated page) |
 
 ## Runnable examples
 

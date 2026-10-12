@@ -29,11 +29,11 @@ STATUSES = {
     "vidore/colqwen2-v1.0": "measured",
     "vidore/colqwen2.5-v0.2": "measured",
     "nvidia/nemotron-colembed-vl-4b-v2": "measured",
-    "nvidia/nemotron-colembed-vl-8b-v2": "untested",
-    "nomic-ai/colnomic-embed-multimodal-7b": "unverified",
+    "nvidia/nemotron-colembed-vl-8b-v2": "measured",  # run committed 2026-10-12 (reports/universal/wide)
+    "nomic-ai/colnomic-embed-multimodal-7b": "untested",  # its card loads it with the measured ColQwen2_5 class
     "colbert-ir/colbertv2.0": "unverified",
     "answerdotai/answerai-colbert-small-v1": "measured",
-    "lightonai/GTE-ModernColBERT-v1": "unverified",
+    "lightonai/GTE-ModernColBERT-v1": "untested",  # passed check_retriever here 2026-10-12
 }
 
 
@@ -128,6 +128,9 @@ def test_every_registry_entry_gives_an_identity_without_invented_facts():
 
         Adapter.info = info
         identity = Adapter().identity()
+        if info.dimension is None:  # no file of the model states its width: it is not guessed
+            assert identity is None
+            continue
         assert identity is not None and identity.dimension == info.dimension
         assert identity.model_id == info.model_id and identity.modality == info.modality
         assert identity.revision is None and identity.normalized is None
@@ -135,8 +138,34 @@ def test_every_registry_entry_gives_an_identity_without_invented_facts():
 
 
 def test_the_registry_statuses_have_not_moved():
-    assert {m.model_id: m.status for m in supported_models()} == STATUSES
+    """The twelve entries of v0.3.0, and every status of the entries added since."""
+    statuses = {m.model_id: m.status for m in supported_models()}
+    assert {k: statuses[k] for k in STATUSES} == STATUSES
+    added = {k: v for k, v in statuses.items() if k not in STATUSES}
+    measured = {k for k, v in added.items() if v == "measured"}
+    assert measured == {"athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"}
+    assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
+
+
+def test_an_entry_that_was_not_measured_here_says_so_and_names_its_revision():
+    for info in supported_models():
+        if info.model_id in STATUSES:
+            continue
+        assert info.revision and len(info.revision) == 40, info.model_id
+        if info.status != "measured":
+            assert "never" in info.evidence, info.model_id  # "never encoded here" / "never run here"
+        assert info.dimension is None or info.dimension > 0
+    without_width = [m.model_id for m in supported_models() if m.dimension is None]
+    assert without_width == ["nvidia/llama-nemoretriever-colembed-1b-v1",
+                             "nvidia/llama-nemoretriever-colembed-3b-v1"]
+
+
+def test_single_vector_and_untrained_checkpoints_are_not_registered():
+    """Checked on their model cards 2026-10-12: dense (one vector per item) or an untrained base."""
+    for model_id in ("nomic-ai/nomic-embed-multimodal-3b", "nomic-ai/nomic-embed-multimodal-7b",
+                     "vidore/ColSmolVLM-Instruct-256M-base"):
+        assert model_id not in MODELS
 
 
 # ------------------------------------------------------------- PageEncoderAdapter

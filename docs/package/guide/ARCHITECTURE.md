@@ -25,19 +25,24 @@ src/optivision/
     selection/         spaces.py statistics.py rules.py decision.py engine.py       (new)
     retrieve/          types.py checks.py exact.py tiered.py                        (new; delegate to storage.py)
     artifact/          certificate.py record.py verification.py report.py bundle.py codeid.py   (new)
-  adapters/            EncoderAdapter and the model registry (moved from adapters.py), arrays.py, nemotron.py
+  adapters/            EncoderAdapter and the model registry (moved from adapters.py), arrays.py, nemotron.py,
+                       tokens.py (TokenEncoderAdapter, check_retriever), measured.py (measured_models,
+                       measured_results, measured_shortlist)                         (0.4.0)
+  presets/measured.json  the measured catalogue, built by scripts/build_measured_catalog.py   (0.4.0)
   backends/            base.py numpy_backend.py qdrant_backend.py factory.py         (wrappers; index/ is unchanged)
   ext/vision/          namespace: page types, pixel and grid pruning, page encoders  (re-exports)
   legacy/              namespace: Config, OptiVisionRAG, Compressor, TokenPruner     (re-exports)
   testing/             synthetic data, basis transforms, basis_probe, conformance checks   (new)
   cli_certify.py       the commands `optivision certify` and `optivision verify`     (new)
+  cli_models.py        the command `optivision models`: the registry and the measured catalogue   (0.4.0)
   ...                  every other v0.3.0 module, where it was: stages/, compression/, index/, pruning/,
-                       encoders/, storage.py, optimize.py, calibration.py, types.py, config.py, cli.py ...
+                       encoders/ (late.py is new in 0.4.0: ColEngineTokenEncoder, RemoteCodeEncoder, Recipe,
+                       RECIPES, PyLateEncoder), storage.py, optimize.py, calibration.py, types.py, config.py, cli.py ...
 ```
 
 Existing files edited, against the research tip `91564fd`: `__init__.py` (additive: new names load
-on first use; `__version__` stays `"0.3.0"`), `cli.py` (registers the two new commands),
-`adapters.py` (became the package `adapters/`, registry unchanged) and the docstrings and comments
+on first use; `__version__` is `"0.4.0"`), `cli.py` (registers the new commands; 16 in all),
+`adapters.py` (became the package `adapters/`; the registry grew in 0.4.0 from 12 to 65 models) and the docstrings and comments
 of `index/numpy_index.py` and `index/qdrant_index.py` (text only). The eleven pinned files are
 byte-identical to the registered ones (`git hash-object`, 2026-10-06).
 
@@ -228,7 +233,6 @@ from `optivision.stages`. `optivision.legacy` lists the original recipe in the s
   decisions.
 - No new native scoring kernel. Q5 and Q6 measured native compressed scoring as slower on one
   stack, and decode-first scoring stays the reference.
-- No version bump: `__version__` stays `"0.3.0"`, and the certificate records the version and a
-  digest of the decision-relevant source files.
-- No change to `optimize()`, `calibrate()`, the file formats, the registry names, the model
-  registry statuses, `NumpyIndex` and `QdrantIndex` (docstrings aside), or the research record.
+- `__version__` is `"0.4.0"`; the certificate records the version and a digest of the
+  decision-relevant source files.
+- No change to `optimize()`, `calibrate()`, the file formats, the registry names of v0.3.0, `NumpyIndex` and `QdrantIndex` (docstrings aside), or the research record.

@@ -47,12 +47,11 @@ multiple-testing problem that it does not correct for. Measured corpora have
 their limits and a release audit are in the
 [repository](https://github.com/Daemon-VI/optivision-rag).
 
-## On the development branch: a model-agnostic core and certified selection (unreleased)
+## Model-agnostic core and certified selection (0.4.0)
 
-None of this is in a release: the latest release, 0.3.0 (what `pip install optivision-rag`
-installs), does not contain it, and `__version__` is still `0.3.0` on the development
-branch. It is engineering capability, tested on synthetic data and against the research
-code for numerical equality; no registered experiment evaluated it as a package.
+`pip install "optivision-rag[merge]"` installs it (the extra adds SciPy, which the default
+candidate list needs). It is engineering capability, tested on synthetic data and against the
+research code for numerical equality; no registered experiment evaluated it as a package.
 
 What was added, for any late-interaction encoder that hands over one `[n_vectors, dim]`
 float array per document and per query, scored by MaxSim (the research record covers
@@ -82,8 +81,7 @@ own statement, claimed only if the assumptions and conditions it lists hold. It 
 compressed index keeps retrieval quality, and it does not carry over to another encoder,
 corpus or coordinate basis.
 
-To try it, install a checkout of the development branch with
-`pip install -e ".[merge]"`; the default candidate list needs SciPy:
+To try it:
 
 ```python
 from optivision import certify, verify
@@ -100,12 +98,34 @@ verify("artifact/").ok             # integrity, replay from stored evidence (bui
 ```
 
 `certify` needs SciPy for its default candidate list: `pip install "optivision-rag[merge]"` (from a
-checkout, `pip install -e ".[merge]"`). In the API, `space=CandidateSpace.default(dim, allow_reduced=True)` and, on the command line, the flag
+clone, `pip install -e ".[merge]"`). In the API, `space=CandidateSpace.default(dim, allow_reduced=True)` and, on the command line, the flag
 `--allow-reduced` use a smaller candidate list that does not need SciPy; the certificate records which
 list was used. The command line reads `.npz` files (a corpus saved with `MultiVectorCorpus.save`, the
 same for the queries) and a JSON file of `{query id: [relevant document ids]}`; section 6 of the
-quickstart (`docs/package/guide/QUICKSTART.md`) writes them and runs `optivision certify` and
+[quickstart](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/guide/QUICKSTART.md) writes them and runs `optivision certify` and
 `optivision verify` on them.
+
+### Model coverage
+
+The registry (`optivision.adapters.MODELS`, `supported_models()`) lists 65 late-interaction
+models: 50 that take page images and 15 that take text. Each has a status that describes the
+loading path and the measurements, not how well a pipeline compresses that model's vectors:
+
+- `measured` (10): retrieval quality with and without compression was measured by this
+  repository on the model's real output. These are in-sample development measurements on ViDoRe
+  V1 DocVQA and InfoVQA (500 pages each) or SciFact; they are not a statement about another
+  corpus.
+- `untested` (23): the loading code is the one a measured sibling uses, or the model passed a
+  `check_retriever` run here; compression of this checkpoint's vectors was never measured here.
+- `unverified` (32): the loader is written against the model card and was never run here.
+
+`optivision models` prints the registry and the measured catalogue. `encode_and_certify(model,
+documents, queries, qrels)` encodes with a model and then runs `certify` on the vectors;
+`load_adapter(model_id, loader=...)` accepts a checkpoint that is not in the registry, and
+`check_retriever` encodes a dozen matched pairs and reports whether an adapter behaves like a
+retriever (it shows the model was driven correctly, not that compression works). The measured
+catalogue (`measured_models`, `measured_results`, `measured_shortlist`) ships with the package.
+Which models are covered, how, and what was measured: [models guide](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/guide/MODELS.md).
 
 What the research record shows, and does not show:
 
@@ -122,14 +142,13 @@ What the research record shows, and does not show:
   X1-X3 reuse the encoders that shaped the candidate list.
 - XH, the held-out encoder protocol, has not been registered and has not been run.
 
-Documentation, in the repository checkout of that branch (paths, not links: the
-branch is not published):
+Documentation, in the repository:
 
-- `docs/package/guide/README.md`: user guide
-- `docs/package/API_DESIGN.md`: API design
-- `docs/package/FINAL_RESEARCH_BOUNDARY.md`: what the package and the research record do
-  and do not support
-- `docs/package/CERTIFICATE_SPEC.md`: certificate format
+- [User guide](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/guide/README.md)
+- [Models: what is covered, and how far](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/guide/MODELS.md)
+- [API design](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/API_DESIGN.md)
+- [What the package and the research record do and do not support](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/FINAL_RESEARCH_BOUNDARY.md)
+- [Certificate format](https://github.com/Daemon-VI/optivision-rag/blob/main/docs/package/CERTIFICATE_SPEC.md)
 
 ## The original recipe: pruning and binary codes for page images
 

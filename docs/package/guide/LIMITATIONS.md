@@ -224,6 +224,18 @@ engine.
 | `to_legacy_pages` | re-splits ids at the first `::p` (`abc` returns as `abc::p1`) and crashes on an id whose suffix is a superscript digit |
 | `QdrantIndex` local | rejects an empty query with an opaque `ValueError` and a NaN query with an `AssertionError` |
 
+## 14b. Most registered models are not measured here
+
+The registry lists 65 late-interaction models. 10 are `measured`; 23 are `untested` (the loader is
+the one a measured sibling uses, or the model passed a `check_retriever` run here; compression of
+its vectors was never measured here); 32 are `unverified` (the loader was written against the model
+card and never run). A loading path says nothing about how
+well a pipeline compresses that model's vectors. The `measured` entries are in-sample development
+measurements on ViDoRe V1 DocVQA and InfoVQA (500 pages each) or SciFact; they were not run under
+the selection rule of `certify`, and the measured catalogue (`measured_results`,
+`measured_shortlist`) is not a statement about another corpus or another set of queries. Details:
+[MODELS.md](MODELS.md).
+
 ## 15. Import-time dependencies
 
 Importing any `optivision` module still runs `optivision/__init__.py`, which imports the original

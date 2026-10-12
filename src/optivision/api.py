@@ -80,7 +80,7 @@ from .core.vectors import (
     validate_corpus,
 )
 
-__all__ = ["CertifiedResult", "certify", "verify"]
+__all__ = ["CertifiedResult", "certify", "encode_and_certify", "verify"]
 
 #: Looks already taken in this process: (documents digest, queries digest) -> what each
 #: ``certify`` call on them asked (target, error, candidate list, query order, metric, reference
@@ -704,3 +704,64 @@ def verify(
     if not leading:
         return report
     return VerificationReport((*leading, *report.checks), report.notes)
+
+
+# --------------------------------------------------------------------------- model in, index out
+
+
+def encode_and_certify(
+    model: Any,
+    documents: Sequence[Any],
+    queries: Sequence[str],
+    qrels: Mapping[Any, Any] | None = None,
+    *,
+    document_ids: Sequence[str] | None = None,
+    query_ids: Sequence[str] | None = None,
+    adapter_options: Mapping[str, Any] | None = None,
+    **certify_options: Any,
+) -> CertifiedResult:
+    """Encode documents and queries with a model, then run :func:`certify` on the vectors.
+
+    The two steps are exactly what calling an adapter and then ``certify`` does; this is the
+    one call for "this model, these pages, this target". Nothing about the selection depends
+    on the model: the candidate list, the rule and the statement are those of ``certify``.
+
+    Args:
+        model: a model id (built with :func:`optivision.adapters.load_adapter`; needs the
+            model's own libraries and downloads its weights) or an ``EncoderAdapter``.
+        documents: what the adapter encodes: page images or ``(PageRef, image)`` pairs for an
+            image model, strings for a text model.
+        queries: the sample queries, as strings (see ``certify`` for what they must be).
+        qrels: ``{query id: [relevant document ids]}`` over ``query_ids`` and ``document_ids``.
+        document_ids, query_ids: ids to use; by default the adapter's (``"0"``, ``"1"``, ...
+            for plain lists, the page id for ``(PageRef, image)`` pairs).
+        adapter_options: keyword arguments for ``load_adapter`` when ``model`` is an id, e.g.
+            ``{"device": "cuda", "trust_remote_code": True, "revision": "<commit>"}``.
+        **certify_options: every keyword of ``certify`` (``target``, ``error``, ``metric``, ...).
+
+    Returns:
+        the ``CertifiedResult`` of ``certify``. The model's identity (id, revision where the
+        adapter knows it, dimension) is recorded in the certificate as descriptive metadata.
+
+    The registry status of a model (:data:`optivision.adapters.MODELS`) says how much of its
+    loading path this repository has exercised. For one that is not ``measured``, run
+    :func:`optivision.adapters.check_retriever` first: a model that loaded with wrong or
+    missing weights still returns vectors, and a compression of meaningless vectors can be
+    certified against their own meaningless baseline.
+    """
+    from .adapters import EncoderAdapter, load_adapter
+
+    if isinstance(model, EncoderAdapter):
+        if adapter_options:
+            raise TypeError("adapter_options applies only when model is a model id")
+        adapter = model
+    elif isinstance(model, str) and model:
+        adapter = load_adapter(model, **dict(adapter_options or {}))
+    else:
+        raise TypeError(f"model must be a model id or an EncoderAdapter, got {type(model).__name__}")
+    for name in ("vectors", "encoder"):
+        if name in certify_options:
+            raise TypeError(f"encode_and_certify() takes no {name!r} argument; it comes from the model")
+    corpus = adapter.encode_documents(list(documents), ids=document_ids)
+    query_corpus = adapter.encode_queries(list(queries), ids=query_ids)
+    return certify(corpus, query_corpus, qrels, **certify_options)

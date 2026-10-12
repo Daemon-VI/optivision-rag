@@ -51,7 +51,7 @@ from .stages import (
 )
 from .types import CompressedPage, PageEncoding, PageRef, PrunedPage, SearchHit, SearchResult
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "AdaptiveMerge",
@@ -99,6 +99,7 @@ __all__ = [
     "__version__",
     "calibrate",
     "certify",
+    "encode_and_certify",
     "load_artifact",
     "maxsim_matrix",
     "optimize",
@@ -121,6 +122,7 @@ _LAZY = {
     "EncoderIdentity": ".core.vectors",
     "Outcome": ".core.selection",
     "certify": ".api",
+    "encode_and_certify": ".api",
     "load_artifact": ".core.artifact",
     "save_artifact": ".core.artifact",
     "verify": ".api",
@@ -128,7 +130,7 @@ _LAZY = {
 }
 
 if _typing.TYPE_CHECKING:  # for type checkers and IDEs; at run time the names above load on demand
-    from .api import CertifiedResult, certify, verify
+    from .api import CertifiedResult, certify, encode_and_certify, verify
     from .core.artifact import Certificate, load_artifact, save_artifact, verify_certificate
     from .core.selection import CandidateSpace, Decision, Outcome
     from .core.vectors import EncoderIdentity
