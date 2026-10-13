@@ -944,7 +944,7 @@ def test_numpy_integers_are_fine_as_a_budget_and_a_seed(data):
 
 @pytest.mark.parametrize(("created", "error", "message"), [
     ("2026-10-06", ValueError, "created must look like"),
-    (datetime.datetime(2026, 10, 6, 12, 0, 0), ValueError, "naive datetime"),  # noqa: DTZ001
+    (datetime.datetime.fromisoformat("2026-10-06T12:00:00"), ValueError, "naive datetime"),
     (20261006, TypeError, "created must be"),
 ])
 def test_a_bad_creation_time_is_refused_when_the_certificate_is_made(data, created, error, message):

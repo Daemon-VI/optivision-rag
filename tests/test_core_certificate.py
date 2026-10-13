@@ -951,7 +951,7 @@ class TestDeterminism:
 
     def test_a_naive_datetime_and_other_types_are_refused(self, problem, space):
         with pytest.raises(ValueError, match="naive datetime"):
-            issue(problem, space, created=dt.datetime(2026, 10, 6, 12, 0, 0))  # noqa: DTZ001
+            issue(problem, space, created=dt.datetime.fromisoformat("2026-10-06T12:00:00"))
         with pytest.raises(TypeError, match="created"):
             issue(problem, space, created=20261006)
 
