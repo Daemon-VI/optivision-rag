@@ -1,0 +1,4911 @@
+{
+ "code_identity": {
+  "numpy": "2.4.6",
+  "python": "3.11.9",
+  "scipy": "1.17.1",
+  "scripts/research/e1_1_study.py": "5896e763b49d4a0f3f0cc988dc2b5ec5e6b2b9aa",
+  "scripts/research/e1_common.py": "3bef181683307eb98a9c5e2d61ab02d87801bbfe",
+  "scripts/research/e1_stats.py": "13494307a4a42cd2c1da63f34aa0952a92b33130",
+  "scripts/research/x3_symmetry.py": "8cd10c0b04ea43e491106fc2d3cd06ec154c8195",
+  "scripts/research/x_common.py": "0b8031d46459e32df4565c6c9668174eadfc3794",
+  "scripts/universal_study/s7b_selection_rules.py": "1b02292cea8c5d732af9d88d256aece7799b469e",
+  "src/optivision": "0b9523bd10f43941a9704cbf6fae1db1804880ee"
+ },
+ "dataset": "colqwen25_docvqa",
+ "evidence": {
+  "candidates": "MEASURED, transformed vectors",
+  "procedure_outcome": "SIMULATED, pool-supported"
+ },
+ "header": {
+  "accepted_open_points": [
+   "OP1",
+   "OP2",
+   "OP3",
+   "OP4",
+   "OP5",
+   "OP6",
+   "OP7"
+  ],
+  "auxiliary_inputs": null,
+  "candidate_spec_sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+  "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+  "code_identity": {
+   "numpy": "2.4.6",
+   "python": "3.11.9",
+   "scipy": "1.17.1",
+   "scripts/research/e1_1_study.py": "5896e763b49d4a0f3f0cc988dc2b5ec5e6b2b9aa",
+   "scripts/research/e1_common.py": "3bef181683307eb98a9c5e2d61ab02d87801bbfe",
+   "scripts/research/e1_stats.py": "13494307a4a42cd2c1da63f34aa0952a92b33130",
+   "scripts/research/x3_symmetry.py": "8cd10c0b04ea43e491106fc2d3cd06ec154c8195",
+   "scripts/research/x_common.py": "0b8031d46459e32df4565c6c9668174eadfc3794",
+   "scripts/universal_study/s7b_selection_rules.py": "1b02292cea8c5d732af9d88d256aece7799b469e",
+   "src/optivision": "0b9523bd10f43941a9704cbf6fae1db1804880ee"
+  },
+  "code_tree_clean": true,
+  "experiment": "X3",
+  "inputs": null,
+  "method_c": {
+   "bet_cap": 0.9,
+   "chains": 7,
+   "choice": "smallest stored size among the rejected; ties by fewer vectors, then earlier position",
+   "deltas": [
+    0.05,
+    0.01
+   ],
+   "hypothesis": "H0_k: E[c_k - T b] <= 0",
+   "level": "delta / number of chains",
+   "multiplicity": "fixed-sequence testing inside each chain, in the chain's own order",
+   "p_value": "exact betting p-value, aGRAPA bets",
+   "queries_used": "all n; no hold-out split",
+   "source": "scripts/research/e1_stats.py and e1_1_study.py, imported unchanged",
+   "statistic": "Y = (c - T b + T) / (1 + T); m0 = T / (1 + T)"
+  },
+  "preregistration": {
+   "amendments": [
+    "Amendment 1, 2026-10-04"
+   ],
+   "blob": "fa9deb73fdf380f06141d89cfaf145444f883506",
+   "blob_at_head": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "blob_implemented": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "commit": "73085ab637679f30fffece6632eb7b9e92adff79",
+   "path": "reports/research/NEXT_PHASE_PREREGISTRATION.md",
+   "registry_commit": "d408b96db87698f76f5f320b8ee8591a3d75ecd9"
+  },
+  "registered_configuration": true,
+  "seeds": {
+   "replication_block": [
+    2000,
+    3999
+   ],
+   "resamples": [
+    0,
+    1999
+   ],
+   "sampling": "first n entries of numpy.random.default_rng(seed).integers(0, N, size=3600)"
+  }
+ },
+ "overlap_exploratory": {
+  "evidence": "MEASURED",
+  "rows": [
+   {
+    "label": "float16",
+    "overlap@10": 0.9995565410199557,
+    "overlap@5": 0.998669623059867,
+    "position": 0
+   },
+   {
+    "label": "int8(per_vector)",
+    "overlap@10": 0.9933481152993349,
+    "overlap@5": 0.9946784922394678,
+    "position": 1
+   },
+   {
+    "label": "hierarchical_merge(0.5) > int8(per_vector)",
+    "overlap@10": 0.8667405764966742,
+    "overlap@5": 0.8496674057649667,
+    "position": 2
+   },
+   {
+    "label": "hierarchical_merge(0.33) > int8(per_vector)",
+    "overlap@10": 0.8303769401330379,
+    "overlap@5": 0.8203991130820399,
+    "position": 3
+   },
+   {
+    "label": "hierarchical_merge(0.25) > int8(per_vector)",
+    "overlap@10": 0.8133037694013305,
+    "overlap@5": 0.8017738359201775,
+    "position": 4
+   },
+   {
+    "label": "hierarchical_merge(0.15) > int8(per_vector)",
+    "overlap@10": 0.7682926829268293,
+    "overlap@5": 0.7348115299334811,
+    "position": 5
+   },
+   {
+    "label": "hierarchical_merge(0.1) > int8(per_vector)",
+    "overlap@10": 0.7388026607538803,
+    "overlap@5": 0.7277161862527717,
+    "position": 6
+   },
+   {
+    "label": "adaptive_merge(0.9) > int8(per_vector)",
+    "overlap@10": 0.91529933481153,
+    "overlap@5": 0.8926829268292683,
+    "position": 8
+   },
+   {
+    "label": "adaptive_merge(0.8) > int8(per_vector)",
+    "overlap@10": 0.8439024390243903,
+    "overlap@5": 0.8292682926829268,
+    "position": 9
+   },
+   {
+    "label": "adaptive_merge(0.7) > int8(per_vector)",
+    "overlap@10": 0.8046563192904655,
+    "overlap@5": 0.7920177383592019,
+    "position": 10
+   },
+   {
+    "label": "adaptive_merge(0.6) > int8(per_vector)",
+    "overlap@10": 0.7603104212860311,
+    "overlap@5": 0.738359201773836,
+    "position": 11
+   },
+   {
+    "label": "adaptive_merge(0.5) > int8(per_vector)",
+    "overlap@10": 0.7241685144124169,
+    "overlap@5": 0.6851441241685144,
+    "position": 12
+   },
+   {
+    "label": "adaptive_merge(0.4) > int8(per_vector)",
+    "overlap@10": 0.6829268292682927,
+    "overlap@5": 0.6376940133037694,
+    "position": 13
+   },
+   {
+    "label": "int4(mean)",
+    "overlap@10": 0.9135254988913527,
+    "overlap@5": 0.910421286031042,
+    "position": 14
+   },
+   {
+    "label": "hierarchical_merge(0.5) > int4(mean)",
+    "overlap@10": 0.8476718403547673,
+    "overlap@5": 0.8301552106430156,
+    "position": 15
+   },
+   {
+    "label": "hierarchical_merge(0.33) > int4(mean)",
+    "overlap@10": 0.8181818181818182,
+    "overlap@5": 0.8053215077605321,
+    "position": 16
+   },
+   {
+    "label": "hierarchical_merge(0.25) > int4(mean)",
+    "overlap@10": 0.8004434589800443,
+    "overlap@5": 0.7831485587583149,
+    "position": 17
+   },
+   {
+    "label": "hierarchical_merge(0.15) > int4(mean)",
+    "overlap@10": 0.7565410199556541,
+    "overlap@5": 0.7365853658536586,
+    "position": 18
+   },
+   {
+    "label": "hierarchical_merge(0.1) > int4(mean)",
+    "overlap@10": 0.7305986696230599,
+    "overlap@5": 0.7130820399113083,
+    "position": 19
+   },
+   {
+    "label": "adaptive_merge(0.9) > int4(mean)",
+    "overlap@10": 0.8815964523281599,
+    "overlap@5": 0.8487804878048779,
+    "position": 21
+   },
+   {
+    "label": "adaptive_merge(0.8) > int4(mean)",
+    "overlap@10": 0.8323725055432375,
+    "overlap@5": 0.8008869179600887,
+    "position": 22
+   },
+   {
+    "label": "adaptive_merge(0.7) > int4(mean)",
+    "overlap@10": 0.7915742793791575,
+    "overlap@5": 0.7720620842572062,
+    "position": 23
+   },
+   {
+    "label": "adaptive_merge(0.6) > int4(mean)",
+    "overlap@10": 0.7492239467849223,
+    "overlap@5": 0.719290465631929,
+    "position": 24
+   },
+   {
+    "label": "adaptive_merge(0.5) > int4(mean)",
+    "overlap@10": 0.7190687361419069,
+    "overlap@5": 0.6700665188470066,
+    "position": 25
+   },
+   {
+    "label": "adaptive_merge(0.4) > int4(mean)",
+    "overlap@10": 0.6740576496674058,
+    "overlap@5": 0.6310421286031043,
+    "position": 26
+   },
+   {
+    "label": "binary",
+    "overlap@10": 0.6379157427937917,
+    "overlap@5": 0.6270509977827051,
+    "position": 27
+   },
+   {
+    "label": "hierarchical_merge(0.5) > binary",
+    "overlap@10": 0.611529933481153,
+    "overlap@5": 0.5942350332594235,
+    "position": 28
+   },
+   {
+    "label": "hierarchical_merge(0.33) > binary",
+    "overlap@10": 0.596230598669623,
+    "overlap@5": 0.5849223946784923,
+    "position": 29
+   },
+   {
+    "label": "hierarchical_merge(0.25) > binary",
+    "overlap@10": 0.5920177383592018,
+    "overlap@5": 0.5711751662971176,
+    "position": 30
+   },
+   {
+    "label": "hierarchical_merge(0.15) > binary",
+    "overlap@10": 0.571840354767184,
+    "overlap@5": 0.5583148558758314,
+    "position": 31
+   },
+   {
+    "label": "hierarchical_merge(0.1) > binary",
+    "overlap@10": 0.5490022172949003,
+    "overlap@5": 0.542350332594235,
+    "position": 32
+   },
+   {
+    "label": "adaptive_merge(0.9) > binary",
+    "overlap@10": 0.6283813747228382,
+    "overlap@5": 0.6172949002217294,
+    "position": 34
+   },
+   {
+    "label": "adaptive_merge(0.8) > binary",
+    "overlap@10": 0.6015521064301551,
+    "overlap@5": 0.592461197339246,
+    "position": 35
+   },
+   {
+    "label": "adaptive_merge(0.7) > binary",
+    "overlap@10": 0.5829268292682928,
+    "overlap@5": 0.5733924611973393,
+    "position": 36
+   },
+   {
+    "label": "adaptive_merge(0.6) > binary",
+    "overlap@10": 0.5587583148558758,
+    "overlap@5": 0.541019955654102,
+    "position": 37
+   },
+   {
+    "label": "adaptive_merge(0.5) > binary",
+    "overlap@10": 0.5396895787139689,
+    "overlap@5": 0.519290465631929,
+    "position": 38
+   },
+   {
+    "label": "adaptive_merge(0.4) > binary",
+    "overlap@10": 0.5181818181818182,
+    "overlap@5": 0.49445676274944567,
+    "position": 39
+   }
+  ]
+ },
+ "pairs": {
+  "T1": {
+   "candidates": {
+    "agreement": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.9975449872743113,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.8969984568155981,
+      "retention_T0": 0.8969984568155981
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9026113972691847,
+      "retention_T0": 0.9026113972691847
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.8696542458459169,
+      "retention_T0": 0.8696542458459169
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.8329453231572915,
+      "retention_T0": 0.8329453231572915
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.8249311062615493,
+      "retention_T0": 0.8249311062615493
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.9975449872743113,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9275746527215355,
+      "retention_T0": 0.9275746527215355
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.8851358809660809,
+      "retention_T0": 0.8851358809660809
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.8715326450331454,
+      "retention_T0": 0.8715326450331454
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.8365038953043207,
+      "retention_T0": 0.8365038953043207
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.7983778223196168,
+      "retention_T0": 0.7983778223196168
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.7501043042728573,
+      "retention_T0": 0.7501043042728573
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9502333352715695,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.8931512420959421,
+      "retention_T0": 0.8931512420959421
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.8755742001112886,
+      "retention_T0": 0.8755742001112886
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.8493465346598821,
+      "retention_T0": 0.8493465346598821
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.8136212759688692,
+      "retention_T0": 0.8136212759688692
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.8098577207664069,
+      "retention_T0": 0.8098577207664069
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9502333352715695,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.0030356324754513553,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.0011086474501108556,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.8891960362320246,
+      "retention_T0": 0.8903046836821354
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.8574934041276441,
+      "retention_T0": 0.8574934041276441
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.8521866231200367,
+      "retention_T0": 0.8521866231200367
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.8126297168970531,
+      "retention_T0": 0.8126297168970531
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.7767958503867355,
+      "retention_T0": 0.7767958503867355
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.7323830562247016,
+      "retention_T0": 0.7323830562247016
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.7728812743670552,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.762204540022131,
+      "retention_T0": 0.762204540022131
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.7622742417281831,
+      "retention_T0": 0.7622742417281831
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.7565235027480955,
+      "retention_T0": 0.7565235027480955
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.7281021769385079,
+      "retention_T0": 0.7281021769385079
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.7176118269581963,
+      "retention_T0": 0.7176118269581963
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.7728812743670552,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.7527416951518564,
+      "retention_T0": 0.7527416951518564
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.7439210998921013,
+      "retention_T0": 0.7439210998921013
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.7350033359500826,
+      "retention_T0": 0.7350033359500826
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.7144698097210669,
+      "retention_T0": 0.7144698097210669
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.6905615263549644,
+      "retention_T0": 0.6905615263549644
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.669513075870936,
+      "retention_T0": 0.669513075870936
+     }
+    ],
+    "labels": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0013879124104454,
+      "retention_T0": 1.0013879124104454
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.998454861051388,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.9880700080425662,
+      "retention_T0": 0.9880700080425662
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.993661654918086,
+      "retention_T0": 0.993661654918086
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.9916254808683074,
+      "retention_T0": 0.9916254808683074
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.9764544691614654,
+      "retention_T0": 0.9764544691614654
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.9712533843565624,
+      "retention_T0": 0.9712533843565624
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.998454861051388,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9943716786146349,
+      "retention_T0": 0.9943716786146349
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.99539624911441,
+      "retention_T0": 0.99539624911441
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.9951919803294166,
+      "retention_T0": 0.9951919803294166
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.9874662855863571,
+      "retention_T0": 0.9874662855863571
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.9654832127196121,
+      "retention_T0": 0.9654832127196121
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.94807629770519,
+      "retention_T0": 0.94807629770519
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9976514117595711,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.9867497796260191,
+      "retention_T0": 0.9867497796260191
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.9931855295032869,
+      "retention_T0": 0.9931855295032869
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.9870409917424919,
+      "retention_T0": 0.9870409917424919
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.9780059966469735,
+      "retention_T0": 0.9780059966469735
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.9673041874981154,
+      "retention_T0": 0.9673041874981154
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9976514117595711,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.9981719802084082,
+      "retention_T0": 0.9981719802084082
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.9975811285528837,
+      "retention_T0": 0.9975811285528837
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.983147264553451,
+      "retention_T0": 0.983147264553451
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.9870686785026517,
+      "retention_T0": 0.9870686785026517
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.959489510537894,
+      "retention_T0": 0.959489510537894
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.9521291941689939,
+      "retention_T0": 0.9521291941689939
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.9947691919714479,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.987872223943555,
+      "retention_T0": 0.987872223943555
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.9653066306947786,
+      "retention_T0": 0.9653066306947786
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.9804757958141099,
+      "retention_T0": 0.9804757958141099
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.9596597040258312,
+      "retention_T0": 0.9596597040258312
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.9569282285120863,
+      "retention_T0": 0.9569282285120863
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.9947691919714479,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.9925012522524944,
+      "retention_T0": 0.9925012522524944
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.9716959010745192,
+      "retention_T0": 0.9716959010745192
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.961867822001972,
+      "retention_T0": 0.961867822001972
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.9660334106652058,
+      "retention_T0": 0.9660334106652058
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.9394253824164996,
+      "retention_T0": 0.9394253824164996
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.9208960230845417,
+      "retention_T0": 0.9208960230845417
+     }
+    ]
+   },
+   "class_counts_distinct": {
+    "agreement": {
+     "invariant": 37,
+     "material": 0,
+     "small": 0
+    },
+    "labels": {
+     "invariant": 37,
+     "material": 0,
+     "small": 0
+    }
+   },
+   "holds": true,
+   "material_candidate_labels": [],
+   "material_candidates": [],
+   "max_abs_delta": {
+    "agreement": 0.0011086474501108556,
+    "labels": 0.0
+   },
+   "procedure_material": false,
+   "procedure_outcome": [
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.003,
+     "nontrivial_rate_T0": 0.003,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.025,
+     "nontrivial_rate_T0": 0.025,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 7.757414918098136,
+     "median_compression_T0": 7.757414918098136,
+     "n": 225,
+     "nontrivial_rate": 0.9855,
+     "nontrivial_rate_T0": 0.9855,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.95
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 450,
+     "nontrivial_rate": 0.006,
+     "nontrivial_rate_T0": 0.006,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 7.757414918098136,
+     "median_compression_T0": 7.757414918098136,
+     "n": 450,
+     "nontrivial_rate": 0.9995,
+     "nontrivial_rate_T0": 0.9995,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 29.711387975972418,
+     "median_compression_T0": 29.711387975972418,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 1.0,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.95
+    }
+   ],
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T1",
+    "kind": "signed coordinate permutation",
+    "orthogonality_error": 0.0,
+    "seed": 0,
+    "sha256": "fe558cab6a3edd9f7efeb71967547f9a38f661c24a85ca711d723857d384f625"
+   }
+  },
+  "T2a": {
+   "candidates": {
+    "agreement": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0
+     },
+     {
+      "ci95": [
+       -0.001636675150459066,
+       0.004910025451377531
+      ],
+      "class": "invariant",
+      "delta": 0.001636675150459066,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.9991816624247704,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       -0.005139261968053479,
+       -0.0003299539895839891
+      ],
+      "class": "invariant",
+      "delta": -0.002481338461741145,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.8945171183538569,
+      "retention_T0": 0.8969984568155981
+     },
+     {
+      "ci95": [
+       -0.0022172949002217113,
+       0.006613596759435958
+      ],
+      "class": "invariant",
+      "delta": 0.002077888494157132,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9046892857633418,
+      "retention_T0": 0.9026113972691847
+     },
+     {
+      "ci95": [
+       -0.0039320147594314485,
+       0.0024024492072784675
+      ],
+      "class": "invariant",
+      "delta": -0.0007869223134265857,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.8688673235324903,
+      "retention_T0": 0.8696542458459169
+     },
+     {
+      "ci95": [
+       -0.0020324681907112814,
+       0.0030188209874144538
+      ],
+      "class": "invariant",
+      "delta": 0.0002468729852106444,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.8331921961425022,
+      "retention_T0": 0.8329453231572915
+     },
+     {
+      "ci95": [
+       -0.005151808910837663,
+       0.002028103490175903
+      ],
+      "class": "invariant",
+      "delta": -0.001381846171374046,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.8235492600901753,
+      "retention_T0": 0.8249311062615493
+     },
+     {
+      "ci95": [
+       -0.001636675150459066,
+       0.004910025451377531
+      ],
+      "class": "invariant",
+      "delta": 0.001636675150459066,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.9991816624247704,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       -0.006088803883361291,
+       2.394646945989609e-05
+      ],
+      "class": "invariant",
+      "delta": -0.0028018629355760494,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9247727897859594,
+      "retention_T0": 0.9275746527215355
+     },
+     {
+      "ci95": [
+       -0.005235816222054934,
+       0.0011926547613280187
+      ],
+      "class": "invariant",
+      "delta": -0.00168926719987339,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.8834466137662075,
+      "retention_T0": 0.8851358809660809
+     },
+     {
+      "ci95": [
+       -0.006687793375301998,
+       0.0018786403166476185
+      ],
+      "class": "invariant",
+      "delta": -0.0023499459752615026,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.8691826990578839,
+      "retention_T0": 0.8715326450331454
+     },
+     {
+      "ci95": [
+       -0.007618516988673468,
+       0.0010525048773740477
+      ],
+      "class": "invariant",
+      "delta": -0.0029790921404451165,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.8335248031638756,
+      "retention_T0": 0.8365038953043207
+     },
+     {
+      "ci95": [
+       -0.004196428162668164,
+       0.0017043281585996343
+      ],
+      "class": "invariant",
+      "delta": -0.0010811804738996011,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.7972966418457172,
+      "retention_T0": 0.7983778223196168
+     },
+     {
+      "ci95": [
+       -0.00378707389308153,
+       0.0002903098748812116
+      ],
+      "class": "invariant",
+      "delta": -0.0015132386578537993,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.7485910656150035,
+      "retention_T0": 0.7501043042728573
+     },
+     {
+      "ci95": [
+       -0.015724959689484067,
+       0.015639663761722798
+      ],
+      "class": "invariant",
+      "delta": -0.00043205818395408713,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9498012770876154,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.021177683384679957,
+       0.009302392101703357
+      ],
+      "class": "small",
+      "delta": -0.005947828458297222,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.8872034136376449,
+      "retention_T0": 0.8931512420959421
+     },
+     {
+      "ci95": [
+       -0.02587007504072119,
+       0.0031276411909359246
+      ],
+      "class": "small",
+      "delta": -0.010945926854885268,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.8646282732564033,
+      "retention_T0": 0.8755742001112886
+     },
+     {
+      "ci95": [
+       -0.020418830273910116,
+       0.01148188417466652
+      ],
+      "class": "invariant",
+      "delta": -0.004471680072783535,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.8448748545870985,
+      "retention_T0": 0.8493465346598821
+     },
+     {
+      "ci95": [
+       -0.023396248887313984,
+       0.0024292137110857354
+      ],
+      "class": "small",
+      "delta": -0.010447708033756387,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.8031735679351129,
+      "retention_T0": 0.8136212759688692
+     },
+     {
+      "ci95": [
+       -0.030583061918502744,
+       -0.0014922551361116346
+      ],
+      "class": "small",
+      "delta": -0.015609871270206965,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.7942478494962,
+      "retention_T0": 0.8098577207664069
+     },
+     {
+      "ci95": [
+       -0.015724959689484067,
+       0.015639663761722798
+      ],
+      "class": "invariant",
+      "delta": -0.00043205818395408713,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9498012770876154,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.0015726138207207445,
+       0.03702608002970659
+      ],
+      "class": "small",
+      "delta": 0.018023578053924405,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.9083282617360598,
+      "retention_T0": 0.8903046836821354
+     },
+     {
+      "ci95": [
+       -0.013919685141558502,
+       0.018867376767514564
+      ],
+      "class": "invariant",
+      "delta": 0.0022343466311491866,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.8597277507587933,
+      "retention_T0": 0.8574934041276441
+     },
+     {
+      "ci95": [
+       -0.026079366554819773,
+       0.008401129042968665
+      ],
+      "class": "small",
+      "delta": -0.008598784931096781,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.8435878381889399,
+      "retention_T0": 0.8521866231200367
+     },
+     {
+      "ci95": [
+       -0.004676087934397802,
+       0.02570389584522471
+      ],
+      "class": "small",
+      "delta": 0.010261380097873918,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.822891096994927,
+      "retention_T0": 0.8126297168970531
+     },
+     {
+      "ci95": [
+       -0.012829167012397885,
+       0.01107974365952158
+      ],
+      "class": "invariant",
+      "delta": -0.0012098238406568207,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.7755860265460787,
+      "retention_T0": 0.7767958503867355
+     },
+     {
+      "ci95": [
+       -0.010189933772794202,
+       0.014823662998353627
+      ],
+      "class": "invariant",
+      "delta": 0.002121325383827588,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.7345043816085292,
+      "retention_T0": 0.7323830562247016
+     },
+     {
+      "ci95": [
+       -0.025960006577295656,
+       0.03587120764909452
+      ],
+      "class": "small",
+      "delta": 0.006117101669292135,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.7789983760363474,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       -0.04927676180353951,
+       0.009583071375460201
+      ],
+      "class": "small",
+      "delta": -0.0186852837150302,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.7435192563071008,
+      "retention_T0": 0.762204540022131
+     },
+     {
+      "ci95": [
+       -0.04287094716149309,
+       0.01856005528982029
+      ],
+      "class": "small",
+      "delta": -0.011530436964528934,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.7507438047636542,
+      "retention_T0": 0.7622742417281831
+     },
+     {
+      "ci95": [
+       -0.04457409808616686,
+       0.015029504921788308
+      ],
+      "class": "small",
+      "delta": -0.014693515137848334,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.7418299876102472,
+      "retention_T0": 0.7565235027480955
+     },
+     {
+      "ci95": [
+       -0.03407901911373129,
+       0.02499558901352719
+      ],
+      "class": "small",
+      "delta": -0.005642013812381497,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.7224601631261264,
+      "retention_T0": 0.7281021769385079
+     },
+     {
+      "ci95": [
+       -0.03836564630795751,
+       0.017665886575416432
+      ],
+      "class": "small",
+      "delta": -0.010638505826386035,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.7069733211318102,
+      "retention_T0": 0.7176118269581963
+     },
+     {
+      "ci95": [
+       -0.025960006577295656,
+       0.03587120764909452
+      ],
+      "class": "small",
+      "delta": 0.006117101669292135,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.7789983760363474,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       -0.02405526799882885,
+       0.03849390417110085
+      ],
+      "class": "small",
+      "delta": 0.007232385605046354,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.7599740807569028,
+      "retention_T0": 0.7527416951518564
+     },
+     {
+      "ci95": [
+       -0.0501944311067231,
+       0.012465388568065512
+      ],
+      "class": "small",
+      "delta": -0.018634415396600934,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.7252866844955004,
+      "retention_T0": 0.7439210998921013
+     },
+     {
+      "ci95": [
+       -0.0368765906411239,
+       0.02293096274358093
+      ],
+      "class": "small",
+      "delta": -0.006573145183270457,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.7284301907668121,
+      "retention_T0": 0.7350033359500826
+     },
+     {
+      "ci95": [
+       -0.044031465411794285,
+       0.01935995474679012
+      ],
+      "class": "small",
+      "delta": -0.01201388653504798,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.7024559231860189,
+      "retention_T0": 0.7144698097210669
+     },
+     {
+      "ci95": [
+       -0.034592038768721856,
+       0.024304940629525543
+      ],
+      "class": "small",
+      "delta": -0.00597541427988979,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.6845861120750746,
+      "retention_T0": 0.6905615263549644
+     },
+     {
+      "ci95": [
+       -0.024946337651620732,
+       0.03415322486231097
+      ],
+      "class": "invariant",
+      "delta": 0.004570047920916198,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.6740831237918522,
+      "retention_T0": 0.669513075870936
+     }
+    ],
+    "labels": [
+     {
+      "ci95": [
+       -0.004387399653843637,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.0013879124104454466,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0013879124104454
+     },
+     {
+      "ci95": [
+       -0.0005066047750247826,
+       0.004978490784393997
+      ],
+      "class": "invariant",
+      "delta": 0.0015451389486119682,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 1.0,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       -0.004246805787896127,
+       0.0013686766829353158
+      ],
+      "class": "invariant",
+      "delta": -0.0009181755325423646,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.9871518325100238,
+      "retention_T0": 0.9880700080425662
+     },
+     {
+      "ci95": [
+       -0.001739395427195134,
+       0.008539136003774463
+      ],
+      "class": "invariant",
+      "delta": 0.0032751911955500868,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9969368461136361,
+      "retention_T0": 0.993661654918086
+     },
+     {
+      "ci95": [
+       -0.006904400433288468,
+       0.0024726096572187948
+      ],
+      "class": "invariant",
+      "delta": -0.0017004227501818958,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.9899250581181255,
+      "retention_T0": 0.9916254808683074
+     },
+     {
+      "ci95": [
+       -0.006563622892352472,
+       0.0027709632689924247
+      ],
+      "class": "invariant",
+      "delta": -0.0013879124104452245,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.9750665567510202,
+      "retention_T0": 0.9764544691614654
+     },
+     {
+      "ci95": [
+       -0.0048934708326118705,
+       0.0008201185062098298
+      ],
+      "class": "invariant",
+      "delta": -0.0014813404279068187,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.9697720439286556,
+      "retention_T0": 0.9712533843565624
+     },
+     {
+      "ci95": [
+       -0.0005066047750247826,
+       0.004978490784393997
+      ],
+      "class": "invariant",
+      "delta": 0.0015451389486119682,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 1.0,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       -0.001097639259959568,
+       0.005056640935001243
+      ],
+      "class": "invariant",
+      "delta": 0.0014793976913105578,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9958510763059455,
+      "retention_T0": 0.9943716786146349
+     },
+     {
+      "ci95": [
+       0.0,
+       0.001078641424414381
+      ],
+      "class": "invariant",
+      "delta": 0.0004059383571979325,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.995802187471608,
+      "retention_T0": 0.99539624911441
+     },
+     {
+      "ci95": [
+       -0.004108592700162744,
+       0.004080734230476948
+      ],
+      "class": "invariant",
+      "delta": -9.342801746159424e-05,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.995098552311955,
+      "retention_T0": 0.9951919803294166
+     },
+     {
+      "ci95": [
+       -0.0024298851204706457,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.0009394737558059418,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.9865268118305511,
+      "retention_T0": 0.9874662855863571
+     },
+     {
+      "ci95": [
+       -0.0005034207248372419,
+       0.004826631409086357
+      ],
+      "class": "invariant",
+      "delta": 0.0013879124104454466,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.9668711251300576,
+      "retention_T0": 0.9654832127196121
+     },
+     {
+      "ci95": [
+       -0.003838652676683979,
+       0.004217039934462607
+      ],
+      "class": "invariant",
+      "delta": 6.379852070492742e-05,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.9481400962258949,
+      "retention_T0": 0.94807629770519
+     },
+     {
+      "ci95": [
+       -0.004966259906787484,
+       0.01698613877470942
+      ],
+      "class": "small",
+      "delta": 0.00560896589869786,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 1.003260377658269,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       -0.0032196273446599474,
+       0.029605763987935234
+      ],
+      "class": "small",
+      "delta": 0.012716684975372927,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.999466464601392,
+      "retention_T0": 0.9867497796260191
+     },
+     {
+      "ci95": [
+       -0.015151564411951965,
+       0.016892064038856704
+      ],
+      "class": "invariant",
+      "delta": 0.0007737260681679459,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.9939592555714548,
+      "retention_T0": 0.9931855295032869
+     },
+     {
+      "ci95": [
+       -0.003850004865774631,
+       0.0293695938761398
+      ],
+      "class": "small",
+      "delta": 0.011853320213850216,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.9988943119563422,
+      "retention_T0": 0.9870409917424919
+     },
+     {
+      "ci95": [
+       -0.024745757237515664,
+       0.0038197334260303916
+      ],
+      "class": "small",
+      "delta": -0.010299756264853244,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.9677062403821203,
+      "retention_T0": 0.9780059966469735
+     },
+     {
+      "ci95": [
+       -0.014885710664777665,
+       0.010623224155055375
+      ],
+      "class": "invariant",
+      "delta": -0.0019084808592821911,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.9653957066388332,
+      "retention_T0": 0.9673041874981154
+     },
+     {
+      "ci95": [
+       -0.004966259906787484,
+       0.01698613877470942
+      ],
+      "class": "small",
+      "delta": 0.00560896589869786,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 1.003260377658269,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       -0.011699543726850753,
+       0.018049832941410517
+      ],
+      "class": "invariant",
+      "delta": 0.0030136061536404357,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 1.0011855863620487,
+      "retention_T0": 0.9981719802084082
+     },
+     {
+      "ci95": [
+       -0.013613776646490003,
+       0.017220415114683228
+      ],
+      "class": "invariant",
+      "delta": 0.0012965232786668057,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.9988776518315505,
+      "retention_T0": 0.9975811285528837
+     },
+     {
+      "ci95": [
+       -0.003461335821644318,
+       0.02895547925108777
+      ],
+      "class": "small",
+      "delta": 0.012720568026372447,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.9958678325798235,
+      "retention_T0": 0.983147264553451
+     },
+     {
+      "ci95": [
+       -0.016481885305746687,
+       0.010459871311747264
+      ],
+      "class": "invariant",
+      "delta": -0.003296489418813886,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.9837721890838378,
+      "retention_T0": 0.9870686785026517
+     },
+     {
+      "ci95": [
+       -0.009357903595595856,
+       0.01889735403577067
+      ],
+      "class": "invariant",
+      "delta": 0.004720419862912051,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.964209930400806,
+      "retention_T0": 0.959489510537894
+     },
+     {
+      "ci95": [
+       -0.02587812124130516,
+       0.00291753812141104
+      ],
+      "class": "small",
+      "delta": -0.01098857546503118,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.9411406187039627,
+      "retention_T0": 0.9521291941689939
+     },
+     {
+      "ci95": [
+       -0.054845897573931185,
+       0.005478410877404323
+      ],
+      "class": "small",
+      "delta": -0.02432129579238529,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.9704478961790626,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       -0.0607309273448039,
+       0.01546146452384687
+      ],
+      "class": "small",
+      "delta": -0.02154935402249447,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.9663228699210605,
+      "retention_T0": 0.987872223943555
+     },
+     {
+      "ci95": [
+       -0.0284113506617255,
+       0.04750918812243053
+      ],
+      "class": "small",
+      "delta": 0.008361645908814164,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.9736682766035928,
+      "retention_T0": 0.9653066306947786
+     },
+     {
+      "ci95": [
+       -0.06193412558489679,
+       0.0061193140345171615
+      ],
+      "class": "small",
+      "delta": -0.027911033791161555,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.9525647620229484,
+      "retention_T0": 0.9804757958141099
+     },
+     {
+      "ci95": [
+       -0.06368333805427993,
+       0.008595419090690538
+      ],
+      "class": "small",
+      "delta": -0.02816807688368539,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.9314916271421458,
+      "retention_T0": 0.9596597040258312
+     },
+     {
+      "ci95": [
+       -0.0624299611930921,
+       0.01272711547942603
+      ],
+      "class": "small",
+      "delta": -0.02540706560007655,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.9315211629120097,
+      "retention_T0": 0.9569282285120863
+     },
+     {
+      "ci95": [
+       -0.054845897573931185,
+       0.005478410877404323
+      ],
+      "class": "small",
+      "delta": -0.02432129579238529,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.9704478961790626,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       -0.05457390033424563,
+       0.011415933421350099
+      ],
+      "class": "small",
+      "delta": -0.021279536278371536,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.9712217159741229,
+      "retention_T0": 0.9925012522524944
+     },
+     {
+      "ci95": [
+       -0.05834148142435872,
+       0.012392829482935753
+      ],
+      "class": "small",
+      "delta": -0.023600906781048092,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.9480949942934711,
+      "retention_T0": 0.9716959010745192
+     },
+     {
+      "ci95": [
+       -0.058475214353746426,
+       0.012068674346211282
+      ],
+      "class": "small",
+      "delta": -0.02403211771720859,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.9378357042847634,
+      "retention_T0": 0.961867822001972
+     },
+     {
+      "ci95": [
+       -0.06626410248240155,
+       0.008789418329881234
+      ],
+      "class": "small",
+      "delta": -0.030790464490516922,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.9352429461746888,
+      "retention_T0": 0.9660334106652058
+     },
+     {
+      "ci95": [
+       -0.04818544010809576,
+       0.019301991190821356
+      ],
+      "class": "small",
+      "delta": -0.015164719319032072,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.9242606630974676,
+      "retention_T0": 0.9394253824164996
+     },
+     {
+      "ci95": [
+       -0.054384895091443,
+       0.011246274223250623
+      ],
+      "class": "small",
+      "delta": -0.020873501772087577,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.9000225213124541,
+      "retention_T0": 0.9208960230845417
+     }
+    ]
+   },
+   "class_counts_distinct": {
+    "agreement": {
+     "invariant": 19,
+     "material": 0,
+     "small": 18
+    },
+    "labels": {
+     "invariant": 19,
+     "material": 0,
+     "small": 18
+    }
+   },
+   "holds": true,
+   "material_candidate_labels": [],
+   "material_candidates": [],
+   "max_abs_delta": {
+    "agreement": 0.0186852837150302,
+    "labels": 0.030790464490516922
+   },
+   "procedure_material": false,
+   "procedure_outcome": [
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.0,
+     "nontrivial_rate_T0": 0.003,
+     "rate_difference": -0.003,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.0345,
+     "nontrivial_rate_T0": 0.025,
+     "rate_difference": 0.009500000000000001,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 11.569373780808185,
+     "median_compression_T0": 7.757414918098136,
+     "n": 225,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 0.9855,
+     "rate_difference": 0.014499999999999957,
+     "ratio_of_medians": 1.491395510354449,
+     "threshold": 0.95
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 450,
+     "nontrivial_rate": 0.009,
+     "nontrivial_rate_T0": 0.006,
+     "rate_difference": 0.002999999999999999,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 15.28911630374803,
+     "median_compression_T0": 7.757414918098136,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 0.9995,
+     "rate_difference": 0.0004999999999999449,
+     "ratio_of_medians": 1.9709035116941276,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 29.711387975972418,
+     "median_compression_T0": 29.711387975972418,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 1.0,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.95
+    }
+   ],
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T2a",
+    "kind": "dense random rotation",
+    "orthogonality_error": 8.881784197001252e-16,
+    "seed": 1,
+    "sha256": "479c843b76a8bd17a8643b0cffc67ccbc17e6209230abe8d75f60e3d80ece593"
+   }
+  },
+  "T2b": {
+   "candidates": {
+    "agreement": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0
+     },
+     {
+      "ci95": [
+       -0.004091687876147776,
+       0.001636675150459288
+      ],
+      "class": "invariant",
+      "delta": -0.000818337575229644,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.9967266496990816,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       -0.0011706658052588136,
+       0.0059679333067700424
+      ],
+      "class": "invariant",
+      "delta": 0.0023658564660300474,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.8993643132816281,
+      "retention_T0": 0.8969984568155981
+     },
+     {
+      "ci95": [
+       -0.002045502945478281,
+       0.0063054328634987115
+      ],
+      "class": "invariant",
+      "delta": 0.0020201474963015276,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9046315447654862,
+      "retention_T0": 0.9026113972691847
+     },
+     {
+      "ci95": [
+       -0.004011786968940045,
+       0.00038627939127544586
+      ],
+      "class": "invariant",
+      "delta": -0.0015526678392417947,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.8681015780066751,
+      "retention_T0": 0.8696542458459169
+     },
+     {
+      "ci95": [
+       -0.0023370836593449074,
+       0.001773274511090775
+      ],
+      "class": "invariant",
+      "delta": -0.0004177540757691611,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.8325275690815224,
+      "retention_T0": 0.8329453231572915
+     },
+     {
+      "ci95": [
+       -0.004724899675324745,
+       0.0033761551331541353
+      ],
+      "class": "invariant",
+      "delta": -0.0005806197497625343,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.8243504865117868,
+      "retention_T0": 0.8249311062615493
+     },
+     {
+      "ci95": [
+       -0.004091687876147776,
+       0.001636675150459288
+      ],
+      "class": "invariant",
+      "delta": -0.000818337575229644,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.9967266496990816,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       -0.0024721238793067313,
+       0.0013555798580121598
+      ],
+      "class": "invariant",
+      "delta": -0.00029425816047301545,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9272803945610625,
+      "retention_T0": 0.9275746527215355
+     },
+     {
+      "ci95": [
+       0.0008566255164589309,
+       0.009329256360191848
+      ],
+      "class": "small",
+      "delta": 0.005040334623409137,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.89017621558949,
+      "retention_T0": 0.8851358809660809
+     },
+     {
+      "ci95": [
+       -0.009138498727126793,
+       0.00128885315671584
+      ],
+      "class": "invariant",
+      "delta": -0.0037265852724835957,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.8678060597606618,
+      "retention_T0": 0.8715326450331454
+     },
+     {
+      "ci95": [
+       -0.008691950396017889,
+       0.00015371051424972748
+      ],
+      "class": "invariant",
+      "delta": -0.004047109746318611,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.8324567855580021,
+      "retention_T0": 0.8365038953043207
+     },
+     {
+      "ci95": [
+       -0.006749109022576643,
+       -0.0010685315943176935
+      ],
+      "class": "invariant",
+      "delta": -0.003685955428246235,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.7946918668913706,
+      "retention_T0": 0.7983778223196168
+     },
+     {
+      "ci95": [
+       -0.0023571290851268495,
+       0.00017423665188362548
+      ],
+      "class": "invariant",
+      "delta": -0.0008880407782619892,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.7492162634945954,
+      "retention_T0": 0.7501043042728573
+     },
+     {
+      "ci95": [
+       -0.004679771346748803,
+       0.025359528335707947
+      ],
+      "class": "small",
+      "delta": 0.009951560737636034,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9601848960092055,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.027020025682248937,
+       0.0069535626382819455
+      ],
+      "class": "small",
+      "delta": -0.010306426364088406,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.8828448157318537,
+      "retention_T0": 0.8931512420959421
+     },
+     {
+      "ci95": [
+       -0.013611285845892787,
+       0.011480350780204785
+      ],
+      "class": "invariant",
+      "delta": -0.0010979438334941527,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.8744762562777945,
+      "retention_T0": 0.8755742001112886
+     },
+     {
+      "ci95": [
+       -0.00813480328566701,
+       0.01906662139022329
+      ],
+      "class": "small",
+      "delta": 0.005260820952896594,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.8546073556127787,
+      "retention_T0": 0.8493465346598821
+     },
+     {
+      "ci95": [
+       -0.00819121222891844,
+       0.018122469128891247
+      ],
+      "class": "small",
+      "delta": 0.00504943185744211,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.8186707078263114,
+      "retention_T0": 0.8136212759688692
+     },
+     {
+      "ci95": [
+       -0.0018400183699423698,
+       0.02148428126728445
+      ],
+      "class": "small",
+      "delta": 0.009885805820195492,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.8197435265866024,
+      "retention_T0": 0.8098577207664069
+     },
+     {
+      "ci95": [
+       -0.004679771346748803,
+       0.025359528335707947
+      ],
+      "class": "small",
+      "delta": 0.009951560737636034,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9601848960092055,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.01403408228655979,
+       0.0164859118998606
+      ],
+      "class": "invariant",
+      "delta": 0.0016172800195434212,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.8919219637016789,
+      "retention_T0": 0.8903046836821354
+     },
+     {
+      "ci95": [
+       -0.00876522730370537,
+       0.026472494430175103
+      ],
+      "class": "small",
+      "delta": 0.00837531478508402,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.8658687189127281,
+      "retention_T0": 0.8574934041276441
+     },
+     {
+      "ci95": [
+       -0.020888788325404025,
+       0.011924515647179723
+      ],
+      "class": "invariant",
+      "delta": -0.004472699473600739,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.8477139236464359,
+      "retention_T0": 0.8521866231200367
+     },
+     {
+      "ci95": [
+       -0.004672483268407193,
+       0.02754240835160158
+      ],
+      "class": "small",
+      "delta": 0.011363620010983566,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.8239933369080367,
+      "retention_T0": 0.8126297168970531
+     },
+     {
+      "ci95": [
+       -0.002626717171828574,
+       0.02643154653031866
+      ],
+      "class": "small",
+      "delta": 0.01175350139080722,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.7885493517775427,
+      "retention_T0": 0.7767958503867355
+     },
+     {
+      "ci95": [
+       0.007757010510385356,
+       0.03704595498408449
+      ],
+      "class": "material",
+      "delta": 0.022625718831357777,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.7550087750560593,
+      "retention_T0": 0.7323830562247016
+     },
+     {
+      "ci95": [
+       0.0051563715313033415,
+       0.06126148274344659
+      ],
+      "class": "material",
+      "delta": 0.03300178747880789,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.8058830618458631,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       -0.023717835405279792,
+       0.03140932000282625
+      ],
+      "class": "small",
+      "delta": 0.005225516828192167,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.7674300568503232,
+      "retention_T0": 0.762204540022131
+     },
+     {
+      "ci95": [
+       -0.0114310105116097,
+       0.042266372508900835
+      ],
+      "class": "small",
+      "delta": 0.016465645414820207,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.7787398871430034,
+      "retention_T0": 0.7622742417281831
+     },
+     {
+      "ci95": [
+       -0.017432882480232906,
+       0.03521148950335181
+      ],
+      "class": "small",
+      "delta": 0.009520819067952435,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.766044321816048,
+      "retention_T0": 0.7565235027480955
+     },
+     {
+      "ci95": [
+       -0.0159559381288079,
+       0.03300348312549878
+      ],
+      "class": "small",
+      "delta": 0.008193789500599569,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.7362959664391074,
+      "retention_T0": 0.7281021769385079
+     },
+     {
+      "ci95": [
+       -0.01595472388175951,
+       0.03502029283462261
+      ],
+      "class": "small",
+      "delta": 0.009225184970518052,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.7268370119287143,
+      "retention_T0": 0.7176118269581963
+     },
+     {
+      "ci95": [
+       0.0051563715313033415,
+       0.06126148274344659
+      ],
+      "class": "material",
+      "delta": 0.03300178747880789,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.8058830618458631,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       -0.006833662408817084,
+       0.04969505174170208
+      ],
+      "class": "small",
+      "delta": 0.021111685230388644,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.773853380382245,
+      "retention_T0": 0.7527416951518564
+     },
+     {
+      "ci95": [
+       -0.019044290537832433,
+       0.0382958619750565
+      ],
+      "class": "small",
+      "delta": 0.010126329194115491,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.7540474290862168,
+      "retention_T0": 0.7439210998921013
+     },
+     {
+      "ci95": [
+       0.011618908509928458,
+       0.0691651439073493
+      ],
+      "class": "material",
+      "delta": 0.04027646873336588,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.7752798046834485,
+      "retention_T0": 0.7350033359500826
+     },
+     {
+      "ci95": [
+       0.00029845246110976067,
+       0.057573864601403464
+      ],
+      "class": "material",
+      "delta": 0.028390026399205737,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.7428598361202726,
+      "retention_T0": 0.7144698097210669
+     },
+     {
+      "ci95": [
+       -0.010900256435717242,
+       0.04078595569445984
+      ],
+      "class": "small",
+      "delta": 0.015074583164031763,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.7056361095189961,
+      "retention_T0": 0.6905615263549644
+     },
+     {
+      "ci95": [
+       -0.0350583632721679,
+       0.013140190876470451
+      ],
+      "class": "small",
+      "delta": -0.010144700433273646,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.6593683754376624,
+      "retention_T0": 0.669513075870936
+     }
+    ],
+    "labels": [
+     {
+      "ci95": [
+       -0.004387399653843637,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.0013879124104454466,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0013879124104454
+     },
+     {
+      "ci95": [
+       -0.0006990179533081619,
+       0.004940666723321347
+      ],
+      "class": "invariant",
+      "delta": 0.001451710931150596,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.9999065719825386,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       -0.00662795101987603,
+       0.000948973110674672
+      ],
+      "class": "invariant",
+      "delta": -0.0022422894222825507,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.9858277186202836,
+      "retention_T0": 0.9880700080425662
+     },
+     {
+      "ci95": [
+       -0.0035201771921320817,
+       0.008223398016699168
+      ],
+      "class": "invariant",
+      "delta": 0.002263587645546461,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9959252425636325,
+      "retention_T0": 0.993661654918086
+     },
+     {
+      "ci95": [
+       -0.007010850202458596,
+       0.0008018853255373875
+      ],
+      "class": "invariant",
+      "delta": -0.0023060879429877,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.9893193929253197,
+      "retention_T0": 0.9916254808683074
+     },
+     {
+      "ci95": [
+       -0.004141215290883344,
+       0.0035666665749967547
+      ],
+      "class": "invariant",
+      "delta": -6.379852070503844e-05,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.9763906706407603,
+      "retention_T0": 0.9764544691614654
+     },
+     {
+      "ci95": [
+       -0.005368891087211428,
+       0.0009597275235655731
+      ],
+      "class": "invariant",
+      "delta": -0.0015451389486119682,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.9697082454079504,
+      "retention_T0": 0.9712533843565624
+     },
+     {
+      "ci95": [
+       -0.0006990179533081619,
+       0.004940666723321347
+      ],
+      "class": "invariant",
+      "delta": 0.001451710931150596,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.9999065719825386,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       0.00015733739332426388,
+       0.0057119129308062086
+      ],
+      "class": "invariant",
+      "delta": 0.002263587645546572,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9966352662601815,
+      "retention_T0": 0.9943716786146349
+     },
+     {
+      "ci95": [
+       -0.004261849729288875,
+       0.0013624787930387266
+      ],
+      "class": "invariant",
+      "delta": -0.0009181755325424756,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.9944780735818676,
+      "retention_T0": 0.99539624911441
+     },
+     {
+      "ci95": [
+       -0.0014253256013278509,
+       0.0040357437444625095
+      ],
+      "class": "invariant",
+      "delta": 0.0006971504736708045,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.9958891308030874,
+      "retention_T0": 0.9951919803294166
+     },
+     {
+      "ci95": [
+       -0.0041707011726542596,
+       0.0035472122091787604
+      ],
+      "class": "invariant",
+      "delta": -0.0003782515970381928,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.9870880339893189,
+      "retention_T0": 0.9874662855863571
+     },
+     {
+      "ci95": [
+       -0.00025399717567221034,
+       0.007198394675106598
+      ],
+      "class": "invariant",
+      "delta": 0.0027120263001856326,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.9681952390197978,
+      "retention_T0": 0.9654832127196121
+     },
+     {
+      "ci95": [
+       -0.004330456523605433,
+       0.0038144897778267443
+      ],
+      "class": "invariant",
+      "delta": -0.0002487118190314108,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.9478275858861586,
+      "retention_T0": 0.94807629770519
+     },
+     {
+      "ci95": [
+       -0.009213612916109944,
+       0.01605419985481281
+      ],
+      "class": "invariant",
+      "delta": 0.0032474082863042097,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 1.0008988200458753,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       -0.012060989794263571,
+       0.020212910559479724
+      ],
+      "class": "invariant",
+      "delta": 0.004325505718888456,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.9910752853449075,
+      "retention_T0": 0.9867497796260191
+     },
+     {
+      "ci95": [
+       -0.015655496792888586,
+       0.012709085955807045
+      ],
+      "class": "invariant",
+      "delta": -0.0016598627671434718,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.9915256667361434,
+      "retention_T0": 0.9931855295032869
+     },
+     {
+      "ci95": [
+       -0.009321274211711689,
+       0.014476175171764232
+      ],
+      "class": "invariant",
+      "delta": 0.0023402569669360718,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.989381248709428,
+      "retention_T0": 0.9870409917424919
+     },
+     {
+      "ci95": [
+       -0.018949379313738364,
+       0.007143645176059853
+      ],
+      "class": "small",
+      "delta": -0.005923418975030903,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.9720825776719426,
+      "retention_T0": 0.9780059966469735
+     },
+     {
+      "ci95": [
+       -0.00757769926140327,
+       0.019102265197542354
+      ],
+      "class": "small",
+      "delta": 0.0057049931289484546,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.9730091806270639,
+      "retention_T0": 0.9673041874981154
+     },
+     {
+      "ci95": [
+       -0.009213612916109944,
+       0.01605419985481281
+      ],
+      "class": "invariant",
+      "delta": 0.0032474082863042097,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 1.0008988200458753,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       -0.011305645847552384,
+       0.01482213306745213
+      ],
+      "class": "invariant",
+      "delta": 0.0011005833449722058,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.9992725635533805,
+      "retention_T0": 0.9981719802084082
+     },
+     {
+      "ci95": [
+       -0.018000759570354866,
+       0.014369944832792731
+      ],
+      "class": "invariant",
+      "delta": -0.0017300522469382296,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.9958510763059455,
+      "retention_T0": 0.9975811285528837
+     },
+     {
+      "ci95": [
+       -0.00741587292806683,
+       0.02986450407188093
+      ],
+      "class": "small",
+      "delta": 0.011475068616812245,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.9946223331702633,
+      "retention_T0": 0.983147264553451
+     },
+     {
+      "ci95": [
+       -0.024368467700946514,
+       0.0070652926851469885
+      ],
+      "class": "small",
+      "delta": -0.008259136414774937,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.9788095420878767,
+      "retention_T0": 0.9870686785026517
+     },
+     {
+      "ci95": [
+       -0.01409569397638424,
+       0.01471251231555644
+      ],
+      "class": "invariant",
+      "delta": -0.00017204007544813216,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.9593174704624459,
+      "retention_T0": 0.959489510537894
+     },
+     {
+      "ci95": [
+       -0.027551296461735948,
+       -0.001322053706317432
+      ],
+      "class": "small",
+      "delta": -0.01390227133742128,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.9382269228315726,
+      "retention_T0": 0.9521291941689939
+     },
+     {
+      "ci95": [
+       -0.04296769158541126,
+       0.01792098685653141
+      ],
+      "class": "small",
+      "delta": -0.011239230020659075,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.9835299619507888,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       -0.04705860268014878,
+       0.017731355854142157
+      ],
+      "class": "small",
+      "delta": -0.014912028299914781,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.9729601956436402,
+      "retention_T0": 0.987872223943555
+     },
+     {
+      "ci95": [
+       -0.030125412874208782,
+       0.034535727768396356
+      ],
+      "class": "invariant",
+      "delta": 0.002134047867539679,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.9674406785623183,
+      "retention_T0": 0.9653066306947786
+     },
+     {
+      "ci95": [
+       -0.04576145508020679,
+       0.01136487319893547
+      ],
+      "class": "small",
+      "delta": -0.0164081822651031,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.9640676135490068,
+      "retention_T0": 0.9804757958141099
+     },
+     {
+      "ci95": [
+       -0.031104842489968754,
+       0.02795176995210688
+      ],
+      "class": "invariant",
+      "delta": -0.002104418370783012,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.9575552856550482,
+      "retention_T0": 0.9596597040258312
+     },
+     {
+      "ci95": [
+       -0.03504204754665713,
+       0.026169329873371824
+      ],
+      "class": "invariant",
+      "delta": -0.004822835630058808,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.9521053928820274,
+      "retention_T0": 0.9569282285120863
+     },
+     {
+      "ci95": [
+       -0.04296769158541126,
+       0.01792098685653141
+      ],
+      "class": "small",
+      "delta": -0.011239230020659075,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.9835299619507888,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       -0.0476475848447576,
+       0.015445438115787179
+      ],
+      "class": "small",
+      "delta": -0.01541343113806326,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.9770878211144312,
+      "retention_T0": 0.9925012522524944
+     },
+     {
+      "ci95": [
+       -0.04061075980261604,
+       0.024757899061276255
+      ],
+      "class": "small",
+      "delta": -0.006512327893958836,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.9651835731805604,
+      "retention_T0": 0.9716959010745192
+     },
+     {
+      "ci95": [
+       -0.03747968814563432,
+       0.026485038645851697
+      ],
+      "class": "small",
+      "delta": -0.005188305308917118,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.9566795166930548,
+      "retention_T0": 0.961867822001972
+     },
+     {
+      "ci95": [
+       -0.0404544524556528,
+       0.025120128681218132
+      ],
+      "class": "small",
+      "delta": -0.0075555036773157225,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.95847790698789,
+      "retention_T0": 0.9660334106652058
+     },
+     {
+      "ci95": [
+       -0.03718740573127892,
+       0.028349024646142515
+      ],
+      "class": "invariant",
+      "delta": -0.0036322407184108396,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.9357931416980888,
+      "retention_T0": 0.9394253824164996
+     },
+     {
+      "ci95": [
+       -0.028978750520720402,
+       0.0272067178111396
+      ],
+      "class": "invariant",
+      "delta": -0.0016469943886525673,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.9192490286958891,
+      "retention_T0": 0.9208960230845417
+     }
+    ]
+   },
+   "class_counts_distinct": {
+    "agreement": {
+     "invariant": 15,
+     "material": 4,
+     "small": 18
+    },
+    "labels": {
+     "invariant": 25,
+     "material": 0,
+     "small": 12
+    }
+   },
+   "holds": true,
+   "material_candidate_labels": [],
+   "material_candidates": [],
+   "max_abs_delta": {
+    "agreement": 0.04027646873336588,
+    "labels": 0.0164081822651031
+   },
+   "procedure_material": false,
+   "procedure_outcome": [
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.0,
+     "nontrivial_rate_T0": 0.003,
+     "rate_difference": -0.003,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.032,
+     "nontrivial_rate_T0": 0.025,
+     "rate_difference": 0.006999999999999999,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 10.558995368120183,
+     "median_compression_T0": 7.757414918098136,
+     "n": 225,
+     "nontrivial_rate": 0.985,
+     "nontrivial_rate_T0": 0.9855,
+     "rate_difference": -0.000500000000000056,
+     "ratio_of_medians": 1.3611487176592718,
+     "threshold": 0.95
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 450,
+     "nontrivial_rate": 0.006,
+     "nontrivial_rate_T0": 0.006,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 7.757414918098136,
+     "median_compression_T0": 7.757414918098136,
+     "n": 450,
+     "nontrivial_rate": 0.9995,
+     "nontrivial_rate_T0": 0.9995,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 29.711387975972418,
+     "median_compression_T0": 29.711387975972418,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 1.0,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.95
+    }
+   ],
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T2b",
+    "kind": "dense random rotation",
+    "orthogonality_error": 1.1102230246251565e-15,
+    "seed": 2,
+    "sha256": "2b9074e732df70aa9d7e912a6908850255ebabff4d75f82b77daab0c38387b02"
+   }
+  },
+  "T3": {
+   "candidates": {
+    "agreement": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0,
+      "retention_T0": 1.0
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.9975449872743113,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.8969984568155981,
+      "retention_T0": 0.8969984568155981
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.9026113972691847,
+      "retention_T0": 0.9026113972691847
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.8696542458459169,
+      "retention_T0": 0.8696542458459169
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.8329453231572915,
+      "retention_T0": 0.8329453231572915
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.8249311062615493,
+      "retention_T0": 0.8249311062615493
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.9975449872743113,
+      "retention_T0": 0.9975449872743113
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9275746527215355,
+      "retention_T0": 0.9275746527215355
+     },
+     {
+      "ci95": [
+       0.0,
+       0.004504293003475768
+      ],
+      "class": "invariant",
+      "delta": 0.0015526678392419058,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.8866885488053228,
+      "retention_T0": 0.8851358809660809
+     },
+     {
+      "ci95": [
+       -0.00562209561333038,
+       0.0016541153757779602
+      ],
+      "class": "invariant",
+      "delta": -0.0018127036924787676,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.8697199413406667,
+      "retention_T0": 0.8715326450331454
+     },
+     {
+      "ci95": [
+       -0.0034665200131270917,
+       0.0038024324213699304
+      ],
+      "class": "invariant",
+      "delta": 0.0002377178254669987,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.8367416131297877,
+      "retention_T0": 0.8365038953043207
+     },
+     {
+      "ci95": [
+       -0.007396232153999607,
+       0.0009300529224283509
+      ],
+      "class": "invariant",
+      "delta": -0.002701090767784131,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.7956767315518327,
+      "retention_T0": 0.7983778223196168
+     },
+     {
+      "ci95": [
+       -0.00844018735793057,
+       0.0036653930688971214
+      ],
+      "class": "invariant",
+      "delta": -0.0022869981032540565,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.7478173061696033,
+      "retention_T0": 0.7501043042728573
+     },
+     {
+      "ci95": [
+       -0.0038206033011256384,
+       0.004689846558369107
+      ],
+      "class": "invariant",
+      "delta": 0.00030742102849934394,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9505407563000688,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.8931512420959421,
+      "retention_T0": 0.8931512420959421
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.8755742001112886,
+      "retention_T0": 0.8755742001112886
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.8493465346598821,
+      "retention_T0": 0.8493465346598821
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.8136212759688692,
+      "retention_T0": 0.8136212759688692
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.8098577207664069,
+      "retention_T0": 0.8098577207664069
+     },
+     {
+      "ci95": [
+       -0.0038206033011256384,
+       0.004689846558369107
+      ],
+      "class": "invariant",
+      "delta": 0.00030742102849934394,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9505407563000688,
+      "retention_T0": 0.9502333352715695
+     },
+     {
+      "ci95": [
+       -0.005781382854861727,
+       0.004402108587715907
+      ],
+      "class": "invariant",
+      "delta": -0.0008091824154859983,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 0.8894955012666494,
+      "retention_T0": 0.8903046836821354
+     },
+     {
+      "ci95": [
+       -0.005476911541185334,
+       0.005073049255201464
+      ],
+      "class": "invariant",
+      "delta": -9.596951639412321e-05,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.85739743461125,
+      "retention_T0": 0.8574934041276441
+     },
+     {
+      "ci95": [
+       -0.005005179816766131,
+       0.0032616871508709218
+      ],
+      "class": "invariant",
+      "delta": -0.0007422847609065419,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.8514443383591301,
+      "retention_T0": 0.8521866231200367
+     },
+     {
+      "ci95": [
+       -0.0050732201970714545,
+       0.0035773809945202485
+      ],
+      "class": "invariant",
+      "delta": -0.0005674568817363168,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.8120622600153168,
+      "retention_T0": 0.8126297168970531
+     },
+     {
+      "ci95": [
+       -0.0076634606786722985,
+       0.0005813064241680312
+      ],
+      "class": "invariant",
+      "delta": -0.003228772171089078,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.7735670782156464,
+      "retention_T0": 0.7767958503867355
+     },
+     {
+      "ci95": [
+       -0.011636047345217832,
+       0.0016864601544404056
+      ],
+      "class": "invariant",
+      "delta": -0.0045870996518436735,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.7277959565728579,
+      "retention_T0": 0.7323830562247016
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.7728812743670552,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.762204540022131,
+      "retention_T0": 0.762204540022131
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.7622742417281831,
+      "retention_T0": 0.7622742417281831
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.7565235027480955,
+      "retention_T0": 0.7565235027480955
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.7281021769385079,
+      "retention_T0": 0.7281021769385079
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.7176118269581963,
+      "retention_T0": 0.7176118269581963
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.7728812743670552,
+      "retention_T0": 0.7728812743670552
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0045014859580427835
+      ],
+      "class": "invariant",
+      "delta": 0.0017732745110908832,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.7545149696629473,
+      "retention_T0": 0.7527416951518564
+     },
+     {
+      "ci95": [
+       -0.0021424427487481967,
+       0.005820812036249943
+      ],
+      "class": "invariant",
+      "delta": 0.0017903856647086824,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.74571148555681,
+      "retention_T0": 0.7439210998921013
+     },
+     {
+      "ci95": [
+       -0.0011492772943484386,
+       0.0064089305949268675
+      ],
+      "class": "invariant",
+      "delta": 0.0025115530606949488,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.7375148890107776,
+      "retention_T0": 0.7350033359500826
+     },
+     {
+      "ci95": [
+       -0.0052796214678754085,
+       0.005007195630621131
+      ],
+      "class": "invariant",
+      "delta": -0.00015371051424961646,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.7143160992068173,
+      "retention_T0": 0.7144698097210669
+     },
+     {
+      "ci95": [
+       -0.007044742582225039,
+       0.0024790418688205905
+      ],
+      "class": "invariant",
+      "delta": -0.0021042142302094557,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.6884573121247549,
+      "retention_T0": 0.6905615263549644
+     },
+     {
+      "ci95": [
+       -0.009639832354915695,
+       0.0019755693664720323
+      ],
+      "class": "invariant",
+      "delta": -0.0032196170113453215,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.6662934588595907,
+      "retention_T0": 0.669513075870936
+     }
+    ],
+    "labels": [
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "float16",
+      "position": 0,
+      "retention": 1.0013879124104454,
+      "retention_T0": 1.0013879124104454
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 1,
+      "retention": 0.998454861051388,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int8(per_vector)",
+      "position": 2,
+      "retention": 0.9880700080425662,
+      "retention_T0": 0.9880700080425662
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int8(per_vector)",
+      "position": 3,
+      "retention": 0.993661654918086,
+      "retention_T0": 0.993661654918086
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int8(per_vector)",
+      "position": 4,
+      "retention": 0.9916254808683074,
+      "retention_T0": 0.9916254808683074
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int8(per_vector)",
+      "position": 5,
+      "retention": 0.9764544691614654,
+      "retention_T0": 0.9764544691614654
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int8(per_vector)",
+      "position": 6,
+      "retention": 0.9712533843565624,
+      "retention_T0": 0.9712533843565624
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "int8(per_vector)",
+      "position": 7,
+      "retention": 0.998454861051388,
+      "retention_T0": 0.998454861051388
+     },
+     {
+      "ci95": [
+       -0.004365940742277951,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.0013879124104451135,
+      "label": "adaptive_merge(0.9) > int8(per_vector)",
+      "position": 8,
+      "retention": 0.9929837662041898,
+      "retention_T0": 0.9943716786146349
+     },
+     {
+      "ci95": [
+       -0.005804840483092066,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": -0.00201487582651505,
+      "label": "adaptive_merge(0.8) > int8(per_vector)",
+      "position": 9,
+      "retention": 0.993381373287895,
+      "retention_T0": 0.99539624911441
+     },
+     {
+      "ci95": [
+       -0.012958422922538768,
+       -0.0013258301182877657
+      ],
+      "class": "small",
+      "delta": -0.006365469092774023,
+      "label": "adaptive_merge(0.7) > int8(per_vector)",
+      "position": 10,
+      "retention": 0.9888265112366426,
+      "retention_T0": 0.9951919803294166
+     },
+     {
+      "ci95": [
+       -0.008400108033775108,
+       -0.0005465600719603006
+      ],
+      "class": "invariant",
+      "delta": -0.0037449280734533907,
+      "label": "adaptive_merge(0.6) > int8(per_vector)",
+      "position": 11,
+      "retention": 0.9837213575129037,
+      "retention_T0": 0.9874662855863571
+     },
+     {
+      "ci95": [
+       -0.006083116374357647,
+       0.0059831634880591995
+      ],
+      "class": "invariant",
+      "delta": 0.00029121211647287204,
+      "label": "adaptive_merge(0.5) > int8(per_vector)",
+      "position": 12,
+      "retention": 0.965774424836085,
+      "retention_T0": 0.9654832127196121
+     },
+     {
+      "ci95": [
+       -0.007055820021502196,
+       0.0026483824482594087
+      ],
+      "class": "invariant",
+      "delta": -0.002134047867539679,
+      "label": "adaptive_merge(0.4) > int8(per_vector)",
+      "position": 13,
+      "retention": 0.9459422498376503,
+      "retention_T0": 0.94807629770519
+     },
+     {
+      "ci95": [
+       -0.003393607368481116,
+       0.006294609579804877
+      ],
+      "class": "invariant",
+      "delta": 0.0013879124104453355,
+      "label": "int4(mean)",
+      "position": 14,
+      "retention": 0.9990393241700164,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > int4(mean)",
+      "position": 15,
+      "retention": 0.9867497796260191,
+      "retention_T0": 0.9867497796260191
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > int4(mean)",
+      "position": 16,
+      "retention": 0.9931855295032869,
+      "retention_T0": 0.9931855295032869
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > int4(mean)",
+      "position": 17,
+      "retention": 0.9870409917424919,
+      "retention_T0": 0.9870409917424919
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > int4(mean)",
+      "position": 18,
+      "retention": 0.9780059966469735,
+      "retention_T0": 0.9780059966469735
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > int4(mean)",
+      "position": 19,
+      "retention": 0.9673041874981154,
+      "retention_T0": 0.9673041874981154
+     },
+     {
+      "ci95": [
+       -0.003393607368481116,
+       0.006294609579804877
+      ],
+      "class": "invariant",
+      "delta": 0.0013879124104453355,
+      "label": "int4(mean)",
+      "position": 20,
+      "retention": 0.9990393241700164,
+      "retention_T0": 0.9976514117595711
+     },
+     {
+      "ci95": [
+       -0.0013148072406924337,
+       0.013343037863627701
+      ],
+      "class": "small",
+      "delta": 0.005694062642666586,
+      "label": "adaptive_merge(0.9) > int4(mean)",
+      "position": 21,
+      "retention": 1.0038660428510748,
+      "retention_T0": 0.9981719802084082
+     },
+     {
+      "ci95": [
+       -0.008758522252352926,
+       -0.00015392940237372033
+      ],
+      "class": "invariant",
+      "delta": -0.003587701535286536,
+      "label": "adaptive_merge(0.8) > int4(mean)",
+      "position": 22,
+      "retention": 0.9939934270175972,
+      "retention_T0": 0.9975811285528837
+     },
+     {
+      "ci95": [
+       -0.00207381947506399,
+       0.003760791764332582
+      ],
+      "class": "invariant",
+      "delta": 0.0004464959180424666,
+      "label": "adaptive_merge(0.7) > int4(mean)",
+      "position": 23,
+      "retention": 0.9835937604714935,
+      "retention_T0": 0.983147264553451
+     },
+     {
+      "ci95": [
+       -0.004515168893962643,
+       0.0045219467757488955
+      ],
+      "class": "invariant",
+      "delta": 0.0001849132983264834,
+      "label": "adaptive_merge(0.6) > int4(mean)",
+      "position": 24,
+      "retention": 0.9872535918009782,
+      "retention_T0": 0.9870686785026517
+     },
+     {
+      "ci95": [
+       -0.003021018035917797,
+       0.007383474203205699
+      ],
+      "class": "invariant",
+      "delta": 0.0018576492883484175,
+      "label": "adaptive_merge(0.5) > int4(mean)",
+      "position": 25,
+      "retention": 0.9613471598262424,
+      "retention_T0": 0.959489510537894
+     },
+     {
+      "ci95": [
+       -0.0042698342196457045,
+       0.004438241060691931
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "adaptive_merge(0.4) > int4(mean)",
+      "position": 26,
+      "retention": 0.9521291941689939,
+      "retention_T0": 0.9521291941689939
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 27,
+      "retention": 0.9947691919714479,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.5) > binary",
+      "position": 28,
+      "retention": 0.987872223943555,
+      "retention_T0": 0.987872223943555
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.33) > binary",
+      "position": 29,
+      "retention": 0.9653066306947786,
+      "retention_T0": 0.9653066306947786
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.25) > binary",
+      "position": 30,
+      "retention": 0.9804757958141099,
+      "retention_T0": 0.9804757958141099
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.15) > binary",
+      "position": 31,
+      "retention": 0.9596597040258312,
+      "retention_T0": 0.9596597040258312
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "hierarchical_merge(0.1) > binary",
+      "position": 32,
+      "retention": 0.9569282285120863,
+      "retention_T0": 0.9569282285120863
+     },
+     {
+      "ci95": [
+       0.0,
+       0.0
+      ],
+      "class": "invariant",
+      "delta": 0.0,
+      "label": "binary",
+      "position": 33,
+      "retention": 0.9947691919714479,
+      "retention_T0": 0.9947691919714479
+     },
+     {
+      "ci95": [
+       0.0,
+       0.009475943618602739
+      ],
+      "class": "invariant",
+      "delta": 0.004257165248797601,
+      "label": "adaptive_merge(0.9) > binary",
+      "position": 34,
+      "retention": 0.996758417501292,
+      "retention_T0": 0.9925012522524944
+     },
+     {
+      "ci95": [
+       -0.0036657043134725813,
+       0.004913699823877162
+      ],
+      "class": "invariant",
+      "delta": 0.0006269634160693816,
+      "label": "adaptive_merge(0.8) > binary",
+      "position": 35,
+      "retention": 0.9723228644905886,
+      "retention_T0": 0.9716959010745192
+     },
+     {
+      "ci95": [
+       -0.0029713337053496767,
+       0.006242062203954258
+      ],
+      "class": "invariant",
+      "delta": 0.0014175419072017803,
+      "label": "adaptive_merge(0.7) > binary",
+      "position": 36,
+      "retention": 0.9632853639091737,
+      "retention_T0": 0.961867822001972
+     },
+     {
+      "ci95": [
+       -0.004551297826497239,
+       0.008048645103021515
+      ],
+      "class": "invariant",
+      "delta": 0.0015174521884520065,
+      "label": "adaptive_merge(0.6) > binary",
+      "position": 37,
+      "retention": 0.9675508628536578,
+      "retention_T0": 0.9660334106652058
+     },
+     {
+      "ci95": [
+       -0.006582993734508486,
+       0.0119998986616347
+      ],
+      "class": "invariant",
+      "delta": 0.003094723697523394,
+      "label": "adaptive_merge(0.5) > binary",
+      "position": 38,
+      "retention": 0.942520106114023,
+      "retention_T0": 0.9394253824164996
+     },
+     {
+      "ci95": [
+       -0.010045148922643927,
+       0.0071407783071360045
+      ],
+      "class": "invariant",
+      "delta": -0.001160498814677502,
+      "label": "adaptive_merge(0.4) > binary",
+      "position": 39,
+      "retention": 0.9197355242698642,
+      "retention_T0": 0.9208960230845417
+     }
+    ]
+   },
+   "class_counts_distinct": {
+    "agreement": {
+     "invariant": 37,
+     "material": 0,
+     "small": 0
+    },
+    "labels": {
+     "invariant": 35,
+     "material": 0,
+     "small": 2
+    }
+   },
+   "holds": true,
+   "material_candidate_labels": [],
+   "material_candidates": [],
+   "max_abs_delta": {
+    "agreement": 0.0045870996518436735,
+    "labels": 0.006365469092774023
+   },
+   "procedure_material": false,
+   "procedure_outcome": [
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.003,
+     "nontrivial_rate_T0": 0.003,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 225,
+     "nontrivial_rate": 0.0245,
+     "nontrivial_rate_T0": 0.025,
+     "rate_difference": -0.0005000000000000004,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 10.558918544350007,
+     "median_compression_T0": 7.757414918098136,
+     "n": 225,
+     "nontrivial_rate": 0.991,
+     "nontrivial_rate_T0": 0.9855,
+     "rate_difference": 0.005499999999999949,
+     "ratio_of_medians": 1.361138814389821,
+     "threshold": 0.95
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 1.0,
+     "median_compression_T0": 1.0,
+     "n": 450,
+     "nontrivial_rate": 0.006,
+     "nontrivial_rate_T0": 0.006,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.99
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 10.558918544350007,
+     "median_compression_T0": 7.757414918098136,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 0.9995,
+     "rate_difference": 0.0004999999999999449,
+     "ratio_of_medians": 1.361138814389821,
+     "threshold": 0.97
+    },
+    {
+     "budget_class": "pool-supported",
+     "delta": 0.05,
+     "evidence": "SIMULATED, pool-supported",
+     "material": false,
+     "median_compression": 29.711387975972418,
+     "median_compression_T0": 29.711387975972418,
+     "n": 450,
+     "nontrivial_rate": 1.0,
+     "nontrivial_rate_T0": 1.0,
+     "rate_difference": 0.0,
+     "ratio_of_medians": 1.0,
+     "threshold": 0.95
+    }
+   ],
+   "transformation": {
+    "applied_to": "documents",
+    "hashed": "the row order, little-endian int64",
+    "id": "T3",
+    "kind": "reordering of the rows of each document",
+    "seed": 3,
+    "sha256": "4f9af373c1e1d2c2f36d84f24317017b559e5b1ff43cc91819b2e0e5f37e126e"
+   }
+  }
+ },
+ "rotations_compared": {
+  "candidates": 40,
+  "candidates_with_the_same_class": 29,
+  "max_abs_difference_in_R_L": 0.026063658512902377
+ },
+ "set": "primary",
+ "units": {
+  "T0": {
+   "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+   "gates": {
+    "P0_reproduces_E1": {
+     "file": "colqwen25_docvqa_selections.npz",
+     "keys_compared": 3,
+     "methods": [
+      "C@0.05"
+     ],
+     "mismatches": [],
+     "passed": true,
+     "sha256": "ef3dff3f9173a594f74a799a3913501d82722d5cda8cdb5d0a5f202da302578d"
+    },
+    "T0": {
+     "arrays_equal": true,
+     "candidate_specification_equal": true,
+     "equal": true,
+     "max_abs_difference": 0.0,
+     "passed": true,
+     "size_metadata_equal": true
+    },
+    "candidate_specification": {
+     "passed": true,
+     "registered": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+     "sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520"
+    },
+    "values": {
+     "arrays": {
+      "base_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "base_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      }
+     },
+     "base_b1_all_one": true,
+     "passed": true
+    }
+   },
+   "transformation": {
+    "applied_to": "nothing",
+    "id": "T0",
+    "kind": "identity",
+    "seed": null,
+    "sha256": null
+   }
+  },
+  "T1": {
+   "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+   "gates": {
+    "candidate_specification": {
+     "passed": true,
+     "registered": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+     "sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520"
+    },
+    "symmetry": {
+     "max_abs_score_difference_over_max_abs_score": 1.212281012800172e-07,
+     "mean_tolerance": 0.001,
+     "passed": true,
+     "pool_mean_difference": 0.0,
+     "score_tolerance": 0.0001,
+     "share_of_queries_with_identical_metric": 1.0,
+     "share_required": 0.99
+    },
+    "values": {
+     "arrays": {
+      "base_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "base_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      }
+     },
+     "base_b1_all_one": true,
+     "passed": true
+    }
+   },
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T1",
+    "kind": "signed coordinate permutation",
+    "orthogonality_error": 0.0,
+    "seed": 0,
+    "sha256": "fe558cab6a3edd9f7efeb71967547f9a38f661c24a85ca711d723857d384f625"
+   }
+  },
+  "T2a": {
+   "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+   "gates": {
+    "candidate_specification": {
+     "passed": true,
+     "registered": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+     "sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520"
+    },
+    "symmetry": {
+     "max_abs_score_difference_over_max_abs_score": 1.818421519200258e-07,
+     "mean_tolerance": 0.001,
+     "passed": true,
+     "pool_mean_difference": 0.0,
+     "score_tolerance": 0.0001,
+     "share_of_queries_with_identical_metric": 1.0,
+     "share_required": 0.99
+    },
+    "values": {
+     "arrays": {
+      "base_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "base_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      }
+     },
+     "base_b1_all_one": true,
+     "passed": true
+    }
+   },
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T2a",
+    "kind": "dense random rotation",
+    "orthogonality_error": 8.881784197001252e-16,
+    "seed": 1,
+    "sha256": "479c843b76a8bd17a8643b0cffc67ccbc17e6209230abe8d75f60e3d80ece593"
+   }
+  },
+  "T2b": {
+   "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+   "gates": {
+    "candidate_specification": {
+     "passed": true,
+     "registered": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+     "sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520"
+    },
+    "symmetry": {
+     "max_abs_score_difference_over_max_abs_score": 2.424562025600344e-07,
+     "mean_tolerance": 0.001,
+     "passed": true,
+     "pool_mean_difference": 0.0,
+     "score_tolerance": 0.0001,
+     "share_of_queries_with_identical_metric": 1.0,
+     "share_required": 0.99
+    },
+    "values": {
+     "arrays": {
+      "base_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "base_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      }
+     },
+     "base_b1_all_one": true,
+     "passed": true
+    }
+   },
+   "transformation": {
+    "applied_to": "documents and queries",
+    "hashed": "the matrix, little-endian float64, C order",
+    "id": "T2b",
+    "kind": "dense random rotation",
+    "orthogonality_error": 1.1102230246251565e-15,
+    "seed": 2,
+    "sha256": "2b9074e732df70aa9d7e912a6908850255ebabff4d75f82b77daab0c38387b02"
+   }
+  },
+  "T3": {
+   "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+   "gates": {
+    "candidate_specification": {
+     "passed": true,
+     "registered": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+     "sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520"
+    },
+    "symmetry": {
+     "max_abs_score_difference_over_max_abs_score": 0.0,
+     "mean_tolerance": 0.001,
+     "passed": true,
+     "pool_mean_difference": 0.0,
+     "score_tolerance": 0.0001,
+     "share_of_queries_with_identical_metric": 1.0,
+     "share_required": 0.99
+    },
+    "values": {
+     "arrays": {
+      "base_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "base_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_b1": {
+       "finite": true,
+       "in_unit_interval": true
+      },
+      "cand_labels": {
+       "finite": true,
+       "in_unit_interval": true
+      }
+     },
+     "base_b1_all_one": true,
+     "passed": true
+    }
+   },
+   "transformation": {
+    "applied_to": "documents",
+    "hashed": "the row order, little-endian int64",
+    "id": "T3",
+    "kind": "reordering of the rows of each document",
+    "seed": 3,
+    "sha256": "4f9af373c1e1d2c2f36d84f24317017b559e5b1ff43cc91819b2e0e5f37e126e"
+   }
+  }
+ }
+}

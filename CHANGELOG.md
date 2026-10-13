@@ -1,5 +1,186 @@
 # Changelog
 
+## 0.4.0 (2026-10-12)
+
+Built on the `research-investigation` work (`91564fd`); this section also holds the batched
+`ExactIndex.rescore` that the base already carried.
+
+`optimize()`, `calibrate()`, the 40 names of v0.3.0's `optivision.__all__` (it has 52 now, 12
+new), the CLI commands that existed, every old import path and the v1 file formats are
+unchanged; `docs/package/MIGRATION.md` lists the observable differences. The additions are
+engineering capability, tested on synthetic data and against the research code for numerical
+equality; no registered experiment evaluated them as a package, and none of the research
+results (`reports/research/`) was changed or re-run. The model coverage entries at the end of
+this section add loading paths and three measured models; a loading path is not evidence that
+compression works for that model.
+
+### Certified selection and the model-agnostic core
+
+- **`optivision.certify()` and `CertifiedResult`** (`optivision/api.py`): a second entry point
+  beside `optimize()`. It scores a frozen candidate list on all the queries, lets a selection
+  rule choose the smallest certified candidate or abstain, and returns the decision, a
+  certificate, the evidence, and (unless it abstained) the fitted pipeline and the compressed
+  corpus. Parameters: `target`, `error`, `metric`, `reference` (`auto`, `labels`, `agreement`
+  or a reference object), `space`, `rule`, `query_budget`, `order_seed`, `fallback`, `encoder`,
+  `progress`, `created`. `result.retriever()`, `result.save()` and `result.report()`;
+  `optivision.verify()` checks a certificate or an artifact directory. Nothing certified gives
+  `Outcome.ABSTAIN` and the uncompressed index; there is no default fallback. Design:
+  `docs/package/API_DESIGN.md`.
+- **New top-level names**, loaded on demand: `certify`, `verify`, `verify_certificate`,
+  `load_artifact`, `save_artifact`, `CertifiedResult`, `Certificate`, `CandidateSpace`,
+  `Decision`, `Outcome`, `EncoderIdentity`. `import optivision` also registers the `rotation`
+  stage.
+- **CLI**: `optivision certify VECTORS QUERIES` and `optivision verify PATH`, with `--json`.
+  `certify` exits 0 for every outcome and 2 for invalid input; `verify` exits 0 when every check
+  that ran passed, 1 when a check failed or the file is unreadable or malformed, and 2 for a usage
+  error, a missing path included. `--allow-reduced` (the smaller candidate list, no SciPy) and
+  `--allow-duplicate-queries`.
+- **`optivision.core`**, a model-agnostic layer over the existing modules (which are not moved
+  or edited): content identities and the vector contract (`identity`, `vectors`); stage traits
+  that state which changes of coordinate basis leave a stage's scores unchanged, fitted-state
+  save and restore, byte accounting and a seeded `RotationProjector` (`stages`); a retrieval
+  seam with exact, compressed, tiered and two-tier retrievers (`retrieve`); references
+  (`LabelReference`, `RankingReference`), `Evidence` and `collect_evidence` (`evaluate`);
+  `CandidateSpace`, the rule (`FixedSequenceBetting`, `BonferroniBetting`), `Decision` and
+  `select` (`selection`); `Certificate`, `create_certificate`, `verify_certificate`,
+  `sign_certificate` (optional HMAC), `save_artifact`, `load_artifact` and `code_identity`
+  (`artifact`). Specifications: `docs/package/CERTIFICATE_SPEC.md`, `METHOD_C_SPEC.md`.
+- **`optivision.backends`**: a `Backend` protocol and wrappers over `NumpyIndex` and
+  `QdrantIndex`, which are not changed, and the canonical import place for the indexes.
+- **Adapters** (`optivision.adapters` is now a package; same imports): `ArrayAdapter`,
+  `CallableAdapter`, `corpus_from_arrays` for bringing your own vectors; `NemotronAdapter`;
+  `EncoderAdapter.identity()` and `.dimension`. `load_adapter` now returns a `NemotronAdapter`
+  for the NVIDIA ColEmbed ids (it used to fall through to the sentence-transformers adapter).
+- **Namespaces and helpers**: `optivision.ext.vision` and `optivision.legacy` name the page
+  layer and the original recipe without moving code; `optivision.testing` holds `make_corpus`,
+  `make_queries`, `random_orthogonal`, `signed_permutation`, `apply_basis`, `reorder_rows`,
+  `basis_probe`, `check_adapter` and `check_stage`.
+- **Tests and documents**: `tests/test_core_*`, `test_api_*`, `test_backends_*`,
+  `test_adapters_*`, `test_cli_certify.py`, `test_integration_*`, `test_public_surface.py` and
+  `test_golden_formats.py` (files written by v0.3.0 keep reading back); the user guide in
+  `docs/package/guide/` with examples that the tests run; the design and audit documents in
+  `docs/package/`.
+- **`ExactIndex.rescore` is batched** (from `research-investigation`).
+  - Each distinct candidate document is decoded once and scored against every query
+    that shortlisted it, instead of re-decoding every query's candidates. The
+    arithmetic (decode, float32 products, max, per-query sum), the column order and
+    the API are unchanged.
+  - On six ViDoRe datasets (500 pages, 50 candidates, all queries scored in one
+    batch), rankings and per-query nDCG@5 were identical and the scores were equal on the
+    stack used. In general batched and per-query rescoring give the same rankings except
+    between scores closer than the float32 rounding of the dot products, and scores equal to
+    within a few float32 ulps; bitwise equality holds on some BLAS kernels only (measured equal
+    on an AVX-512 kernel, about one ulp different on an AVX2-class kernel). The same holds for a
+    comparison with v0.3.0 scores.
+  - Rescoring was 5.5-9.3x faster and the two-tier query 2.9-3.7x faster, on one
+    laptop CPU. Evidence: `reports/engineering/batched_rescore/RESULTS.md`.
+- **After the hardening pass** (an internal audit of the package before a possible release):
+  - `certify(..., allow_duplicate_queries=False)`: exact duplicate queries among the tested
+    queries now raise an error unless the caller passes `allow_duplicate_queries=True` (CLI
+    `--allow-duplicate-queries`), which asserts that they are independent draws; the certificate
+    records the assertion.
+  - `certify` gives a `UserWarning` when it is called again in the same process on the same
+    queries and corpus with a different target, error level,
+    query order (seed or budget), candidate space, metric, reference or rule.
+  - `certify` gives a `UserWarning` with the counts when some of the queries given have no
+    relevant document under the reference and are therefore not tested (labels whose ids match
+    only part of the queries used to shrink the sample without a word; the count was, and is, in
+    the certificate). The error for labels that match no query now names the likely cause.
+  - `verify` reports the highest level whose checks ran without a failure at that level or below
+    (`binding` only with the corpus, the queries and the reference supplied; `none` when an
+    integrity check failed) and lists the checks it skipped.
+    `verify().ok` on an ABSTAIN or FALLBACK record means that the record is intact, not that an
+    index was certified.
+  - Loading an artifact: a malformed bundle file gives `ArtifactError` or
+    `CertificateFormatError` instead of a raw exception, deeply nested JSON is refused cleanly, and
+    `load_artifact(verify=True)` checks `dim` and `stats` of the codes header against the
+    certificate and the pipeline.
+  - Adapters make their array items C-contiguous, so the memory layout of the input does not change
+    the certificate digest. (A corpus built directly from Fortran-ordered arrays can still give
+    last-bit different norms and a different digest.)
+  - `certify` refuses `qrels` of the wrong type and names the type; a built-in rule instance that
+    carries instance attributes is not treated as built in; note strings were parenthesised.
+  - `from optivision.storage import segment_reduce` works again, as in v0.3.0. The rescoring tests
+    compare batched and per-query scores within a derived float32 bound instead of bitwise.
+    The retrieval test of one query alone against the same query in a batch uses the same bound
+    (the two were equal bit for bit on one BLAS kernel only).
+  - Documentation: 51 names in `__all__` (the 40 of v0.3.0 plus 11), the `int4(mean)` label, the
+    scope of the platforms that were tested, the `certify` dependency on SciPy, how to write the
+    files the command line reads, and the four expected failures in the pinned `compose.py`
+    (`docs/package/TEST_REPORT.md`).
+  - `docs/package/RELEASE_READINESS_REPORT.md`: the release-candidate gate, the disposition of
+    every finding and the steps a release still needs; the audit reports are in
+    `docs/package/hardening/`.
+- **After the internal reviews** (`docs/package/RESEARCH_INTEGRITY_AUDIT.md`,
+  `docs/package/STATISTICAL_REVIEW.md`; internal, not external):
+  - *Certified only for the library's own rules.* A decision and a certificate record the rule's
+    class and whether it is one of the library's own (the exact types `FixedSequenceBetting` and
+    `BonferroniBetting`). A rule written by anyone else is recorded with what it declared, its
+    assumptions are labelled as its author's, its selection is never `certified`, and the
+    certificate carries a fixed text saying the library has not examined it instead of the
+    library's statement. `verify` fails a record that says `certified: true` for a rule it does
+    not know, instead of skipping the level, decision, text and replay checks, and the report
+    has `notes`.
+  - *The statement and the assumptions were reworded*: the stored statement says that it is a
+    joint probability and not the probability that a selection is below the target, not about the
+    retention on the sample, not about a finite batch of future queries, not about power, and that
+    A1-A6 and C1-C4 are sufficient conditions. A1, A3 and A5 are stricter, and four conditions of
+    use were added (one look, same queries and metric, a reference fixed independently of the
+    candidates, deployed equals evaluated): ten sentences in all.
+  - *`certify()` and `optivision certify` test the queries in a seeded random order by default*
+    (`order_seed=0`; `--order-seed`, and `--given-order` for the order of the file).
+    `select()` keeps the order given. The certificate says what a given order requires and when
+    the seed was chosen by the caller.
+  - *Exact duplicate queries are counted* (`queries.exact_duplicates`,
+    `report()["n_exact_duplicate_queries"]`, a caveat; see the hardening entry below for
+    `allow_duplicate_queries`). *Vector norms are recorded* (new top-level field `norms`; a caveat when the
+    vectors are not unit-norm). The certificate has 25 fields; `verify` recounts both from the
+    live queries and vectors.
+  - Wording: the headline of the command line no longer says "certified" on its own, the abstain
+    note no longer suggests a lower target on the same queries, "conditional on" no longer sits
+    beside a probability, and the guide and the specification say what each assumption asks of
+    you.
+
+### Model coverage
+
+- **The model registry grew from 12 to 65 late-interaction models** (`optivision.adapters.MODELS`,
+  `supported_models()`): 10 `measured`, 23 `untested`, 32 `unverified`; 50 take page images and 15
+  take text. `measured` means retrieval quality with and without compression was measured by this
+  repository on the model's real output; `untested` means the loading code is the one a measured
+  sibling uses and the checkpoint was never encoded here; `unverified` means the loader is written
+  against the model card and was never run. A status describes the loading path, not how well a
+  pipeline compresses that model's vectors. `ModelInfo` has three optional fields, `license`,
+  `revision` and `notes`. Page: `docs/package/guide/MODELS.md` (generated by
+  `scripts/build_models_doc.py`).
+- **Three models became `measured`** from Kaggle runs committed under `reports/universal/wide/`:
+  `nvidia/nemotron-colembed-vl-8b-v2` (float16 inference), `athrael-soju/colqwen3.5-4.5B-v3` and
+  `TomoroAI/tomoro-colqwen3-embed-4b`. These are development-style, in-sample measurements on
+  ViDoRe V1 DocVQA and InfoVQA (500 pages each); they were not run under the selection rule of
+  `certify` and are not a statement about another corpus.
+- **`nomic-ai/colnomic-embed-multimodal-7b` changed loader**: from `sentence-transformers`
+  (`unverified`) to `colpali-engine:colqwen2.5` (`untested`).
+- **`load_adapter(model_id, loader=None, **kwargs)`**: the new `loader` argument builds an adapter
+  for a checkpoint that is not in the registry. New loader families: `colpali-engine:<family>`
+  (a token-vector path for ColQwen3, ColQwen3.5, ColModernVBert, ColGemma3 and ColQwen2.5-Omni),
+  `remote-code:<recipe>` (needs `trust_remote_code=True` from the caller; the revision is pinned)
+  and `pylate`. `supported_loaders()` lists them.
+- **New modules**: `optivision.encoders.late` (`ColEngineTokenEncoder`, `RemoteCodeEncoder`,
+  `Recipe`, `RECIPES`, `PyLateEncoder`); `optivision.adapters.tokens` (`TokenEncoderAdapter`,
+  `check_retriever`, which encodes matched pairs and reports whether an adapter behaves like a
+  retriever; it shows the model was driven correctly, not that compression works);
+  `optivision.adapters.measured` (`measured_models`, `measured_results`, `measured_shortlist`)
+  over the shipped catalogue `optivision/presets/measured.json`, built by
+  `scripts/build_measured_catalog.py` from the committed reports.
+- **`optivision.encode_and_certify(model, documents, queries, qrels, *, document_ids, query_ids,
+  adapter_options, **certify_options)`**: encodes with a model, then calls `certify`. It is the
+  twelfth new name in `optivision.__all__` (52 in all); `check_retriever`, `TokenEncoderAdapter` and
+  the `measured_*` functions are imported from `optivision.adapters`.
+- **CLI**: `optivision models` (`optivision/cli_models.py`) lists the registry and the measured
+  catalogue. The CLI has 16 commands (the 13 of v0.3.0, plus `certify`, `verify` and `models`).
+- **`scripts/encode_vectors.py`** gained `--loader`, `--trust-remote-code`, `--revision` and
+  `--check-pairs`.
+- The certificate records package version 0.4.0.
+
 ## 0.3.0 (2026-10-02)
 
 The measured model set grows from three to six encoders, one of them

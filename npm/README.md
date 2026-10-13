@@ -21,9 +21,14 @@ page image
 
 | setting | encoder / corpus | compression | nDCG@5 retained |
 |---|---|---|---|
-| prune + binary | ColSmol-256M, generated pages | 113.5x | 86.7% |
-| prune + int8 | ColSmol-256M, generated pages | 14.2x | 96.0% |
-| prune + binary | ColPali-v1.3, ViDoRe (4 splits) | 53-60x | 94.6-103.4% |
+| prune + binary | ColSmol-256M, 60 generated pages (72 queries) | 113.5x | 86.7% |
+| prune + int8 | ColSmol-256M, 60 generated pages (72 queries) | 14.2x | 96.0% |
+| prune + binary | ColPali-v1.3, 4 ViDoRe splits (1,780 pages, 1,325 queries) | 53-60x | 94.6-103.4% |
+
+Each row is one fixed pipeline scored on every query of its corpus, with no choice made
+from those queries. The 60-page corpus has 72 queries, so its figures carry intervals of
+about 6 points (a sanity check, not evidence). Ratios and retention are specific to the
+encoder and corpus named in each row.
 
 Full results, the ablations and the analysis are in the
 [repository](https://github.com/Daemon-VI/optivision-rag).
@@ -42,6 +47,12 @@ Full results, the ablations and the analysis are in the
 > | `OPTIVISION_HOME` | where the environments are kept |
 >
 > Every `optivision` command below also works as `npx optivision-rag <command>`.
+>
+> The launcher installs the `corpus` extra by default, which does not include SciPy. The
+> `optivision certify` command (added in 0.4.0) needs SciPy for its
+> default candidate list, so through npx set `OPTIVISION_EXTRAS=corpus,merge` (the `merge` extra
+> installs SciPy), or pass `--allow-reduced` to use the smaller candidate list. Each set of extras
+> gets its own environment. Running `certify` from a pip install is the more direct route.
 
 ## Install
 

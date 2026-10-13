@@ -1,0 +1,904 @@
+{
+ "header": {
+  "accepted_open_points": [
+   "OP1",
+   "OP2",
+   "OP3",
+   "OP4",
+   "OP5",
+   "OP6",
+   "OP7"
+  ],
+  "auxiliary_inputs": null,
+  "candidate_spec_sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+  "code_commit": "e4d48653967b470945a9a70da8c9d51bd0f78da0",
+  "code_identity": {
+   "numpy": "2.4.6",
+   "python": "3.11.9",
+   "scipy": "1.17.1",
+   "scripts/research/e1_1_study.py": "5896e763b49d4a0f3f0cc988dc2b5ec5e6b2b9aa",
+   "scripts/research/e1_common.py": "3bef181683307eb98a9c5e2d61ab02d87801bbfe",
+   "scripts/research/e1_stats.py": "13494307a4a42cd2c1da63f34aa0952a92b33130",
+   "scripts/research/x2_budget.py": "0999a161186687474a32a6be8b6af7432c3b7cd8",
+   "scripts/research/x_common.py": "0b8031d46459e32df4565c6c9668174eadfc3794",
+   "src/optivision": "0b9523bd10f43941a9704cbf6fae1db1804880ee"
+  },
+  "code_tree_clean": true,
+  "experiment": "X2",
+  "inputs": null,
+  "method_c": {
+   "bet_cap": 0.9,
+   "chains": 7,
+   "choice": "smallest stored size among the rejected; ties by fewer vectors, then earlier position",
+   "deltas": [
+    0.05,
+    0.01
+   ],
+   "hypothesis": "H0_k: E[c_k - T b] <= 0",
+   "level": "delta / number of chains",
+   "multiplicity": "fixed-sequence testing inside each chain, in the chain's own order",
+   "p_value": "exact betting p-value, aGRAPA bets",
+   "queries_used": "all n; no hold-out split",
+   "source": "scripts/research/e1_stats.py and e1_1_study.py, imported unchanged",
+   "statistic": "Y = (c - T b + T) / (1 + T); m0 = T / (1 + T)"
+  },
+  "preregistration": {
+   "amendments": [
+    "Amendment 1, 2026-10-04"
+   ],
+   "blob": "fa9deb73fdf380f06141d89cfaf145444f883506",
+   "blob_at_head": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "blob_implemented": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "commit": "73085ab637679f30fffece6632eb7b9e92adff79",
+   "path": "reports/research/NEXT_PHASE_PREREGISTRATION.md",
+   "registry_commit": "d408b96db87698f76f5f320b8ee8591a3d75ecd9"
+  },
+  "registered_configuration": true,
+  "seeds": {
+   "replication_block": [
+    2000,
+    3999
+   ],
+   "resamples": [
+    0,
+    1999
+   ],
+   "sampling": "first n entries of numpy.random.default_rng(seed).integers(0, N, size=3600)"
+  }
+ },
+ "hypotheses": {
+  "H3": {
+   "extension_beyond_the_pools": {
+    "evidence": "SIMULATED; extrapolated wherever the deciding budget exceeds the pool",
+    "n_star": {
+     "colpali_docvqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 450,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 450
+     },
+     "colpali_infovqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 450,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 450
+     },
+     "colqwen25_docvqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 450,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 450
+     },
+     "colqwen25_infovqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 225,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 225
+     },
+     "colqwen2_docvqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 450,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 450
+     },
+     "colqwen2_infovqa": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 225,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 225
+     },
+     "scifact": {
+      "budget_class": "pool-supported",
+      "decided_by_budget": 300,
+      "evidence": "SIMULATED, pool-supported",
+      "n_star": 300
+     }
+    },
+    "reading": "a statement about samples drawn repeatedly from the pool's own N queries; never evidence of what that many independent queries would give",
+    "stores_without_n_star": [],
+    "verdict": "holds in simulation"
+   },
+   "primary": {
+    "by_pool": {
+     "DocVQA": {
+      "at_least_0.90": true,
+      "deciding_rate": 0.998,
+      "worst_store": "colqwen2_docvqa"
+     },
+     "InfoVQA": {
+      "at_least_0.90": true,
+      "deciding_rate": 1.0,
+      "worst_store": "colpali_infovqa"
+     },
+     "SciFact": {
+      "at_least_0.90": true,
+      "deciding_rate": 0.9175,
+      "worst_store": "scifact"
+     }
+    },
+    "cells": {
+     "colpali_docvqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.998157260206594,
+       1.0
+      ],
+      "construct": "labels",
+      "count": 2000,
+      "deciding_rate": 1.0,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 1.0,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "colpali_infovqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.998157260206594,
+       1.0
+      ],
+      "construct": "labels",
+      "count": 2000,
+      "deciding_rate": 1.0,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 1.0,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "colqwen25_docvqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.9972173601653411,
+       0.9999873411761314
+      ],
+      "construct": "labels",
+      "count": 1999,
+      "deciding_rate": 0.9995,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 0.9995,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "colqwen25_infovqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.998157260206594,
+       1.0
+      ],
+      "construct": "labels",
+      "count": 2000,
+      "deciding_rate": 1.0,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 1.0,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "colqwen2_docvqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.9948871913946538,
+       0.999454806874789
+      ],
+      "construct": "labels",
+      "count": 1996,
+      "deciding_rate": 0.998,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 0.998,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "colqwen2_infovqa": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.998157260206594,
+       1.0
+      ],
+      "construct": "labels",
+      "count": 2000,
+      "deciding_rate": 1.0,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 450,
+      "procedure": "P0",
+      "rate": 1.0,
+      "seeds": 2000,
+      "threshold": 0.97
+     },
+     "scifact": {
+      "at_least_0.90": true,
+      "borderline_rule_used": false,
+      "budget_class": "pool-supported",
+      "ci95": [
+       0.9045708386873013,
+       0.9291888396315517
+      ],
+      "construct": "labels",
+      "count": 1835,
+      "deciding_rate": 0.9175,
+      "delta": 0.05,
+      "deployment": "nontrivial",
+      "evidence": "SIMULATED, pool-supported",
+      "n": 300,
+      "procedure": "P0",
+      "rate": 0.9175,
+      "seeds": 2000,
+      "threshold": 0.97
+     }
+    },
+    "evidence": "SIMULATED, pool-supported",
+    "failing_stores": [],
+    "verdict": "supported"
+   },
+   "secondary": {
+    "secondary_T0.99": {
+     "by_pool": {
+      "DocVQA": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0015,
+       "worst_store": "colpali_docvqa"
+      },
+      "InfoVQA": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0035,
+       "worst_store": "colqwen2_infovqa"
+      },
+      "SciFact": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0,
+       "worst_store": "scifact"
+      }
+     },
+     "cells": {
+      "colpali_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.00030944294931233306,
+        0.004377320104529591
+       ],
+       "construct": "labels",
+       "count": 3,
+       "deciding_rate": 0.0015,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0015,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colpali_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.006118657542743463,
+        0.01540212578356003
+       ],
+       "construct": "labels",
+       "count": 20,
+       "deciding_rate": 0.01,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.01,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen25_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0031040162823773266,
+        0.01045731382179483
+       ],
+       "construct": "labels",
+       "count": 12,
+       "deciding_rate": 0.006,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.006,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen25_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0024002197556657725,
+        0.009175895070019804
+       ],
+       "construct": "labels",
+       "count": 10,
+       "deciding_rate": 0.005,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.005,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen2_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.00030944294931233306,
+        0.004377320104529591
+       ],
+       "construct": "labels",
+       "count": 3,
+       "deciding_rate": 0.0015,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0015,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen2_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0014083038325025412,
+        0.007197961714657952
+       ],
+       "construct": "labels",
+       "count": 7,
+       "deciding_rate": 0.0035,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0035,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "scifact": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0,
+        0.0018427397934059364
+       ],
+       "construct": "labels",
+       "count": 0,
+       "deciding_rate": 0.0,
+       "delta": 0.05,
+       "deployment": "nontrivial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 300,
+       "procedure": "P0",
+       "rate": 0.0,
+       "seeds": 2000,
+       "threshold": 0.99
+      }
+     },
+     "failing_stores": [
+      "colpali_docvqa",
+      "colpali_infovqa",
+      "colqwen2_docvqa",
+      "colqwen2_infovqa",
+      "colqwen25_docvqa",
+      "colqwen25_infovqa",
+      "scifact"
+     ],
+     "verdict": "fails"
+    },
+    "secondary_T0.99_substantial": {
+     "by_pool": {
+      "DocVQA": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0,
+       "worst_store": "colpali_docvqa"
+      },
+      "InfoVQA": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0,
+       "worst_store": "colqwen25_infovqa"
+      },
+      "SciFact": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.0,
+       "worst_store": "scifact"
+      }
+     },
+     "cells": {
+      "colpali_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0,
+        0.0018427397934059364
+       ],
+       "construct": "labels",
+       "count": 0,
+       "deciding_rate": 0.0,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colpali_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.00030944294931233306,
+        0.004377320104529591
+       ],
+       "construct": "labels",
+       "count": 3,
+       "deciding_rate": 0.0015,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0015,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen25_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0031040162823773266,
+        0.01045731382179483
+       ],
+       "construct": "labels",
+       "count": 12,
+       "deciding_rate": 0.006,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.006,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen25_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0,
+        0.0018427397934059364
+       ],
+       "construct": "labels",
+       "count": 0,
+       "deciding_rate": 0.0,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen2_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0,
+        0.0018427397934059364
+       ],
+       "construct": "labels",
+       "count": 0,
+       "deciding_rate": 0.0,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "colqwen2_infovqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        1.265882386855789e-05,
+        0.0027826398346589205
+       ],
+       "construct": "labels",
+       "count": 1,
+       "deciding_rate": 0.0005,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.0005,
+       "seeds": 2000,
+       "threshold": 0.99
+      },
+      "scifact": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.0,
+        0.0018427397934059364
+       ],
+       "construct": "labels",
+       "count": 0,
+       "deciding_rate": 0.0,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 300,
+       "procedure": "P0",
+       "rate": 0.0,
+       "seeds": 2000,
+       "threshold": 0.99
+      }
+     },
+     "failing_stores": [
+      "colpali_docvqa",
+      "colpali_infovqa",
+      "colqwen2_docvqa",
+      "colqwen2_infovqa",
+      "colqwen25_docvqa",
+      "colqwen25_infovqa",
+      "scifact"
+     ],
+     "verdict": "fails"
+    },
+    "secondary_substantial": {
+     "by_pool": {
+      "DocVQA": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.1145,
+       "worst_store": "colpali_docvqa"
+      },
+      "InfoVQA": {
+       "at_least_0.90": true,
+       "deciding_rate": 0.9975,
+       "worst_store": "colpali_infovqa"
+      },
+      "SciFact": {
+       "at_least_0.90": false,
+       "deciding_rate": 0.2055,
+       "worst_store": "scifact"
+      }
+     },
+     "cells": {
+      "colpali_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.10086775933134241,
+        0.12927342447014226
+       ],
+       "construct": "labels",
+       "count": 229,
+       "deciding_rate": 0.1145,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.1145,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "colpali_infovqa": {
+       "at_least_0.90": true,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.9941755546654815,
+        0.9991877740248061
+       ],
+       "construct": "labels",
+       "count": 1995,
+       "deciding_rate": 0.9975,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.9975,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "colqwen25_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.31382735113054583,
+        0.3556589406591858
+       ],
+       "construct": "labels",
+       "count": 669,
+       "deciding_rate": 0.3345,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.3345,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "colqwen25_infovqa": {
+       "at_least_0.90": true,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.998157260206594,
+        1.0
+       ],
+       "construct": "labels",
+       "count": 2000,
+       "deciding_rate": 1.0,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 1.0,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "colqwen2_docvqa": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.38140876853716593,
+        0.42487607933994653
+       ],
+       "construct": "labels",
+       "count": 806,
+       "deciding_rate": 0.403,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.403,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "colqwen2_infovqa": {
+       "at_least_0.90": true,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.9963923714301715,
+        0.9998788724094432
+       ],
+       "construct": "labels",
+       "count": 1998,
+       "deciding_rate": 0.999,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 450,
+       "procedure": "P0",
+       "rate": 0.999,
+       "seeds": 2000,
+       "threshold": 0.97
+      },
+      "scifact": {
+       "at_least_0.90": false,
+       "borderline_rule_used": false,
+       "budget_class": "pool-supported",
+       "ci95": [
+        0.187983150457454,
+        0.22388444001171706
+       ],
+       "construct": "labels",
+       "count": 411,
+       "deciding_rate": 0.2055,
+       "delta": 0.05,
+       "deployment": "substantial",
+       "evidence": "SIMULATED, pool-supported",
+       "n": 300,
+       "procedure": "P0",
+       "rate": 0.2055,
+       "seeds": 2000,
+       "threshold": 0.97
+      }
+     },
+     "failing_stores": [
+      "colpali_docvqa",
+      "colqwen2_docvqa",
+      "colqwen25_docvqa",
+      "scifact"
+     ],
+     "verdict": "fails"
+    }
+   },
+   "secondary_extension": {
+    "T0.99": {
+     "n_star": {
+      "colpali_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 1800,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 1800
+      },
+      "colpali_infovqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 900,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 900
+      },
+      "colqwen25_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 1800,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 1800
+      },
+      "colqwen25_infovqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 900,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 900
+      },
+      "colqwen2_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 1800,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 1800
+      },
+      "colqwen2_infovqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 900,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 900
+      },
+      "scifact": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 1800,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 1800
+      }
+     },
+     "stores_without_n_star": [],
+     "verdict": "holds in simulation"
+    },
+    "substantial": {
+     "n_star": {
+      "colpali_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 3600,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 3600
+      },
+      "colpali_infovqa": {
+       "budget_class": "pool-supported",
+       "decided_by_budget": 450,
+       "evidence": "SIMULATED, pool-supported",
+       "n_star": 450
+      },
+      "colqwen25_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 1800,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 1800
+      },
+      "colqwen25_infovqa": {
+       "budget_class": "pool-supported",
+       "decided_by_budget": 450,
+       "evidence": "SIMULATED, pool-supported",
+       "n_star": 450
+      },
+      "colqwen2_docvqa": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 900,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 900
+      },
+      "colqwen2_infovqa": {
+       "budget_class": "pool-supported",
+       "decided_by_budget": 450,
+       "evidence": "SIMULATED, pool-supported",
+       "n_star": 450
+      },
+      "scifact": {
+       "budget_class": "extrapolated",
+       "decided_by_budget": 900,
+       "evidence": "SIMULATED, extrapolated",
+       "n_star": 900
+      }
+     },
+     "stores_without_n_star": [],
+     "verdict": "holds in simulation"
+    }
+   }
+  }
+ },
+ "negative_result_sentences": [],
+ "scope": "development encoders only; three pools; every simulated result is about the pool's own empirical distribution (section 23)",
+ "validity": {
+  "cells_checked": 2800,
+  "cells_replicated": 0,
+  "confirmed_failures": 0
+ }
+}

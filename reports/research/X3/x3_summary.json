@@ -1,0 +1,130 @@
+{
+ "extension_set": {
+  "note": "reported separately; never substituted for a primary dataset",
+  "pairs": {
+   "colpali_infovqa__T1": "holds",
+   "colpali_infovqa__T2a": "does not hold",
+   "colpali_infovqa__T2b": "does not hold",
+   "colpali_infovqa__T3": "holds",
+   "colqwen25_infovqa__T1": "holds",
+   "colqwen25_infovqa__T2a": "holds",
+   "colqwen25_infovqa__T2b": "holds",
+   "colqwen25_infovqa__T3": "holds",
+   "colqwen2_docvqa__T1": "holds",
+   "colqwen2_docvqa__T2a": "does not hold",
+   "colqwen2_docvqa__T2b": "does not hold",
+   "colqwen2_docvqa__T3": "holds"
+  }
+ },
+ "header": {
+  "accepted_open_points": [
+   "OP1",
+   "OP2",
+   "OP3",
+   "OP4",
+   "OP5",
+   "OP6",
+   "OP7"
+  ],
+  "auxiliary_inputs": null,
+  "candidate_spec_sha256": "af29b01146a90a048ffea9cfbd66f0fedf988134829cd4dc56861f1207893520",
+  "code_commit": "59d08f24bd8320486f7be1cd685a7b64cc5e619e",
+  "code_identity": {
+   "numpy": "2.4.6",
+   "python": "3.11.9",
+   "scipy": "1.17.1",
+   "scripts/research/e1_1_study.py": "5896e763b49d4a0f3f0cc988dc2b5ec5e6b2b9aa",
+   "scripts/research/e1_common.py": "3bef181683307eb98a9c5e2d61ab02d87801bbfe",
+   "scripts/research/e1_stats.py": "13494307a4a42cd2c1da63f34aa0952a92b33130",
+   "scripts/research/x3_symmetry.py": "8cd10c0b04ea43e491106fc2d3cd06ec154c8195",
+   "scripts/research/x_common.py": "0b8031d46459e32df4565c6c9668174eadfc3794",
+   "scripts/universal_study/s7b_selection_rules.py": "1b02292cea8c5d732af9d88d256aece7799b469e",
+   "src/optivision": "0b9523bd10f43941a9704cbf6fae1db1804880ee"
+  },
+  "code_tree_clean": true,
+  "experiment": "X3",
+  "inputs": null,
+  "method_c": {
+   "bet_cap": 0.9,
+   "chains": 7,
+   "choice": "smallest stored size among the rejected; ties by fewer vectors, then earlier position",
+   "deltas": [
+    0.05,
+    0.01
+   ],
+   "hypothesis": "H0_k: E[c_k - T b] <= 0",
+   "level": "delta / number of chains",
+   "multiplicity": "fixed-sequence testing inside each chain, in the chain's own order",
+   "p_value": "exact betting p-value, aGRAPA bets",
+   "queries_used": "all n; no hold-out split",
+   "source": "scripts/research/e1_stats.py and e1_1_study.py, imported unchanged",
+   "statistic": "Y = (c - T b + T) / (1 + T); m0 = T / (1 + T)"
+  },
+  "preregistration": {
+   "amendments": [
+    "Amendment 1, 2026-10-04"
+   ],
+   "blob": "fa9deb73fdf380f06141d89cfaf145444f883506",
+   "blob_at_head": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "blob_implemented": "445d94cdb1dda8671a7d4c4ba3bbb7f895f15700",
+   "commit": "73085ab637679f30fffece6632eb7b9e92adff79",
+   "path": "reports/research/NEXT_PHASE_PREREGISTRATION.md",
+   "registry_commit": "d408b96db87698f76f5f320b8ee8591a3d75ecd9"
+  },
+  "registered_configuration": true,
+  "seeds": {
+   "replication_block": [
+    2000,
+    3999
+   ],
+   "resamples": [
+    0,
+    1999
+   ],
+   "sampling": "first n entries of numpy.random.default_rng(seed).integers(0, N, size=3600)"
+  }
+ },
+ "hypotheses": {
+  "H5": {
+   "failing_pairs": [
+    "colpali_docvqa__T2a",
+    "scifact__T2a",
+    "scifact__T2b"
+   ],
+   "if_supported": "invariance under these four maps, on these datasets, within these tolerances. Two rotations cannot establish invariance under every orthogonal map.",
+   "incomplete_pairs": [],
+   "pairs": {
+    "colpali_docvqa__T1": "holds",
+    "colpali_docvqa__T2a": "does not hold",
+    "colpali_docvqa__T2b": "holds",
+    "colpali_docvqa__T3": "holds",
+    "colqwen25_docvqa__T1": "holds",
+    "colqwen25_docvqa__T2a": "holds",
+    "colqwen25_docvqa__T2b": "holds",
+    "colqwen25_docvqa__T3": "holds",
+    "colqwen2_infovqa__T1": "holds",
+    "colqwen2_infovqa__T2a": "holds",
+    "colqwen2_infovqa__T2b": "holds",
+    "colqwen2_infovqa__T3": "holds",
+    "scifact__T1": "holds",
+    "scifact__T2a": "does not hold",
+    "scifact__T2b": "does not hold",
+    "scifact__T3": "holds"
+   },
+   "verdict": "fails"
+  }
+ },
+ "negative_result_sentences": [
+  "The result for candidate `binary` on dataset colpali_docvqa is not invariant under the registered rotation.",
+  "The result for candidate `hierarchical_merge(0.25) > binary` on dataset colpali_docvqa is not invariant under the registered rotation.",
+  "The result for candidate `adaptive_merge(0.6) > int4(mean)` on dataset scifact is not invariant under the registered rotation.",
+  "The result for the outcome of P0 on dataset scifact is not invariant under the registered rotation.",
+  "The result for candidate `adaptive_merge(0.7) > int4(mean)` on dataset scifact is not invariant under the registered rotation.",
+  "The result for candidate `hierarchical_merge(0.33) > binary` on dataset scifact is not invariant under the registered rotation.",
+  "The result for candidate `adaptive_merge(0.8) > binary` on dataset scifact is not invariant under the registered rotation.",
+  "The result for candidate `adaptive_merge(0.7) > binary` on dataset scifact is not invariant under the registered rotation.",
+  "The result for candidate `adaptive_merge(0.6) > binary` on dataset scifact is not invariant under the registered rotation.",
+  "The result for the outcome of P0 on dataset scifact is not invariant under the registered rotation."
+ ],
+ "scope": "four registered maps; 96-d and 128-d development encoders; says nothing about model-blindness (sections 12.8 and 15.6)"
+}
