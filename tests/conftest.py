@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+import os
+
+# The CLI tests compare what a command prints with plain text. On a CI runner (GITHUB_ACTIONS
+# set) typer and rich force terminal output and put colour codes inside the words, e.g. between
+# the two dashes of an option. A dumb terminal makes rich print plain text everywhere; it is set
+# before anything imports the CLI and is inherited by the subprocesses the tests start.
+os.environ["TERM"] = "dumb"
+
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw
