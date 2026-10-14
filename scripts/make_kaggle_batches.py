@@ -10,6 +10,7 @@ results. Batches group models that share an environment and fit one session.
 from __future__ import annotations
 
 import json
+import pprint
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,8 +113,8 @@ Download `results_{name}.zip` from the version's *Output* tab and give it to Cla
        "session (`trust_remote_code`).\n" if remote else "")),
         code(f'''
 BRANCH = "{BRANCH}"
-BATCH = {json.dumps(models, indent=1)}
-EXTRA_PIP = {json.dumps(packages)}
+BATCH = {pprint.pformat(models, width=100, sort_dicts=False)}
+EXTRA_PIP = {packages!r}
 DEADLINE_HOURS = 11.0
 SELECTION = True   # also run the selection study for a model when the session has time to spare
 '''),
