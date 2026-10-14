@@ -608,10 +608,23 @@ class SentenceTransformersAdapter(EncoderAdapter):
     here, and every other model remains unverified. Pass ``model``
     to inject an already-constructed encoder (that is how the tests exercise the
     glue without the library).
+
+    Inputs are encoded ``batch_size`` at a time and each chunk is copied to host memory as
+    float32 before the next one starts, so the device holds one chunk of outputs at a time
+    (a page of a wide model is megabytes of vectors). ``dtype`` (``"float16"``, ...) is the
+    inference dtype, passed to the model as ``model_kwargs={"torch_dtype": ...}``;
+    ``encode_kwargs`` go to every ``encode_document`` / ``encode_query`` call; any other
+    keyword goes to ``MultiVectorEncoder`` (``device``, ``trust_remote_code``, ``revision``,
+    ``model_kwargs`` such as ``{"device_map": "auto"}``).
     """
 
-    def __init__(self, model_id: str, model: Any = None, **kwargs: Any) -> None:
+    def __init__(self, model_id: str, model: Any = None, *, batch_size: int = 32, dtype: str | None = None,
+                 encode_kwargs: dict[str, Any] | None = None, **kwargs: Any) -> None:
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size < 1:
+            raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
         self.model_id = model_id
+        self.batch_size = batch_size
+        self.encode_kwargs = dict(encode_kwargs or {})
         self.info = MODELS.get(model_id)
         if self.info is None or self.info.status == UNVERIFIED:
             warnings.warn(
@@ -627,20 +640,39 @@ class SentenceTransformersAdapter(EncoderAdapter):
                     "SentenceTransformersAdapter needs sentence-transformers>=6.0 "
                     "(pip install 'sentence-transformers[image]>=6')"
                 ) from exc
+            if dtype is not None:
+                import torch
+
+                kwargs["model_kwargs"] = {**(kwargs.get("model_kwargs") or {}), "torch_dtype": getattr(torch, dtype)}
             model = MultiVectorEncoder(model_id, **kwargs)
         self.model = model
+        self.dtype = dtype
 
-    def _to_corpus(self, outputs: Sequence[Any], ids: Sequence[str] | None) -> MultiVectorCorpus:
-        arrays = [np.asarray(o.detach().cpu().float().numpy() if hasattr(o, "detach") else o) for o in outputs]
+    @staticmethod
+    def _host(output: Any) -> np.ndarray:
+        if hasattr(output, "detach"):
+            output = output.detach().cpu().float().numpy()
+        return np.asarray(output, dtype=np.float32)
+
+    def _encode(self, method: Any, items: Sequence[Any]) -> list[np.ndarray]:
+        items = list(items)
+        arrays: list[np.ndarray] = []
+        for start in range(0, len(items), self.batch_size):
+            arrays.extend(self._host(o) for o in method(items[start : start + self.batch_size], **self.encode_kwargs))
+        return arrays
+
+    def _to_corpus(self, arrays: Sequence[np.ndarray], ids: Sequence[str] | None) -> MultiVectorCorpus:
         attrs = {"model": self.model_id, "loader": "sentence-transformers",
                  "model_status": self.info.status if self.info else UNVERIFIED}
-        return MultiVectorCorpus.from_arrays(arrays, ids=ids, attrs=attrs)
+        if self.dtype is not None:
+            attrs["inference_dtype"] = self.dtype
+        return MultiVectorCorpus.from_arrays(list(arrays), ids=ids, attrs=attrs)
 
     def encode_documents(self, documents: Sequence[Any], ids: Sequence[str] | None = None) -> MultiVectorCorpus:
-        return self._to_corpus(self.model.encode_document(list(documents)), ids)
+        return self._to_corpus(self._encode(self.model.encode_document, documents), ids)
 
     def encode_queries(self, queries: Sequence[str], ids: Sequence[str] | None = None) -> MultiVectorCorpus:
-        return self._to_corpus(self.model.encode_query(list(queries)), ids)
+        return self._to_corpus(self._encode(self.model.encode_query, queries), ids)
 
     def identity(self) -> EncoderIdentity | None:
         """From the registry entry only. The wrapped model's API is unverified in this

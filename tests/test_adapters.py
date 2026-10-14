@@ -97,3 +97,25 @@ def test_adapter_only_checkpoints_are_detected(tmp_path):
     plain.mkdir()
     (plain / "config.json").write_text("{}")
     assert _adapter_base(str(plain)) is None
+
+
+def test_sentence_transformers_glue_encodes_in_chunks_and_passes_options():
+    class Recording(_StubMultiVectorEncoder):
+        def __init__(self):
+            super().__init__()
+            self.calls = []
+
+        def encode_document(self, inputs, **kwargs):
+            self.calls.append((len(inputs), kwargs))
+            return super().encode_document(inputs)
+
+    stub = Recording()
+    with pytest.warns(UserWarning, match="unverified"):
+        adapter = SentenceTransformersAdapter("some/unknown-model", model=stub, batch_size=2,
+                                              encode_kwargs={"show_progress_bar": False})
+    docs = adapter.encode_documents(["a", "bb", "ccc", "dddd", "eeeee"])
+    assert [n for n, _ in stub.calls] == [2, 2, 1]
+    assert all(kw == {"show_progress_bar": False} for _, kw in stub.calls)
+    assert docs.counts.tolist() == [2, 3, 4, 5, 1] and docs.dtype == np.float32
+    with pytest.raises(ValueError, match="batch_size"):
+        SentenceTransformersAdapter("some/unknown-model", model=stub, batch_size=0)

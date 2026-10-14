@@ -55,6 +55,8 @@ def main() -> int:
     ap.add_argument("--check-pairs", type=int, default=12,
                     help="pages on which check_retriever runs before the full encode (0 skips it); the run "
                          "stops if the vectors are not finite, unit-norm and retrieving their own page")
+    ap.add_argument("--batch-size", type=int, default=4,
+                    help="items per encode call on the sentence-transformers path (pages are large)")
     a = ap.parse_args()
 
     from datasets import load_dataset
@@ -78,6 +80,16 @@ def main() -> int:
             options.update(dtype=a.dtype, multi_gpu=a.multi_gpu)
         if loader.startswith("remote-code:"):
             options.update(trust_remote_code=a.trust_remote_code, revision=a.revision)
+        if loader == "sentence-transformers":
+            options.update(batch_size=a.batch_size, encode_kwargs={"show_progress_bar": False})
+            if a.dtype != "auto":
+                options["dtype"] = a.dtype
+            if a.trust_remote_code:
+                options["trust_remote_code"] = True
+            if a.revision:
+                options["revision"] = a.revision
+            if a.multi_gpu:
+                options["model_kwargs"] = {"device_map": "auto"}
         adapter = load_adapter(a.model, loader=a.loader, **options)
     encoder = getattr(adapter, "encoder", None)
     run_info = {
