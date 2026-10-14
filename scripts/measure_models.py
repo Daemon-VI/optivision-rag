@@ -132,7 +132,8 @@ def measure(spec: dict, out: Path, data: Path, session: Session, selection: bool
         record["check_retriever"] = check_report(log)
         tags = [f"{short}_scifact"] if record["steps"]["encode_scifact"]["status"] == "ok" else []
 
-    env = {"OPTIVISION_DATA": str(data), "OPTIVISION_OUT": str(folder), "PYTHONUNBUFFERED": "1",
+    path = os.pathsep.join(filter(None, [str(ROOT / "src"), os.environ.get("PYTHONPATH")]))
+    env = {"OPTIVISION_DATA": str(data), "OPTIVISION_OUT": str(folder), "PYTHONUNBUFFERED": "1", "PYTHONPATH": path,
            "OPTIVISION_SCORE_DEVICE": os.environ.get("OPTIVISION_SCORE_DEVICE", "cuda"),
            "OPTIVISION_CACHE_BYTES": os.environ.get("OPTIVISION_CACHE_BYTES", str(4 * 1024**3))}
     for tag in tags:
