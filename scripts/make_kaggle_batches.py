@@ -119,7 +119,11 @@ DEADLINE_HOURS = 11.0
 SELECTION = True   # also run the selection study for a model when the session has time to spare
 '''),
         code('''
-import json, os, subprocess, sys, time
+import json, os, shutil, subprocess, sys, time
+if shutil.which("nvidia-smi") is None:
+    raise SystemExit("NO GPU IN THIS SESSION. Open the notebook editor, Settings (right panel) -> Accelerator -> "
+                     "GPU T4 x2, then Save Version -> Save & Run All (Commit) again. If GPU is greyed out, the "
+                     "account needs phone verification (kaggle.com -> Settings -> Phone verification).")
 print(subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv"], capture_output=True, text=True).stdout)
 WORK = "/kaggle/working"
 REPO = f"{WORK}/optivision-rag"
