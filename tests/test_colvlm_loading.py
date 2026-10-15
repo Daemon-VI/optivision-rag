@@ -114,3 +114,37 @@ def test_multi_gpu_map_never_splits_a_decoder_layer(tmp_path):
         assert any(name == k or name.startswith(k + ".") for k in dm), name
     with pytest.raises(RuntimeError, match="does not fit"):
         layer_device_map(model, [total // 4, total // 4])
+
+
+class _BareLoader(torch.nn.Module):
+    """A remote-code class whose from_pretrained ignores output_loading_info, like ColVec1."""
+
+    def __init__(self):
+        super().__init__()
+        self.proj = torch.nn.Linear(4, 2)
+        self.head = torch.nn.Linear(2, 2)
+
+    @classmethod
+    def from_pretrained(cls, checkpoint, **kwargs):
+        model = cls()
+        state = safetensors_torch.load_file(f"{checkpoint}/model.safetensors")
+        model.load_state_dict(state, strict=False)  # silently skips what does not match
+        return model
+
+
+def test_loader_checks_a_model_returned_without_loading_info(tmp_path):
+    reference = _BareLoader()
+    safetensors_torch.save_file({k: v.contiguous() for k, v in reference.state_dict().items()},
+                                str(tmp_path / "model.safetensors"))
+    model = _from_pretrained(_BareLoader, str(tmp_path), torch.float32)
+    assert model.loading_report == {"missing_allowed": [], "unexpected": []}
+    assert torch.equal(model.proj.weight, reference.proj.weight)
+
+    partial = tmp_path / "partial"
+    partial.mkdir()
+    safetensors_torch.save_file({"proj.weight": reference.proj.weight.contiguous(),
+                                 "proj.bias": reference.proj.bias.contiguous(),
+                                 "renamed.head.weight": reference.head.weight.contiguous()},
+                                str(partial / "model.safetensors"))
+    with pytest.raises(RuntimeError, match="would be random"):
+        _from_pretrained(_BareLoader, str(partial), torch.float32)

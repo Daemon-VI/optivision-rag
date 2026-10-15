@@ -129,3 +129,27 @@ def test_sentence_transformers_glue_encodes_in_chunks_and_passes_options():
     assert docs.counts.tolist() == [2, 3, 4, 5, 1] and docs.dtype == np.float32
     with pytest.raises(ValueError, match="batch_size"):
         SentenceTransformersAdapter("some/unknown-model", model=stub, batch_size=0)
+
+
+def test_sentence_transformers_device_map_is_left_in_place():
+    from optivision.adapters import _device_map_placement, _keep_placement
+
+    class Inner:
+        def __init__(self):
+            self.hf_device_map = {"model.visual": 0, "model.layers.0": 0, "model.layers.1": 1}
+
+    class Outer:
+        moved = False
+
+        def modules(self):
+            return iter([self, Inner()])
+
+        def to(self, *args, **kwargs):
+            self.moved = True
+            return self
+
+    model = Outer()
+    assert _device_map_placement(model) == {"devices": ["0", "1"], "device_map": "auto"}
+    _keep_placement(model)  # sentence-transformers' encode() calls model.to(device) every time
+    assert model.to("cuda:0") is model and not model.moved
+    assert _device_map_placement(_StubMultiVectorEncoder()) is None

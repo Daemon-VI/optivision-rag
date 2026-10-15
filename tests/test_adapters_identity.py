@@ -149,7 +149,10 @@ def test_the_registry_statuses_have_not_moved():
                         "vidore/colpali-v1.3", "vidore/colsmolvlm-v0.1", "vidore/colqwen2-v0.1",
                         "nomic-ai/colnomic-embed-multimodal-3b", "tsystems/colqwen2.5-3b-multilingual-v1.0",
                         "tsystems/colqwen2.5-3b-multilingual-v1.0-merged", "vidore/colqwen-omni-v0.1",
-                        "ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1"}
+                        "ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1",
+                        # Kaggle batches 05 and 08, 2026-10-15
+                        "ModernVBERT/colmodernvbert", "vidore/colpali-v1.2-hf", "vidore/colpali-v1.3-hf",
+                        "vidore/colqwen2-v1.0-hf", "TomoroAI/tomoro-colqwen3-embed-8b"}
     assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
 

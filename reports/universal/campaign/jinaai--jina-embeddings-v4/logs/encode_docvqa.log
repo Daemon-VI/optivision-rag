@@ -1,0 +1,58 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py jinaai/jina-embeddings-v4 vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --trust-remote-code --dtype float16 --batch-size 4 --multi-gpu --revision latest
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+jinaai/jina-embeddings-v4: registry status unverified
+[ERROR] `cache_position` is part of Qwen2_5_VLTextModel.forward's signature, but not documented. Make sure to add it to the docstring of the function in /tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py.
+[ERROR] `cache_position` is part of Qwen2_5_VLModel.forward's signature, but not documented. Make sure to add it to the docstring of the function in /tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py.
+[ERROR] `cache_position` is part of Qwen2_5_VLForConditionalGeneration.forward's signature, but not documented. Make sure to add it to the docstring of the function in /tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:22<00:22, 22.47s/it]Fetching 2 files: 100%|██████████| 2/2 [00:25<00:00, 11.23s/it]Fetching 2 files: 100%|██████████| 2/2 [00:25<00:00, 12.92s/it]
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 199, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 93, in main
+    adapter = load_adapter(a.model, loader=a.loader, **options)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 746, in load_adapter
+    return TokenEncoderAdapter(RemoteCodeEncoder(model_id, name.split(":", 1)[1], **kwargs), info=info)
+                               ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/late.py", line 359, in __init__
+    model = _from_pretrained(AutoModel, model_name, self.torch_dtype, **extra)
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 152, in _from_pretrained
+    model, info = model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/auto_factory.py", line 385, in from_pretrained
+    return model_class.from_pretrained(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/modeling_jina_embeddings_v4.py", line 575, in from_pretrained
+    base_model = super().from_pretrained(
+        pretrained_model_name_or_path, *args, **kwargs
+    )
+  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py", line 4350, in from_pretrained
+    model = cls(config, *model_args, **model_kwargs)
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/modeling_jina_embeddings_v4.py", line 142, in __init__
+    Qwen2_5_VLForConditionalGeneration.__init__(self, config)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 2121, in __init__
+    self.model = Qwen2_5_VLModel(config)
+                 ~~~~~~~~~~~~~~~^^^^^^^^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 1709, in __init__
+    self.language_model = Qwen2_5_VLTextModel._from_config(config.text_config)
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py", line 1539, in _from_config
+    model = cls(config, **kwargs)
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 1399, in __init__
+    [Qwen2_5_VLDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
+     ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 1312, in __init__
+    self.self_attn = QWEN2_5_VL_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx)
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 1020, in __init__
+    self.rotary_emb = Qwen2_5_VLRotaryEmbedding(config=config)
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/tmp/hf/modules/transformers_modules/jinaai/jina_hyphen_embeddings_hyphen_v4/853c867b65b749f3c3c72a06868140d842e04f06/qwen2_5_vl.py", line 887, in __init__
+    self.rope_init_fn = ROPE_INIT_FUNCTIONS[self.rope_type]
+                        ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+KeyError: 'default'

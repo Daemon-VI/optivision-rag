@@ -1,0 +1,72 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py Hcompany/NeoMME-260M-Retriever-ST-late vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 4
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Hcompany/NeoMME-260M-Retriever-ST-late: registry status unverified
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:01<00:06, 64.89 examples/s]Generating test split:  40%|████      | 200/500 [00:01<00:02, 128.18 examples/s]Generating test split:  60%|██████    | 300/500 [00:02<00:01, 188.03 examples/s]Generating test split:  80%|████████  | 400/500 [00:02<00:00, 238.02 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 214.97 examples/s]
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:754: UserWarning: Hcompany/NeoMME-260M-Retriever-ST-late: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/configuration_auto.py", line 419, in from_pretrained
+    config_class = CONFIG_MAPPING[config_dict["model_type"]]
+                   ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/configuration_auto.py", line 107, in __getitem__
+    raise KeyError(key)
+KeyError: 'neomme'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 199, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 93, in main
+    adapter = load_adapter(a.model, loader=a.loader, **options)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 754, in load_adapter
+    return SentenceTransformersAdapter(model_id, **kwargs)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 647, in __init__
+    model = MultiVectorEncoder(model_id, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 183, in __init__
+    super().__init__(
+    ~~~~~~~~~~~~~~~~^
+        model_name_or_path=model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<13 lines>...
+        default_prompt_name=default_prompt_name,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/model.py", line 236, in __init__
+    modules, self.module_kwargs = self._load_modules(
+                                  ~~~~~~~~~~~~~~~~~~^
+        model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        config_kwargs=config_kwargs,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/model.py", line 1081, in _load_modules
+    return self._load_config_modules(model_name_or_path, **load_kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/model.py", line 1298, in _load_config_modules
+    module = module_class.load(
+        model_name_or_path,
+    ...<12 lines>...
+        **extra_load_kwargs,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/modules/transformer.py", line 2635, in load
+    return cls(model_name_or_path=model_name_or_path, **init_kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/util/decorators.py", line 92, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/modules/transformer.py", line 832, in __init__
+    config, is_peft_model = self._load_config(model_name_or_path, backend, config_kwargs)
+                            ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/modules/transformer.py", line 2270, in _load_config
+    return AutoConfig.from_pretrained(model_name_or_path, **config_kwargs), False
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/configuration_auto.py", line 421, in from_pretrained
+    raise ValueError(
+    ...<8 lines>...
+    )
+ValueError: The checkpoint you are trying to load has model type `neomme` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.
+
+You can update Transformers with the command `pip install --upgrade transformers`. If this does not work, and the checkpoint is very new, then there may not be a release version that supports this model yet. In this case, you can get the most up-to-date code by installing Transformers from source with the command `pip install git+https://github.com/huggingface/transformers.git`

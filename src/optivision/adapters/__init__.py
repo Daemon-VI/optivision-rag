@@ -173,16 +173,18 @@ _MODELS: list[ModelInfo] = [
               license="mit", revision="b5c6dd62125326e6f0b540c1f7b36e901cdc0a11",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colpali-v1.2-hf", "colpali", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 05_st_small; "
+              "reports/universal/campaign/vidore--colpali-v1.2-hf",
               license="gemma", revision="3c712e95d5557c4d72a4107659cee01a40c1ece6",
               notes="transformers-native weights (ColPaliForRetrieval), not a colpali-engine "
                     "checkpoint"),
     ModelInfo("vidore/colpali-v1.3-hf", "colpali", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 05_st_small; "
+              "reports/universal/campaign/vidore--colpali-v1.3-hf",
               license="gemma", revision="133a9eb02947310513f52f8f0d39d622e0eab8dc",
               notes="transformers-native weights (ColPaliForRetrieval), not a colpali-engine "
                     "checkpoint"),
@@ -193,9 +195,10 @@ _MODELS: list[ModelInfo] = [
               license="apache-2.0", revision="38b8ebb6198e2704bc24fe0027b3743f25f03bfc",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colqwen2-v1.0-hf", "colqwen", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 05_st_small; "
+              "reports/universal/campaign/vidore--colqwen2-v1.0-hf",
               license="apache-2.0", revision="ddc07d2317c80f75fc742b7362ee9ad1912908f9",
               notes="transformers-native weights (ColQwen2ForRetrieval), not a colpali-engine "
                     "checkpoint"),
@@ -261,16 +264,18 @@ _MODELS: list[ModelInfo] = [
               license=None, revision="c14f4090e6ac69f0420d4ddb4425d28f8cd9cc80",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("ModernVBERT/colmodernvbert", "colmodernvbert", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~900 vectors/page), float32 on one Kaggle T4, at"
+              " the revision below, 2026-10-15; Kaggle batch 05_st_small; "
+              "reports/universal/campaign/ModernVBERT--colmodernvbert",
               license="mit", revision="4c604428a6e1a7e33d0fb34837f0cdecbc22026e",
               notes="the colpali-engine route of the card (ColModernVBert) needs "
                     "trust_remote_code; loader='colpali-engine:colmodernvbert' is available and "
                     "equally unrun"),
     ModelInfo("TomoroAI/tomoro-colqwen3-embed-8b", "colqwen3", "image", "remote-code:tomoro", 320,
-              UNTESTED, "same remote code and calls as the measured TomoroAI/tomoro-colqwen3-embed-4b; never "
-              "encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) over two Kaggle T4s, at the "
+              "revision below, 2026-10-15; Kaggle batch 08_remote_code; "
+              "reports/universal/campaign/TomoroAI--tomoro-colqwen3-embed-8b",
               license="apache-2.0", revision="7901e21544bf360868ead6b384b37b3abdf119cf",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("vultr/VultronRetrieverPrime-Qwen3.5-8B", "colqwen3.5", "image", "colpali-engine:colqwen3.5", 320,
@@ -292,53 +297,57 @@ _MODELS: list[ModelInfo] = [
               notes="the card pins a colpali-engine git commit and needs causal-conv1d and "
                     "flash-linear-attention"),
     ModelInfo("tencent/EVIE-4.5B", "colqwen3.5", "image", "sentence-transformers", 2048,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
+              "on this model (the adapter's image path is measured on four others); model card and "
+              "repository files read 2026-10-12",
               license="apache-2.0", revision="498388f8f4c92af8d99fffeececd56c0a4c428d0",
               notes="2,048-d vectors (the card describes shorter prefixes as usable); its colpali "
                     "route needs the fork bundled in the repository"),
     ModelInfo("tencent/EVIE-8B", "colqwen3.5", "image", "sentence-transformers", 4096,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded over two "
+              "T4s on Kaggle 2026-10-15, but sentence-transformers' encode() moved the model back onto one "
+              "T4, out of memory; the adapter now leaves a device_map placement alone, not yet re-run; "
+              "reports/universal/campaign/tencent--EVIE-8B",
               license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
+              "on this model (the adapter's image path is measured on four others); model card and "
+              "repository files read 2026-10-12",
               license="apache-2.0", revision="60a0200a0d9c76df7acee02d7fd074db8c81cf00"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
+              "on this model (the adapter's image path is measured on four others); model card and "
+              "repository files read 2026-10-12",
               license="apache-2.0", revision="de6b8ac536cae74fab7595de5d53e24f5e6c4295"),
     ModelInfo("webAI-Official/webAI-ColVec1-4b", "colvec", "image", "remote-code:colvec", 640,
-              UNVERIFIED, "remote-code recipe written against the model card (process_images / "
-              "process_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); on "
+              "Kaggle 2026-10-15 its from_pretrained returned no loading info, which the loader required; "
+              "the loader now checks the loaded weights against the checkpoint's tensor names, not yet "
+              "re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1-4b",
               license="other", revision="cb5af9aab4894bfa1c7f2427d6970f19055c7226",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-4b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
+              "on this model (the adapter's image path is measured on four others); model card and "
+              "repository files read 2026-10-12",
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded over two "
+              "T4s on Kaggle 2026-10-15, but sentence-transformers' encode() moved the model back onto one "
+              "T4, out of memory; the adapter now leaves a device_map placement alone, not yet re-run; "
+              "reports/universal/campaign/webAI-Official--webAI-ColVec1.1-8b",
               license="other", revision="0f712a2777fbba29b2a21bb68ffcfbb5272505ad",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("Hcompany/NeoMME-260M-Retriever-ST-late", "neomme", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; refused on Kaggle"
+              " 2026-10-15: its model type neomme is in transformers 5.17 and later and the session had "
+              "5.16.1; not yet re-run; reports/universal/campaign/Hcompany--NeoMME-260M-Retriever-ST-late",
               license="apache-2.0", revision="023be2a8ab9d797f5aa76f5bf8b5dde78d819659"),
     ModelInfo("Hcompany/NeoMME-800M-Retriever-ST-late", "neomme", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; the "
-              "image path of that adapter has never been run here; model card and repository files "
-              "read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; refused on Kaggle"
+              " 2026-10-15: its model type neomme is in transformers 5.17 and later and the session had "
+              "5.16.1; not yet re-run; reports/universal/campaign/Hcompany--NeoMME-800M-Retriever-ST-late",
               license="apache-2.0", revision="ad4c17419c28745c3b3045981b0d8abb72cd142b"),
     ModelInfo("Cognitive-Lab/ColNetraEmbed", "colgemma", "image", "colpali-engine:colgemma3", 128,
               UNVERIFIED, "colpali-engine ColGemma3 per its model card; the load was refused on Kaggle 2026-10-14 "
@@ -348,42 +357,54 @@ _MODELS: list[ModelInfo] = [
               license="gemma", revision="a27fe0bdcf65a54116393853621f7f80e3cd9ca3",
               notes="the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali)"),
     ModelInfo("ibm-granite/granite-vision-3.3-2b-embedding", "granite-vision", "image", "remote-code:processor", 128,
-              UNVERIFIED, "remote-code recipe written against the model card (process_images / "
-              "process_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); cannot"
+              " be loaded under transformers 5: its modelling code reads a language_model attribute that "
+              "LlavaNext no longer has (Kaggle 2026-10-15, transformers 5.16.1); "
+              "reports/universal/campaign/ibm-granite--granite-vision-3.3-2b-embedding",
               license="apache-2.0", revision="baa53d1e1ac95baefb15e4aa9fdcc471ac728c83",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card pins transformers==4.50"),
     ModelInfo("5CD-AI/Vintern-Embedding-1B", "colinternvl", "image", "remote-code:processor", 128,
-              UNVERIFIED, "remote-code recipe written against the model card (process_images / "
-              "process_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); cannot"
+              " be loaded under transformers 5: its configuration_internvl_chat.py reads "
+              "llm_config['architectures'], which is not there (Kaggle 2026-10-15, transformers 5.16.1); "
+              "reports/universal/campaign/5CD-AI--Vintern-Embedding-1B",
               license=None, revision="ee3f8a72164d194c0885df3f9be3d4a3f0626cc9",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand"),
     ModelInfo("jinaai/jina-embeddings-v4", "jina-v4", "image", "remote-code:jina-v4", 128,
               UNVERIFIED, "remote-code recipe written against the model card (encode_image / encode_text with "
-              "return_multivector=True); never run here; model card and repository files read "
-              "2026-10-12",
+              "return_multivector=True); cannot be loaded under transformers 5: its qwen2_5_vl.py asks for "
+              "the 'default' RoPE initialiser, which transformers 5 removed (Kaggle 2026-10-15, "
+              "transformers 5.16.1); reports/universal/campaign/jinaai--jina-embeddings-v4",
               license=None, revision="853c867b65b749f3c3c72a06868140d842e04f06",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; "
                     "single-vector by default, the recipe asks for the 128-d multi-vector output; "
                     "the card names the Qwen Research License"),
     ModelInfo("nvidia/llama-nemoretriever-colembed-1b-v1", "nemoretriever-colembed", "image", "remote-code:nvidia-colembed", None,
-              UNVERIFIED, "remote-code recipe written against the model card (forward_images / "
-              "forward_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (forward_images / forward_queries); cannot"
+              " be loaded on a T4: its modelling code imports flash_attn (Kaggle 2026-10-15), and "
+              "FlashAttention 2 needs an Ampere or newer GPU; "
+              "reports/universal/campaign/nvidia--llama-nemoretriever-colembed-1b-v1",
               license="other", revision="78361b5fa933f700305cfab3accae44b759de590",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card requires transformers==4.49.0 and flash-attn; no file of the repository "
                     "states the output width"),
     ModelInfo("nvidia/llama-nemoretriever-colembed-3b-v1", "nemoretriever-colembed", "image", "remote-code:nvidia-colembed", None,
-              UNVERIFIED, "remote-code recipe written against the model card (forward_images / "
-              "forward_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (forward_images / forward_queries); cannot"
+              " be loaded on a T4: its modelling code imports flash_attn (Kaggle 2026-10-15), and "
+              "FlashAttention 2 needs an Ampere or newer GPU; "
+              "reports/universal/campaign/nvidia--llama-nemoretriever-colembed-3b-v1",
               license="other", revision="75f7e7311c7a5965c535587fd5e563c5e4a3c583",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card requires transformers==4.49.0 and flash-attn; no file of the repository "
                     "states the output width"),
     ModelInfo("nvidia/llama-nemotron-colembed-vl-3b-v2", "nemoretriever-colembed", "image", "remote-code:nvidia-colembed", 3072,
-              UNVERIFIED, "remote-code recipe written against the model card (forward_images / "
-              "forward_queries); never run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "remote-code recipe written against the model card (forward_images / forward_queries); loaded"
+              " over two T4s and passed check_retriever on Kaggle 2026-10-15, then the process was killed "
+              "for host memory after encoding the 500 DocVQA pages (~1800 vectors of 3072 dimensions per "
+              "page, about 11 GB as float32); not yet re-run; "
+              "reports/universal/campaign/nvidia--llama-nemotron-colembed-vl-3b-v2",
               license="other", revision="9907f8fdf1eae6802c5b9ee4287ef9009acfdae9",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card requires flash-attn"),
@@ -634,6 +655,26 @@ class PageEncoderAdapter(EncoderAdapter):
         )
 
 
+def _keep_placement(model: Any) -> None:
+    """Stop ``model.to(...)`` from moving a model that ``device_map`` spread over several GPUs.
+
+    sentence-transformers' ``encode`` calls ``self.to(self.device)`` on every call, which
+    gathers every layer back onto the first GPU (that ran tencent/EVIE-8B and
+    webAI-Official/webAI-ColVec1.1-8b out of memory on a 16 GB T4, Kaggle 2026-10-15).
+    accelerate's hooks already move the activations between the devices.
+    """
+    model.to = lambda *args, **kwargs: model
+
+
+def _device_map_placement(model: Any) -> dict[str, Any] | None:
+    modules = getattr(model, "modules", None)
+    for module in modules() if callable(modules) else ():
+        device_map = getattr(module, "hf_device_map", None)
+        if isinstance(device_map, dict) and device_map:
+            return {"devices": sorted({str(d) for d in device_map.values()}), "device_map": "auto"}
+    return None
+
+
 class SentenceTransformersAdapter(EncoderAdapter):
     """sentence-transformers ``MultiVectorEncoder`` (>= 6.0).
 
@@ -641,8 +682,10 @@ class SentenceTransformersAdapter(EncoderAdapter):
     and ``encode_query(texts)`` returning one ``[n_i, d]`` tensor or array per
     input. Run for real with sentence-transformers 6.1.0 on text: answerai-colbert-small-v1
     on SciFact (its float baseline matched the model card), and ``check_retriever`` runs on
-    the text models whose registry evidence says so. The image path has never been run
-    here, and every other model remains unverified. Pass ``model``
+    the text models whose registry evidence says so. The image path ran on Kaggle T4s
+    (sentence-transformers 6.1.0, 2026-10-15) for the four image models it measured; each
+    other model's status is its own registry entry's. A ``device_map`` placement is kept:
+    ``encode`` would otherwise move the model back onto one device. Pass ``model``
     to inject an already-constructed encoder (that is how the tests exercise the
     glue without the library).
 
@@ -682,8 +725,11 @@ class SentenceTransformersAdapter(EncoderAdapter):
 
                 kwargs["model_kwargs"] = {**(kwargs.get("model_kwargs") or {}), "torch_dtype": getattr(torch, dtype)}
             model = MultiVectorEncoder(model_id, **kwargs)
+            if (kwargs.get("model_kwargs") or {}).get("device_map") is not None:
+                _keep_placement(model)
         self.model = model
         self.dtype = dtype
+        self.placement = _device_map_placement(model)
 
     @staticmethod
     def _host(output: Any) -> np.ndarray:

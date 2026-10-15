@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-14 of 18 models attempted are measured.
+19 of 34 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -31,5 +31,21 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | 04_colqwen_7b | measured | float16 | 1.82 | yes |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | 04_colqwen_7b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.0 | no |
 | `nomic-ai/colnomic-embed-multimodal-7b` | 04_colqwen_7b | measured | float16 | 1.57 | yes |
+| `Hcompany/NeoMME-260M-Retriever-ST-late` | 05_st_small | incomplete: encode_docvqa failed (exit 1) | float32 | 0.01 | no |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | 05_st_small | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
+| `ModernVBERT/colmodernvbert` | 05_st_small | measured | float32 | 1.69 | yes |
+| `vidore/colpali-v1.2-hf` | 05_st_small | measured | float16 | 1.46 | yes |
+| `vidore/colpali-v1.3-hf` | 05_st_small | measured | float16 | 1.58 | yes |
+| `vidore/colqwen2-v1.0-hf` | 05_st_small | measured | float16 | 1.31 | yes |
+| `jinaai/jina-embeddings-v4` | 08_remote_code | incomplete: encode_docvqa failed (exit 1) | float16 | 0.02 | no |
+| `nvidia/llama-nemotron-colembed-vl-3b-v2` | 08_remote_code | incomplete: encode_docvqa failed (exit -9) | float32 | 2.3 | no |
+| `TomoroAI/tomoro-colqwen3-embed-8b` | 08_remote_code | measured | float16 | 3.08 | yes |
+| `webAI-Official/webAI-ColVec1-4b` | 08_remote_code | incomplete: encode_docvqa failed (exit 1) | float32 | 0.07 | no |
+| `tencent/EVIE-8B` | 09_st_8b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.05 | no |
+| `webAI-Official/webAI-ColVec1.1-8b` | 09_st_8b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.04 | no |
+| `5CD-AI/Vintern-Embedding-1B` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
+| `ibm-granite/granite-vision-3.3-2b-embedding` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.03 | no |
+| `nvidia/llama-nemoretriever-colembed-1b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
+| `nvidia/llama-nemoretriever-colembed-3b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).

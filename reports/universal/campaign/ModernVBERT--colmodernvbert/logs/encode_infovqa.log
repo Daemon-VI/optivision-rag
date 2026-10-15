@@ -1,0 +1,27 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py ModernVBERT/colmodernvbert vidore/infovqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 0 --dtype float32 --batch-size 4
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+ModernVBERT/colmodernvbert: registry status unverified
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:00<00:01, 300.96 examples/s]Generating test split:  40%|████      | 200/500 [00:00<00:00, 479.70 examples/s]Generating test split:  60%|██████    | 300/500 [00:00<00:00, 506.64 examples/s]Generating test split:  80%|████████  | 400/500 [00:00<00:00, 588.23 examples/s]Generating test split: 100%|██████████| 500/500 [00:00<00:00, 624.14 examples/s]
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:754: UserWarning: ModernVBERT/colmodernvbert: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/343 [00:00<?, ?it/s]Loading weights:  74%|███████▍  | 254/343 [00:00<00:00, 2519.65it/s]Loading weights: 100%|██████████| 343/343 [00:00<00:00, 2564.08it/s]
+[transformers] [1mModernVBertModel LOAD REPORT[0m from: ModernVBERT/colmodernvbert-base
+Key                     | Status     |  | 
+------------------------+------------+--+-
+custom_text_proj.bias   | UNEXPECTED |  | 
+custom_text_proj.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+Loading weights:   0%|          | 0/176 [00:00<?, ?it/s]Loading weights: 100%|██████████| 176/176 [00:00<00:00, 2617.97it/s]
+[transformers] [1mModernVBertModel LOAD REPORT[0m from: ModernVBERT/colmodernvbert
+Key                                    | Status     |  | 
+---------------------------------------+------------+--+-
+custom_text_proj.lora_A.default.weight | UNEXPECTED |  | 
+custom_text_proj.lora_B.default.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+{"loaded": "ModernVBERT/colmodernvbert", "device": null, "dtype": "float32", "adapter_merge_check": null, "loading_report": null, "placement": null}
+{"tag": "colmodernvbert_infovqa_test_subsampled", "docs": 500, "vectors": 361661, "dim": 128, "queries": 494, "doc_seconds": 610.9, "query_seconds": 5.5, "device": null, "dtype": "float32", "adapter_merge_check": null, "loading_report": null, "placement": null}

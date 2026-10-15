@@ -32,6 +32,33 @@
   `scripts/build_measured_catalog.py` reads `campaign/outcomes.json`. A retry notebook,
   `notebooks/kaggle_batches/batch_12_retry.ipynb`, re-runs the three models the fixes cover.
 
+### Kaggle measurement campaign, batches 05 and 08-10
+
+- **5 more models measured**, at their pinned revisions (each equal to the Hub's main):
+  `vidore/colpali-v1.2-hf`, `vidore/colpali-v1.3-hf`, `vidore/colqwen2-v1.0-hf` (float16
+  inference through sentence-transformers 6.1.0), `ModernVBERT/colmodernvbert` (float32,
+  sentence-transformers) and `TomoroAI/tomoro-colqwen3-embed-8b` (float16 over two T4s). That
+  is the first time the sentence-transformers image path has run here. 29 of the 65 registry
+  models are now measured; the catalogue holds 27 models and 3044 rows.
+- **11 failures are recorded in the registry evidence**:
+  - The two `Hcompany/NeoMME` models need transformers 5.17; the session had 5.16.1.
+  - `tencent/EVIE-8B` and `webAI-Official/webAI-ColVec1.1-8b` were split over two GPUs, but
+    sentence-transformers moved them back onto one, which ran out of memory.
+  - `webAI-Official/webAI-ColVec1-4b`'s own `from_pretrained` returns no loading info.
+  - `nvidia/llama-nemotron-colembed-vl-3b-v2` passed `check_retriever` but was killed for host
+    memory: 500 pages of ~1800 × 3072 float32 vectors.
+  - `jinaai/jina-embeddings-v4`, `ibm-granite/granite-vision-3.3-2b-embedding` and
+    `5CD-AI/Vintern-Embedding-1B` ship remote code that fails under transformers 5.
+  - The two `nvidia/llama-nemoretriever-colembed` v1 models import flash_attn, which does not
+    run on a T4.
+- **The sentence-transformers adapter keeps a `device_map` placement.** sentence-transformers'
+  `encode` calls `model.to(device)` on every call; the adapter now leaves the split in place.
+- **A `from_pretrained` that returns the model alone is still checked.** The loader compares
+  the model's state-dict keys with the tensor names in the checkpoint's safetensors headers
+  and refuses the load if any weight would be random, as before.
+- `notebooks/kaggle_batches/batch_13_retry.ipynb` re-runs the five models these fixes cover,
+  with transformers>=5.17.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

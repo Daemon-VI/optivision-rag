@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 24 measured, 9 untested, 32 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 29 measured, 8 untested, 28 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (24)
+### Measured (29)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -157,13 +157,18 @@ The registry holds 65 models: 24 measured, 9 untested, 32 unverified. The facts 
 | `vidore/colpali-v1.2` | image | 128 | `colpali-engine:colpali` | mit |
 | `vidore/colpali-v1.2-merged` | image | 128 | `colpali-engine:colpali` | gemma |
 | `vidore/colpali-v1.3` | image | 128 | `colpali-engine:colpali` | mit |
+| `vidore/colpali-v1.2-hf` | image | 128 | `sentence-transformers` | gemma |
+| `vidore/colpali-v1.3-hf` | image | 128 | `sentence-transformers` | gemma |
 | `vidore/colqwen2-v0.1` | image | 128 | `colpali-engine:colqwen2` | apache-2.0 |
+| `vidore/colqwen2-v1.0-hf` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `vidore/colqwen-omni-v0.1` | image | 128 | `colpali-engine:colqwen2.5-omni` | mit |
 | `nomic-ai/colnomic-embed-multimodal-3b` | image | 128 | `colpali-engine:colqwen2.5` | not declared |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0-merged` | image | 128 | `colpali-engine:colqwen2.5` | mit |
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | image | 128 | `colpali-engine:colqwen2.5` | apache-2.0 |
 | `vidore/colsmolvlm-v0.1` | image | 128 | `colpali-engine:colsmol` | not declared |
+| `ModernVBERT/colmodernvbert` | image | 128 | `sentence-transformers` | mit |
+| `TomoroAI/tomoro-colqwen3-embed-8b` | image | 320 | `remote-code:tomoro` | apache-2.0 |
 
 Loading notes:
 
@@ -173,20 +178,24 @@ Loading notes:
 - `vidore/colpali-v1.1`: adapter-only repository: merged explicitly over its base model on load
 - `vidore/colpali-v1.2`: adapter-only repository: merged explicitly over its base model on load
 - `vidore/colpali-v1.3`: adapter-only repository: merged explicitly over its base model on load
+- `vidore/colpali-v1.2-hf`: transformers-native weights (ColPaliForRetrieval), not a colpali-engine checkpoint
+- `vidore/colpali-v1.3-hf`: transformers-native weights (ColPaliForRetrieval), not a colpali-engine checkpoint
 - `vidore/colqwen2-v0.1`: adapter-only repository: merged explicitly over its base model on load
+- `vidore/colqwen2-v1.0-hf`: transformers-native weights (ColQwen2ForRetrieval), not a colpali-engine checkpoint
 - `vidore/colqwen-omni-v0.1`: adapter-only repository: merged explicitly over its base model on load
 - `nomic-ai/colnomic-embed-multimodal-3b`: adapter-only repository: merged explicitly over its base model on load
 - `tsystems/colqwen2.5-3b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
 - `vidore/colsmolvlm-v0.1`: adapter-only repository: merged explicitly over its base model on load
+- `ModernVBERT/colmodernvbert`: the colpali-engine route of the card (ColModernVBert) needs trust_remote_code; loader='colpali-engine:colmodernvbert' is available and equally unrun
+- `TomoroAI/tomoro-colqwen3-embed-8b`: runs the repository's own modelling code: pass trust_remote_code=True
 
-### Untested (9)
+### Untested (8)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 | `lightonai/GTE-ModernColBERT-v1` | text | 128 | `sentence-transformers` | not declared |
 | `vidore/colqwen2.5-v0.1` | image | 128 | `colpali-engine:colqwen2.5` | mit |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
-| `TomoroAI/tomoro-colqwen3-embed-8b` | image | 320 | `remote-code:tomoro` | apache-2.0 |
 | `lightonai/colbertv2.0` | text | 128 | `sentence-transformers` | mit |
 | `lightonai/Reason-ModernColBERT` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
 | `mixedbread-ai/mxbai-edge-colbert-v0-17m` | text | 48 | `sentence-transformers` | apache-2.0 |
@@ -197,22 +206,17 @@ Loading notes:
 
 - `vidore/colqwen2.5-v0.1`: adapter-only repository: merged explicitly over its base model on load; pages capped at 768 visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of memory)
 - `Metric-AI/ColQwen2.5-3b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load; pages capped at 768 visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of memory)
-- `TomoroAI/tomoro-colqwen3-embed-8b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
 - `lightonai/Reason-ModernColBERT`: also loads with loader='pylate'
 - `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
 - `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
 
-### Unverified (32)
+### Unverified (28)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 | `colbert-ir/colbertv2.0` | text | 128 | `sentence-transformers` | not declared |
-| `vidore/colpali-v1.2-hf` | image | 128 | `sentence-transformers` | gemma |
-| `vidore/colpali-v1.3-hf` | image | 128 | `sentence-transformers` | gemma |
-| `vidore/colqwen2-v1.0-hf` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
-| `ModernVBERT/colmodernvbert` | image | 128 | `sentence-transformers` | mit |
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
@@ -242,11 +246,7 @@ Loading notes:
 
 Loading notes:
 
-- `vidore/colpali-v1.2-hf`: transformers-native weights (ColPaliForRetrieval), not a colpali-engine checkpoint
-- `vidore/colpali-v1.3-hf`: transformers-native weights (ColPaliForRetrieval), not a colpali-engine checkpoint
-- `vidore/colqwen2-v1.0-hf`: transformers-native weights (ColQwen2ForRetrieval), not a colpali-engine checkpoint
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
-- `ModernVBERT/colmodernvbert`: the colpali-engine route of the card (ColModernVBert) needs trust_remote_code; loader='colpali-engine:colmodernvbert' is available and equally unrun
 - `vultr/VultronRetrieverPrime-Qwen3.5-8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
@@ -301,8 +301,12 @@ queries decides.
 |---|---|---|---|---|---|
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | docvqa_test_subsampled | ndcg@5 0.644 | `hierarchical_merge(0.33) > int4` | 23.0 | 0.990 [0.972, 1.008] |
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.33) > int4` | 22.9 | 0.994 [0.986, 1.001] |
+| `ModernVBERT/colmodernvbert` | docvqa_test_subsampled | ndcg@5 0.556 | `hierarchical_merge(0.33) > int4(mean)` | 23.5 | 0.992 [0.971, 1.013] |
+| `ModernVBERT/colmodernvbert` | infovqa_test_subsampled | ndcg@5 0.867 | `hierarchical_merge(0.33) > int4(mean)` | 23.5 | 0.992 [0.984, 1.001] |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | docvqa_test_subsampled | ndcg@5 0.654 | `hierarchical_merge(0.25) > int4` | 31.6 | 0.994 [0.980, 1.008] |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.25) > int4` | 31.6 | 0.999 [0.991, 1.007] |
+| `TomoroAI/tomoro-colqwen3-embed-8b` | docvqa_test_subsampled | ndcg@5 0.656 | `hierarchical_merge(0.33) > binary` | 96.9 | 0.992 [0.972, 1.013] |
+| `TomoroAI/tomoro-colqwen3-embed-8b` | infovqa_test_subsampled | ndcg@5 0.944 | `hierarchical_merge(0.33) > binary` | 96.8 | 0.993 [0.986, 1.000] |
 | `answerdotai/answerai-colbert-small-v1` | scifact | ndcg@10 0.746 | `ward ratio=0.33 > int8/vec` | 11.8 | 1.000 [0.985, 1.016] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | docvqa_test_subsampled | ndcg@5 0.675 | `lloyd2(7)` | 16.0 | 0.994 [0.979, 1.007] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | infovqa_test_subsampled | ndcg@5 0.939 | `lloyd2(7)` | 16.0 | 0.997 [0.992, 1.001] |
@@ -326,16 +330,22 @@ queries decides.
 | `vidore/colpali-v1.1` | infovqa_test_subsampled | ndcg@5 0.817 | `hierarchical_merge(0.25) > int4` | 30.4 | 0.987 [0.977, 0.997] |
 | `vidore/colpali-v1.2` | docvqa_test_subsampled | ndcg@5 0.558 | `hierarchical_merge(0.25) > int4` | 30.4 | 0.999 [0.981, 1.017] |
 | `vidore/colpali-v1.2` | infovqa_test_subsampled | ndcg@5 0.819 | `hierarchical_merge(0.25) > int4` | 30.4 | 0.996 [0.985, 1.006] |
+| `vidore/colpali-v1.2-hf` | docvqa_test_subsampled | ndcg@5 0.579 | `hierarchical_merge(0.25) > int4` | 31.0 | 0.992 [0.973, 1.010] |
+| `vidore/colpali-v1.2-hf` | infovqa_test_subsampled | ndcg@5 0.833 | `hierarchical_merge(0.25) > int4` | 31.0 | 0.996 [0.987, 1.005] |
 | `vidore/colpali-v1.2-merged` | docvqa_test_subsampled | ndcg@5 0.558 | `hierarchical_merge(0.25) > int4` | 30.4 | 0.992 [0.972, 1.011] |
 | `vidore/colpali-v1.2-merged` | infovqa_test_subsampled | ndcg@5 0.820 | `hierarchical_merge(0.25) > int4` | 30.4 | 0.996 [0.986, 1.007] |
 | `vidore/colpali-v1.3` | docvqa_test_subsampled | ndcg@5 0.575 | `hierarchical_merge(0.33) > int4` | 23.2 | 0.999 [0.979, 1.021] |
 | `vidore/colpali-v1.3` | infovqa_test_subsampled | ndcg@5 0.855 | `hierarchical_merge(0.33) > int4` | 23.2 | 0.998 [0.991, 1.006] |
+| `vidore/colpali-v1.3-hf` | docvqa_test_subsampled | ndcg@5 0.590 | `int8(per_vector)` | 3.9 | 0.998 [0.992, 1.003] |
+| `vidore/colpali-v1.3-hf` | infovqa_test_subsampled | ndcg@5 0.856 | `int8(per_vector)` | 3.9 | 0.998 [0.996, 1.000] |
 | `vidore/colpali-v1.3-merged` | docvqa_test_subsampled | ndcg@5 0.584 | `ward d=0.8 > int8/vec` | 14.7 | 0.989 [0.970, 1.007] |
 | `vidore/colpali-v1.3-merged` | infovqa_test_subsampled | ndcg@5 0.846 | `ward d=0.8 > int8/vec` | 15.0 | 1.000 [0.991, 1.010] |
 | `vidore/colqwen-omni-v0.1` | docvqa_test_subsampled | ndcg@5 0.654 | `hierarchical_merge(0.33) > int4` | 23.5 | 0.994 [0.977, 1.011] |
 | `vidore/colqwen-omni-v0.1` | infovqa_test_subsampled | ndcg@5 0.934 | `hierarchical_merge(0.33) > int4` | 23.5 | 0.990 [0.982, 0.999] |
 | `vidore/colqwen2-v0.1` | docvqa_test_subsampled | ndcg@5 0.592 | `lloyd2(7)` | 16.0 | 0.996 [0.971, 1.020] |
 | `vidore/colqwen2-v0.1` | infovqa_test_subsampled | ndcg@5 0.903 | `lloyd2(7)` | 16.0 | 0.985 [0.974, 0.995] |
+| `vidore/colqwen2-v1.0-hf` | docvqa_test_subsampled | ndcg@5 0.604 | `hierarchical_merge(0.25) > int4` | 31.0 | 1.000 [0.976, 1.027] |
+| `vidore/colqwen2-v1.0-hf` | infovqa_test_subsampled | ndcg@5 0.915 | `hierarchical_merge(0.25) > int4` | 31.0 | 0.987 [0.977, 0.995] |
 | `vidore/colqwen2-v1.0-merged` | docvqa_test_subsampled | ndcg@5 0.607 | `ward d=1.6 > int4` | 59.9 | 0.995 [0.973, 1.019] |
 | `vidore/colqwen2-v1.0-merged` | infovqa_test_subsampled | ndcg@5 0.920 | `ward d=1.6 > int4` | 59.5 | 0.983 [0.972, 0.995] |
 | `vidore/colqwen2.5-v0.2` | docvqa_test_subsampled | ndcg@5 0.618 | `ward ratio=0.5 > int4` | 15.3 | 0.989 [0.972, 1.006] |

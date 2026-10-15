@@ -88,10 +88,23 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
         {"model": "vidore/colqwen2.5-v0.1", **F32},
         {"model": "Metric-AI/ColQwen2.5-3b-multilingual-v1.0", **F32},
         {"model": "Cognitive-Lab/ColNetraEmbed", **F32}]),
+    # after batches 05, 08-10 (2026-10-15): NeoMME needs transformers>=5.17 (Kaggle had 5.16.1),
+    # sentence-transformers moved the two 8B models off their two-GPU split (now kept) and
+    # ColVec1's from_pretrained returned no loading info (now checked against the checkpoint)
+    ("13_retry", "re-runs: NeoMME (newer transformers), two 8B sentence-transformers models, ColVec1 4B",
+     [ST, "transformers>=5.17"], [
+        {"model": "Hcompany/NeoMME-260M-Retriever-ST-late", "dtype": "float32", "batch_size": 4},
+        {"model": "Hcompany/NeoMME-800M-Retriever-ST-late", "dtype": "float32", "batch_size": 4},
+        {"model": "webAI-Official/webAI-ColVec1-4b", **F32, "trust_remote_code": True, "revision": "latest"},
+        {"model": "tencent/EVIE-8B", **ST16, "multi_gpu": True},
+        {"model": "webAI-Official/webAI-ColVec1.1-8b", **ST16, "multi_gpu": True, "trust_remote_code": True}]),
 ]
 
-#: in a batch that ran, but no batch can measure them (the reason is in the registry evidence)
-UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0"}
+#: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
+#: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
+UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
+              "ibm-granite/granite-vision-3.3-2b-embedding", "5CD-AI/Vintern-Embedding-1B",
+              "nvidia/llama-nemoretriever-colembed-1b-v1", "nvidia/llama-nemoretriever-colembed-3b-v1"}
 
 
 def md(text: str) -> dict:

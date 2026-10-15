@@ -91,7 +91,7 @@ def main() -> int:
             if a.multi_gpu:
                 options["model_kwargs"] = {"device_map": "auto"}
         adapter = load_adapter(a.model, loader=a.loader, **options)
-    encoder = getattr(adapter, "encoder", None)
+    encoder = getattr(adapter, "encoder", adapter)
     run_info = {
         "device": getattr(encoder, "device", None),
         "dtype": str(getattr(encoder, "torch_dtype", a.dtype)),

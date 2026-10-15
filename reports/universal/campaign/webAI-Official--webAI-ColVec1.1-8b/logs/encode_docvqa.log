@@ -1,0 +1,71 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py webAI-Official/webAI-ColVec1.1-8b vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --trust-remote-code --dtype float16 --batch-size 2 --multi-gpu
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:793: UserWarning: webAI-Official/webAI-ColVec1.1-8b: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+[transformers] A new version of the following files was downloaded from https://huggingface.co/webAI-Official/webAI-ColVec1.1-8b:
+- modeling_colqwen35_bidirection.py
+. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+webAI-Official/webAI-ColVec1.1-8b: registry status unverified
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [01:06<03:18, 66.23s/it]Fetching 4 files: 100%|██████████| 4/4 [01:06<00:00, 16.58s/it]
+Loading weights:   0%|          | 0/761 [00:00<?, ?it/s]Loading weights:   0%|          | 3/761 [00:10<42:24,  3.36s/it]Loading weights:  25%|██▍       | 187/761 [00:10<00:23, 24.83it/s]Loading weights:  30%|███       | 229/761 [00:12<00:22, 23.93it/s]Loading weights:  33%|███▎      | 248/761 [00:12<00:19, 26.38it/s]Loading weights:  34%|███▍      | 262/761 [00:15<00:29, 16.96it/s]Loading weights:  36%|███▌      | 275/761 [00:15<00:26, 18.69it/s]Loading weights:  37%|███▋      | 283/761 [00:17<00:31, 15.06it/s]Loading weights:  38%|███▊      | 290/761 [00:17<00:28, 16.42it/s]Loading weights:  39%|███▉      | 295/761 [00:18<00:39, 11.79it/s]Loading weights:  40%|███▉      | 304/761 [00:18<00:31, 14.52it/s]Loading weights:  41%|████      | 309/761 [00:20<00:46,  9.78it/s]Loading weights:  41%|████      | 313/761 [00:21<00:59,  7.57it/s]Loading weights:  43%|████▎     | 328/761 [00:22<00:38, 11.30it/s]Loading weights:  44%|████▎     | 332/761 [00:22<00:44,  9.62it/s]Loading weights:  44%|████▍     | 334/761 [00:23<00:44,  9.49it/s]Loading weights:  45%|████▌     | 346/761 [00:23<00:28, 14.72it/s]Loading weights:  47%|████▋     | 359/761 [00:23<00:17, 22.64it/s]Loading weights:  48%|████▊     | 364/761 [00:23<00:18, 21.06it/s]Loading weights:  48%|████▊     | 368/761 [00:24<00:19, 19.93it/s]Loading weights:  50%|█████     | 381/761 [00:24<00:13, 28.11it/s]Loading weights:  51%|█████     | 386/761 [00:24<00:12, 29.86it/s]Loading weights:  52%|█████▏    | 399/761 [00:24<00:09, 38.25it/s]Loading weights:  53%|█████▎    | 404/761 [00:25<00:21, 16.72it/s]Loading weights:  54%|█████▍    | 413/761 [00:26<00:27, 12.51it/s]Loading weights:  55%|█████▍    | 416/761 [00:26<00:27, 12.61it/s]Loading weights:  55%|█████▌    | 419/761 [00:28<00:46,  7.40it/s]Loading weights:  59%|█████▉    | 448/761 [00:28<00:13, 22.51it/s]Loading weights:  71%|███████   | 542/761 [00:28<00:02, 87.67it/s]Loading weights:  76%|███████▌  | 577/761 [00:28<00:01, 95.71it/s]Loading weights:  80%|███████▉  | 605/761 [00:28<00:01, 96.20it/s]Loading weights:  83%|████████▎ | 628/761 [00:29<00:01, 98.18it/s]Loading weights:  89%|████████▉ | 679/761 [00:29<00:00, 147.90it/s]Loading weights:  97%|█████████▋| 736/761 [00:29<00:00, 208.73it/s]Loading weights: 100%|██████████| 761/761 [00:29<00:00, 25.81it/s] 
+[transformers] A new version of the following files was downloaded from https://huggingface.co/webAI-Official/webAI-ColVec1.1-8b:
+- processing_colqwen35_bidirection.py
+. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
+[transformers] `ColQwen35BidirectionProcessor` defines `image_processor_class = 'AutoImageProcessor'`, which is deprecated. Register the correct mapping in `AutoImageProcessor` instead.
+[transformers] `ColQwen35BidirectionProcessor` defines `video_processor_class = 'AutoVideoProcessor'`, which is deprecated. Register the correct mapping in `AutoVideoProcessor` instead.
+{"loaded": "webAI-Official/webAI-ColVec1.1-8b", "device": null, "dtype": "float16", "adapter_merge_check": null, "loading_report": null, "placement": null, "max_num_visual_tokens": null}
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 200, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 126, in main
+    report = check_retriever(adapter, pages, [q for _, q in pairs],
+                             expected_dim=info.dimension if info else None)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/tokens.py", line 144, in check_retriever
+    docs = adapter.encode_documents(list(documents))
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 709, in encode_documents
+    return self._to_corpus(self._encode(self.model.encode_document, documents), ids)
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 698, in _encode
+    arrays.extend(self._host(o) for o in method(items[start : start + self.batch_size], **self.encode_kwargs))
+                                         ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 563, in encode_document
+    return self.encode(
+           ~~~~~~~~~~~^
+        inputs=inputs,
+        ^^^^^^^^^^^^^^
+    ...<12 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 851, in encode
+    self.to(device)
+    ~~~~~~~^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1384, in to
+    return self._apply(convert)
+           ~~~~~~~~~~~^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 934, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 934, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 934, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  [Previous line repeated 5 more times]
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 965, in _apply
+    param_applied = fn(param)
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1370, in convert
+    return t.to(
+           ~~~~^
+        device,
+        ^^^^^^^
+        dtype if t.is_floating_point() or t.is_complex() else None,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        non_blocking,
+        ^^^^^^^^^^^^^
+    )
+    ^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 32.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 10.81 MiB is free. Including non-PyTorch memory, this process has 14.55 GiB memory in use. Of the allocated memory 14.43 GiB is allocated by PyTorch, and 21.25 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

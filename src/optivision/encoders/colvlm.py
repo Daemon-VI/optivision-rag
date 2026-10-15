@@ -173,9 +173,43 @@ def _load_with_info(model_cls, checkpoint: str, dtype, mapping: dict[str, str] |
         kwargs["key_mapping"] = mapping
     # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
     try:
-        return model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+        result = model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
     except TypeError:
-        return model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+        result = model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+    if isinstance(result, tuple):
+        return result
+    # a remote-code from_pretrained can ignore output_loading_info and return the model alone
+    # (webAI-Official/webAI-ColVec1-4b loads its tensors with load_state_dict(strict=False))
+    return result, _loading_info_from_checkpoint(result, checkpoint, extra.get("revision"))
+
+
+def _checkpoint_tensor_names(checkpoint: str, revision: str | None = None) -> set[str]:
+    """Names of the tensors in a checkpoint's safetensors files, read from their headers."""
+    import os
+
+    if os.path.isdir(checkpoint):
+        from pathlib import Path
+
+        from safetensors import safe_open
+
+        names: set[str] = set()
+        for path in sorted(Path(checkpoint).glob("*.safetensors")):
+            with safe_open(str(path), framework="np") as f:
+                names.update(f.keys())
+        return names
+    from huggingface_hub import HfApi
+
+    metadata = HfApi().get_safetensors_metadata(checkpoint, revision=revision)
+    return {name for f in metadata.files_metadata.values() for name in f.tensors}
+
+
+def _loading_info_from_checkpoint(model, checkpoint: str, revision: str | None) -> dict[str, list[str]]:
+    """``output_loading_info`` worked out by hand: the model's state-dict keys against the checkpoint's."""
+    shipped = _checkpoint_tensor_names(checkpoint, revision)
+    if not shipped:
+        raise RuntimeError(f"{checkpoint}: found no safetensors tensors to check the loaded weights against")
+    expected = set(model.state_dict())
+    return {"missing_keys": sorted(expected - shipped), "unexpected_keys": sorted(shipped - expected)}
 
 
 def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
