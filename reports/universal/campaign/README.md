@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-25 of 41 models attempted are measured.
+28 of 41 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -20,11 +20,8 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `vidore/colpali-v1.3` | 01_colpali | measured | float32 | 2.0 | yes |
 | `nomic-ai/colnomic-embed-multimodal-3b` | 02_colqwen_small | measured | float32 | 3.13 | yes |
 | `vidore/colqwen2-v0.1` | 02_colqwen_small | measured | float32 | 1.85 | yes |
-| `vidore/colqwen2.5-v0.1` | 02_colqwen_small | incomplete: encode_docvqa failed (exit 1) | float32 | 0.04 | no |
 | `vidore/colSmol-500M` | 02_colqwen_small | measured | float32 | 1.04 | no |
 | `vidore/colsmolvlm-v0.1` | 02_colqwen_small | measured | float32 | 2.17 | no |
-| `Cognitive-Lab/ColNetraEmbed` | 03_colqwen_multilingual | incomplete: encode_docvqa failed (exit 1) | float32 | 0.02 | no |
-| `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | 03_colqwen_multilingual | incomplete: encode_docvqa failed (exit 1) | float32 | 0.04 | no |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | 03_colqwen_multilingual | measured | float32 | 1.83 | yes |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0-merged` | 03_colqwen_multilingual | measured | float32 | 1.22 | no |
 | `vidore/colqwen-omni-v0.1` | 03_colqwen_multilingual | measured | float32 | 3.76 | yes |
@@ -54,5 +51,8 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `ibm-granite/granite-vision-3.3-2b-embedding` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.03 | no |
 | `nvidia/llama-nemoretriever-colembed-1b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
+| `Cognitive-Lab/ColNetraEmbed` | 12_retry | measured | float32 | 1.46 | yes |
+| `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | 12_retry | measured | float32 | 1.9 | yes |
+| `vidore/colqwen2.5-v0.1` | 12_retry | measured | float32 | 1.9 | yes |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).

@@ -158,7 +158,10 @@ def test_the_registry_statuses_have_not_moved():
                         "vultr/VultronRetrieverPrime-Qwen3.5-8B",
                         # Kaggle batch 06, 2026-10-15
                         "VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1",
-                        "tencent/EVIE-4.5B"}
+                        "tencent/EVIE-4.5B",
+                        # Kaggle batch 12_retry, 2026-10-15 (after the page cap and the key remap)
+                        "vidore/colqwen2.5-v0.1", "Metric-AI/ColQwen2.5-3b-multilingual-v1.0",
+                        "Cognitive-Lab/ColNetraEmbed"}
     assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
 

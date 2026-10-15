@@ -203,10 +203,9 @@ _MODELS: list[ModelInfo] = [
               notes="transformers-native weights (ColQwen2ForRetrieval), not a colpali-engine "
                     "checkpoint"),
     ModelInfo("vidore/colqwen2.5-v0.1", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; loads and "
-              "merges (Kaggle 2026-10-14) but ran a T4 out of memory on one page at the checkpoint's own "
-              "limit of 16384 visual tokens; pages are now capped at 768 as its model card states, not yet "
-              "re-run; reports/universal/campaign/vidore--colqwen2.5-v0.1",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-15; Kaggle batch 12_retry; pages capped at 768 visual "
+              "tokens, as its model card states; reports/universal/campaign/vidore--colqwen2.5-v0.1",
               license="mit", revision="4379ecfd4c9446836ad0ef4dd7390b1c748f68d8",
               notes="adapter-only repository: merged explicitly over its base model on load; pages capped at 768 "
               "visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of "
@@ -236,10 +235,10 @@ _MODELS: list[ModelInfo] = [
               "reports/universal/campaign/tsystems--colqwen2.5-3b-multilingual-v1.0-merged",
               license="mit", revision="db0d27eb032de3fa5bcd626a6558e7a560a2beb8"),
     ModelInfo("Metric-AI/ColQwen2.5-3b-multilingual-v1.0", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; loads and "
-              "merges (Kaggle 2026-10-14) but ran a T4 out of memory on one page at the checkpoint's own "
-              "limit of 16384 visual tokens; pages are now capped at 768 as its model card states, not yet "
-              "re-run; reports/universal/campaign/Metric-AI--ColQwen2.5-3b-multilingual-v1.0",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-15; Kaggle batch 12_retry; pages capped at 768 visual "
+              "tokens, as its model card states; "
+              "reports/universal/campaign/Metric-AI--ColQwen2.5-3b-multilingual-v1.0",
               license="mit", revision="e2a1c05d053dcf4ad6e39b6c48ced9d6a81071f0",
               notes="adapter-only repository: merged explicitly over its base model on load; pages capped at 768 "
               "visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of "
@@ -359,12 +358,13 @@ _MODELS: list[ModelInfo] = [
               "5.16.1; not yet re-run; reports/universal/campaign/Hcompany--NeoMME-800M-Retriever-ST-late",
               license="apache-2.0", revision="ad4c17419c28745c3b3045981b0d8abb72cd142b"),
     ModelInfo("Cognitive-Lab/ColNetraEmbed", "colgemma", "image", "colpali-engine:colgemma3", 128,
-              UNVERIFIED, "colpali-engine ColGemma3 per its model card; the load was refused on Kaggle 2026-10-14 "
-              "because the checkpoint stores its language model one level deeper (language_model.model.*) "
-              "than ColGemma3 expects; the loader now maps such keys when that accounts for every one of "
-              "them, not yet re-run; reports/universal/campaign/Cognitive-Lab--ColNetraEmbed",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~270 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-15; Kaggle batch 12_retry; loaded with the released "
+              "colpali-engine 0.3.18, its language_model.model.* keys mapped to language_model.* "
+              "(loading_report key_remap); reports/universal/campaign/Cognitive-Lab--ColNetraEmbed",
               license="gemma", revision="a27fe0bdcf65a54116393853621f7f80e3cd9ca3",
-              notes="the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali)"),
+              notes="the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali); the "
+                    "released colpali-engine loads it here once the checkpoint's nested keys are mapped"),
     ModelInfo("ibm-granite/granite-vision-3.3-2b-embedding", "granite-vision", "image", "remote-code:processor", 128,
               UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); cannot"
               " be loaded under transformers 5: its modelling code reads a language_model attribute that "

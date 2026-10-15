@@ -78,6 +78,16 @@
   evaluation, which a T4 cannot run natively. `batch_13_retry` now also runs it in float32
   over two T4s.
 
+### Kaggle measurement campaign, batch 12_retry
+
+- **The three re-runs after the batch 01-04 fixes are measured** (float32 over two T4s, at
+  their pinned revisions). `vidore/colqwen2.5-v0.1` and
+  `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` ran with pages capped at 768 visual tokens (about
+  740 vectors per page). `Cognitive-Lab/ColNetraEmbed` loaded with the released colpali-engine
+  0.3.18 once its nested `language_model.model.*` keys were mapped; the mapping is recorded in
+  `loading_report["key_remap"]`. 38 of the 65 registry models are now measured; the catalogue
+  holds 36 models and 4106 rows.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

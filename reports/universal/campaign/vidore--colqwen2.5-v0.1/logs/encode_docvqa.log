@@ -1,86 +1,9 @@
 $ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py vidore/colqwen2.5-v0.1 vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 4 --multi-gpu
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 vidore/colqwen2.5-v0.1: registry status untested
-Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:20<00:20, 20.42s/it]Fetching 2 files: 100%|██████████| 2/2 [00:27<00:00, 12.50s/it]Fetching 2 files: 100%|██████████| 2/2 [00:27<00:00, 13.69s/it]
-Loading weights:   0%|          | 0/826 [00:00<?, ?it/s]Loading weights:   0%|          | 3/826 [00:09<42:03,  3.07s/it]Loading weights:  22%|██▏       | 185/826 [00:09<00:23, 27.59it/s]Loading weights:  28%|██▊       | 231/826 [00:10<00:18, 32.50it/s]Loading weights:  31%|███▏      | 259/826 [00:11<00:20, 27.15it/s]Loading weights:  34%|███▎      | 277/826 [00:12<00:19, 27.58it/s]Loading weights:  35%|███▌      | 290/826 [00:13<00:20, 26.12it/s]Loading weights:  36%|███▌      | 299/826 [00:13<00:22, 23.58it/s]Loading weights:  37%|███▋      | 306/826 [00:14<00:22, 22.89it/s]Loading weights:  38%|███▊      | 311/826 [00:14<00:21, 24.07it/s]Loading weights:  38%|███▊      | 317/826 [00:14<00:25, 20.00it/s]Loading weights:  40%|███▉      | 329/826 [00:15<00:23, 21.39it/s]Loading weights:  40%|████      | 333/826 [00:15<00:23, 20.89it/s]Loading weights:  41%|████▏     | 341/826 [00:15<00:22, 21.12it/s]Loading weights:  42%|████▏     | 344/826 [00:16<00:26, 18.15it/s]Loading weights:  43%|████▎     | 353/826 [00:16<00:23, 20.05it/s]Loading weights:  43%|████▎     | 356/826 [00:16<00:23, 19.96it/s]Loading weights:  44%|████▍     | 365/826 [00:17<00:23, 19.30it/s]Loading weights:  46%|████▌     | 377/826 [00:17<00:22, 19.94it/s]Loading weights:  46%|████▌     | 380/826 [00:18<00:23, 19.22it/s]Loading weights:  47%|████▋     | 389/826 [00:18<00:20, 21.69it/s]Loading weights:  47%|████▋     | 392/826 [00:18<00:24, 17.63it/s]Loading weights:  49%|████▊     | 401/826 [00:19<00:21, 19.80it/s]Loading weights:  49%|████▉     | 403/826 [00:19<00:23, 18.13it/s]Loading weights:  50%|█████     | 413/826 [00:19<00:21, 19.18it/s]Loading weights:  51%|█████▏    | 425/826 [00:20<00:19, 20.35it/s]Loading weights:  52%|█████▏    | 427/826 [00:20<00:20, 19.44it/s]Loading weights:  54%|█████▍    | 446/826 [00:20<00:10, 37.91it/s]Loading weights:  57%|█████▋    | 474/826 [00:20<00:04, 70.83it/s]Loading weights:  61%|██████    | 500/826 [00:20<00:03, 99.96it/s]Loading weights:  64%|██████▍   | 528/826 [00:20<00:02, 132.00it/s]Loading weights:  67%|██████▋   | 550/826 [00:21<00:01, 149.77it/s]Loading weights:  70%|██████▉   | 578/826 [00:21<00:01, 178.59it/s]Loading weights:  74%|███████▎  | 608/826 [00:21<00:01, 203.47it/s]Loading weights:  78%|███████▊  | 644/826 [00:21<00:00, 234.15it/s]Loading weights:  82%|████████▏ | 680/826 [00:21<00:00, 261.98it/s]Loading weights:  87%|████████▋ | 716/826 [00:21<00:00, 269.95it/s]Loading weights:  91%|█████████ | 749/826 [00:23<00:01, 41.77it/s] Loading weights:  95%|█████████▌| 788/826 [00:24<00:00, 59.50it/s]Loading weights:  99%|█████████▉| 818/826 [00:24<00:00, 75.99it/s]Loading weights: 100%|██████████| 826/826 [00:24<00:00, 34.12it/s]
-{"loaded": "vidore/colqwen2.5-v0.1", "device": "cuda:0", "dtype": "torch.float32", "adapter_merge_check": {"base": "vidore/colqwen2.5-base", "lora_modules": 253, "probe": "language_model.layers.0.self_attn.q_proj.weight", "max_abs_change": 0.0019483675714582205}, "loading_report": {"missing_allowed": [], "unexpected": []}, "placement": {"devices": ["0", "1"], "decoder_layers_per_device": {"0": 22, "1": 14}, "budget_bytes": [10945226342, 13290631987]}}
-Traceback (most recent call last):
-  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 199, in <module>
-    raise SystemExit(main())
-                     ~~~~^^
-  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 125, in main
-    report = check_retriever(adapter, pages, [q for _, q in pairs],
-                             expected_dim=info.dimension if info else None)
-  File "/kaggle/working/optivision-rag/src/optivision/adapters/tokens.py", line 144, in check_retriever
-    docs = adapter.encode_documents(list(documents))
-  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 543, in encode_documents
-    encodings.extend(self.encoder.encode_pages([img], [ref]))
-                     ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 540, in encode_pages
-    emb = self.model(**batch)
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/accelerate/hooks.py", line 192, in new_forward
-    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/colpali_engine/models/qwen2_5/colqwen2_5/modeling_colqwen2_5.py", line 64, in forward
-    super()
-    ~~~~~~~
-    .forward(*args, **kwargs, use_cache=False, output_hidden_states=True, return_dict=True)
-    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py", line 939, in wrapper
-    output = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1210, in forward
-    image_embeds = self.get_image_features(pixel_values, image_grid_thw, **kwargs).pooler_output
-                   ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py", line 993, in wrapper
-    return func(*args, **translated)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py", line 939, in wrapper
-    output = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1087, in get_image_features
-    vision_outputs = self.visual(pixel_values, grid_thw=image_grid_thw, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/accelerate/hooks.py", line 192, in new_forward
-    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py", line 1068, in wrapper
-    output = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/output_capturing.py", line 262, in wrapper
-    outputs = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 456, in forward
-    hidden_states = blk(
-        hidden_states,
-    ...<3 lines>...
-        **kwargs,
-    )
-  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_layers.py", line 114, in __call__
-    return super().__call__(*args, **kwargs)
-           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1885, in _call_impl
-    return inner()
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1833, in inner
-    result = forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/accelerate/hooks.py", line 192, in new_forward
-    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 320, in forward
-    hidden_states = hidden_states + self.mlp(self.norm2(hidden_states))
-                                    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/accelerate/hooks.py", line 192, in new_forward
-    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 96, in forward
-    return self.down_proj(self.act_fn(self.gate_proj(hidden_state)) * self.up_proj(hidden_state))
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 260.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 70.81 MiB is free. Including non-PyTorch memory, this process has 14.49 GiB memory in use. Of the allocated memory 13.17 GiB is allocated by PyTorch, and 1.19 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:00<00:01, 222.58 examples/s]Generating test split:  40%|████      | 200/500 [00:00<00:00, 320.18 examples/s]Generating test split:  60%|██████    | 300/500 [00:00<00:00, 368.14 examples/s]Generating test split:  80%|████████  | 400/500 [00:01<00:00, 383.24 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 175.83 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 221.90 examples/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:05<00:05,  5.49s/it]Fetching 2 files: 100%|██████████| 2/2 [00:22<00:00, 12.48s/it]Fetching 2 files: 100%|██████████| 2/2 [00:22<00:00, 11.43s/it]
+Loading weights:   0%|          | 0/826 [00:00<?, ?it/s]Loading weights:   0%|          | 3/826 [00:00<03:38,  3.76it/s]Loading weights:  14%|█▎        | 113/826 [00:00<00:04, 162.97it/s]Loading weights:  20%|█▉        | 164/826 [00:01<00:04, 155.27it/s]Loading weights:  24%|██▍       | 198/826 [00:01<00:04, 151.13it/s]Loading weights:  27%|██▋       | 225/826 [00:01<00:04, 147.13it/s]Loading weights:  30%|██▉       | 247/826 [00:01<00:03, 146.62it/s]Loading weights:  32%|███▏      | 267/826 [00:02<00:03, 146.05it/s]Loading weights:  35%|███▍      | 285/826 [00:02<00:03, 138.04it/s]Loading weights:  36%|███▋      | 301/826 [00:02<00:03, 141.18it/s]Loading weights:  38%|███▊      | 317/826 [00:02<00:03, 128.98it/s]Loading weights:  40%|████      | 331/826 [00:02<00:04, 122.94it/s]Loading weights:  42%|████▏     | 344/826 [00:02<00:04, 110.21it/s]Loading weights:  43%|████▎     | 356/826 [00:02<00:04, 110.97it/s]Loading weights:  45%|████▍     | 368/826 [00:02<00:04, 108.10it/s]Loading weights:  46%|████▌     | 380/826 [00:03<00:04, 96.93it/s] Loading weights:  47%|████▋     | 390/826 [00:03<00:04, 95.13it/s]Loading weights:  49%|████▉     | 403/826 [00:03<00:04, 92.73it/s]Loading weights:  50%|█████     | 414/826 [00:03<00:04, 96.36it/s]Loading weights:  52%|█████▏    | 426/826 [00:03<00:04, 92.45it/s]Loading weights:  61%|██████    | 500/826 [00:03<00:01, 245.97it/s]Loading weights:  67%|██████▋   | 550/826 [00:03<00:00, 310.14it/s]Loading weights:  72%|███████▏  | 598/826 [00:03<00:00, 353.62it/s]Loading weights:  78%|███████▊  | 646/826 [00:04<00:00, 385.14it/s]Loading weights:  84%|████████▍ | 692/826 [00:04<00:00, 406.12it/s]Loading weights:  90%|█████████ | 747/826 [00:04<00:00, 447.25it/s]Loading weights:  96%|█████████▌| 794/826 [00:04<00:00, 450.51it/s]Loading weights: 100%|██████████| 826/826 [00:04<00:00, 185.57it/s]
+{"loaded": "vidore/colqwen2.5-v0.1", "device": "cuda:0", "dtype": "torch.float32", "adapter_merge_check": {"base": "vidore/colqwen2.5-base", "lora_modules": 253, "probe": "language_model.layers.0.self_attn.q_proj.weight", "max_abs_change": 0.0019483675714582205}, "loading_report": {"missing_allowed": [], "unexpected": []}, "placement": {"devices": ["0", "1"], "decoder_layers_per_device": {"0": 22, "1": 14}, "budget_bytes": [10945226342, 13290631987]}, "max_num_visual_tokens": 768}
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [747, 755, 755, 755, 755, 747, 755, 755, 755, 755, 557, 755], "vectors_per_query": [22, 22, 22, 16, 18, 22, 18, 23, 24, 17, 16, 22], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 11, "ok": true}}
+{"tag": "colqwen2.5-v0.1_docvqa_test_subsampled", "docs": 500, "vectors": 374154, "dim": 128, "queries": 451, "doc_seconds": 1458.0, "query_seconds": 25.3, "device": "cuda:0", "dtype": "torch.float32", "adapter_merge_check": {"base": "vidore/colqwen2.5-base", "lora_modules": 253, "probe": "language_model.layers.0.self_attn.q_proj.weight", "max_abs_change": 0.0019483675714582205}, "loading_report": {"missing_allowed": [], "unexpected": []}, "placement": {"devices": ["0", "1"], "decoder_layers_per_device": {"0": 22, "1": 14}, "budget_bytes": [10945226342, 13290631987]}, "max_num_visual_tokens": 768}
