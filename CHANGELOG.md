@@ -59,6 +59,14 @@
 - `notebooks/kaggle_batches/batch_13_retry.ipynb` re-runs the five models these fixes cover,
   with transformers>=5.17.
 
+### Kaggle measurement campaign, batch 07
+
+- **3 more models measured** through colpali-engine (ColQwen3_5), at their pinned revisions:
+  `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` and `vultr/VultronRetrieverCore-Qwen3.5-4.5B`
+  (float32), `vultr/VultronRetrieverPrime-Qwen3.5-8B` (float16 inference over two T4s; the
+  session had no time left for its selection study). 32 of the 65 registry models are now
+  measured; the catalogue holds 30 models and 3428 rows.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

@@ -152,7 +152,10 @@ def test_the_registry_statuses_have_not_moved():
                         "ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1",
                         # Kaggle batches 05 and 08, 2026-10-15
                         "ModernVBERT/colmodernvbert", "vidore/colpali-v1.2-hf", "vidore/colpali-v1.3-hf",
-                        "vidore/colqwen2-v1.0-hf", "TomoroAI/tomoro-colqwen3-embed-8b"}
+                        "vidore/colqwen2-v1.0-hf", "TomoroAI/tomoro-colqwen3-embed-8b",
+                        # Kaggle batch 07, 2026-10-15
+                        "vultr/VultronRetrieverFlash-Qwen3.5-0.8B", "vultr/VultronRetrieverCore-Qwen3.5-4.5B",
+                        "vultr/VultronRetrieverPrime-Qwen3.5-8B"}
     assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
 

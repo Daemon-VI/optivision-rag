@@ -279,20 +279,24 @@ _MODELS: list[ModelInfo] = [
               license="apache-2.0", revision="7901e21544bf360868ead6b384b37b3abdf119cf",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("vultr/VultronRetrieverPrime-Qwen3.5-8B", "colqwen3.5", "image", "colpali-engine:colqwen3.5", 320,
-              UNVERIFIED, "colpali-engine ColQwen3_5 per its model card; never run here; model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~730 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) over two Kaggle T4s, at the "
+              "revision below, 2026-10-15; Kaggle batch 07_qwen35_vultr; "
+              "reports/universal/campaign/vultr--VultronRetrieverPrime-Qwen3.5-8B",
               license="apache-2.0", revision="1201db5ae23bc4d5977c188748f35cf3be54c568",
               notes="the card pins a colpali-engine git commit and needs causal-conv1d and "
                     "flash-linear-attention"),
     ModelInfo("vultr/VultronRetrieverCore-Qwen3.5-4.5B", "colqwen3.5", "image", "colpali-engine:colqwen3.5", 320,
-              UNVERIFIED, "colpali-engine ColQwen3_5 per its model card; never run here; model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-15; Kaggle batch 07_qwen35_vultr; "
+              "reports/universal/campaign/vultr--VultronRetrieverCore-Qwen3.5-4.5B",
               license="apache-2.0", revision="b0857609ad6db741009a7026e02cf30bd384f54d",
               notes="the card pins a colpali-engine git commit and needs causal-conv1d and "
                     "flash-linear-attention"),
     ModelInfo("vultr/VultronRetrieverFlash-Qwen3.5-0.8B", "colqwen3.5", "image", "colpali-engine:colqwen3.5", 320,
-              UNVERIFIED, "colpali-engine ColQwen3_5 per its model card; never run here; model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-15; Kaggle batch 07_qwen35_vultr; "
+              "reports/universal/campaign/vultr--VultronRetrieverFlash-Qwen3.5-0.8B",
               license="apache-2.0", revision="6f6b6757e9ea3ad93f4f2cbd839bc6f2f0b93739",
               notes="the card pins a colpali-engine git commit and needs causal-conv1d and "
                     "flash-linear-attention"),

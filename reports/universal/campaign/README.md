@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-19 of 34 models attempted are measured.
+22 of 37 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -37,6 +37,9 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `vidore/colpali-v1.2-hf` | 05_st_small | measured | float16 | 1.46 | yes |
 | `vidore/colpali-v1.3-hf` | 05_st_small | measured | float16 | 1.58 | yes |
 | `vidore/colqwen2-v1.0-hf` | 05_st_small | measured | float16 | 1.31 | yes |
+| `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | 07_qwen35_vultr | measured | float32 | 3.91 | yes |
+| `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | 07_qwen35_vultr | measured | float32 | 2.88 | yes |
+| `vultr/VultronRetrieverPrime-Qwen3.5-8B` | 07_qwen35_vultr | measured | float16 | 1.14 | no |
 | `jinaai/jina-embeddings-v4` | 08_remote_code | incomplete: encode_docvqa failed (exit 1) | float16 | 0.02 | no |
 | `nvidia/llama-nemotron-colembed-vl-3b-v2` | 08_remote_code | incomplete: encode_docvqa failed (exit -9) | float32 | 2.3 | no |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | 08_remote_code | measured | float16 | 3.08 | yes |

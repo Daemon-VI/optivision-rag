@@ -1,0 +1,85 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s7b_selection_rules.py vec:VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled
+== VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled: 500 docs, 451 queries, metric ndcg@5
+  scored float16                                          x    2.0   25.2s
+  scored int8(per_vector)                                 x    4.0   25.4s
+  scored hierarchical_merge(0.5) > int8(per_vector)       x    7.9  156.2s
+  scored hierarchical_merge(0.33) > int8(per_vector)      x   12.0  151.4s
+  scored hierarchical_merge(0.25) > int8(per_vector)      x   15.9  149.8s
+  scored hierarchical_merge(0.15) > int8(per_vector)      x   26.4  146.1s
+  scored hierarchical_merge(0.1) > int8(per_vector)       x   39.5  143.9s
+  scored int8(per_vector)                                 x    4.0   25.4s
+  scored adaptive_merge(0.9) > int8(per_vector)           x    5.9   96.2s
+  scored adaptive_merge(0.8) > int8(per_vector)           x   10.0   60.0s
+  scored adaptive_merge(0.7) > int8(per_vector)           x   15.9   40.8s
+  scored adaptive_merge(0.6) > int8(per_vector)           x   23.9   29.8s
+  scored adaptive_merge(0.5) > int8(per_vector)           x   34.3   23.0s
+  scored adaptive_merge(0.4) > int8(per_vector)           x   48.7   18.4s
+  scored int4(mean)                                       x    7.9   26.4s
+  scored hierarchical_merge(0.5) > int4(mean)             x   15.8   13.4s
+  scored hierarchical_merge(0.33) > int4(mean)            x   23.9    9.0s
+  scored hierarchical_merge(0.25) > int4(mean)            x   31.6    6.7s
+  scored hierarchical_merge(0.15) > int4(mean)            x   52.5    4.2s
+  scored hierarchical_merge(0.1) > int4(mean)             x   78.5    2.9s
+  scored int4(mean)                                       x    7.9   26.4s
+  scored adaptive_merge(0.9) > int4(mean)                 x   11.7   18.1s
+  scored adaptive_merge(0.8) > int4(mean)                 x   19.8   10.7s
+  scored adaptive_merge(0.7) > int4(mean)                 x   31.6    6.7s
+  scored adaptive_merge(0.6) > int4(mean)                 x   47.4    4.6s
+  scored adaptive_merge(0.5) > int4(mean)                 x   68.2    3.2s
+  scored adaptive_merge(0.4) > int4(mean)                 x   96.8    2.3s
+  scored binary                                           x   32.0   24.1s
+  scored hierarchical_merge(0.5) > binary                 x   64.0   12.3s
+  scored hierarchical_merge(0.33) > binary                x   96.9    8.3s
+  scored hierarchical_merge(0.25) > binary                x  127.9    6.2s
+  scored hierarchical_merge(0.15) > binary                x  212.8    3.8s
+  scored hierarchical_merge(0.1) > binary                 x  317.9    2.7s
+  scored binary                                           x   32.0   24.2s
+  scored adaptive_merge(0.9) > binary                     x   47.3   16.7s
+  scored adaptive_merge(0.8) > binary                     x   80.3    9.8s
+  scored adaptive_merge(0.7) > binary                     x  127.9    6.2s
+  scored adaptive_merge(0.6) > binary                     x  192.1    4.2s
+  scored adaptive_merge(0.5) > binary                     x  276.4    3.0s
+  scored adaptive_merge(0.4) > binary                     x  392.1    2.2s
+  labels     calibrate() default        target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9946285519739216
+  labels     calibrate() default        target 0.97: met 0.9 (labels 0.9)  median x7.922956195216956  min 0.9604245112235867
+  labels     calibrate() default        target 0.95: met 1.0 (labels 1.0)  median x31.56788576676692  min 0.9545196713853992
+  labels     point                      target 0.99: met 0.1 (labels 0.1)  median x31.56788576676692  min 0.9469550408462157
+  labels     point                      target 0.97: met 0.45 (labels 0.45)  median x212.82821878710632  min 0.949402799029501
+  labels     point                      target 0.95: met 0.95 (labels 0.95)  median x317.93832283682406  min 0.949402799029501
+  labels     lower 0.975                target 0.99: met 0.9 (labels 0.9)  median x7.901132314780965  min 0.9698382077034325
+  labels     lower 0.975                target 0.97: met 0.75 (labels 0.75)  median x31.56788576676692  min 0.9540954816022613
+  labels     lower 0.975                target 0.95: met 0.95 (labels 0.95)  median x96.88036853928126  min 0.949402799029501
+  labels     lower 0.99                 target 0.99: met 0.9 (labels 0.9)  median x3.9751552795031055  min 0.9698382077034325
+  labels     lower 0.99                 target 0.97: met 0.75 (labels 0.75)  median x15.883216816842111  min 0.9522270505988504
+  labels     lower 0.99                 target 0.95: met 0.95 (labels 0.95)  median x88.59398425895323  min 0.9469550408462157
+  labels     lower 0.999                target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9946285519739216
+  labels     lower 0.999                target 0.97: met 0.9 (labels 0.9)  median x7.922956195216956  min 0.9604245112235867
+  labels     lower 0.999                target 0.95: met 1.0 (labels 1.0)  median x31.56788576676692  min 0.9545196713853992
+  labels     bonferroni 0.975           target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9966574423473671
+  labels     bonferroni 0.975           target 0.97: met 0.9 (labels 0.9)  median x7.922956195216956  min 0.9604245112235867
+  labels     bonferroni 0.975           target 0.95: met 1.0 (labels 1.0)  median x31.56788576676692  min 0.9578369926810675
+  labels     lower 0.975 + margin 0.01  target 0.99: met 0.95 (labels 0.95)  median x3.9751552795031055  min 0.9698382077034325
+  labels     lower 0.975 + margin 0.01  target 0.97: met 0.9 (labels 0.9)  median x7.922956195216956  min 0.9522270505988504
+  labels     lower 0.975 + margin 0.01  target 0.95: met 0.95 (labels 0.95)  median x63.95547960900621  min 0.9469550408462157
+  baseline@1 calibrate() default        target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 calibrate() default        target 0.97: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9780940313015889
+  baseline@1 calibrate() default        target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 point                      target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 point                      target 0.97: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 point                      target 0.95: met 0.35 (labels 1.0)  median x15.836934517068595  min 0.9204745559493265
+  baseline@1 lower 0.975                target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 lower 0.975                target 0.97: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 lower 0.975                target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9533839303650823
+  baseline@1 lower 0.99                 target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 lower 0.99                 target 0.97: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 lower 0.99                 target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 lower 0.999                target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 lower 0.999                target 0.97: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9780940313015889
+  baseline@1 lower 0.999                target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 bonferroni 0.975           target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 bonferroni 0.975           target 0.97: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9780940313015889
+  baseline@1 bonferroni 0.975           target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+  baseline@1 lower 0.975 + margin 0.01  target 0.99: met 1.0 (labels 1.0)  median x3.9751552795031055  min 1.0
+  baseline@1 lower 0.975 + margin 0.01  target 0.97: met 1.0 (labels 1.0)  median x3.9751552795031055  min 0.9780940313015889
+  baseline@1 lower 0.975 + margin 0.01  target 0.95: met 1.0 (labels 1.0)  median x7.901132314780965  min 0.9780940313015889
+== VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled [selection_rules] done in 1943s

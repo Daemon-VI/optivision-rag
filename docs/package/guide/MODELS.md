@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 29 measured, 8 untested, 28 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 32 measured, 8 untested, 25 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (29)
+### Measured (32)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -169,6 +169,9 @@ The registry holds 65 models: 29 measured, 8 untested, 28 unverified. The facts 
 | `vidore/colsmolvlm-v0.1` | image | 128 | `colpali-engine:colsmol` | not declared |
 | `ModernVBERT/colmodernvbert` | image | 128 | `sentence-transformers` | mit |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | image | 320 | `remote-code:tomoro` | apache-2.0 |
+| `vultr/VultronRetrieverPrime-Qwen3.5-8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
+| `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
+| `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 
 Loading notes:
 
@@ -188,6 +191,9 @@ Loading notes:
 - `vidore/colsmolvlm-v0.1`: adapter-only repository: merged explicitly over its base model on load
 - `ModernVBERT/colmodernvbert`: the colpali-engine route of the card (ColModernVBert) needs trust_remote_code; loader='colpali-engine:colmodernvbert' is available and equally unrun
 - `TomoroAI/tomoro-colqwen3-embed-8b`: runs the repository's own modelling code: pass trust_remote_code=True
+- `vultr/VultronRetrieverPrime-Qwen3.5-8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
+- `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
+- `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 
 ### Untested (8)
 
@@ -211,15 +217,12 @@ Loading notes:
 - `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
 - `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
 
-### Unverified (28)
+### Unverified (25)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 | `colbert-ir/colbertv2.0` | text | 128 | `sentence-transformers` | not declared |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
-| `vultr/VultronRetrieverPrime-Qwen3.5-8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
-| `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
-| `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `tencent/EVIE-4.5B` | image | 2048 | `sentence-transformers` | apache-2.0 |
 | `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
@@ -247,9 +250,6 @@ Loading notes:
 Loading notes:
 
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
-- `vultr/VultronRetrieverPrime-Qwen3.5-8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
-- `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
-- `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
 - `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `webAI-Official/webAI-ColVec1.1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
@@ -352,6 +352,12 @@ queries decides.
 | `vidore/colqwen2.5-v0.2` | infovqa_test_subsampled | ndcg@5 0.917 | `ward ratio=0.5 > int4` | 15.3 | 0.997 [0.992, 1.001] |
 | `vidore/colsmolvlm-v0.1` | docvqa_test_subsampled | ndcg@5 0.583 | `hierarchical_merge(0.25) > int4` | 20.4 | 1.001 [0.982, 1.019] |
 | `vidore/colsmolvlm-v0.1` | infovqa_test_subsampled | ndcg@5 0.902 | `hierarchical_merge(0.25) > int4` | 19.2 | 0.995 [0.985, 1.006] |
+| `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | docvqa_test_subsampled | ndcg@5 0.656 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.994 [0.977, 1.013] |
+| `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | infovqa_test_subsampled | ndcg@5 0.938 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.992 [0.985, 0.997] |
+| `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | docvqa_test_subsampled | ndcg@5 0.614 | `hierarchical_merge(0.33) > project(80) > int8(per_vector)` | 47.3 | 0.990 [0.971, 1.008] |
+| `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | infovqa_test_subsampled | ndcg@5 0.919 | `hierarchical_merge(0.33) > project(80) > int8(per_vector)` | 47.2 | 0.988 [0.979, 0.998] |
+| `vultr/VultronRetrieverPrime-Qwen3.5-8B` | docvqa_test_subsampled | ndcg@5 0.662 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.3 | 0.999 [0.979, 1.018] |
+| `vultr/VultronRetrieverPrime-Qwen3.5-8B` | infovqa_test_subsampled | ndcg@5 0.930 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.989 [0.980, 0.997] |
 
 Measured models without rows in the catalogue: `vidore/colSmol-256M`, `vidore/colqwen2-v1.0`. `vidore/colSmol-256M` was measured on generated corpora only, which have no fixed-pipeline study of this form; `vidore/colqwen2-v1.0` gives the same vectors as its pre-merged copy, which holds the rows.
 
