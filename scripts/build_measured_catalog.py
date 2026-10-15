@@ -1,10 +1,12 @@
 """Build ``src/optivision/presets/measured.json`` from the committed study reports.
 
 The catalogue is a copy, in one small file that ships in the wheel, of the fixed-pipeline
-rows of ``reports/universal/frontier`` (128-d and text models) and ``reports/universal/wide``
-(wide models and the ColQwen3 generation): for every measured model and dataset, each
-pipeline that was run, its compression against float32 and its retention of the float
-baseline with the bootstrap interval of the report. Nothing is computed here beyond rounding.
+rows of ``reports/universal/frontier`` (128-d and text models), ``reports/universal/wide``
+(wide models and the ColQwen3 generation) and ``reports/universal/campaign`` (the Kaggle
+measurement batches, every model whose outcome in ``campaign/outcomes.json`` is
+``measured``): for every measured model and dataset, each pipeline that was run, its
+compression against float32 and its retention of the float baseline with the bootstrap
+interval of the report. Nothing is computed here beyond rounding.
 
     python scripts/build_measured_catalog.py            # rewrite the catalogue
     python scripts/build_measured_catalog.py --check    # exit 1 if it is out of date
@@ -28,6 +30,7 @@ OUT = ROOT / "src" / "optivision" / "presets" / "measured.json"
 
 DOCVQA = "vidore/docvqa_test_subsampled"
 INFOVQA = "vidore/infovqa_test_subsampled"
+F16_NOTE = "float16 inference; the baseline is the float16-inference encoding (no float32 encoding exists)"
 
 #: (report file under reports/universal, model id, dataset, metric the retention is of, note)
 SOURCES: list[tuple[str, str, str, str, str]] = [
@@ -42,14 +45,36 @@ SOURCES: list[tuple[str, str, str, str, str]] = [
     ("wide/nemotron-colembed-vl-4b-v2_docvqa_test_subsampled.json", "nvidia/nemotron-colembed-vl-4b-v2", DOCVQA, "ndcg@5", ""),
     ("wide/nemotron-colembed-vl-4b-v2_infovqa_test_subsampled.json", "nvidia/nemotron-colembed-vl-4b-v2", INFOVQA, "ndcg@5", ""),
     ("wide/nemotron-colembed-vl-8b-v2_docvqa_test_subsampled.json", "nvidia/nemotron-colembed-vl-8b-v2", DOCVQA, "ndcg@5",
-     "float16 inference; the baseline is the float16-inference encoding (no float32 encoding exists)"),
+     F16_NOTE),
     ("wide/nemotron-colembed-vl-8b-v2_infovqa_test_subsampled.json", "nvidia/nemotron-colembed-vl-8b-v2", INFOVQA, "ndcg@5",
-     "float16 inference; the baseline is the float16-inference encoding (no float32 encoding exists)"),
+     F16_NOTE),
     ("wide/colqwen3.5-4.5B-v3_docvqa_test_subsampled.json", "athrael-soju/colqwen3.5-4.5B-v3", DOCVQA, "ndcg@5", ""),
     ("wide/colqwen3.5-4.5B-v3_infovqa_test_subsampled.json", "athrael-soju/colqwen3.5-4.5B-v3", INFOVQA, "ndcg@5", ""),
     ("wide/tomoro-colqwen3-embed-4b_docvqa_test_subsampled.json", "TomoroAI/tomoro-colqwen3-embed-4b", DOCVQA, "ndcg@5", ""),
     ("wide/tomoro-colqwen3-embed-4b_infovqa_test_subsampled.json", "TomoroAI/tomoro-colqwen3-embed-4b", INFOVQA, "ndcg@5", ""),
 ]
+
+TEXT_DATASETS = {"scifact": "BeIR/scifact"}
+
+
+def campaign_sources() -> list[tuple[str, str, str, str, str]]:
+    """The study reports of every model the Kaggle campaign measured, as ``SOURCES`` rows."""
+    path = REPORTS / "campaign" / "outcomes.json"
+    if not path.exists():
+        return []
+    rows = []
+    for model_id, rec in sorted(json.loads(path.read_text(encoding="utf-8")).items()):
+        if rec["outcome"] != "measured":
+            continue
+        short = model_id.split("/")[-1]
+        datasets = ([(DOCVQA, "ndcg@5"), (INFOVQA, "ndcg@5")] if rec["kind"] == "image"
+                    else [(TEXT_DATASETS["scifact"], "ndcg@10")])
+        note = F16_NOTE if rec.get("dtype") == "float16" else ""
+        for dataset, metric in datasets:
+            tag = f"{short}_{dataset.split('/')[-1]}"
+            rows.append((f"campaign/{rec['folder']}/wide/{tag}.json", model_id, dataset, metric, note))
+    return rows
+
 
 NOTE = ("Development measurements of fixed pipelines on the named dataset: retention is the "
         "pipeline's mean metric over the float baseline's, on all queries of that dataset, with "
@@ -103,7 +128,7 @@ def _rows(report: dict, metric: str) -> list[dict]:
 def build() -> dict:
     models: dict[str, dict] = {}
     sources = {}
-    for rel, model_id, dataset, metric, note in SOURCES:
+    for rel, model_id, dataset, metric, note in [*SOURCES, *campaign_sources()]:
         path = REPORTS / rel
         report = json.loads(path.read_text(encoding="utf-8"))
         sources[f"reports/universal/{rel}"] = _sha256_lf(path)

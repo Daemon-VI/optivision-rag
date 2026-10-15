@@ -98,6 +98,7 @@ def main() -> int:
         "adapter_merge_check": getattr(encoder, "adapter_merge_check", None),
         "loading_report": getattr(encoder, "loading_report", None),
         "placement": getattr(encoder, "placement", None),
+        "max_num_visual_tokens": getattr(encoder, "max_num_visual_tokens", None),
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 

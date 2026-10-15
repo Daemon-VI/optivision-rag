@@ -177,7 +177,8 @@ class _TokenEncoder:
     def info(self) -> dict[str, Any]:
         return {"model": self.checkpoint, "revision": self.revision, "dim": self.dim, "loader": self.loader,
                 "device": self.device, "dtype": str(self.torch_dtype), "loading_report": self.loading_report,
-                "adapter_merge_check": self.adapter_merge_check, "placement": self.placement}
+                "adapter_merge_check": self.adapter_merge_check, "placement": self.placement,
+                **({"max_num_visual_tokens": cap} if (cap := getattr(self, "max_num_visual_tokens", None)) else {})}
 
     def _images(self, images: list[Any]) -> list[np.ndarray]:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -197,7 +198,8 @@ class ColEngineTokenEncoder(_TokenEncoder):
 
     def __init__(self, model_name: str, family: str, device: str = "auto", dtype: str = "auto",
                  multi_gpu: bool = False, expected_dim: int | None = None, page_batch_size: int = 1,
-                 query_batch_size: int = 8, model: Any = None, processor: Any = None) -> None:
+                 query_batch_size: int = 8, model: Any = None, processor: Any = None,
+                 max_num_visual_tokens: int | None = None) -> None:
         if family not in COLENGINE_FAMILIES:
             raise ValueError(f"unknown colpali-engine family {family!r}; choose from {sorted(COLENGINE_FAMILIES)}")
         self.loader = f"colpali-engine:{family}"
@@ -206,6 +208,7 @@ class ColEngineTokenEncoder(_TokenEncoder):
         self.expected_dim = expected_dim
         self.page_batch_size = max(1, int(page_batch_size))
         self.query_batch_size = max(1, int(query_batch_size))
+        self.max_num_visual_tokens = max_num_visual_tokens
         if model is None or processor is None:
             try:
                 from colpali_engine import models as cpm
@@ -228,7 +231,8 @@ class ColEngineTokenEncoder(_TokenEncoder):
                 model, self.device, self.placement = place_model(model, self.device, multi_gpu)
                 model = model.eval()
             if processor is None:
-                processor = getattr(cpm, proc_cls_name).from_pretrained(model_name)
+                processor = getattr(cpm, proc_cls_name).from_pretrained(
+                    model_name, **({"max_num_visual_tokens": int(max_num_visual_tokens)} if max_num_visual_tokens else {}))
         self.model = model
         self.processor = processor
 

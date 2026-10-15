@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -16,14 +19,21 @@ from optivision.types import PageRef
 
 from .conftest import make_page
 
+CAMPAIGN_OUTCOMES = Path(__file__).resolve().parents[1] / "reports" / "universal" / "campaign" / "outcomes.json"
 
+
+@pytest.mark.skipif(not CAMPAIGN_OUTCOMES.exists(), reason="needs the repository's reports (not in an installed wheel)")
 def test_measured_models_are_exactly_the_benchmarked_ones():
     """The registry must not claim more than the reports support."""
     measured = {m.model_id for m in supported_models(MEASURED)}
+    campaign = {m for m, r in json.loads(CAMPAIGN_OUTCOMES.read_text(encoding="utf-8")).items()
+                if r["outcome"] == "measured"}
     assert measured == {"vidore/colpali-v1.3-merged", "vidore/colSmol-256M", "answerdotai/answerai-colbert-small-v1",
                         "vidore/colqwen2-v1.0-merged", "vidore/colqwen2-v1.0", "vidore/colqwen2.5-v0.2",
                         "nvidia/nemotron-colembed-vl-4b-v2", "nvidia/nemotron-colembed-vl-8b-v2",
-                        "athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"}
+                        "athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"} | campaign
+    for model_id in campaign:  # each one points at its own campaign folder
+        assert f"reports/universal/campaign/{model_id.replace('/', '--')}" in MODELS[model_id].evidence
 
 
 def test_every_entry_says_where_its_status_comes_from():

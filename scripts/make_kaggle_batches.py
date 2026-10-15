@@ -81,7 +81,17 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
             "LiquidAI/LFM2-ColBERT-350M")] + [
         {"model": "LiquidAI/LFM2.5-ColBERT-350M", "kind": "text", "trust_remote_code": True},
         {"model": "jinaai/jina-colbert-v2", "kind": "text", "trust_remote_code": True}]),
+    # after batches 01-04 (2026-10-14): two ColQwen2.5 checkpoints ran out of memory at their
+    # 16384-token page limit (now capped at the 768 their cards state) and ColNetraEmbed's
+    # nested key names were refused (now mapped); see reports/universal/campaign
+    ("12_retry", "re-runs after loader fixes: two ColQwen2.5 3B checkpoints, ColNetraEmbed", [], [
+        {"model": "vidore/colqwen2.5-v0.1", **F32},
+        {"model": "Metric-AI/ColQwen2.5-3b-multilingual-v1.0", **F32},
+        {"model": "Cognitive-Lab/ColNetraEmbed", **F32}]),
 ]
+
+#: in a batch that ran, but no batch can measure them (the reason is in the registry evidence)
+UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0"}
 
 
 def md(text: str) -> dict:
@@ -174,10 +184,13 @@ def main() -> int:
     from optivision.adapters import MODELS
 
     unmeasured = {m.model_id for m in MODELS.values() if m.status != "measured"}
-    missing, extra = unmeasured - set(seen), set(seen) - unmeasured
-    assert len(seen) == len(set(seen)), "a model is in two batches"
-    assert not missing and not extra, (missing, extra)
-    print(f"wrote {len(BATCHES)} notebooks covering {len(seen)} models to {OUT.relative_to(ROOT)}")
+    retried = {m["model"] for name, _, _, models in BATCHES if name.endswith("_retry") for m in models}
+    repeated = {m for m in seen if seen.count(m) > 1}
+    missing, unknown = unmeasured - set(seen) - UNLOADABLE, set(seen) - set(MODELS)
+    assert repeated <= retried, f"in two batches without a retry: {repeated - retried}"
+    assert not missing and not unknown, (missing, unknown)
+    print(f"wrote {len(BATCHES)} notebooks covering {len(set(seen))} models to {OUT.relative_to(ROOT)}; "
+          f"{len(unmeasured)} of the registry still unmeasured")
     return 0
 
 

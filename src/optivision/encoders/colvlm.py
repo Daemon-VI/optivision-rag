@@ -136,24 +136,72 @@ def _key_mapping(model_cls) -> dict[str, str] | None:
     return mapping
 
 
+def _segment_mapping(missing: list[str], unexpected: list[str]) -> dict[str, str] | None:
+    """Rules that drop one dotted segment, if they turn the unmatched keys into exactly the missing ones.
+
+    A checkpoint saved under an older transformers can nest a sub-model one level deeper
+    than the installed class (``language_model.model.layers.*`` for ``language_model.layers.*``,
+    seen with Cognitive-Lab/ColNetraEmbed). Which levels differ depends on the installed
+    version, so the rules are read off the two key lists instead of being fixed. ``None``
+    unless every unmatched key maps onto a missing key and every missing key is covered.
+    """
+    targets = set(missing)
+    rules: dict[str, str] = {}
+    for key in unexpected:
+        parts = key.split(".")
+        for i in range(1, len(parts) - 1):
+            if ".".join(parts[:i] + parts[i + 1 :]) in targets:
+                prefix = ".".join(parts[:i])
+                rules[rf"^{re.escape(prefix)}\.{re.escape(parts[i])}\."] = prefix + "."
+                break
+        else:
+            return None
+
+    def apply(key: str) -> str:
+        for pattern, replacement in rules.items():
+            new, n = re.subn(pattern, replacement, key)
+            if n:
+                return new
+        return key
+
+    return rules if rules and {apply(k) for k in unexpected} == targets else None
+
+
+def _load_with_info(model_cls, checkpoint: str, dtype, mapping: dict[str, str] | None, extra: dict[str, Any]):
+    kwargs: dict[str, Any] = {"output_loading_info": True, **extra}
+    if mapping is not None:
+        kwargs["key_mapping"] = mapping
+    # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
+    try:
+        return model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+    except TypeError:
+        return model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+
+
 def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
     """Load and refuse any weight that the checkpoint did not provide.
 
     transformers fills a weight it finds no tensor for with random values and only
     logs it. For a retrieval encoder that yields complete, plausible, meaningless
-    vectors, so a missing weight is an error here.
+    vectors, so a missing weight is an error here. When the missing weights are exactly
+    the checkpoint's unmatched tensors one nesting level off (:func:`_segment_mapping`),
+    the model is loaded once more with those names mapped, and the rules are recorded in
+    ``loading_report["key_remap"]``.
     """
-    kwargs: dict[str, Any] = {"output_loading_info": True, **extra}
     mapping = _key_mapping(model_cls)
-    if mapping is not None:
-        kwargs["key_mapping"] = mapping
-    # transformers>=5 renamed `torch_dtype` to `dtype`; support both.
-    try:
-        model, info = model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
-    except TypeError:
-        model, info = model_cls.from_pretrained(checkpoint, torch_dtype=dtype, **kwargs)
+    model, info = _load_with_info(model_cls, checkpoint, dtype, mapping, extra)
     missing = [k for k in info.get("missing_keys", []) if not _ALLOWED_MISSING.search(k)]
     unexpected = list(info.get("unexpected_keys", []))
+    remap = _segment_mapping(missing, unexpected) if missing else None
+    if remap:
+        del model
+        if mapping is None:
+            mapping = {}
+            for klass in reversed(model_cls.__mro__):
+                mapping.update(getattr(klass, "_checkpoint_conversion_mapping", None) or {})
+        model, info = _load_with_info(model_cls, checkpoint, dtype, {**mapping, **remap}, extra)
+        missing = [k for k in info.get("missing_keys", []) if not _ALLOWED_MISSING.search(k)]
+        unexpected = list(info.get("unexpected_keys", []))
     if missing:
         raise RuntimeError(
             f"{checkpoint}: {len(missing)} weights were not in the checkpoint and would be random "
@@ -162,6 +210,8 @@ def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
             "transformers / colpali-engine versions."
         )
     model.loading_report = {"missing_allowed": list(info.get("missing_keys", [])), "unexpected": unexpected}
+    if remap:
+        model.loading_report["key_remap"] = remap
     return model
 
 
@@ -341,6 +391,7 @@ class ColVLMEncoder(BaseEncoder):
         dtype: str = "auto",
         query_batch_size: int = 16,
         multi_gpu: bool = False,
+        max_num_visual_tokens: int | None = None,
     ) -> None:
         if backend not in BACKENDS:
             raise ValueError(f"unknown backend {backend!r}; choose from {sorted(BACKENDS)}")
@@ -379,7 +430,11 @@ class ColVLMEncoder(BaseEncoder):
                 "adapter-only repo, point --model at the merged checkpoint instead."
             )
         self.model = self._place(model, multi_gpu).eval()
-        self.processor = proc_cls.from_pretrained(checkpoint)
+        # colpali-engine caps the page resolution only when asked; otherwise the checkpoint's
+        # preprocessor config decides (Qwen's default allows 16384 visual tokens per page).
+        self.max_num_visual_tokens = max_num_visual_tokens
+        self.processor = proc_cls.from_pretrained(
+            checkpoint, **({"max_num_visual_tokens": int(max_num_visual_tokens)} if max_num_visual_tokens else {}))
         self._dim: int | None = None
         self._image_token_id = self._find_image_token_id()
 

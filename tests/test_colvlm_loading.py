@@ -65,6 +65,34 @@ def test_loader_maps_every_tensor_and_refuses_partial_loads(tmp_path):
         _from_pretrained(colpali_models.ColQwen2, str(broken), torch.float32)
 
 
+def test_segment_mapping_only_when_it_accounts_for_every_key():
+    from optivision.encoders.colvlm import _segment_mapping
+
+    missing = ["language_model.layers.0.w", "language_model.norm.weight"]
+    unexpected = ["language_model.model.layers.0.w", "language_model.model.norm.weight"]
+    assert _segment_mapping(missing, unexpected) == {r"^language_model\.model\.": "language_model."}
+    # a key that maps onto nothing, or a missing key nothing maps onto: no rules
+    assert _segment_mapping(missing, [*unexpected, "other.extra.bias"]) is None
+    assert _segment_mapping([*missing, "custom_text_proj.weight"], unexpected) is None
+
+
+def test_loader_maps_a_checkpoint_nested_one_level_deeper(tmp_path):
+    # Cognitive-Lab/ColNetraEmbed stores its language model as `language_model.model.*`
+    state = _tiny_colqwen2_checkpoint(tmp_path)
+    nested = {("language_model.model." + k[len("language_model."):]) if k.startswith("language_model.") else k:
+              v.detach().clone().contiguous() for k, v in state.items()}
+    deep = tmp_path / "deep"
+    deep.mkdir()
+    safetensors_torch.save_file(nested, str(deep / "model.safetensors"))
+    (deep / "config.json").write_text((tmp_path / "config.json").read_text())
+    model = _from_pretrained(colpali_models.ColQwen2, str(deep), torch.float32)
+    loaded = model.state_dict()
+    for key, value in state.items():
+        assert torch.equal(loaded[key], value), key
+    assert model.loading_report["key_remap"] == {r"^language_model\.model\.": "language_model."}
+    assert model.loading_report["unexpected"] == []
+
+
 def test_multi_gpu_map_never_splits_a_decoder_layer(tmp_path):
     from optivision.encoders.colvlm import layer_device_map
 

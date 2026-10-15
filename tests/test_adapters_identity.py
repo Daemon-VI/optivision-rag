@@ -24,13 +24,13 @@ from .conftest import make_page
 STATUSES = {
     "vidore/colpali-v1.3-merged": "measured",
     "vidore/colSmol-256M": "measured",
-    "vidore/colSmol-500M": "untested",
+    "vidore/colSmol-500M": "measured",  # Kaggle batch 02, 2026-10-14 (reports/universal/campaign)
     "vidore/colqwen2-v1.0-merged": "measured",
     "vidore/colqwen2-v1.0": "measured",
     "vidore/colqwen2.5-v0.2": "measured",
     "nvidia/nemotron-colembed-vl-4b-v2": "measured",
     "nvidia/nemotron-colembed-vl-8b-v2": "measured",  # run committed 2026-10-12 (reports/universal/wide)
-    "nomic-ai/colnomic-embed-multimodal-7b": "untested",  # its card loads it with the measured ColQwen2_5 class
+    "nomic-ai/colnomic-embed-multimodal-7b": "measured",  # Kaggle batch 04, 2026-10-14 (reports/universal/campaign)
     "colbert-ir/colbertv2.0": "unverified",
     "answerdotai/answerai-colbert-small-v1": "measured",
     "lightonai/GTE-ModernColBERT-v1": "untested",  # passed check_retriever here 2026-10-12
@@ -143,7 +143,13 @@ def test_the_registry_statuses_have_not_moved():
     assert {k: statuses[k] for k in STATUSES} == STATUSES
     added = {k: v for k, v in statuses.items() if k not in STATUSES}
     measured = {k for k, v in added.items() if v == "measured"}
-    assert measured == {"athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"}
+    assert measured == {"athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b",
+                        # Kaggle batches 01-04, 2026-10-14 (reports/universal/campaign)
+                        "vidore/colpali", "vidore/colpali-v1.1", "vidore/colpali-v1.2", "vidore/colpali-v1.2-merged",
+                        "vidore/colpali-v1.3", "vidore/colsmolvlm-v0.1", "vidore/colqwen2-v0.1",
+                        "nomic-ai/colnomic-embed-multimodal-3b", "tsystems/colqwen2.5-3b-multilingual-v1.0",
+                        "tsystems/colqwen2.5-3b-multilingual-v1.0-merged", "vidore/colqwen-omni-v0.1",
+                        "ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1"}
     assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
 
@@ -153,8 +159,8 @@ def test_an_entry_that_was_not_measured_here_says_so_and_names_its_revision():
         if info.model_id in STATUSES:
             continue
         assert info.revision and len(info.revision) == 40, info.model_id
-        if info.status != "measured":
-            assert "never" in info.evidence, info.model_id  # "never encoded here" / "never run here"
+        if info.status != "measured":  # "never encoded here", or a failed run that says so
+            assert any(w in info.evidence for w in ("never", "not yet re-run", "cannot be loaded")), info.model_id
         assert info.dimension is None or info.dimension > 0
     without_width = [m.model_id for m in supported_models() if m.dimension is None]
     assert without_width == ["nvidia/llama-nemoretriever-colembed-1b-v1",

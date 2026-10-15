@@ -76,6 +76,9 @@ class ModelInfo:
     license: str | None = None  # as the model repository declares it; check it before use
     revision: str | None = None  # the commit the facts of this entry were read from or measured at
     notes: str = ""  # what a caller has to know to load it (extra packages, arguments)
+    #: keyword arguments load_adapter passes to the loader unless the caller gives them, for a
+    #: setting the model card states but the repository files do not (as (name, value) pairs)
+    load_options: tuple[tuple[str, Any], ...] = ()
 
 
 _MODELS: list[ModelInfo] = [
@@ -84,7 +87,10 @@ _MODELS: list[ModelInfo] = [
     ModelInfo("vidore/colSmol-256M", "colsmol", "image", "colpali-engine:colsmol", 128,
               MEASURED, "E1/E4: reports/colsmol*; replayed 2026-09-27"),
     ModelInfo("vidore/colSmol-500M", "colsmol", "image", "colpali-engine:colsmol-500m", 128,
-              UNTESTED, "same colpali-engine class as ColSmol-256M; never encoded here"),
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~890 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-14; Kaggle batch 02_colqwen_small; "
+              "reports/universal/campaign/vidore--colSmol-500M",
+              revision="0aaa9726104ce485884c7b8faa8a58a72d5fdbe7"),
     ModelInfo("vidore/colqwen2-v1.0-merged", "colqwen", "image", "colpali-engine:colqwen2", 128,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each), encoded 2026-10-01 on a Kaggle T4 in "
               "float32; reports/universal/*/colqwen2-v1.0-merged_* (docs/UNIVERSAL.md, R11)"),
@@ -119,8 +125,10 @@ _MODELS: list[ModelInfo] = [
               license="apache-2.0", revision="13517a29e8c5e408f7f2684337ed407df3acb212",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("nomic-ai/colnomic-embed-multimodal-7b", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2 (its model "
-              "card loads it that way); never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) over two Kaggle T4s, at the "
+              "revision below, 2026-10-14; Kaggle batch 04_colqwen_7b; "
+              "reports/universal/campaign/nomic-ai--colnomic-embed-multimodal-7b",
               license="apache-2.0", revision="09dbc9502b66605d5be56d2226019b49c9fd3293",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("colbert-ir/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
@@ -133,30 +141,35 @@ _MODELS: list[ModelInfo] = [
               "6.1.0, CPU: 8 of 8 queries ranked their own document first, 128-d unit-norm "
               "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
               "measured here; also loads with loader='pylate' (the same check passed with PyLate)"),
-    # ---- added 2026-10-12: facts read from each model's card and repository files; none was benchmarked here
+    # ---- added 2026-10-12: facts read from each model's card and repository files; those measured since
+    # ---- (Kaggle campaign, reports/universal/campaign) say so in their evidence
     ModelInfo("vidore/colpali", "colpali", "image", "colpali-engine:colpali", 128,
-              UNTESTED, "same colpali-engine class (ColPali) as the measured vidore/colpali-v1.3-merged; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 01_colpali; "
+              "reports/universal/campaign/vidore--colpali",
               license="mit", revision="7754422bfa37f8e3cd771e13d4d7f07de3103c95",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colpali-v1.1", "colpali", "image", "colpali-engine:colpali", 128,
-              UNTESTED, "same colpali-engine class (ColPali) as the measured vidore/colpali-v1.3-merged; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 01_colpali; "
+              "reports/universal/campaign/vidore--colpali-v1.1",
               license="mit", revision="855a60dd9e466987f27c385609710152f8868f67",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colpali-v1.2", "colpali", "image", "colpali-engine:colpali", 128,
-              UNTESTED, "same colpali-engine class (ColPali) as the measured vidore/colpali-v1.3-merged; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 01_colpali; "
+              "reports/universal/campaign/vidore--colpali-v1.2",
               license="mit", revision="6e6cf48566f6fbb8eb429a4bf90f39006d703317",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colpali-v1.2-merged", "colpali", "image", "colpali-engine:colpali", 128,
-              UNTESTED, "same colpali-engine class (ColPali) as the measured vidore/colpali-v1.3-merged; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 01_colpali; "
+              "reports/universal/campaign/vidore--colpali-v1.2-merged",
               license="gemma", revision="cd3977f763d2495ec7cfb605fb9f5aec65330509"),
     ModelInfo("vidore/colpali-v1.3", "colpali", "image", "colpali-engine:colpali", 128,
-              UNTESTED, "same colpali-engine class (ColPali) as the measured vidore/colpali-v1.3-merged; "
-              "never encoded here (the measured checkpoint is the pre-merged copy of this "
-              "adapter); model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1030 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 01_colpali; "
+              "reports/universal/campaign/vidore--colpali-v1.3",
               license="mit", revision="b5c6dd62125326e6f0b540c1f7b36e901cdc0a11",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colpali-v1.2-hf", "colpali", "image", "sentence-transformers", 128,
@@ -174,8 +187,9 @@ _MODELS: list[ModelInfo] = [
               notes="transformers-native weights (ColPaliForRetrieval), not a colpali-engine "
                     "checkpoint"),
     ModelInfo("vidore/colqwen2-v0.1", "colqwen", "image", "colpali-engine:colqwen2", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2) as the measured vidore/colqwen2-v1.0; never "
-              "encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-14; Kaggle batch 02_colqwen_small; "
+              "reports/universal/campaign/vidore--colqwen2-v0.1",
               license="apache-2.0", revision="38b8ebb6198e2704bc24fe0027b3743f25f03bfc",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("vidore/colqwen2-v1.0-hf", "colqwen", "image", "sentence-transformers", 128,
@@ -186,46 +200,64 @@ _MODELS: list[ModelInfo] = [
               notes="transformers-native weights (ColQwen2ForRetrieval), not a colpali-engine "
                     "checkpoint"),
     ModelInfo("vidore/colqwen2.5-v0.1", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; loads and "
+              "merges (Kaggle 2026-10-14) but ran a T4 out of memory on one page at the checkpoint's own "
+              "limit of 16384 visual tokens; pages are now capped at 768 as its model card states, not yet "
+              "re-run; reports/universal/campaign/vidore--colqwen2.5-v0.1",
               license="mit", revision="4379ecfd4c9446836ad0ef4dd7390b1c748f68d8",
-              notes="adapter-only repository: merged explicitly over its base model on load"),
+              notes="adapter-only repository: merged explicitly over its base model on load; pages capped at 768 "
+              "visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of "
+              "memory)",
+              load_options=(("max_num_visual_tokens", 768),)),
     ModelInfo("vidore/colqwen-omni-v0.1", "colqwen", "image", "colpali-engine:colqwen2.5-omni", 128,
-              UNVERIFIED, "colpali-engine ColQwen2_5Omni per its model card; token-vector loader written "
-              "against the card, never run here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1020 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 03_colqwen_multilingual; "
+              "reports/universal/campaign/vidore--colqwen-omni-v0.1",
               license="mit", revision="c0f50696f483b12247c3a4bc23a524b29aba2c13",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("nomic-ai/colnomic-embed-multimodal-3b", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1200 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 02_colqwen_small; "
+              "reports/universal/campaign/nomic-ai--colnomic-embed-multimodal-3b",
               license=None, revision="86627b4a9b0cade577851a70afa469084f9863a4",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("tsystems/colqwen2.5-3b-multilingual-v1.0", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-14; Kaggle batch 03_colqwen_multilingual; "
+              "reports/universal/campaign/tsystems--colqwen2.5-3b-multilingual-v1.0",
               license="mit", revision="d5bd3db7ca57a1de3dc862828f343904ca07efd9",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("tsystems/colqwen2.5-3b-multilingual-v1.0-merged", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~740 vectors/page), float32 over two Kaggle T4s,"
+              " at the revision below, 2026-10-14; Kaggle batch 03_colqwen_multilingual; "
+              "reports/universal/campaign/tsystems--colqwen2.5-3b-multilingual-v1.0-merged",
               license="mit", revision="db0d27eb032de3fa5bcd626a6558e7a560a2beb8"),
     ModelInfo("Metric-AI/ColQwen2.5-3b-multilingual-v1.0", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; loads and "
+              "merges (Kaggle 2026-10-14) but ran a T4 out of memory on one page at the checkpoint's own "
+              "limit of 16384 visual tokens; pages are now capped at 768 as its model card states, not yet "
+              "re-run; reports/universal/campaign/Metric-AI--ColQwen2.5-3b-multilingual-v1.0",
               license="mit", revision="e2a1c05d053dcf4ad6e39b6c48ced9d6a81071f0",
-              notes="adapter-only repository: merged explicitly over its base model on load"),
+              notes="adapter-only repository: merged explicitly over its base model on load; pages capped at 768 "
+              "visual tokens as the model card states (its preprocessor config allows 16384, which runs a T4 out of "
+              "memory)",
+              load_options=(("max_num_visual_tokens", 768),)),
     ModelInfo("Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "cannot be loaded: its adapter names the base model Metric-AI/colqwen2.5-7b-base, which is "
+              "not on the Hugging Face Hub (Kaggle 2026-10-14; checked again 2026-10-15); "
+              "reports/universal/campaign/Metric-AI--ColQwen2.5-7b-multilingual-v1.0",
               license="mit", revision="8874f274c038e7ddd093b5ea4b33218db710fa5f",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
-              UNTESTED, "same colpali-engine class (ColQwen2_5) as the measured vidore/colqwen2.5-v0.2; "
-              "never encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~980 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) over two Kaggle T4s, at the "
+              "revision below, 2026-10-14; Kaggle batch 04_colqwen_7b; "
+              "reports/universal/campaign/ApsaraStackMaaS--EvoQwen2.5-VL-Retriever-7B-v1",
               license="apache-2.0", revision="b4c6d894958789e861db16d444cd811b8eb1be75"),
     ModelInfo("vidore/colsmolvlm-v0.1", "colsmol", "image", "colpali-engine:colsmol", 128,
-              UNTESTED, "same colpali-engine class (ColIdefics3) as the measured vidore/colSmol-256M; never "
-              "encoded here; model card and repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1210 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-14; Kaggle batch 02_colqwen_small; "
+              "reports/universal/campaign/vidore--colsmolvlm-v0.1",
               license=None, revision="c14f4090e6ac69f0420d4ddb4425d28f8cd9cc80",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("ModernVBERT/colmodernvbert", "colmodernvbert", "image", "sentence-transformers", 128,
@@ -309,8 +341,10 @@ _MODELS: list[ModelInfo] = [
               "read 2026-10-12",
               license="apache-2.0", revision="ad4c17419c28745c3b3045981b0d8abb72cd142b"),
     ModelInfo("Cognitive-Lab/ColNetraEmbed", "colgemma", "image", "colpali-engine:colgemma3", 128,
-              UNVERIFIED, "colpali-engine ColGemma3 per its model card; never run here; model card and "
-              "repository files read 2026-10-12",
+              UNVERIFIED, "colpali-engine ColGemma3 per its model card; the load was refused on Kaggle 2026-10-14 "
+              "because the checkpoint stores its language model one level deeper (language_model.model.*) "
+              "than ColGemma3 expects; the loader now maps such keys when that accounts for every one of "
+              "them, not yet re-run; reports/universal/campaign/Cognitive-Lab--ColNetraEmbed",
               license="gemma", revision="a27fe0bdcf65a54116393853621f7f80e3cd9ca3",
               notes="the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali)"),
     ModelInfo("ibm-granite/granite-vision-3.3-2b-embedding", "granite-vision", "image", "remote-code:processor", 128,
@@ -587,6 +621,9 @@ class PageEncoderAdapter(EncoderAdapter):
         extra = {"encoder": name} if name else {}
         if info is not None:
             extra["family"] = info.family
+        cap = _positive_int(getattr(enc, "max_num_visual_tokens", None))
+        if cap is not None:  # a resolution cap changes the vectors, so it is part of the identity
+            extra["max_num_visual_tokens"] = str(cap)
         return EncoderIdentity(
             model_id=model_id,
             revision=_text(getattr(enc, "revision", None)),
@@ -719,6 +756,8 @@ def load_adapter(model_id: str, loader: str | None = None, **kwargs: Any) -> Enc
     info = MODELS.get(model_id)
     name = loader if loader is not None else (info.loader if info is not None else "sentence-transformers")
     width = info.dimension if info is not None else None
+    for key, value in info.load_options if info is not None else ():
+        kwargs.setdefault(key, value)
     if name.startswith("colpali-engine:"):
         from ..encoders.colvlm import BACKENDS
 

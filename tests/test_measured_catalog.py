@@ -85,7 +85,7 @@ def test_the_result_is_a_copy_and_an_unmeasured_model_is_an_error():
     next(iter(first.values()))["rows"].clear()
     assert next(iter(measured_results("vidore/colqwen2.5-v0.2").values()))["rows"]
     with pytest.raises(KeyError, match="no measured"):
-        measured_results("vidore/colSmol-500M")
+        measured_results("Metric-AI/ColQwen2.5-7b-multilingual-v1.0")
     with pytest.raises(KeyError, match="was not measured on"):
         measured_results("vidore/colqwen2.5-v0.2", "BeIR/scifact")
     assert list(measured_results("vidore/colqwen2.5-v0.2", "vidore/docvqa_test_subsampled")) == [
@@ -137,7 +137,7 @@ def test_the_models_command_shows_one_model_with_its_caveat():
     assert shown.exit_code == 0 and "in-sample" in shown.output and "certify" in shown.output
     detail = json.loads(runner.invoke(app, ["models", "vidore/colqwen2.5-v0.2", "--json"]).output)
     assert detail["status"] == "measured" and detail["shortlist"] and len(detail["measured"]) == 2
-    unmeasured = runner.invoke(app, ["models", "vidore/colSmol-500M"])
+    unmeasured = runner.invoke(app, ["models", "Metric-AI/ColQwen2.5-7b-multilingual-v1.0"])
     assert unmeasured.exit_code == 0 and "No fixed-pipeline measurements" in unmeasured.output
     assert runner.invoke(app, ["models", "nobody/nothing"]).exit_code == 2
 

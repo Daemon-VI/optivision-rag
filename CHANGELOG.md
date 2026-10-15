@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+### Kaggle measurement campaign, batches 01-04
+
+- **14 more models measured** on ViDoRe V1 DocVQA + InfoVQA (500 pages each) over two Kaggle
+  T4s, at the revisions pinned in the registry: `vidore/colpali`, `colpali-v1.1`, `-v1.2`,
+  `-v1.2-merged`, `-v1.3`, `vidore/colsmolvlm-v0.1`, `vidore/colSmol-500M`,
+  `vidore/colqwen2-v0.1`, `vidore/colqwen-omni-v0.1`, `nomic-ai/colnomic-embed-multimodal-3b`
+  and `-7b` (float16 inference), `tsystems/colqwen2.5-3b-multilingual-v1.0` and its `-merged`
+  copy, `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` (float16 inference). Their registry
+  status is `measured` and the catalogue (`presets/measured.json`) holds their fixed-pipeline
+  rows: 22 models, 2484 rows. 24 of the 65 registry models are measured. Records:
+  `reports/universal/campaign/`, one folder per model plus `outcomes.json`.
+- **Four failures are recorded, not hidden.** `vidore/colqwen2.5-v0.1` and
+  `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` ran a T4 out of memory on one page at their
+  checkpoints' own page-size limit (16384 visual tokens). `Cognitive-Lab/ColNetraEmbed`'s load
+  was refused because its language-model keys are nested one level deeper than ColGemma3
+  expects. `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` cannot be loaded at all: its adapter
+  names a base model that is not on the Hugging Face Hub (now `unverified`).
+- **Page-resolution cap.** `ColVLMEncoder` and `ColEngineTokenEncoder` take
+  `max_num_visual_tokens`. Registry entries can carry `load_options`, which `load_adapter`
+  passes unless the caller overrides them. The two ColQwen2.5 checkpoints above get the
+  768-token cap their model cards state. A cap set on an encoder is part of the encoder
+  identity.
+- **Nested checkpoint keys.** When the weights a load leaves missing are exactly the
+  checkpoint's unmatched tensors one nesting level off, the loader reloads once with those
+  names mapped and records the rules in `loading_report["key_remap"]`. Any other mismatch is
+  still an error.
+- `scripts/ingest_campaign.py` copies a batch's `results_<batch>.zip` into the repository.
+  `scripts/build_measured_catalog.py` reads `campaign/outcomes.json`. A retry notebook,
+  `notebooks/kaggle_batches/batch_12_retry.ipynb`, re-runs the three models the fixes cover.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

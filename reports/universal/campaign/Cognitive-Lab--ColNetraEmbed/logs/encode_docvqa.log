@@ -1,0 +1,59 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py Cognitive-Lab/ColNetraEmbed vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 4 --multi-gpu
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Cognitive-Lab/ColNetraEmbed: registry status unverified
+Loading weights:   0%|          | 0/441 [00:00<?, ?it/s]Loading weights:  14%|█▍        | 61/441 [00:00<00:00, 572.05it/s]Loading weights:  32%|███▏      | 143/441 [00:00<00:00, 587.85it/s]Loading weights:  54%|█████▎    | 237/441 [00:00<00:00, 718.65it/s]Loading weights:  72%|███████▏  | 317/441 [00:00<00:00, 686.68it/s]Loading weights:  90%|█████████ | 397/441 [00:00<00:00, 688.49it/s]Loading weights: 100%|██████████| 441/441 [00:00<00:00, 702.62it/s]
+[transformers] [1mColGemma3 LOAD REPORT[0m from: Cognitive-Lab/ColNetraEmbed
+Key                                                                    | Status     | 
+-----------------------------------------------------------------------+------------+-
+language_model.model.layers.{0...33}.post_attention_layernorm.weight   | UNEXPECTED | 
+language_model.model.layers.{0...33}.input_layernorm.weight            | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.k_proj.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.k_norm.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.pre_feedforward_layernorm.weight  | UNEXPECTED | 
+language_model.model.layers.{0...33}.mlp.gate_proj.weight              | UNEXPECTED | 
+language_model.model.layers.{0...33}.mlp.up_proj.weight                | UNEXPECTED | 
+language_model.model.layers.{0...33}.post_feedforward_layernorm.weight | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.o_proj.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.q_proj.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.q_norm.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.self_attn.v_proj.weight           | UNEXPECTED | 
+language_model.model.layers.{0...33}.mlp.down_proj.weight              | UNEXPECTED | 
+language_model.model.embed_tokens.weight                               | UNEXPECTED | 
+language_model.model.norm.weight                                       | UNEXPECTED | 
+language_model.layers.{0...33}.mlp.down_proj.weight                    | MISSING    | 
+language_model.layers.{0...33}.post_attention_layernorm.weight         | MISSING    | 
+language_model.layers.{0...33}.self_attn.k_norm.weight                 | MISSING    | 
+language_model.layers.{0...33}.mlp.up_proj.weight                      | MISSING    | 
+language_model.layers.{0...33}.input_layernorm.weight                  | MISSING    | 
+language_model.layers.{0...33}.pre_feedforward_layernorm.weight        | MISSING    | 
+language_model.layers.{0...33}.self_attn.k_proj.weight                 | MISSING    | 
+language_model.layers.{0...33}.self_attn.o_proj.weight                 | MISSING    | 
+language_model.layers.{0...33}.mlp.gate_proj.weight                    | MISSING    | 
+language_model.layers.{0...33}.self_attn.q_norm.weight                 | MISSING    | 
+language_model.layers.{0...33}.self_attn.q_proj.weight                 | MISSING    | 
+language_model.layers.{0...33}.post_feedforward_layernorm.weight       | MISSING    | 
+language_model.layers.{0...33}.self_attn.v_proj.weight                 | MISSING    | 
+language_model.embed_tokens.weight                                     | MISSING    | 
+language_model.norm.weight                                             | MISSING    | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING:	those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 199, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 93, in main
+    adapter = load_adapter(a.model, loader=a.loader, **options)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 734, in load_adapter
+    return TokenEncoderAdapter(ColEngineTokenEncoder(model_id, family, **kwargs), info=info)
+                               ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/late.py", line 222, in __init__
+    model = _load_model(getattr(cpm, model_cls_name), model_name, self.torch_dtype)
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 172, in _load_model
+    return _from_pretrained(model_cls, checkpoint, dtype)
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 158, in _from_pretrained
+    raise RuntimeError(
+    ...<4 lines>...
+    )
+RuntimeError: Cognitive-Lab/ColNetraEmbed: 444 weights were not in the checkpoint and would be random (e.g. ['language_model.layers.0.mlp.down_proj.weight', 'language_model.layers.24.post_attention_layernorm.weight', 'language_model.layers.19.self_attn.k_norm.weight']); checkpoint tensors that matched nothing: ['language_model.model.layers.4.post_attention_layernorm.weight', 'language_model.model.layers.22.input_layernorm.weight', 'language_model.model.layers.32.input_layernorm.weight']. The checkpoint's key names do not map onto this model under the installed transformers / colpali-engine versions.

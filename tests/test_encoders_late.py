@@ -334,6 +334,28 @@ def test_load_adapter_passes_the_registry_pin_and_width_to_a_remote_code_model(m
                      "expected_dim": 320, "known_revision": info.revision}
 
 
+def test_load_adapter_applies_a_registry_load_option_unless_the_caller_overrides_it(monkeypatch):
+    from optivision.encoders import colvlm
+
+    built = []
+
+    def fake_init(self, backend="colsmol", model_name=None, **kwargs):
+        built.append(kwargs)
+        self.name, self.checkpoint = backend, model_name
+        self.max_num_visual_tokens = kwargs.get("max_num_visual_tokens")
+
+    monkeypatch.setattr(colvlm.ColVLMEncoder, "__init__", fake_init)
+    model_id = "vidore/colqwen2.5-v0.1"
+    assert dict(MODELS[model_id].load_options) == {"max_num_visual_tokens": 768}
+    adapter = load_adapter(model_id, dtype="float32")
+    assert built[-1] == {"dtype": "float32", "max_num_visual_tokens": 768}
+    assert adapter.identity() is not None and adapter.identity().extra["max_num_visual_tokens"] == "768"
+    load_adapter(model_id, max_num_visual_tokens=1280)
+    assert built[-1] == {"max_num_visual_tokens": 1280}
+    load_adapter("vidore/colqwen2.5-v0.2")  # no option in its row: nothing added
+    assert built[-1] == {}
+
+
 def test_an_unknown_loader_is_refused_with_the_known_ones():
     with pytest.raises(ValueError, match="unknown loader"):
         load_adapter("org/model", loader="telepathy")
