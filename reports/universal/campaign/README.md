@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-22 of 37 models attempted are measured.
+25 of 41 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -37,6 +37,10 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `vidore/colpali-v1.2-hf` | 05_st_small | measured | float16 | 1.46 | yes |
 | `vidore/colpali-v1.3-hf` | 05_st_small | measured | float16 | 1.58 | yes |
 | `vidore/colqwen2-v1.0-hf` | 05_st_small | measured | float16 | 1.31 | yes |
+| `tencent/EVIE-4.5B` | 06_st_qwen3 | measured | float16 | 4.62 | yes |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | 06_st_qwen3 | measured | float16 | 1.93 | yes |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | 06_st_qwen3 | measured | float16 | 2.19 | yes |
+| `webAI-Official/webAI-ColVec1.1-4b` | 06_st_qwen3 | check failed | float16 | 0.04 | no |
 | `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | 07_qwen35_vultr | measured | float32 | 3.91 | yes |
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | 07_qwen35_vultr | measured | float32 | 2.88 | yes |
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | 07_qwen35_vultr | measured | float16 | 1.14 | no |

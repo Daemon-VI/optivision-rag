@@ -67,6 +67,17 @@
   session had no time left for its selection study). 32 of the 65 registry models are now
   measured; the catalogue holds 30 models and 3428 rows.
 
+### Kaggle measurement campaign, batch 06
+
+- **3 more models measured** through sentence-transformers 6.1.0 (float16 inference, one T4), at
+  their pinned revisions: `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1`, `-4b-v0.1` and
+  `tencent/EVIE-4.5B` (2048 dimensions). 35 of the 65 registry models are now measured; the
+  catalogue holds 33 models and 3782 rows.
+- `webAI-Official/webAI-ColVec1.1-4b` loaded but failed `check_retriever`: 9 of 12 queries
+  ranked their own page first, and 10 are required. Its card states bfloat16 weights and
+  evaluation, which a T4 cannot run natively. `batch_13_retry` now also runs it in float32
+  over two T4s.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

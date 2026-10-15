@@ -301,9 +301,10 @@ _MODELS: list[ModelInfo] = [
               notes="the card pins a colpali-engine git commit and needs causal-conv1d and "
                     "flash-linear-attention"),
     ModelInfo("tencent/EVIE-4.5B", "colqwen3.5", "image", "sentence-transformers", 2048,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
-              "on this model (the adapter's image path is measured on four others); model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~960 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 06_st_qwen3; "
+              "reports/universal/campaign/tencent--EVIE-4.5B",
               license="apache-2.0", revision="498388f8f4c92af8d99fffeececd56c0a4c428d0",
               notes="2,048-d vectors (the card describes shorter prefixes as usable); its colpali "
                     "route needs the fork bundled in the repository"),
@@ -314,14 +315,16 @@ _MODELS: list[ModelInfo] = [
               "reports/universal/campaign/tencent--EVIE-8B",
               license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
-              "on this model (the adapter's image path is measured on four others); model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 06_st_qwen3; "
+              "reports/universal/campaign/VAGOsolutions--SauerkrautLM-ColQwen3-2b-v0.1",
               license="apache-2.0", revision="60a0200a0d9c76df7acee02d7fd074db8c81cf00"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
-              "on this model (the adapter's image path is measured on four others); model card and "
-              "repository files read 2026-10-12",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
+              "revision below, 2026-10-15; Kaggle batch 06_st_qwen3; "
+              "reports/universal/campaign/VAGOsolutions--SauerkrautLM-ColQwen3-4b-v0.1",
               license="apache-2.0", revision="de6b8ac536cae74fab7595de5d53e24f5e6c4295"),
     ModelInfo("webAI-Official/webAI-ColVec1-4b", "colvec", "image", "remote-code:colvec", 640,
               UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); on "
@@ -331,9 +334,11 @@ _MODELS: list[ModelInfo] = [
               license="other", revision="cb5af9aab4894bfa1c7f2427d6970f19055c7226",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-4b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run "
-              "on this model (the adapter's image path is measured on four others); model card and "
-              "repository files read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded on Kaggle "
+              "2026-10-15 (float16 inference, one T4) but failed check_retriever: 9 of 12 queries ranked "
+              "their own page first, where 10 are required; its card states bfloat16 weights and "
+              "evaluation, which a T4 cannot run natively, so a float32 run over two T4s is next; not yet "
+              "re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1.1-4b",
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,
@@ -687,7 +692,7 @@ class SentenceTransformersAdapter(EncoderAdapter):
     input. Run for real with sentence-transformers 6.1.0 on text: answerai-colbert-small-v1
     on SciFact (its float baseline matched the model card), and ``check_retriever`` runs on
     the text models whose registry evidence says so. The image path ran on Kaggle T4s
-    (sentence-transformers 6.1.0, 2026-10-15) for the four image models it measured; each
+    (sentence-transformers 6.1.0, 2026-10-15) for the image models it measured; each
     other model's status is its own registry entry's. A ``device_map`` placement is kept:
     ``encode`` would otherwise move the model back onto one device. Pass ``model``
     to inject an already-constructed encoder (that is how the tests exercise the

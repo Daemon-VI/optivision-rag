@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 32 measured, 8 untested, 25 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 35 measured, 8 untested, 22 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (32)
+### Measured (35)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -172,6 +172,9 @@ The registry holds 65 models: 32 measured, 8 untested, 25 unverified. The facts 
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
+| `tencent/EVIE-4.5B` | image | 2048 | `sentence-transformers` | apache-2.0 |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 
 Loading notes:
 
@@ -194,6 +197,7 @@ Loading notes:
 - `vultr/VultronRetrieverPrime-Qwen3.5-8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
+- `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
 
 ### Untested (8)
 
@@ -217,16 +221,13 @@ Loading notes:
 - `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
 - `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
 
-### Unverified (25)
+### Unverified (22)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 | `colbert-ir/colbertv2.0` | text | 128 | `sentence-transformers` | not declared |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
-| `tencent/EVIE-4.5B` | image | 2048 | `sentence-transformers` | apache-2.0 |
 | `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
-| `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
-| `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `webAI-Official/webAI-ColVec1-4b` | image | 640 | `remote-code:colvec` | other |
 | `webAI-Official/webAI-ColVec1.1-4b` | image | 640 | `sentence-transformers` | other |
 | `webAI-Official/webAI-ColVec1.1-8b` | image | 640 | `sentence-transformers` | other |
@@ -250,7 +251,6 @@ Loading notes:
 Loading notes:
 
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
-- `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
 - `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `webAI-Official/webAI-ColVec1.1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `webAI-Official/webAI-ColVec1.1-8b`: runs the repository's own modelling code: pass trust_remote_code=True
@@ -307,6 +307,10 @@ queries decides.
 | `TomoroAI/tomoro-colqwen3-embed-4b` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.25) > int4` | 31.6 | 0.999 [0.991, 1.007] |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | docvqa_test_subsampled | ndcg@5 0.656 | `hierarchical_merge(0.33) > binary` | 96.9 | 0.992 [0.972, 1.013] |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | infovqa_test_subsampled | ndcg@5 0.944 | `hierarchical_merge(0.33) > binary` | 96.8 | 0.993 [0.986, 1.000] |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | docvqa_test_subsampled | ndcg@5 0.649 | `hierarchical_merge(0.33) > int4` | 23.5 | 0.993 [0.976, 1.008] |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | infovqa_test_subsampled | ndcg@5 0.926 | `hierarchical_merge(0.33) > int4` | 23.5 | 1.000 [0.994, 1.006] |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | docvqa_test_subsampled | ndcg@5 0.660 | `hierarchical_merge(0.33) > int4` | 23.5 | 0.995 [0.981, 1.010] |
+| `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.33) > int4` | 23.5 | 1.000 [0.995, 1.006] |
 | `answerdotai/answerai-colbert-small-v1` | scifact | ndcg@10 0.746 | `ward ratio=0.33 > int8/vec` | 11.8 | 1.000 [0.985, 1.016] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | docvqa_test_subsampled | ndcg@5 0.675 | `lloyd2(7)` | 16.0 | 0.994 [0.979, 1.007] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | infovqa_test_subsampled | ndcg@5 0.939 | `lloyd2(7)` | 16.0 | 0.997 [0.992, 1.001] |
@@ -318,6 +322,8 @@ queries decides.
 | `nvidia/nemotron-colembed-vl-4b-v2` | infovqa_test_subsampled | ndcg@5 0.934 | `binary` | 32.0 | 0.998 [0.992, 1.004] |
 | `nvidia/nemotron-colembed-vl-8b-v2` | docvqa_test_subsampled | ndcg@5 0.673 | `hierarchical_merge(0.33) > binary` | 96.6 | 0.985 [0.972, 1.000] |
 | `nvidia/nemotron-colembed-vl-8b-v2` | infovqa_test_subsampled | ndcg@5 0.947 | `hierarchical_merge(0.33) > binary` | 96.7 | 0.995 [0.989, 1.001] |
+| `tencent/EVIE-4.5B` | docvqa_test_subsampled | ndcg@5 0.673 | `project(256) > binary` | 256.0 | 0.989 [0.970, 1.008] |
+| `tencent/EVIE-4.5B` | infovqa_test_subsampled | ndcg@5 0.947 | `project(256) > binary` | 256.0 | 0.995 [0.991, 0.999] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | docvqa_test_subsampled | ndcg@5 0.629 | `hierarchical_merge(0.33) > binary` | 94.0 | 1.001 [0.977, 1.024] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | infovqa_test_subsampled | ndcg@5 0.933 | `hierarchical_merge(0.33) > binary` | 93.9 | 0.982 [0.972, 0.991] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0-merged` | docvqa_test_subsampled | ndcg@5 0.628 | `hierarchical_merge(0.33) > binary` | 94.0 | 1.003 [0.980, 1.026] |

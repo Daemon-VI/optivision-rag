@@ -1,0 +1,18 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1 vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float16 --batch-size 2
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1: registry status unverified
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:00<00:01, 218.58 examples/s]Generating test split:  40%|████      | 200/500 [00:00<00:00, 317.20 examples/s]Generating test split:  60%|██████    | 300/500 [00:00<00:00, 363.29 examples/s]Generating test split:  80%|████████  | 400/500 [00:01<00:00, 378.61 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 179.07 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 223.82 examples/s]
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:754: UserWarning: VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+Loading weights:   0%|          | 0/625 [00:00<?, ?it/s]Loading weights:   0%|          | 1/625 [00:00<06:51,  1.52it/s]Loading weights:  27%|██▋       | 168/625 [00:00<00:01, 293.32it/s]Loading weights:  41%|████▏     | 258/625 [00:01<00:01, 285.79it/s]Loading weights:  51%|█████     | 319/625 [00:01<00:01, 305.84it/s]Loading weights:  68%|██████▊   | 424/625 [00:01<00:00, 433.86it/s]Loading weights:  85%|████████▌ | 534/625 [00:01<00:00, 561.72it/s]Loading weights:  99%|█████████▊| 616/625 [00:01<00:00, 594.40it/s]Loading weights: 100%|██████████| 625/625 [00:01<00:00, 389.85it/s]
+[transformers] [1mQwen3VLModel LOAD REPORT[0m from: VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1
+Key                     | Status     |  | 
+------------------------+------------+--+-
+custom_text_proj.weight | UNEXPECTED |  | 
+custom_text_proj.bias   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+{"loaded": "VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "device": null, "dtype": "float16", "adapter_merge_check": null, "loading_report": null, "placement": null}
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [1271, 1251, 1251, 1251, 1251, 1241, 1251, 1251, 1251, 1251, 407, 1251], "vectors_per_query": [24, 24, 24, 18, 20, 24, 20, 25, 26, 19, 18, 24], "finite": true, "unit_norm_max_error": 0.0005371570587158203, "query_ranks_own_document_first": 12, "ok": true}}
+{"tag": "SauerkrautLM-ColQwen3-2b-v0.1_docvqa_test_subsampled", "docs": 500, "vectors": 610531, "dim": 128, "queries": 451, "doc_seconds": 430.8, "query_seconds": 11.4, "device": null, "dtype": "float16", "adapter_merge_check": null, "loading_report": null, "placement": null}
