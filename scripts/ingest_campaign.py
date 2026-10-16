@@ -40,6 +40,14 @@ def _hours(record: dict) -> float:
     return round(sum(float(s.get("seconds", 0)) for s in record.get("steps", {}).values()) / 3600, 2)
 
 
+def _selection_file(rest: tuple[str, ...]) -> bool:
+    return rest[0] == "selection_rules" or (rest[0] == "logs" and rest[-1].startswith("s7b_"))
+
+
+def _ran_selection(record: dict) -> bool:
+    return any(k.startswith("s7b ") for k in record.get("steps", {}))
+
+
 def ingest(archive: Path, outcomes: dict) -> list[str]:
     with zipfile.ZipFile(archive) as z:
         members = [m for m in z.infolist() if not m.is_dir()]
@@ -63,7 +71,7 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
             shutil.rmtree(CAMPAIGN / dest, ignore_errors=True)
         shutil.rmtree(CAMPAIGN / "batches" / batch, ignore_errors=True)
 
-        skipped = []
+        skipped, orphans = [], []
         for m in members:
             path = PurePosixPath(m.filename)
             parts = path.parts
@@ -72,6 +80,11 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
                 continue
             if len(parts) == 2:
                 target = CAMPAIGN / "batches" / batch / parts[1]
+            elif parts[1] in destinations and _selection_file(parts[2:]) and not _ran_selection(runs[parts[1]]):
+                # a selection study this folder's run never ran: left by another model with the same
+                # short name (lightonai/colbertv2.0 and colbert-ir/colbertv2.0 in batch 11_text)
+                target = CAMPAIGN / "batches" / batch / "orphans" / parts[1] / Path(*parts[2:])
+                orphans.append(m.filename)
             elif parts[1] in destinations:
                 target = CAMPAIGN / destinations[parts[1]] / Path(*parts[2:])
             else:
@@ -84,20 +97,25 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
     for item in summary:
         model = item["model"]
         record = next((r for r in runs.values() if r["model"] == model), None)
-        entry = {"batch": batch, "outcome": item["outcome"], "commit": commit}
+        outcome = item["outcome"]
+        if record is None and outcome == "measured":
+            outcome = "incomplete: its results are not in the archive (overwritten by a model with the same short name)"
+        entry = {"batch": batch, "outcome": outcome, "commit": commit}
         if record is not None:
             check = record.get("check_retriever") or {}
             entry.update(folder=folder_of(model), kind=record["kind"], dtype=record["spec"].get("dtype", "auto"),
                          multi_gpu=bool(record["spec"].get("multi_gpu")), started_utc=record.get("started_utc"),
                          finished_utc=record.get("finished_utc"), gpu_hours=_hours(record),
                          check_retriever_ok=check.get("ok"),
-                         selection_study=any(k.startswith("s7b ") for k in record.get("steps", {})))
+                         selection_study=_ran_selection(record))
         previous = outcomes.get(model)
         attempts = (previous or {}).get("attempts", [])
         if previous is not None and previous["batch"] != batch:  # the same archive again changes nothing
             attempts = [*attempts, {"batch": previous["batch"], "outcome": previous["outcome"]}]
         outcomes[model] = {**entry, **({"attempts": attempts} if attempts else {})}
-        lines.append(f"  {model}: {item['outcome']}")
+        lines.append(f"  {model}: {outcome}")
+    if orphans:
+        lines.append(f"  set aside {len(orphans)} selection-study file(s) their folder's run never made: {orphans[:3]}")
     if skipped:
         lines.append(f"  skipped {len(skipped)} member(s): {skipped[:5]}")
     return [f"{archive.name} -> batch {batch}", *lines]

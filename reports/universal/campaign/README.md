@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-28 of 41 models attempted are measured.
+41 of 54 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -28,8 +28,6 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | 04_colqwen_7b | measured | float16 | 1.82 | yes |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | 04_colqwen_7b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.0 | no |
 | `nomic-ai/colnomic-embed-multimodal-7b` | 04_colqwen_7b | measured | float16 | 1.57 | yes |
-| `Hcompany/NeoMME-260M-Retriever-ST-late` | 05_st_small | incomplete: encode_docvqa failed (exit 1) | float32 | 0.01 | no |
-| `Hcompany/NeoMME-800M-Retriever-ST-late` | 05_st_small | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 | `ModernVBERT/colmodernvbert` | 05_st_small | measured | float32 | 1.69 | yes |
 | `vidore/colpali-v1.2-hf` | 05_st_small | measured | float16 | 1.46 | yes |
 | `vidore/colpali-v1.3-hf` | 05_st_small | measured | float16 | 1.58 | yes |
@@ -44,15 +42,30 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `jinaai/jina-embeddings-v4` | 08_remote_code | incomplete: encode_docvqa failed (exit 1) | float16 | 0.02 | no |
 | `nvidia/llama-nemotron-colembed-vl-3b-v2` | 08_remote_code | incomplete: encode_docvqa failed (exit -9) | float32 | 2.3 | no |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | 08_remote_code | measured | float16 | 3.08 | yes |
-| `webAI-Official/webAI-ColVec1-4b` | 08_remote_code | incomplete: encode_docvqa failed (exit 1) | float32 | 0.07 | no |
-| `tencent/EVIE-8B` | 09_st_8b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.05 | no |
-| `webAI-Official/webAI-ColVec1.1-8b` | 09_st_8b | incomplete: encode_docvqa failed (exit 1) | float16 | 0.04 | no |
 | `5CD-AI/Vintern-Embedding-1B` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 | `ibm-granite/granite-vision-3.3-2b-embedding` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.03 | no |
 | `nvidia/llama-nemoretriever-colembed-1b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
+| `colbert-ir/colbertv2.0` | 11_text | measured | auto | 0.37 | no |
+| `lightonai/ColBERT-Zero` | 11_text | measured | auto | 0.6 | no |
+| `lightonai/colbertv2.0` | 11_text | incomplete: its results are not in the archive (overwritten by a model with the same short name) |  |  | no |
+| `lightonai/GTE-ModernColBERT-v1` | 11_text | measured | auto | 0.43 | no |
+| `lightonai/LateOn` | 11_text | measured | auto | 1.47 | yes |
+| `lightonai/mLateOn` | 11_text | measured | auto | 0.74 | no |
+| `lightonai/Reason-ModernColBERT` | 11_text | measured | auto | 0.59 | no |
+| `LiquidAI/LFM2-ColBERT-350M` | 11_text | measured | auto | 0.85 | no |
+| `LiquidAI/LFM2.5-ColBERT-350M` | 11_text | incomplete: s13 LFM2.5-ColBERT-350M_scifact timed out | auto | 0.41 | no |
+| `mixedbread-ai/mxbai-colbert-large-v1` | 11_text | measured | auto | 1.72 | no |
+| `mixedbread-ai/mxbai-edge-colbert-v0-17m` | 11_text | measured | auto | 1.25 | yes |
+| `mixedbread-ai/mxbai-edge-colbert-v0-32m` | 11_text | measured | auto | 0.38 | no |
+| `NeuML/colbert-bert-tiny` | 11_text | measured | auto | 0.37 | no |
 | `Cognitive-Lab/ColNetraEmbed` | 12_retry | measured | float32 | 1.46 | yes |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | 12_retry | measured | float32 | 1.9 | yes |
 | `vidore/colqwen2.5-v0.1` | 12_retry | measured | float32 | 1.9 | yes |
+| `Hcompany/NeoMME-260M-Retriever-ST-late` | 13_retry | measured | float32 | 3.01 | no |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float32 | 0.08 | no |
+| `tencent/EVIE-8B` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.18 | no |
+| `webAI-Official/webAI-ColVec1-4b` | 13_retry | measured | float32 | 4.81 | yes |
+| `webAI-Official/webAI-ColVec1.1-8b` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.06 | no |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).

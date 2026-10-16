@@ -71,7 +71,8 @@ def test_rows_hold_a_rebuildable_pipeline_and_plausible_figures():
             assert entry["source"].startswith("reports/universal/") and entry["n_queries"] > 0
             assert 0.0 < entry["baseline"] <= 1.0, (model_id, dataset)
             labels = [r["label"] for r in entry["rows"]]
-            assert len(labels) == len(set(labels)) >= 50
+            # 45: the 48- and 64-d mxbai-edge models skip projections no narrower than themselves (49 rows)
+            assert len(labels) == len(set(labels)) >= 45
             for row in entry["rows"]:
                 lo, hi = row["retention_interval"]
                 assert lo <= row["retention"] <= hi and row["compression"] > 0

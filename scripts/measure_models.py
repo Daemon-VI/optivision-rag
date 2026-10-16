@@ -175,6 +175,9 @@ def main() -> int:
     a = ap.parse_args()
 
     batch = json.loads(a.batch.read_text(encoding="utf-8"))
+    shorts = [spec["model"].split("/")[-1] for spec in batch]
+    if len(set(shorts)) != len(shorts):  # one folder and one set of vector files per short name
+        raise SystemExit(f"two models in this batch share a short name: {sorted({s for s in shorts if shorts.count(s) > 1})}")
     session = Session(a.deadline_hours)
     a.out.mkdir(parents=True, exist_ok=True)
     results = []

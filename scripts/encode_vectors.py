@@ -32,6 +32,19 @@ from optivision.adapters import MODELS, PageEncoderAdapter, load_adapter
 from optivision.types import PageRef
 
 
+def _gpu_budgets() -> dict[int, int]:
+    """``max_memory`` for a sentence-transformers model spread with ``device_map="auto"``.
+
+    GPU 0 also holds the inputs, the vision activations and every page's outputs, so it gets
+    a smaller share of the weights (tencent/EVIE-8B ran GPU 0 out of memory in its forward pass
+    with an even split, Kaggle 2026-10-16).
+    """
+    import torch
+
+    return {i: int(torch.cuda.get_device_properties(i).total_memory * (0.45 if i == 0 else 0.85))
+            for i in range(torch.cuda.device_count())}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("model", help="model id, e.g. vidore/colqwen2-v1.0")
@@ -86,10 +99,12 @@ def main() -> int:
                 options["dtype"] = a.dtype
             if a.trust_remote_code:
                 options["trust_remote_code"] = True
-            if a.revision:
-                options["revision"] = a.revision
+            # the registry's pin unless --revision says otherwise ("latest": the Hub's main branch)
+            revision = a.revision or (info.revision if info else None)
+            if revision and revision != "latest":
+                options["revision"] = revision
             if a.multi_gpu:
-                options["model_kwargs"] = {"device_map": "auto"}
+                options["model_kwargs"] = {"device_map": "auto", "max_memory": _gpu_budgets()}
         adapter = load_adapter(a.model, loader=a.loader, **options)
     encoder = getattr(adapter, "encoder", adapter)
     run_info = {
@@ -99,6 +114,7 @@ def main() -> int:
         "loading_report": getattr(encoder, "loading_report", None),
         "placement": getattr(encoder, "placement", None),
         "max_num_visual_tokens": getattr(encoder, "max_num_visual_tokens", None),
+        "revision": getattr(encoder, "revision", None),
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 

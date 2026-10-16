@@ -91,22 +91,31 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
     # after batches 05, 08-10 (2026-10-15): NeoMME needs transformers>=5.17 (Kaggle had 5.16.1),
     # sentence-transformers moved the two 8B models off their two-GPU split (now kept) and
     # ColVec1's from_pretrained returned no loading info (now checked against the checkpoint)
-    ("13_retry", "re-runs: NeoMME (newer transformers), two 8B sentence-transformers models, ColVec1 4B, ColVec1.1 4B",
+    ("13_retry", "re-runs: NeoMME (newer transformers), two 8B sentence-transformers models, ColVec1 4B",
      [ST, "transformers>=5.17"], [
         {"model": "Hcompany/NeoMME-260M-Retriever-ST-late", "dtype": "float32", "batch_size": 4},
         {"model": "Hcompany/NeoMME-800M-Retriever-ST-late", "dtype": "float32", "batch_size": 4},
         {"model": "webAI-Official/webAI-ColVec1-4b", **F32, "trust_remote_code": True, "revision": "latest"},
         {"model": "tencent/EVIE-8B", **ST16, "multi_gpu": True},
-        {"model": "webAI-Official/webAI-ColVec1.1-8b", **ST16, "multi_gpu": True, "trust_remote_code": True},
-        # batch 06: failed check_retriever in float16 (9 of 12); its card states bfloat16, which a T4
-        # cannot run natively, so float32 spread over the two T4s
-        {"model": "webAI-Official/webAI-ColVec1.1-4b", "dtype": "float32", "batch_size": 2, "multi_gpu": True,
-         "trust_remote_code": True}]),
+        {"model": "webAI-Official/webAI-ColVec1.1-8b", **ST16, "multi_gpu": True, "trust_remote_code": True}]),
+    # after batches 06, 11 and 13 (2026-10-16): the text models batch 11 had no time for, and
+    # lightonai/colbertv2.0, whose results colbert-ir/colbertv2.0 overwrote there (same short name);
+    # NeoMME-800M one page at a time; EVIE-8B with less of its weights on GPU 0; ColVec1.1-4b in
+    # float32 over two T4s (in float16 it failed check_retriever, 9 of 12; its card states bfloat16)
+    ("14_retry", "re-runs: three text models, NeoMME 800M, ColVec1.1 4B, EVIE 8B",
+     [ST, "transformers>=5.17", "einops"], [
+        {"model": "lightonai/colbertv2.0", "kind": "text"},
+        {"model": "LiquidAI/LFM2.5-ColBERT-350M", "kind": "text", "trust_remote_code": True},
+        {"model": "jinaai/jina-colbert-v2", "kind": "text", "trust_remote_code": True},
+        {"model": "Hcompany/NeoMME-800M-Retriever-ST-late", "dtype": "float32", "batch_size": 1},
+        {"model": "webAI-Official/webAI-ColVec1.1-4b", "dtype": "float32", "batch_size": 1, "multi_gpu": True,
+         "trust_remote_code": True},
+        {"model": "tencent/EVIE-8B", **ST16, "batch_size": 1, "multi_gpu": True}]),
 ]
 
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
-#: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
-UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
+#: a missing base model, remote code that fails under transformers 5 or across two GPUs, or flash_attn on a T4
+UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "webAI-Official/webAI-ColVec1.1-8b", "jinaai/jina-embeddings-v4",
               "ibm-granite/granite-vision-3.3-2b-embedding", "5CD-AI/Vintern-Embedding-1B",
               "nvidia/llama-nemoretriever-colembed-1b-v1", "nvidia/llama-nemoretriever-colembed-3b-v1"}
 
@@ -205,6 +214,11 @@ def main() -> int:
     repeated = {m for m in seen if seen.count(m) > 1}
     missing, unknown = unmeasured - set(seen) - UNLOADABLE, set(seen) - set(MODELS)
     assert repeated <= retried, f"in two batches without a retry: {repeated - retried}"
+    for name, _, _, models in BATCHES:  # measure_models.py keeps one folder per short name
+        if name == "11_text":  # ran before this check: colbert-ir/colbertv2.0 overwrote lightonai/colbertv2.0
+            continue
+        shorts = [m["model"].split("/")[-1] for m in models]
+        assert len(set(shorts)) == len(shorts), f"batch {name}: two models share a short name"
     assert not missing and not unknown, (missing, unknown)
     print(f"wrote {len(BATCHES)} notebooks covering {len(set(seen))} models to {OUT.relative_to(ROOT)}; "
           f"{len(unmeasured)} of the registry still unmeasured")

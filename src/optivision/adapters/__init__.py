@@ -132,15 +132,21 @@ _MODELS: list[ModelInfo] = [
               license="apache-2.0", revision="09dbc9502b66605d5be56d2226019b49c9fd3293",
               notes="adapter-only repository: merged explicitly over its base model on load"),
     ModelInfo("colbert-ir/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "text late interaction; loading path not exercised here"),
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~157 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/colbert-ir--colbertv2.0",
+              revision="c1e84128e85ef755c096a95bdb06b47793b13acf"),
     ModelInfo("answerdotai/answerai-colbert-small-v1", "colbert", "text", "sentence-transformers", 96,
               MEASURED, "BEIR SciFact (5,183 docs / 300 queries) via sentence-transformers 6.1.0 on "
               "2026-09-27; float nDCG@10 74.56 vs 74.77 on the model card; reports/universal/text"),
     ModelInfo("lightonai/GTE-ModernColBERT-v1", "colbert", "text", "sentence-transformers", 128,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 128-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; also loads with loader='pylate' (the same check passed with PyLate)"),
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~230 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/lightonai--GTE-ModernColBERT-v1",
+              revision="25f6f7bb8237b7ae25ae1d9b805ce17c0d1cc639",
+              notes="also loads with loader='pylate' (check_retriever passed with PyLate here, 2026-10-12)"),
     # ---- added 2026-10-12: facts read from each model's card and repository files; those measured since
     # ---- (Kaggle campaign, reports/universal/campaign) say so in their evidence
     ModelInfo("vidore/colpali", "colpali", "image", "colpali-engine:colpali", 128,
@@ -308,9 +314,9 @@ _MODELS: list[ModelInfo] = [
               notes="2,048-d vectors (the card describes shorter prefixes as usable); its colpali "
                     "route needs the fork bundled in the repository"),
     ModelInfo("tencent/EVIE-8B", "colqwen3.5", "image", "sentence-transformers", 4096,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded over two "
-              "T4s on Kaggle 2026-10-15, but sentence-transformers' encode() moved the model back onto one "
-              "T4, out of memory; the adapter now leaves a device_map placement alone, not yet re-run; "
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; split over two "
+              "T4s on Kaggle 2026-10-16, but GPU 0 ran out of memory in the forward pass; GPU 0's share of "
+              "the weights is now capped at 45% of its memory, not yet re-run; "
               "reports/universal/campaign/tencent--EVIE-8B",
               license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
@@ -326,10 +332,9 @@ _MODELS: list[ModelInfo] = [
               "reports/universal/campaign/VAGOsolutions--SauerkrautLM-ColQwen3-4b-v0.1",
               license="apache-2.0", revision="de6b8ac536cae74fab7595de5d53e24f5e6c4295"),
     ModelInfo("webAI-Official/webAI-ColVec1-4b", "colvec", "image", "remote-code:colvec", 640,
-              UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); on "
-              "Kaggle 2026-10-15 its from_pretrained returned no loading info, which the loader required; "
-              "the loader now checks the loaded weights against the checkpoint's tensor names, not yet "
-              "re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1-4b",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float32 over two Kaggle "
+              "T4s, at the revision below, 2026-10-15; Kaggle batch 13_retry; "
+              "reports/universal/campaign/webAI-Official--webAI-ColVec1-4b",
               license="other", revision="cb5af9aab4894bfa1c7f2427d6970f19055c7226",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-4b", "colvec", "image", "sentence-transformers", 640,
@@ -341,21 +346,23 @@ _MODELS: list[ModelInfo] = [
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded over two "
-              "T4s on Kaggle 2026-10-15, but sentence-transformers' encode() moved the model back onto one "
-              "T4, out of memory; the adapter now leaves a device_map placement alone, not yet re-run; "
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never encoded "
+              "here: in float16 it does not fit one 16 GB T4, and split over two (Kaggle 2026-10-16) its "
+              "own forward (modeling_colqwen35_bidirection.py) multiplies the projected vectors, on the "
+              "last GPU, by the attention mask on the first; "
               "reports/universal/campaign/webAI-Official--webAI-ColVec1.1-8b",
               license="other", revision="0f712a2777fbba29b2a21bb68ffcfbb5272505ad",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("Hcompany/NeoMME-260M-Retriever-ST-late", "neomme", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; refused on Kaggle"
-              " 2026-10-15: its model type neomme is in transformers 5.17 and later and the session had "
-              "5.16.1; not yet re-run; reports/universal/campaign/Hcompany--NeoMME-260M-Retriever-ST-late",
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~2150 vectors/page), float32 on one Kaggle T4, "
+              "at the revision below, 2026-10-15; Kaggle batch 13_retry; "
+              "reports/universal/campaign/Hcompany--NeoMME-260M-Retriever-ST-late",
               license="apache-2.0", revision="023be2a8ab9d797f5aa76f5bf8b5dde78d819659"),
     ModelInfo("Hcompany/NeoMME-800M-Retriever-ST-late", "neomme", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; refused on Kaggle"
-              " 2026-10-15: its model type neomme is in transformers 5.17 and later and the session had "
-              "5.16.1; not yet re-run; reports/universal/campaign/Hcompany--NeoMME-800M-Retriever-ST-late",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded on Kaggle "
+              "2026-10-16 (transformers 5.19.0) but ran a T4 out of memory in attention at 4 pages per "
+              "batch in float32; the retry encodes one page at a time, not yet re-run; "
+              "reports/universal/campaign/Hcompany--NeoMME-800M-Retriever-ST-late",
               license="apache-2.0", revision="ad4c17419c28745c3b3045981b0d8abb72cd142b"),
     ModelInfo("Cognitive-Lab/ColNetraEmbed", "colgemma", "image", "colpali-engine:colgemma3", 128,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~270 vectors/page), float32 over two Kaggle T4s,"
@@ -418,79 +425,88 @@ _MODELS: list[ModelInfo] = [
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card requires flash-attn"),
     ModelInfo("lightonai/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 128-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; loads through sentence-transformers MultiVectorEncoder per its "
-              "model card; model card and repository files read 2026-10-12",
+              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers 6.1.0, CPU: 8"
+              " of 8 queries ranked their own document first, 128-d unit-norm vectors; "
+              "reports/universal/loader_checks/2026-10-12.json); Kaggle batch 11_text measured it, but "
+              "colbert-ir/colbertv2.0 in the same batch has the same short name and overwrote its results "
+              "(only its selection study survived, in "
+              "reports/universal/campaign/batches/11_text/orphans/colbertv2.0); not yet re-run",
               license="mit", revision="0b9b1e380096a3b72b6b4877f68d59effb62e0f2",
               notes="the sentence-transformers conversion of colbert-ir/colbertv2.0"),
     ModelInfo("jinaai/jina-colbert-v2", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run here "
+              "(Kaggle batch 11_text ran out of time before it); model card and repository files read "
+              "2026-10-12",
               license="cc-by-nc-4.0", revision="a9dc5cd7293d4c71dbbba04829923ba4d0e4f6ea",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; needs "
                     "einops"),
     ModelInfo("lightonai/Reason-ModernColBERT", "colbert", "text", "sentence-transformers", 128,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 128-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; loads through sentence-transformers MultiVectorEncoder per its "
-              "model card; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~274 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/lightonai--Reason-ModernColBERT",
               license="cc-by-nc-4.0", revision="e0bd6968566909365aa553cb54f2219c2d851ed0",
               notes="also loads with loader='pylate'"),
     ModelInfo("lightonai/ColBERT-Zero", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~270 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/lightonai--ColBERT-Zero",
               license="apache-2.0", revision="43aefda07cf4fea7a13dbdab0eef8ecf78580d3d",
               notes="also loads with loader='pylate'"),
     ModelInfo("lightonai/LateOn", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~230 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; reports/universal/campaign/lightonai--LateOn",
               license="apache-2.0", revision="62911e105059585d244384c7d17826e35f669c17",
               notes="also loads with loader='pylate'"),
     ModelInfo("lightonai/mLateOn", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~313 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/lightonai--mLateOn",
               license="apache-2.0", revision="bbd883ae1fadb563056ff73b1061ae8172a3fcda",
               notes="also loads with loader='pylate'"),
     ModelInfo("mixedbread-ai/mxbai-edge-colbert-v0-17m", "colbert", "text", "sentence-transformers", 48,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 48-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; loads through sentence-transformers MultiVectorEncoder per its "
-              "model card; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~267 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/mixedbread-ai--mxbai-edge-colbert-v0-17m",
               license="apache-2.0", revision="592c6417c1c6687572043408ed1ae5196bce16b1",
               notes="also loads with loader='pylate'"),
     ModelInfo("mixedbread-ai/mxbai-edge-colbert-v0-32m", "colbert", "text", "sentence-transformers", 64,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 64-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; loads through sentence-transformers MultiVectorEncoder per its "
-              "model card; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~267 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/mixedbread-ai--mxbai-edge-colbert-v0-32m",
               license="apache-2.0", revision="bb13a29ec9b1e7edd4ba8f7a0776c48b55cbad66",
               notes="also loads with loader='pylate'"),
     ModelInfo("mixedbread-ai/mxbai-colbert-large-v1", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~212 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/mixedbread-ai--mxbai-colbert-large-v1",
               license="apache-2.0", revision="d092c678f449647d1945569dc17b4d8917a687e0"),
     ModelInfo("LiquidAI/LFM2-ColBERT-350M", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~286 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/LiquidAI--LFM2-ColBERT-350M",
               license="other", revision="9d727d7964d3e4fd093a0f01c7287ae814264e31",
               notes="also loads with loader='pylate'"),
     ModelInfo("LiquidAI/LFM2.5-ColBERT-350M", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; this "
-              "checkpoint has never been run here; model card and repository files read 2026-10-12",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; encoded BEIR "
+              "SciFact and passed check_retriever on Kaggle 2026-10-15 (batch 11_text), then the session "
+              "ran out of time in the fixed-pipeline study; not yet re-run; "
+              "reports/universal/campaign/LiquidAI--LFM2.5-ColBERT-350M",
               license="other", revision="9772bdf797255d8693b83e84aa98e9b2d36dd0be",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; also "
                     "loads with loader='pylate'"),
     ModelInfo("NeuML/colbert-bert-tiny", "colbert", "text", "sentence-transformers", 128,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers "
-              "6.1.0, CPU: 8 of 8 queries ranked their own document first, 128-d unit-norm "
-              "vectors; reports/universal/loader_checks/2026-10-12.json); compression never "
-              "measured here; loads through sentence-transformers MultiVectorEncoder per its "
-              "model card; model card and repository files read 2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~157 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below (the Hub's main branch "
+              "when it ran), 2026-10-15; Kaggle batch 11_text; "
+              "reports/universal/campaign/NeuML--colbert-bert-tiny",
               license="apache-2.0", revision="5967f70792ff2315c72c53a74e7cd5de2af4e209"),
 ]
 
@@ -738,6 +754,7 @@ class SentenceTransformersAdapter(EncoderAdapter):
                 _keep_placement(model)
         self.model = model
         self.dtype = dtype
+        self.revision = kwargs.get("revision")
         self.placement = _device_map_placement(model)
 
     @staticmethod

@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 38 measured, 6 untested, 21 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 51 measured, 1 untested, 13 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (38)
+### Measured (51)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -151,7 +151,9 @@ The registry holds 65 models: 38 measured, 6 untested, 21 unverified. The facts 
 | `athrael-soju/colqwen3.5-4.5B-v3` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | image | 320 | `remote-code:tomoro` | apache-2.0 |
 | `nomic-ai/colnomic-embed-multimodal-7b` | image | 128 | `colpali-engine:colqwen2.5` | apache-2.0 |
+| `colbert-ir/colbertv2.0` | text | 128 | `sentence-transformers` | not declared |
 | `answerdotai/answerai-colbert-small-v1` | text | 96 | `sentence-transformers` | not declared |
+| `lightonai/GTE-ModernColBERT-v1` | text | 128 | `sentence-transformers` | not declared |
 | `vidore/colpali` | image | 128 | `colpali-engine:colpali` | mit |
 | `vidore/colpali-v1.1` | image | 128 | `colpali-engine:colpali` | mit |
 | `vidore/colpali-v1.2` | image | 128 | `colpali-engine:colpali` | mit |
@@ -177,12 +179,24 @@ The registry holds 65 models: 38 measured, 6 untested, 21 unverified. The facts 
 | `tencent/EVIE-4.5B` | image | 2048 | `sentence-transformers` | apache-2.0 |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
+| `webAI-Official/webAI-ColVec1-4b` | image | 640 | `remote-code:colvec` | other |
+| `Hcompany/NeoMME-260M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Cognitive-Lab/ColNetraEmbed` | image | 128 | `colpali-engine:colgemma3` | gemma |
+| `lightonai/Reason-ModernColBERT` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
+| `lightonai/ColBERT-Zero` | text | 128 | `sentence-transformers` | apache-2.0 |
+| `lightonai/LateOn` | text | 128 | `sentence-transformers` | apache-2.0 |
+| `lightonai/mLateOn` | text | 128 | `sentence-transformers` | apache-2.0 |
+| `mixedbread-ai/mxbai-edge-colbert-v0-17m` | text | 48 | `sentence-transformers` | apache-2.0 |
+| `mixedbread-ai/mxbai-edge-colbert-v0-32m` | text | 64 | `sentence-transformers` | apache-2.0 |
+| `mixedbread-ai/mxbai-colbert-large-v1` | text | 128 | `sentence-transformers` | apache-2.0 |
+| `LiquidAI/LFM2-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
+| `NeuML/colbert-bert-tiny` | text | 128 | `sentence-transformers` | apache-2.0 |
 
 Loading notes:
 
 - `TomoroAI/tomoro-colqwen3-embed-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `nomic-ai/colnomic-embed-multimodal-7b`: adapter-only repository: merged explicitly over its base model on load
+- `lightonai/GTE-ModernColBERT-v1`: also loads with loader='pylate' (check_retriever passed with PyLate here, 2026-10-12)
 - `vidore/colpali`: adapter-only repository: merged explicitly over its base model on load
 - `vidore/colpali-v1.1`: adapter-only repository: merged explicitly over its base model on load
 - `vidore/colpali-v1.2`: adapter-only repository: merged explicitly over its base model on load
@@ -203,37 +217,34 @@ Loading notes:
 - `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
+- `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `Cognitive-Lab/ColNetraEmbed`: the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali); the released colpali-engine loads it here once the checkpoint's nested keys are mapped
+- `lightonai/Reason-ModernColBERT`: also loads with loader='pylate'
+- `lightonai/ColBERT-Zero`: also loads with loader='pylate'
+- `lightonai/LateOn`: also loads with loader='pylate'
+- `lightonai/mLateOn`: also loads with loader='pylate'
+- `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
+- `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
+- `LiquidAI/LFM2-ColBERT-350M`: also loads with loader='pylate'
 
-### Untested (6)
+### Untested (1)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
-| `lightonai/GTE-ModernColBERT-v1` | text | 128 | `sentence-transformers` | not declared |
 | `lightonai/colbertv2.0` | text | 128 | `sentence-transformers` | mit |
-| `lightonai/Reason-ModernColBERT` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
-| `mixedbread-ai/mxbai-edge-colbert-v0-17m` | text | 48 | `sentence-transformers` | apache-2.0 |
-| `mixedbread-ai/mxbai-edge-colbert-v0-32m` | text | 64 | `sentence-transformers` | apache-2.0 |
-| `NeuML/colbert-bert-tiny` | text | 128 | `sentence-transformers` | apache-2.0 |
 
 Loading notes:
 
 - `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
-- `lightonai/Reason-ModernColBERT`: also loads with loader='pylate'
-- `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
-- `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
 
-### Unverified (21)
+### Unverified (13)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
-| `colbert-ir/colbertv2.0` | text | 128 | `sentence-transformers` | not declared |
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
 | `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
-| `webAI-Official/webAI-ColVec1-4b` | image | 640 | `remote-code:colvec` | other |
 | `webAI-Official/webAI-ColVec1.1-4b` | image | 640 | `sentence-transformers` | other |
 | `webAI-Official/webAI-ColVec1.1-8b` | image | 640 | `sentence-transformers` | other |
-| `Hcompany/NeoMME-260M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `ibm-granite/granite-vision-3.3-2b-embedding` | image | 128 | `remote-code:processor` | apache-2.0 |
 | `5CD-AI/Vintern-Embedding-1B` | image | 128 | `remote-code:processor` | not declared |
@@ -242,17 +253,11 @@ Loading notes:
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | image | ? | `remote-code:nvidia-colembed` | other |
 | `nvidia/llama-nemotron-colembed-vl-3b-v2` | image | 3072 | `remote-code:nvidia-colembed` | other |
 | `jinaai/jina-colbert-v2` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
-| `lightonai/ColBERT-Zero` | text | 128 | `sentence-transformers` | apache-2.0 |
-| `lightonai/LateOn` | text | 128 | `sentence-transformers` | apache-2.0 |
-| `lightonai/mLateOn` | text | 128 | `sentence-transformers` | apache-2.0 |
-| `mixedbread-ai/mxbai-colbert-large-v1` | text | 128 | `sentence-transformers` | apache-2.0 |
-| `LiquidAI/LFM2-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
 | `LiquidAI/LFM2.5-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
 
 Loading notes:
 
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
-- `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `webAI-Official/webAI-ColVec1.1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `webAI-Official/webAI-ColVec1.1-8b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `ibm-granite/granite-vision-3.3-2b-embedding`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.50
@@ -262,10 +267,6 @@ Loading notes:
 - `nvidia/llama-nemoretriever-colembed-3b-v1`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires transformers==4.49.0 and flash-attn; no file of the repository states the output width
 - `nvidia/llama-nemotron-colembed-vl-3b-v2`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires flash-attn
 - `jinaai/jina-colbert-v2`: runs the repository's own modelling code: pass trust_remote_code=True; needs einops
-- `lightonai/ColBERT-Zero`: also loads with loader='pylate'
-- `lightonai/LateOn`: also loads with loader='pylate'
-- `lightonai/mLateOn`: also loads with loader='pylate'
-- `LiquidAI/LFM2-ColBERT-350M`: also loads with loader='pylate'
 - `LiquidAI/LFM2.5-ColBERT-350M`: runs the repository's own modelling code: pass trust_remote_code=True; also loads with loader='pylate'
 
 ## 4. What was measured
@@ -303,10 +304,14 @@ queries decides.
 | `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.33) > int4` | 22.9 | 0.994 [0.986, 1.001] |
 | `Cognitive-Lab/ColNetraEmbed` | docvqa_test_subsampled | ndcg@5 0.576 | `int4` | 7.8 | 1.002 [0.988, 1.016] |
 | `Cognitive-Lab/ColNetraEmbed` | infovqa_test_subsampled | ndcg@5 0.886 | `int4` | 7.8 | 0.999 [0.995, 1.003] |
+| `Hcompany/NeoMME-260M-Retriever-ST-late` | docvqa_test_subsampled | ndcg@5 0.542 | `hierarchical_merge(0.25) > lloyd2(7)` | 64.0 | 0.999 [0.978, 1.020] |
+| `Hcompany/NeoMME-260M-Retriever-ST-late` | infovqa_test_subsampled | ndcg@5 0.821 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.983 [0.971, 0.994] |
+| `LiquidAI/LFM2-ColBERT-350M` | scifact | ndcg@10 0.733 | `int4` | 7.8 | 0.992 [0.977, 1.006] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | docvqa_test_subsampled | ndcg@5 0.626 | `lloyd2(7)` | 16.0 | 0.992 [0.973, 1.011] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | infovqa_test_subsampled | ndcg@5 0.924 | `lloyd2(7)` | 16.0 | 0.994 [0.986, 1.001] |
 | `ModernVBERT/colmodernvbert` | docvqa_test_subsampled | ndcg@5 0.556 | `hierarchical_merge(0.33) > int4(mean)` | 23.5 | 0.992 [0.971, 1.013] |
 | `ModernVBERT/colmodernvbert` | infovqa_test_subsampled | ndcg@5 0.867 | `hierarchical_merge(0.33) > int4(mean)` | 23.5 | 0.992 [0.984, 1.001] |
+| `NeuML/colbert-bert-tiny` | scifact | ndcg@10 0.489 | `int4` | 7.8 | 1.005 [0.988, 1.026] |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | docvqa_test_subsampled | ndcg@5 0.654 | `hierarchical_merge(0.25) > int4` | 31.6 | 0.994 [0.980, 1.008] |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | infovqa_test_subsampled | ndcg@5 0.940 | `hierarchical_merge(0.25) > int4` | 31.6 | 0.999 [0.991, 1.007] |
 | `TomoroAI/tomoro-colqwen3-embed-8b` | docvqa_test_subsampled | ndcg@5 0.656 | `hierarchical_merge(0.33) > binary` | 96.9 | 0.992 [0.972, 1.013] |
@@ -318,6 +323,15 @@ queries decides.
 | `answerdotai/answerai-colbert-small-v1` | scifact | ndcg@10 0.746 | `ward ratio=0.33 > int8/vec` | 11.8 | 1.000 [0.985, 1.016] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | docvqa_test_subsampled | ndcg@5 0.675 | `lloyd2(7)` | 16.0 | 0.994 [0.979, 1.007] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | infovqa_test_subsampled | ndcg@5 0.939 | `lloyd2(7)` | 16.0 | 0.997 [0.992, 1.001] |
+| `colbert-ir/colbertv2.0` | scifact | ndcg@10 0.646 | `binary` | 32.0 | 1.012 [0.993, 1.032] |
+| `lightonai/ColBERT-Zero` | scifact | ndcg@10 0.770 | `project(64) > int4(mean)` | 15.1 | 0.997 [0.983, 1.013] |
+| `lightonai/GTE-ModernColBERT-v1` | scifact | ndcg@10 0.760 | `hierarchical_merge(0.25) > project(128) > int4(mean)` | 30.8 | 0.994 [0.977, 1.009] |
+| `lightonai/LateOn` | scifact | ndcg@10 0.763 | `hierarchical_merge(0.33) > project(128) > int8(per_vector)` | 11.9 | 0.997 [0.976, 1.016] |
+| `lightonai/Reason-ModernColBERT` | scifact | ndcg@10 0.738 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.2 | 1.004 [0.980, 1.031] |
+| `lightonai/mLateOn` | scifact | ndcg@10 0.764 | `hierarchical_merge(0.33) > int8(per_vector)` | 11.9 | 0.992 [0.979, 1.007] |
+| `mixedbread-ai/mxbai-colbert-large-v1` | scifact | ndcg@10 0.631 | `int4(mean)` | 7.8 | 0.992 [0.975, 1.009] |
+| `mixedbread-ai/mxbai-edge-colbert-v0-17m` | scifact | ndcg@10 0.731 | `int4(mean)` | 7.4 | 0.993 [0.976, 1.010] |
+| `mixedbread-ai/mxbai-edge-colbert-v0-32m` | scifact | ndcg@10 0.745 | `int4(mean)` | 7.5 | 0.986 [0.973, 0.997] |
 | `nomic-ai/colnomic-embed-multimodal-3b` | docvqa_test_subsampled | ndcg@5 0.612 | `hierarchical_merge(0.25) > int4` | 30.2 | 0.990 [0.972, 1.008] |
 | `nomic-ai/colnomic-embed-multimodal-3b` | infovqa_test_subsampled | ndcg@5 0.927 | `hierarchical_merge(0.25) > int4` | 30.2 | 0.994 [0.987, 1.001] |
 | `nomic-ai/colnomic-embed-multimodal-7b` | docvqa_test_subsampled | ndcg@5 0.603 | `hierarchical_merge(0.25) > int4` | 29.7 | 0.994 [0.971, 1.018] |
@@ -370,6 +384,8 @@ queries decides.
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | infovqa_test_subsampled | ndcg@5 0.919 | `hierarchical_merge(0.33) > project(80) > int8(per_vector)` | 47.2 | 0.988 [0.979, 0.998] |
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | docvqa_test_subsampled | ndcg@5 0.662 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.3 | 0.999 [0.979, 1.018] |
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | infovqa_test_subsampled | ndcg@5 0.930 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.989 [0.980, 0.997] |
+| `webAI-Official/webAI-ColVec1-4b` | docvqa_test_subsampled | ndcg@5 0.666 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.989 [0.971, 1.006] |
+| `webAI-Official/webAI-ColVec1-4b` | infovqa_test_subsampled | ndcg@5 0.941 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.998 [0.989, 1.006] |
 
 Measured models without rows in the catalogue: `vidore/colSmol-256M`, `vidore/colqwen2-v1.0`. `vidore/colSmol-256M` was measured on generated corpora only, which have no fixed-pipeline study of this form; `vidore/colqwen2-v1.0` gives the same vectors as its pre-merged copy, which holds the rows.
 

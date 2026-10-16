@@ -69,7 +69,10 @@ def main() -> int:
         options.update(batch_size=a.batch_size)
     if a.trust_remote_code:
         options["trust_remote_code"] = True
+    if loader == "sentence-transformers" and info is not None and info.revision:
+        options["revision"] = info.revision  # measure the registry's pin, not whatever main is today
     adapter = load_adapter(a.model, loader=a.loader, **options)
+    print(json.dumps({"loaded": a.model, "revision": options.get("revision")}), flush=True)
 
     if a.check_pairs:
         by_id = dict(zip(ids, texts, strict=True))

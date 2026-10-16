@@ -75,8 +75,8 @@
   catalogue holds 33 models and 3782 rows.
 - `webAI-Official/webAI-ColVec1.1-4b` loaded but failed `check_retriever`: 9 of 12 queries
   ranked their own page first, and 10 are required. Its card states bfloat16 weights and
-  evaluation, which a T4 cannot run natively. `batch_13_retry` now also runs it in float32
-  over two T4s.
+  evaluation, which a T4 cannot run natively. `batch_14_retry` runs it in float32 over two T4s
+  (it was added to `batch_13_retry` after that batch had already been imported).
 
 ### Kaggle measurement campaign, batch 12_retry
 
@@ -87,6 +87,42 @@
   0.3.18 once its nested `language_model.model.*` keys were mapped; the mapping is recorded in
   `loading_report["key_remap"]`. 38 of the 65 registry models are now measured; the catalogue
   holds 36 models and 4106 rows.
+
+### Kaggle measurement campaign, batches 11_text and 13_retry
+
+- **13 more models measured.** 11 text models were measured on BEIR SciFact through
+  sentence-transformers 6.1.0: `NeuML/colbert-bert-tiny`, the two `mixedbread-ai/mxbai-edge-colbert-v0`
+  models (17m, 32m), `colbert-ir/colbertv2.0`, `lightonai/GTE-ModernColBERT-v1`,
+  `Reason-ModernColBERT`, `ColBERT-Zero`, `LateOn`, `mLateOn`, `mixedbread-ai/mxbai-colbert-large-v1`
+  and `LiquidAI/LFM2-ColBERT-350M`. Two image models were also measured:
+  `Hcompany/NeoMME-260M-Retriever-ST-late` (with transformers 5.19.0) and
+  `webAI-Official/webAI-ColVec1-4b` (its weights checked against the checkpoint's tensor names).
+  51 of the 65 registry models are now measured; the catalogue holds 49 models and 4936 rows.
+  `colbert-ir/colbertv2.0` and `GTE-ModernColBERT-v1` are pinned to the Hub commit that was
+  measured.
+- **lightonai/colbertv2.0's results were lost.** It shares the short name `colbertv2.0` with
+  `colbert-ir/colbertv2.0` in the same batch, and the later run overwrote its folder. Only its
+  selection study survived, and the ingest set it aside in `campaign/batches/11_text/orphans/`.
+  The ingest now marks a model whose results are missing as incomplete, and keeps a
+  selection-study file out of a folder whose run never made one. `measure_models.py` and
+  `make_kaggle_batches.py` now refuse two models with the same short name in one batch.
+- **Text runs now measure the registry's pin.** `encode_vectors.py` and `encode_text_vectors.py`
+  pass the registry's revision to sentence-transformers. Batches up to now loaded the Hub's main
+  branch, which matched the pin for every model measured. The loaded revision is recorded in the
+  run info.
+- **Split sentence-transformers models leave GPU 0 more room.** GPU 0's share of the weights is
+  capped at 45% of its memory. `tencent/EVIE-8B` was split over the two T4s this time, but still
+  ran GPU 0 out of memory in its forward pass.
+- **Still unmeasured:**
+  - `Hcompany/NeoMME-800M-Retriever-ST-late` ran out of GPU memory in attention at 4 pages per
+    batch.
+  - `LiquidAI/LFM2.5-ColBERT-350M` ran out of session time in its study.
+  - `jinaai/jina-colbert-v2` was not reached.
+  - `webAI-Official/webAI-ColVec1.1-8b` cannot run on T4s: in float16 it does not fit one, and
+    split over two, its own forward multiplies tensors that sit on different GPUs.
+  - `notebooks/kaggle_batches/batch_14_retry.ipynb` re-runs the rest, including
+    `webAI-ColVec1.1-4b` in float32 over two T4s. `batch_13_retry.ipynb` is back to the list that
+    ran.
 
 ## 0.4.0 (2026-10-12)
 

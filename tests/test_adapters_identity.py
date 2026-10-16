@@ -31,9 +31,9 @@ STATUSES = {
     "nvidia/nemotron-colembed-vl-4b-v2": "measured",
     "nvidia/nemotron-colembed-vl-8b-v2": "measured",  # run committed 2026-10-12 (reports/universal/wide)
     "nomic-ai/colnomic-embed-multimodal-7b": "measured",  # Kaggle batch 04, 2026-10-14 (reports/universal/campaign)
-    "colbert-ir/colbertv2.0": "unverified",
+    "colbert-ir/colbertv2.0": "measured",  # Kaggle batch 11_text, 2026-10-15 (reports/universal/campaign)
     "answerdotai/answerai-colbert-small-v1": "measured",
-    "lightonai/GTE-ModernColBERT-v1": "untested",  # passed check_retriever here 2026-10-12
+    "lightonai/GTE-ModernColBERT-v1": "measured",  # Kaggle batch 11_text, 2026-10-15 (reports/universal/campaign)
 }
 
 
@@ -161,7 +161,13 @@ def test_the_registry_statuses_have_not_moved():
                         "tencent/EVIE-4.5B",
                         # Kaggle batch 12_retry, 2026-10-15 (after the page cap and the key remap)
                         "vidore/colqwen2.5-v0.1", "Metric-AI/ColQwen2.5-3b-multilingual-v1.0",
-                        "Cognitive-Lab/ColNetraEmbed"}
+                        "Cognitive-Lab/ColNetraEmbed",
+                        # Kaggle batches 11_text and 13_retry, 2026-10-15
+                        "NeuML/colbert-bert-tiny", "mixedbread-ai/mxbai-edge-colbert-v0-17m",
+                        "mixedbread-ai/mxbai-edge-colbert-v0-32m", "lightonai/Reason-ModernColBERT",
+                        "lightonai/ColBERT-Zero", "lightonai/LateOn", "lightonai/mLateOn",
+                        "mixedbread-ai/mxbai-colbert-large-v1", "LiquidAI/LFM2-ColBERT-350M",
+                        "Hcompany/NeoMME-260M-Retriever-ST-late", "webAI-Official/webAI-ColVec1-4b"}
     assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
     assert all(m.evidence for m in supported_models())
 
