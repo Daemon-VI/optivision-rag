@@ -102,14 +102,17 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
     # lightonai/colbertv2.0, whose results colbert-ir/colbertv2.0 overwrote there (same short name);
     # NeoMME-800M one page at a time; EVIE-8B with less of its weights on GPU 0; ColVec1.1-4b in
     # float32 over two T4s (in float16 it failed check_retriever, 9 of 12; its card states bfloat16)
-    ("14_retry", "re-runs: three text models, NeoMME 800M, ColVec1.1 4B, EVIE 8B",
-     [ST, "transformers>=5.17", "einops"], [
+    # split into four notebooks to run side by side (one would need ~12-18 h against an 11 h session)
+    ("14a_text_retry", "re-runs: three text models", [ST, "einops"], [
         {"model": "lightonai/colbertv2.0", "kind": "text"},
         {"model": "LiquidAI/LFM2.5-ColBERT-350M", "kind": "text", "trust_remote_code": True},
-        {"model": "jinaai/jina-colbert-v2", "kind": "text", "trust_remote_code": True},
-        {"model": "Hcompany/NeoMME-800M-Retriever-ST-late", "dtype": "float32", "batch_size": 1},
+        {"model": "jinaai/jina-colbert-v2", "kind": "text", "trust_remote_code": True}]),
+    ("14b_neomme_retry", "re-run: NeoMME 800M, one page at a time", [ST, "transformers>=5.17"], [
+        {"model": "Hcompany/NeoMME-800M-Retriever-ST-late", "dtype": "float32", "batch_size": 1}]),
+    ("14c_colvec_retry", "re-run: ColVec1.1 4B in float32 over two T4s", [ST], [
         {"model": "webAI-Official/webAI-ColVec1.1-4b", "dtype": "float32", "batch_size": 1, "multi_gpu": True,
-         "trust_remote_code": True},
+         "trust_remote_code": True}]),
+    ("14d_evie_retry", "re-run: EVIE 8B, float16 over two T4s, less of it on GPU 0", [ST], [
         {"model": "tencent/EVIE-8B", **ST16, "batch_size": 1, "multi_gpu": True}]),
 ]
 

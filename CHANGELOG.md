@@ -75,7 +75,7 @@
   catalogue holds 33 models and 3782 rows.
 - `webAI-Official/webAI-ColVec1.1-4b` loaded but failed `check_retriever`: 9 of 12 queries
   ranked their own page first, and 10 are required. Its card states bfloat16 weights and
-  evaluation, which a T4 cannot run natively. `batch_14_retry` runs it in float32 over two T4s
+  evaluation, which a T4 cannot run natively. `batch_14c_colvec_retry` runs it in float32 over two T4s
   (it was added to `batch_13_retry` after that batch had already been imported).
 
 ### Kaggle measurement campaign, batch 12_retry
@@ -120,9 +120,14 @@
   - `jinaai/jina-colbert-v2` was not reached.
   - `webAI-Official/webAI-ColVec1.1-8b` cannot run on T4s: in float16 it does not fit one, and
     split over two, its own forward multiplies tensors that sit on different GPUs.
-  - `notebooks/kaggle_batches/batch_14_retry.ipynb` re-runs the rest, including
-    `webAI-ColVec1.1-4b` in float32 over two T4s. `batch_13_retry.ipynb` is back to the list that
-    ran.
+- Four notebooks re-run the rest, side by side, because one would need more than an 11-hour
+  session:
+  - `batch_14a_text_retry` runs the three text models.
+  - `batch_14b_neomme_retry` runs NeoMME-800M one page at a time.
+  - `batch_14c_colvec_retry` runs `webAI-ColVec1.1-4b` in float32 over two T4s.
+  - `batch_14d_evie_retry` runs EVIE-8B.
+
+  `batch_13_retry.ipynb` is back to the list that ran.
 
 ## 0.4.0 (2026-10-12)
 
