@@ -123,6 +123,12 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
     ("15b_colvec8b_retry", "re-run: ColVec1.1 8B in float16 over two T4s, head on the input GPU", [ST], [
         {"model": "webAI-Official/webAI-ColVec1.1-8b", **ST16, "batch_size": 1, "multi_gpu": True,
          "trust_remote_code": True}]),
+    # after batch 14d (2026-10-16): EVIE-8B passed check_retriever (11 of 12) but a page of ~8500
+    # visual tokens needed 4.4 GiB for one attention call on GPU 0; its processor allows 16,384
+    # tokens a page, and its card gives the evaluation protocol's 1,024-token budget, used here
+    ("16_evie_retry", "re-run: EVIE 8B over two T4s at its card's 1,024-token evaluation page budget", [ST], [
+        {"model": "tencent/EVIE-8B", **ST16, "batch_size": 1, "multi_gpu": True,
+         "processor_kwargs": {"size": {"longest_edge": 1024 * 32 * 32, "shortest_edge": 65536}}}]),
 ]
 
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):

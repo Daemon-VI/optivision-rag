@@ -149,6 +149,16 @@
   float32) and `batch_15b_colvec8b_retry` (8B, float16). The 8B is no longer listed as
   unloadable.
 
+### Kaggle measurement campaign, batch 14d_evie_retry
+
+- **`tencent/EVIE-8B` passed `check_retriever` (11 of 12) but ran out of memory in the encode.**
+  Its processor allows 16,384 visual tokens a page, against about 1,000 for `EVIE-4.5B`. One
+  DocVQA page of about 8500 tokens needed 4.4 GiB for a single attention call on GPU 0.
+- **A batch can pass `processor_kwargs` to a sentence-transformers page model.**
+  `measure_models.py` forwards it as `encode_vectors.py --processor-kwargs`, and the run info
+  records it. `batch_16_evie_retry` uses the 1,024-token page budget that EVIE-8B's card gives
+  for its evaluation protocol.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

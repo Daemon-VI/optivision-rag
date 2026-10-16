@@ -13,10 +13,12 @@ of time is recorded and the batch goes on with the next one.
 The batch file is a JSON list of objects:
 
     {"model": "vidore/colpali-v1.2", "kind": "image", "dtype": "float32", "multi_gpu": true,
-     "loader": null, "trust_remote_code": false, "revision": null, "pip": [], "batch_size": 4}
+     "loader": null, "trust_remote_code": false, "revision": null, "pip": [], "batch_size": 4,
+     "processor_kwargs": null}
 
 Only ``model`` is required (``kind`` defaults to the registry's modality). ``pip`` lists
 packages to install before that model (they stay installed for the rest of the session).
+``processor_kwargs`` goes to a sentence-transformers page model's processor (a page budget).
 
 Every model gets ``<out>/<model short name>/`` with its logs, the study JSON files
 (``wide/``, ``selection_rules/``), the qrels and ``run.json`` (what ran, how long, and the
@@ -112,6 +114,8 @@ def measure(spec: dict, out: Path, data: Path, session: Session, selection: bool
             options += ["--multi-gpu"]
         if spec.get("revision"):
             options += ["--revision", spec["revision"]]
+        if spec.get("processor_kwargs"):
+            options += ["--processor-kwargs", json.dumps(spec["processor_kwargs"])]
         tags = []
         for i, (split, dataset) in enumerate(IMAGE_SPLITS.items()):
             step = f"encode_{split}"

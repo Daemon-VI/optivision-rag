@@ -315,8 +315,9 @@ _MODELS: list[ModelInfo] = [
                     "route needs the fork bundled in the repository"),
     ModelInfo("tencent/EVIE-8B", "colqwen3.5", "image", "sentence-transformers", 4096,
               UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; split over two "
-              "T4s on Kaggle 2026-10-16, but GPU 0 ran out of memory in the forward pass; GPU 0's share of "
-              "the weights is now capped at 45% of its memory, not yet re-run; "
+              "T4s on Kaggle 2026-10-16, it passed check_retriever (11 of 12) but ran GPU 0 out of memory in "
+              "attention on a page of ~8500 visual tokens (its processor allows 16,384 a page); the retry "
+              "uses its card's 1,024-token evaluation budget, not yet re-run; "
               "reports/universal/campaign/tencent--EVIE-8B",
               license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "colqwen3", "image", "sentence-transformers", 128,

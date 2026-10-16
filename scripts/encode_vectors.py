@@ -68,6 +68,9 @@ def main() -> int:
     ap.add_argument("--check-pairs", type=int, default=12,
                     help="pages on which check_retriever runs before the full encode (0 skips it); the run "
                          "stops if the vectors are not finite, unit-norm and retrieving their own page")
+    ap.add_argument("--processor-kwargs", type=json.loads, default=None,
+                    help="JSON for a sentence-transformers model's processor, e.g. the page budget "
+                         "a model card's evaluation used")
     ap.add_argument("--batch-size", type=int, default=4,
                     help="items per encode call on the sentence-transformers path (pages are large)")
     a = ap.parse_args()
@@ -105,6 +108,8 @@ def main() -> int:
                 options["revision"] = revision
             if a.multi_gpu:
                 options["model_kwargs"] = {"device_map": "auto", "max_memory": _gpu_budgets()}
+            if a.processor_kwargs:
+                options["processor_kwargs"] = a.processor_kwargs
         adapter = load_adapter(a.model, loader=a.loader, **options)
     encoder = getattr(adapter, "encoder", adapter)
     run_info = {
@@ -115,6 +120,7 @@ def main() -> int:
         "placement": getattr(encoder, "placement", None),
         "max_num_visual_tokens": getattr(encoder, "max_num_visual_tokens", None),
         "revision": getattr(encoder, "revision", None),
+        "processor_kwargs": a.processor_kwargs,
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 
