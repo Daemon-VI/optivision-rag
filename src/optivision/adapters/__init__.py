@@ -339,13 +339,12 @@ _MODELS: list[ModelInfo] = [
               license="other", revision="cb5af9aab4894bfa1c7f2427d6970f19055c7226",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-4b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded on Kaggle "
-              "2026-10-15 (float16 inference, one T4) but failed check_retriever: 9 of 12 queries ranked "
-              "their own page first, where 10 are required; its card states bfloat16 weights and "
-              "evaluation, which a T4 cannot run natively; in float32 over two T4s (2026-10-16) its own "
-              "forward (modeling_colqwen35_bidirection.py) multiplied the projected vectors, on the last "
-              "GPU, by the attention mask on the first; the adapter now moves the projection head to the "
-              "input GPU, not yet re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1.1-4b",
+              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card, loaded as its "
+              "card shows; never measured here: it failed check_retriever on Kaggle in float16 on one T4 "
+              "(2026-10-15) and again in float32 over two T4s with its projection head on the input GPU "
+              "(batch 15a, 2026-10-16), both times with 9 of 12 queries ranking their own page first, "
+              "where 10 are required; its card reports ViDoRe V3 only; "
+              "reports/universal/campaign/webAI-Official--webAI-ColVec1.1-4b",
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,

@@ -160,6 +160,14 @@
   float32) and `batch_15b_colvec8b_retry` (8B, float16). The 8B is no longer listed as
   unloadable.
 
+### Kaggle measurement campaign, batch 15a_colvec4b_retry
+
+- **Moving the projection head to the input GPU worked.** `webAI-Official/webAI-ColVec1.1-4b` ran
+  over two T4s in float32 with `lm_head` and `embedding_proj_layer` on GPU 0.
+- **It still failed `check_retriever`, with 9 of 12 queries, the same as in float16.** It was
+  loaded as its card shows, so precision is ruled out as the cause. It stays unverified and is
+  not re-run. Its card reports ViDoRe V3 only.
+
 ### Kaggle measurement campaign, batch 14d_evie_retry
 
 - **`tencent/EVIE-8B` passed `check_retriever` (11 of 12) but ran out of memory in the encode.**

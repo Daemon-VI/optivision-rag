@@ -66,7 +66,7 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `lightonai/colbertv2.0` | 14a_text_retry | measured | auto | 1.64 | yes |
 | `LiquidAI/LFM2.5-ColBERT-350M` | 14a_text_retry | measured | auto | 2.08 | yes |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | 14b_neomme_retry | measured | float32 | 4.52 | yes |
-| `webAI-Official/webAI-ColVec1.1-4b` | 14c_colvec_retry | incomplete: encode_docvqa failed (exit 1) | float32 | 0.04 | no |
 | `tencent/EVIE-8B` | 14d_evie_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.2 | no |
+| `webAI-Official/webAI-ColVec1.1-4b` | 15a_colvec4b_retry | check failed | float32 | 0.06 | no |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).
