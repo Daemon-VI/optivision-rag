@@ -341,15 +341,18 @@ _MODELS: list[ModelInfo] = [
               UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded on Kaggle "
               "2026-10-15 (float16 inference, one T4) but failed check_retriever: 9 of 12 queries ranked "
               "their own page first, where 10 are required; its card states bfloat16 weights and "
-              "evaluation, which a T4 cannot run natively, so a float32 run over two T4s is next; not yet "
-              "re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1.1-4b",
+              "evaluation, which a T4 cannot run natively; in float32 over two T4s (2026-10-16) its own "
+              "forward (modeling_colqwen35_bidirection.py) multiplied the projected vectors, on the last "
+              "GPU, by the attention mask on the first; the adapter now moves the projection head to the "
+              "input GPU, not yet re-run; reports/universal/campaign/webAI-Official--webAI-ColVec1.1-4b",
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,
               UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never encoded "
               "here: in float16 it does not fit one 16 GB T4, and split over two (Kaggle 2026-10-16) its "
-              "own forward (modeling_colqwen35_bidirection.py) multiplies the projected vectors, on the "
-              "last GPU, by the attention mask on the first; "
+              "own forward (modeling_colqwen35_bidirection.py) multiplied the projected vectors, on the "
+              "last GPU, by the attention mask on the first; the adapter now moves the projection head "
+              "to the input GPU, not yet re-run; "
               "reports/universal/campaign/webAI-Official--webAI-ColVec1.1-8b",
               license="other", revision="0f712a2777fbba29b2a21bb68ffcfbb5272505ad",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
@@ -691,13 +694,65 @@ def _keep_placement(model: Any) -> None:
     model.to = lambda *args, **kwargs: model
 
 
-def _device_map_placement(model: Any) -> dict[str, Any] | None:
+def _split_module(model: Any) -> Any:
+    """The module ``device_map`` dispatched (it carries ``hf_device_map``), or ``None``."""
     modules = getattr(model, "modules", None)
     for module in modules() if callable(modules) else ():
         device_map = getattr(module, "hf_device_map", None)
         if isinstance(device_map, dict) and device_map:
-            return {"devices": sorted({str(d) for d in device_map.values()}), "device_map": "auto"}
+            return module
     return None
+
+
+#: a top-level module holding at most this share of the parameters counts as a head
+_HEAD_SHARE = 0.02
+
+
+def _heads_on_input_device(model: Any) -> list[str]:
+    """Move the small top-level modules of a split model onto the device its inputs are on.
+
+    ``device_map="auto"`` puts the last modules (the projection head) on the last GPU, but
+    some models' own forward multiplies the head's output by an input tensor:
+    webAI-Official/webAI-ColVec1.1-4b and -8b multiply their projected vectors by the
+    attention mask (modeling_colqwen35_bidirection.py), which failed with tensors on
+    cuda:1 and cuda:0 (Kaggle 2026-10-16). On the input device the head's output meets the
+    inputs there; accelerate's hook copies the hidden states across. Returns the names moved.
+    """
+    split = _split_module(model)
+    if split is None:
+        return []
+    import torch
+
+    device = getattr(model, "device", None)
+    if not isinstance(device, torch.device):
+        device = next(split.parameters()).device
+    total = sum(p.numel() for p in split.parameters())
+    target = device.index if device.type == "cuda" else str(device)
+    moved = []
+    for name, placed in list(split.hf_device_map.items()):
+        if "." in name or not name or placed == target:
+            continue
+        head = split.get_submodule(name)
+        if sum(p.numel() for p in head.parameters()) > _HEAD_SHARE * total:
+            continue
+        from accelerate.hooks import AlignDevicesHook, add_hook_to_module, remove_hook_from_module
+
+        remove_hook_from_module(head, recurse=True)
+        head.to(device)
+        add_hook_to_module(head, AlignDevicesHook(execution_device=device, io_same_device=False))
+        split.hf_device_map[name] = target
+        moved.append(name)
+    return moved
+
+
+def _device_map_placement(model: Any, heads: Sequence[str] = ()) -> dict[str, Any] | None:
+    split = _split_module(model)
+    if split is None:
+        return None
+    placement = {"devices": sorted({str(d) for d in split.hf_device_map.values()}), "device_map": "auto"}
+    if heads:
+        placement["heads_on_input_device"] = list(heads)
+    return placement
 
 
 class SentenceTransformersAdapter(EncoderAdapter):
@@ -710,7 +765,8 @@ class SentenceTransformersAdapter(EncoderAdapter):
     the text models whose registry evidence says so. The image path ran on Kaggle T4s
     (sentence-transformers 6.1.0, 2026-10-15) for the image models it measured; each
     other model's status is its own registry entry's. A ``device_map`` placement is kept:
-    ``encode`` would otherwise move the model back onto one device. Pass ``model``
+    ``encode`` would otherwise move the model back onto one device, and the model's small
+    top-level heads go to the device its inputs are on. Pass ``model``
     to inject an already-constructed encoder (that is how the tests exercise the
     glue without the library).
 
@@ -731,6 +787,7 @@ class SentenceTransformersAdapter(EncoderAdapter):
         self.batch_size = batch_size
         self.encode_kwargs = dict(encode_kwargs or {})
         self.info = MODELS.get(model_id)
+        heads: list[str] = []
         if self.info is None or self.info.status == UNVERIFIED:
             warnings.warn(
                 f"{model_id}: the sentence-transformers adapter is unverified in this "
@@ -752,10 +809,11 @@ class SentenceTransformersAdapter(EncoderAdapter):
             model = MultiVectorEncoder(model_id, **kwargs)
             if (kwargs.get("model_kwargs") or {}).get("device_map") is not None:
                 _keep_placement(model)
+                heads = _heads_on_input_device(model)
         self.model = model
         self.dtype = dtype
         self.revision = kwargs.get("revision")
-        self.placement = _device_map_placement(model)
+        self.placement = _device_map_placement(model, heads)
 
     @staticmethod
     def _host(output: Any) -> np.ndarray:

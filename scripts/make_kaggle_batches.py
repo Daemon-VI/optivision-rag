@@ -114,11 +114,20 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
          "trust_remote_code": True}]),
     ("14d_evie_retry", "re-run: EVIE 8B, float16 over two T4s, less of it on GPU 0", [ST], [
         {"model": "tencent/EVIE-8B", **ST16, "batch_size": 1, "multi_gpu": True}]),
+    # after batch 14c (2026-10-16): ColVec1.1's own forward multiplies its projection head's
+    # output (last GPU) by the attention mask (first GPU); the adapter now moves the head to the
+    # input GPU, which also lets the 8B (float16, too large for one T4) try the two-GPU split
+    ("15a_colvec4b_retry", "re-run: ColVec1.1 4B in float32 over two T4s, head on the input GPU", [ST], [
+        {"model": "webAI-Official/webAI-ColVec1.1-4b", "dtype": "float32", "batch_size": 1, "multi_gpu": True,
+         "trust_remote_code": True}]),
+    ("15b_colvec8b_retry", "re-run: ColVec1.1 8B in float16 over two T4s, head on the input GPU", [ST], [
+        {"model": "webAI-Official/webAI-ColVec1.1-8b", **ST16, "batch_size": 1, "multi_gpu": True,
+         "trust_remote_code": True}]),
 ]
 
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
-#: a missing base model, remote code that fails under transformers 5 or across two GPUs, or flash_attn on a T4
-UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "webAI-Official/webAI-ColVec1.1-8b", "jinaai/jina-embeddings-v4",
+#: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
+UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
               "ibm-granite/granite-vision-3.3-2b-embedding", "5CD-AI/Vintern-Embedding-1B",
               "nvidia/llama-nemoretriever-colembed-1b-v1", "nvidia/llama-nemoretriever-colembed-3b-v1"}
 

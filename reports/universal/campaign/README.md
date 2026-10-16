@@ -35,7 +35,6 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `tencent/EVIE-4.5B` | 06_st_qwen3 | measured | float16 | 4.62 | yes |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | 06_st_qwen3 | measured | float16 | 1.93 | yes |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | 06_st_qwen3 | measured | float16 | 2.19 | yes |
-| `webAI-Official/webAI-ColVec1.1-4b` | 06_st_qwen3 | check failed | float16 | 0.04 | no |
 | `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | 07_qwen35_vultr | measured | float32 | 3.91 | yes |
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | 07_qwen35_vultr | measured | float32 | 2.88 | yes |
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | 07_qwen35_vultr | measured | float16 | 1.14 | no |
@@ -67,5 +66,6 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `webAI-Official/webAI-ColVec1-4b` | 13_retry | measured | float32 | 4.81 | yes |
 | `webAI-Official/webAI-ColVec1.1-8b` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.06 | no |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | 14b_neomme_retry | measured | float32 | 4.52 | yes |
+| `webAI-Official/webAI-ColVec1.1-4b` | 14c_colvec_retry | incomplete: encode_docvqa failed (exit 1) | float32 | 0.04 | no |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).

@@ -135,6 +135,20 @@
   batch, with transformers 5.20.0, and the selection study completed. 52 of the 65 registry models
   are now measured; the catalogue holds 50 models and 5044 rows.
 
+### Kaggle measurement campaign, batch 14c_colvec_retry
+
+- **`webAI-Official/webAI-ColVec1.1-4b` failed again, over two T4s in float32.** Its own forward
+  (`modeling_colqwen35_bidirection.py`) multiplies the projection head's output, which
+  `device_map="auto"` put on the last GPU, by the attention mask, which is on the first. The 8B
+  model failed the same way in batch 13_retry.
+- **The sentence-transformers adapter moves a split model's small heads to the input device.**
+  Top-level modules holding at most 2% of the parameters go to the device the inputs are on,
+  and accelerate's hook copies the hidden states across. `placement["heads_on_input_device"]`
+  names the modules moved.
+- Two notebooks re-run the ColVec1.1 models with the fix: `batch_15a_colvec4b_retry` (4B,
+  float32) and `batch_15b_colvec8b_retry` (8B, float16). The 8B is no longer listed as
+  unloadable.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

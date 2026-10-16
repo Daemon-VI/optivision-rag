@@ -153,3 +153,30 @@ def test_sentence_transformers_device_map_is_left_in_place():
     _keep_placement(model)  # sentence-transformers' encode() calls model.to(device) every time
     assert model.to("cuda:0") is model and not model.moved
     assert _device_map_placement(_StubMultiVectorEncoder()) is None
+
+
+def test_a_split_models_small_heads_move_to_the_input_device():
+    """ColVec1.1 multiplies its head's output by the attention mask, which is on the input device."""
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("accelerate")
+    from optivision.adapters import _device_map_placement, _heads_on_input_device
+
+    split = torch.nn.Module()
+    split.backbone = torch.nn.Sequential(torch.nn.Linear(64, 64), torch.nn.Linear(64, 64))
+    split.big = torch.nn.Linear(64, 64)  # a top-level module too large to count as a head
+    split.head = torch.nn.Linear(64, 2)  # under 2% of the parameters
+    split.hf_device_map = {"backbone.0": "cpu", "backbone.1": 1, "big": 1, "head": 1}
+
+    class Encoder:
+        device = torch.device("cpu")
+
+        def modules(self):
+            return iter([self, split])
+
+    assert _heads_on_input_device(Encoder()) == ["head"]
+    assert split.hf_device_map == {"backbone.0": "cpu", "backbone.1": 1, "big": 1, "head": "cpu"}
+    assert split.head._hf_hook.execution_device == torch.device("cpu")
+    assert split.head(torch.ones(3, 64)).shape == (3, 2)
+    assert _device_map_placement(Encoder(), ["head"]) == {
+        "devices": ["1", "cpu"], "device_map": "auto", "heads_on_input_device": ["head"]}
+    assert _heads_on_input_device(_StubMultiVectorEncoder()) == []
