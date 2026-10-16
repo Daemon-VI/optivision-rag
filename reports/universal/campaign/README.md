@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-41 of 54 models attempted are measured.
+42 of 54 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -63,9 +63,9 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | 12_retry | measured | float32 | 1.9 | yes |
 | `vidore/colqwen2.5-v0.1` | 12_retry | measured | float32 | 1.9 | yes |
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | 13_retry | measured | float32 | 3.01 | no |
-| `Hcompany/NeoMME-800M-Retriever-ST-late` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float32 | 0.08 | no |
 | `tencent/EVIE-8B` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.18 | no |
 | `webAI-Official/webAI-ColVec1-4b` | 13_retry | measured | float32 | 4.81 | yes |
 | `webAI-Official/webAI-ColVec1.1-8b` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.06 | no |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | 14b_neomme_retry | measured | float32 | 4.52 | yes |
 
 Why a run failed is in the model's `logs/` and in its registry evidence (`optivision models <id>`).

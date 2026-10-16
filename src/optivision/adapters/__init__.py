@@ -359,9 +359,9 @@ _MODELS: list[ModelInfo] = [
               "reports/universal/campaign/Hcompany--NeoMME-260M-Retriever-ST-late",
               license="apache-2.0", revision="023be2a8ab9d797f5aa76f5bf8b5dde78d819659"),
     ModelInfo("Hcompany/NeoMME-800M-Retriever-ST-late", "neomme", "image", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; loaded on Kaggle "
-              "2026-10-16 (transformers 5.19.0) but ran a T4 out of memory in attention at 4 pages per "
-              "batch in float32; the retry encodes one page at a time, not yet re-run; "
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~2150 vectors/page), float32 on one Kaggle T4, "
+              "one page per batch (4 ran out of memory in attention), at the revision below, 2026-10-16; "
+              "Kaggle batch 14b_neomme_retry; "
               "reports/universal/campaign/Hcompany--NeoMME-800M-Retriever-ST-late",
               license="apache-2.0", revision="ad4c17419c28745c3b3045981b0d8abb72cd142b"),
     ModelInfo("Cognitive-Lab/ColNetraEmbed", "colgemma", "image", "colpali-engine:colgemma3", 128,

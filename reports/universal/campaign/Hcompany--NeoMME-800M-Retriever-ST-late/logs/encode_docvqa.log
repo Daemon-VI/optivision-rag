@@ -1,94 +1,10 @@
-$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py Hcompany/NeoMME-800M-Retriever-ST-late vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 4
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py Hcompany/NeoMME-800M-Retriever-ST-late vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 1
 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:839: UserWarning: Hcompany/NeoMME-800M-Retriever-ST-late: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
-  return SentenceTransformersAdapter(model_id, **kwargs)
 Hcompany/NeoMME-800M-Retriever-ST-late: registry status unverified
-Loading weights:   0%|          | 0/188 [00:00<?, ?it/s]Loading weights:  12%|█▏        | 22/188 [00:00<00:00, 211.54it/s]Loading weights:  26%|██▌       | 49/188 [00:00<00:00, 221.06it/s]Loading weights:  40%|████      | 76/188 [00:00<00:00, 227.81it/s]Loading weights:  55%|█████▍    | 103/188 [00:00<00:00, 222.92it/s]Loading weights:  70%|██████▉   | 131/188 [00:00<00:00, 236.77it/s]Loading weights:  84%|████████▎ | 157/188 [00:00<00:00, 233.80it/s]Loading weights:  99%|█████████▉| 187/188 [00:00<00:00, 247.75it/s]Loading weights: 100%|██████████| 188/188 [00:00<00:00, 215.16it/s]
-{"loaded": "Hcompany/NeoMME-800M-Retriever-ST-late", "device": null, "dtype": "float32", "adapter_merge_check": null, "loading_report": null, "placement": null, "max_num_visual_tokens": null}
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:00<00:01, 224.80 examples/s]Generating test split:  40%|████      | 200/500 [00:00<00:00, 321.49 examples/s]Generating test split:  60%|██████    | 300/500 [00:00<00:00, 366.89 examples/s]Generating test split:  80%|████████  | 400/500 [00:01<00:00, 380.99 examples/s]Generating test split: 100%|██████████| 500/500 [00:01<00:00, 421.45 examples/s]
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:865: UserWarning: Hcompany/NeoMME-800M-Retriever-ST-late: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+Loading weights:   0%|          | 0/188 [00:00<?, ?it/s]Loading weights:   1%|          | 2/188 [00:00<00:13, 13.72it/s]Loading weights:  26%|██▌       | 49/188 [00:00<00:00, 221.85it/s]Loading weights:  40%|████      | 76/188 [00:00<00:00, 226.48it/s]Loading weights:  55%|█████▍    | 103/188 [00:00<00:00, 240.42it/s]Loading weights:  69%|██████▉   | 130/188 [00:00<00:00, 242.67it/s]Loading weights:  84%|████████▎ | 157/188 [00:00<00:00, 240.61it/s]Loading weights:  99%|█████████▉| 187/188 [00:00<00:00, 256.72it/s]Loading weights: 100%|██████████| 188/188 [00:00<00:00, 214.72it/s]
+{"loaded": "Hcompany/NeoMME-800M-Retriever-ST-late", "device": null, "dtype": "float32", "adapter_merge_check": null, "loading_report": null, "placement": null, "max_num_visual_tokens": null, "revision": "ad4c17419c28745c3b3045981b0d8abb72cd142b"}
 {"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [3010, 3330, 3266, 3317, 3266, 3074, 3330, 3252, 3266, 3266, 462, 3330], "vectors_per_query": [21, 18, 19, 15, 16, 22, 18, 20, 23, 16, 17, 24], "finite": true, "unit_norm_max_error": 1.7881393432617188e-07, "query_ranks_own_document_first": 11, "ok": true}}
-Traceback (most recent call last):
-  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 200, in <module>
-    raise SystemExit(main())
-                     ~~~~^^
-  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 137, in main
-    docs = adapter.encode_documents(images, ids=ids)
-  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 755, in encode_documents
-    return self._to_corpus(self._encode(self.model.encode_document, documents), ids)
-                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 744, in _encode
-    arrays.extend(self._host(o) for o in method(items[start : start + self.batch_size], **self.encode_kwargs))
-                                         ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 563, in encode_document
-    return self.encode(
-           ~~~~~~~~~~~^
-        inputs=inputs,
-        ^^^^^^^^^^^^^^
-    ...<12 lines>...
-        **kwargs,
-        ^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 867, in encode
-    features = self(features, task=task)
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/model.py", line 569, in forward
-    input = module(input, **module_kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/modules/transformer.py", line 1650, in forward
-    model_output = model_method(**filtered_kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/output_capturing.py", line 287, in wrapper
-    outputs = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/neomme/modeling_neomme.py", line 594, in forward
-    hidden_states = encoder_layer(
-        hidden_states,
-    ...<4 lines>...
-        **kwargs,
-    )
-  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_layers.py", line 110, in __call__
-    return super().__call__(*args, **kwargs)
-           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/neomme/modeling_neomme.py", line 403, in forward
-    attn_output, _ = self.self_attn(
-                     ~~~~~~~~~~~~~~^
-        normed_states,
-        ^^^^^^^^^^^^^^
-    ...<3 lines>...
-        **kwargs,
-        ^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
-    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.13/dist-packages/transformers/models/neomme/modeling_neomme.py", line 347, in forward
-    attn_output, attn_weights = attention_interface(
-                                ~~~~~~~~~~~~~~~~~~~^
-        self,
-        ^^^^^
-    ...<7 lines>...
-        **kwargs,
-        ^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/transformers/integrations/sdpa_attention.py", line 170, in sdpa_attention_forward
-    attn_output = torch.nn.functional.scaled_dot_product_attention(
-        query,
-    ...<6 lines>...
-        **sdpa_kwargs,
-    )
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.11 GiB. GPU 0 has a total capacity of 14.56 GiB of which 442.81 MiB is free. Including non-PyTorch memory, this process has 14.13 GiB memory in use. Of the allocated memory 13.52 GiB is allocated by PyTorch, and 495.84 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+{"tag": "NeoMME-800M-Retriever-ST-late_docvqa_test_subsampled", "docs": 500, "vectors": 1460312, "dim": 128, "queries": 451, "doc_seconds": 1006.0, "query_seconds": 16.8, "device": null, "dtype": "float32", "adapter_merge_check": null, "loading_report": null, "placement": null, "max_num_visual_tokens": null, "revision": "ad4c17419c28745c3b3045981b0d8abb72cd142b"}

@@ -129,6 +129,12 @@
 
   `batch_13_retry.ipynb` is back to the list that ran.
 
+### Kaggle measurement campaign, batch 14b_neomme_retry
+
+- **`Hcompany/NeoMME-800M-Retriever-ST-late` measured.** It ran in float32 on one T4, one page per
+  batch, with transformers 5.20.0, and the selection study completed. 52 of the 65 registry models
+  are now measured; the catalogue holds 50 models and 5044 rows.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

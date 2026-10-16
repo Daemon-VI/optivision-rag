@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 51 measured, 1 untested, 13 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 52 measured, 1 untested, 12 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (51)
+### Measured (52)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -181,6 +181,7 @@ The registry holds 65 models: 51 measured, 1 untested, 13 unverified. The facts 
 | `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `webAI-Official/webAI-ColVec1-4b` | image | 640 | `remote-code:colvec` | other |
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Cognitive-Lab/ColNetraEmbed` | image | 128 | `colpali-engine:colgemma3` | gemma |
 | `lightonai/Reason-ModernColBERT` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
 | `lightonai/ColBERT-Zero` | text | 128 | `sentence-transformers` | apache-2.0 |
@@ -237,7 +238,7 @@ Loading notes:
 
 - `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
 
-### Unverified (13)
+### Unverified (12)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -245,7 +246,6 @@ Loading notes:
 | `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
 | `webAI-Official/webAI-ColVec1.1-4b` | image | 640 | `sentence-transformers` | other |
 | `webAI-Official/webAI-ColVec1.1-8b` | image | 640 | `sentence-transformers` | other |
-| `Hcompany/NeoMME-800M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `ibm-granite/granite-vision-3.3-2b-embedding` | image | 128 | `remote-code:processor` | apache-2.0 |
 | `5CD-AI/Vintern-Embedding-1B` | image | 128 | `remote-code:processor` | not declared |
 | `jinaai/jina-embeddings-v4` | image | 128 | `remote-code:jina-v4` | not declared |
@@ -306,6 +306,8 @@ queries decides.
 | `Cognitive-Lab/ColNetraEmbed` | infovqa_test_subsampled | ndcg@5 0.886 | `int4` | 7.8 | 0.999 [0.995, 1.003] |
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | docvqa_test_subsampled | ndcg@5 0.542 | `hierarchical_merge(0.25) > lloyd2(7)` | 64.0 | 0.999 [0.978, 1.020] |
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | infovqa_test_subsampled | ndcg@5 0.821 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.983 [0.971, 0.994] |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | docvqa_test_subsampled | ndcg@5 0.581 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.5 | 0.991 [0.971, 1.012] |
+| `Hcompany/NeoMME-800M-Retriever-ST-late` | infovqa_test_subsampled | ndcg@5 0.860 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.992 [0.980, 1.003] |
 | `LiquidAI/LFM2-ColBERT-350M` | scifact | ndcg@10 0.733 | `int4` | 7.8 | 0.992 [0.977, 1.006] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | docvqa_test_subsampled | ndcg@5 0.626 | `lloyd2(7)` | 16.0 | 0.992 [0.973, 1.011] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | infovqa_test_subsampled | ndcg@5 0.924 | `lloyd2(7)` | 16.0 | 0.994 [0.986, 1.001] |
