@@ -429,18 +429,18 @@ _MODELS: list[ModelInfo] = [
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card requires flash-attn"),
     ModelInfo("lightonai/colbertv2.0", "colbert", "text", "sentence-transformers", 128,
-              UNTESTED, "check_retriever passed here on 2026-10-12 (8 text pairs, sentence-transformers 6.1.0, CPU: 8"
-              " of 8 queries ranked their own document first, 128-d unit-norm vectors; "
-              "reports/universal/loader_checks/2026-10-12.json); Kaggle batch 11_text measured it, but "
-              "colbert-ir/colbertv2.0 in the same batch has the same short name and overwrote its results "
-              "(only its selection study survived, in "
-              "reports/universal/campaign/batches/11_text/orphans/colbertv2.0); not yet re-run",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~236 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below, 2026-10-16 "
+              "(batch 11_text's results were overwritten by colbert-ir/colbertv2.0, same short name); "
+              "Kaggle batch 14a_text_retry; "
+              "reports/universal/campaign/lightonai--colbertv2.0",
               license="mit", revision="0b9b1e380096a3b72b6b4877f68d59effb62e0f2",
               notes="the sentence-transformers conversion of colbert-ir/colbertv2.0"),
     ModelInfo("jinaai/jina-colbert-v2", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never run here "
-              "(Kaggle batch 11_text ran out of time before it); model card and repository files read "
-              "2026-10-12",
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~258 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below, 2026-10-16; "
+              "Kaggle batch 14a_text_retry; "
+              "reports/universal/campaign/jinaai--jina-colbert-v2",
               license="cc-by-nc-4.0", revision="a9dc5cd7293d4c71dbbba04829923ba4d0e4f6ea",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; needs "
                     "einops"),
@@ -499,9 +499,10 @@ _MODELS: list[ModelInfo] = [
               license="other", revision="9d727d7964d3e4fd093a0f01c7287ae814264e31",
               notes="also loads with loader='pylate'"),
     ModelInfo("LiquidAI/LFM2.5-ColBERT-350M", "colbert", "text", "sentence-transformers", 128,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; encoded BEIR "
-              "SciFact and passed check_retriever on Kaggle 2026-10-15 (batch 11_text), then the session "
-              "ran out of time in the fixed-pipeline study; not yet re-run; "
+              MEASURED, "BEIR SciFact (5,183 documents, 300 queries, ~286 vectors/document) through "
+              "sentence-transformers 6.1.0 on one Kaggle T4, at the revision below, 2026-10-16 "
+              "(batch 11_text ran out of time in its study); "
+              "Kaggle batch 14a_text_retry; "
               "reports/universal/campaign/LiquidAI--LFM2.5-ColBERT-350M",
               license="other", revision="9772bdf797255d8693b83e84aa98e9b2d36dd0be",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; also "

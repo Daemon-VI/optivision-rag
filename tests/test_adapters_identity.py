@@ -169,8 +169,10 @@ def test_the_registry_statuses_have_not_moved():
                         "mixedbread-ai/mxbai-colbert-large-v1", "LiquidAI/LFM2-ColBERT-350M",
                         "Hcompany/NeoMME-260M-Retriever-ST-late", "webAI-Official/webAI-ColVec1-4b",
                         # Kaggle batch 14b_neomme_retry, 2026-10-16
-                        "Hcompany/NeoMME-800M-Retriever-ST-late"}
-    assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
+                        "Hcompany/NeoMME-800M-Retriever-ST-late",
+                        # Kaggle batch 14a_text_retry, 2026-10-16
+                        "lightonai/colbertv2.0", "LiquidAI/LFM2.5-ColBERT-350M", "jinaai/jina-colbert-v2"}
+    assert len(added) == 53 and set(added.values()) == {"measured", "unverified"}
     assert all(m.evidence for m in supported_models())
 
 

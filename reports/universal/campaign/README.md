@@ -9,7 +9,7 @@ loader after `check_retriever` passed on 12 pairs, then the fixed-pipeline study
 (`s7b_selection_rules.py`, in `selection_rules/`). The figures are development measurements
 on those datasets, not a guarantee for another corpus. The vectors were not kept.
 
-42 of 54 models attempted are measured.
+45 of 55 models attempted are measured.
 
 | model | batch | outcome | inference dtype | GPU hours | selection study |
 |---|---|---|---|---|---|
@@ -47,13 +47,11 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | 10_pinned_transformers | incomplete: encode_docvqa failed (exit 1) | float32 | 0.0 | no |
 | `colbert-ir/colbertv2.0` | 11_text | measured | auto | 0.37 | no |
 | `lightonai/ColBERT-Zero` | 11_text | measured | auto | 0.6 | no |
-| `lightonai/colbertv2.0` | 11_text | incomplete: its results are not in the archive (overwritten by a model with the same short name) |  |  | no |
 | `lightonai/GTE-ModernColBERT-v1` | 11_text | measured | auto | 0.43 | no |
 | `lightonai/LateOn` | 11_text | measured | auto | 1.47 | yes |
 | `lightonai/mLateOn` | 11_text | measured | auto | 0.74 | no |
 | `lightonai/Reason-ModernColBERT` | 11_text | measured | auto | 0.59 | no |
 | `LiquidAI/LFM2-ColBERT-350M` | 11_text | measured | auto | 0.85 | no |
-| `LiquidAI/LFM2.5-ColBERT-350M` | 11_text | incomplete: s13 LFM2.5-ColBERT-350M_scifact timed out | auto | 0.41 | no |
 | `mixedbread-ai/mxbai-colbert-large-v1` | 11_text | measured | auto | 1.72 | no |
 | `mixedbread-ai/mxbai-edge-colbert-v0-17m` | 11_text | measured | auto | 1.25 | yes |
 | `mixedbread-ai/mxbai-edge-colbert-v0-32m` | 11_text | measured | auto | 0.38 | no |
@@ -64,6 +62,9 @@ on those datasets, not a guarantee for another corpus. The vectors were not kept
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | 13_retry | measured | float32 | 3.01 | no |
 | `webAI-Official/webAI-ColVec1-4b` | 13_retry | measured | float32 | 4.81 | yes |
 | `webAI-Official/webAI-ColVec1.1-8b` | 13_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.06 | no |
+| `jinaai/jina-colbert-v2` | 14a_text_retry | measured | auto | 1.81 | yes |
+| `lightonai/colbertv2.0` | 14a_text_retry | measured | auto | 1.64 | yes |
+| `LiquidAI/LFM2.5-ColBERT-350M` | 14a_text_retry | measured | auto | 2.08 | yes |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | 14b_neomme_retry | measured | float32 | 4.52 | yes |
 | `webAI-Official/webAI-ColVec1.1-4b` | 14c_colvec_retry | incomplete: encode_docvqa failed (exit 1) | float32 | 0.04 | no |
 | `tencent/EVIE-8B` | 14d_evie_retry | incomplete: encode_docvqa failed (exit 1) | float16 | 0.2 | no |

@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 52 measured, 1 untested, 12 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 55 measured, 0 untested, 10 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (52)
+### Measured (55)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -183,6 +183,8 @@ The registry holds 65 models: 52 measured, 1 untested, 12 unverified. The facts 
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Cognitive-Lab/ColNetraEmbed` | image | 128 | `colpali-engine:colgemma3` | gemma |
+| `lightonai/colbertv2.0` | text | 128 | `sentence-transformers` | mit |
+| `jinaai/jina-colbert-v2` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
 | `lightonai/Reason-ModernColBERT` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
 | `lightonai/ColBERT-Zero` | text | 128 | `sentence-transformers` | apache-2.0 |
 | `lightonai/LateOn` | text | 128 | `sentence-transformers` | apache-2.0 |
@@ -191,6 +193,7 @@ The registry holds 65 models: 52 measured, 1 untested, 12 unverified. The facts 
 | `mixedbread-ai/mxbai-edge-colbert-v0-32m` | text | 64 | `sentence-transformers` | apache-2.0 |
 | `mixedbread-ai/mxbai-colbert-large-v1` | text | 128 | `sentence-transformers` | apache-2.0 |
 | `LiquidAI/LFM2-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
+| `LiquidAI/LFM2.5-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
 | `NeuML/colbert-bert-tiny` | text | 128 | `sentence-transformers` | apache-2.0 |
 
 Loading notes:
@@ -220,6 +223,8 @@ Loading notes:
 - `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
 - `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `Cognitive-Lab/ColNetraEmbed`: the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali); the released colpali-engine loads it here once the checkpoint's nested keys are mapped
+- `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
+- `jinaai/jina-colbert-v2`: runs the repository's own modelling code: pass trust_remote_code=True; needs einops
 - `lightonai/Reason-ModernColBERT`: also loads with loader='pylate'
 - `lightonai/ColBERT-Zero`: also loads with loader='pylate'
 - `lightonai/LateOn`: also loads with loader='pylate'
@@ -227,18 +232,14 @@ Loading notes:
 - `mixedbread-ai/mxbai-edge-colbert-v0-17m`: also loads with loader='pylate'
 - `mixedbread-ai/mxbai-edge-colbert-v0-32m`: also loads with loader='pylate'
 - `LiquidAI/LFM2-ColBERT-350M`: also loads with loader='pylate'
+- `LiquidAI/LFM2.5-ColBERT-350M`: runs the repository's own modelling code: pass trust_remote_code=True; also loads with loader='pylate'
 
-### Untested (1)
+### Untested (0)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
-| `lightonai/colbertv2.0` | text | 128 | `sentence-transformers` | mit |
 
-Loading notes:
-
-- `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
-
-### Unverified (12)
+### Unverified (10)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -252,8 +253,6 @@ Loading notes:
 | `nvidia/llama-nemoretriever-colembed-1b-v1` | image | ? | `remote-code:nvidia-colembed` | other |
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | image | ? | `remote-code:nvidia-colembed` | other |
 | `nvidia/llama-nemotron-colembed-vl-3b-v2` | image | 3072 | `remote-code:nvidia-colembed` | other |
-| `jinaai/jina-colbert-v2` | text | 128 | `sentence-transformers` | cc-by-nc-4.0 |
-| `LiquidAI/LFM2.5-ColBERT-350M` | text | 128 | `sentence-transformers` | other |
 
 Loading notes:
 
@@ -266,8 +265,6 @@ Loading notes:
 - `nvidia/llama-nemoretriever-colembed-1b-v1`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires transformers==4.49.0 and flash-attn; no file of the repository states the output width
 - `nvidia/llama-nemoretriever-colembed-3b-v1`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires transformers==4.49.0 and flash-attn; no file of the repository states the output width
 - `nvidia/llama-nemotron-colembed-vl-3b-v2`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires flash-attn
-- `jinaai/jina-colbert-v2`: runs the repository's own modelling code: pass trust_remote_code=True; needs einops
-- `LiquidAI/LFM2.5-ColBERT-350M`: runs the repository's own modelling code: pass trust_remote_code=True; also loads with loader='pylate'
 
 ## 4. What was measured
 
@@ -309,6 +306,7 @@ queries decides.
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | docvqa_test_subsampled | ndcg@5 0.581 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.5 | 0.991 [0.971, 1.012] |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | infovqa_test_subsampled | ndcg@5 0.860 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.992 [0.980, 1.003] |
 | `LiquidAI/LFM2-ColBERT-350M` | scifact | ndcg@10 0.733 | `int4` | 7.8 | 0.992 [0.977, 1.006] |
+| `LiquidAI/LFM2.5-ColBERT-350M` | scifact | ndcg@10 0.742 | `int4(mean)` | 7.8 | 0.992 [0.979, 1.004] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | docvqa_test_subsampled | ndcg@5 0.626 | `lloyd2(7)` | 16.0 | 0.992 [0.973, 1.011] |
 | `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` | infovqa_test_subsampled | ndcg@5 0.924 | `lloyd2(7)` | 16.0 | 0.994 [0.986, 1.001] |
 | `ModernVBERT/colmodernvbert` | docvqa_test_subsampled | ndcg@5 0.556 | `hierarchical_merge(0.33) > int4(mean)` | 23.5 | 0.992 [0.971, 1.013] |
@@ -326,10 +324,12 @@ queries decides.
 | `athrael-soju/colqwen3.5-4.5B-v3` | docvqa_test_subsampled | ndcg@5 0.675 | `lloyd2(7)` | 16.0 | 0.994 [0.979, 1.007] |
 | `athrael-soju/colqwen3.5-4.5B-v3` | infovqa_test_subsampled | ndcg@5 0.939 | `lloyd2(7)` | 16.0 | 0.997 [0.992, 1.001] |
 | `colbert-ir/colbertv2.0` | scifact | ndcg@10 0.646 | `binary` | 32.0 | 1.012 [0.993, 1.032] |
+| `jinaai/jina-colbert-v2` | scifact | ndcg@10 0.695 | `hierarchical_merge(0.25) > int4(mean)` | 30.9 | 0.998 [0.979, 1.016] |
 | `lightonai/ColBERT-Zero` | scifact | ndcg@10 0.770 | `project(64) > int4(mean)` | 15.1 | 0.997 [0.983, 1.013] |
 | `lightonai/GTE-ModernColBERT-v1` | scifact | ndcg@10 0.760 | `hierarchical_merge(0.25) > project(128) > int4(mean)` | 30.8 | 0.994 [0.977, 1.009] |
 | `lightonai/LateOn` | scifact | ndcg@10 0.763 | `hierarchical_merge(0.33) > project(128) > int8(per_vector)` | 11.9 | 0.997 [0.976, 1.016] |
 | `lightonai/Reason-ModernColBERT` | scifact | ndcg@10 0.738 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.2 | 1.004 [0.980, 1.031] |
+| `lightonai/colbertv2.0` | scifact | ndcg@10 0.692 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.2 | 0.995 [0.976, 1.014] |
 | `lightonai/mLateOn` | scifact | ndcg@10 0.764 | `hierarchical_merge(0.33) > int8(per_vector)` | 11.9 | 0.992 [0.979, 1.007] |
 | `mixedbread-ai/mxbai-colbert-large-v1` | scifact | ndcg@10 0.631 | `int4(mean)` | 7.8 | 0.992 [0.975, 1.009] |
 | `mixedbread-ai/mxbai-edge-colbert-v0-17m` | scifact | ndcg@10 0.731 | `int4(mean)` | 7.4 | 0.993 [0.976, 1.010] |
