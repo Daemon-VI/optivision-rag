@@ -152,6 +152,10 @@ FOLLOWUP: list[tuple[str, str, list[str], list[dict]]] = [
         {"model": "LiquidAI/LFM2-ColBERT-350M", **NFCORPUS}]),
     ("f3_text_scale", "SciFact with 10,000 FiQA distractor documents (corpus 5,183 -> 15,183)", [ST], [
         {"model": m, **SCALE_TEXT} for m in ("colbert-ir/colbertv2.0", "answerdotai/answerai-colbert-small-v1")]),
+    # the original corpus for f3's second model: answerai was measured before the campaign, with an
+    # older script whose rows lack int4(mean) and the tiered index that P9 and P11 compare
+    ("f3b_answerai_scifact", "SciFact without distractors, the original corpus f3 compares against", [ST], [
+        {"model": "answerdotai/answerai-colbert-small-v1", "kind": "text", "datasets": ["scifact"]}]),
     ("f4_pages_128d", "image models on two other ViDoRe page sets (arXiv figures, French tables), 128-d", [], [
         {"model": m, **F32, **PAGESETS} for m in ("vidore/colSmol-500M", "vidore/colpali-v1.3",
                                                   "vidore/colqwen2.5-v0.2")]),

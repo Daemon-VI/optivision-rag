@@ -227,6 +227,31 @@
 - **Correction.** The 14a entry above gave the colbertv2.0 baselines as nDCG@5. They are nDCG@10,
   the metric of the catalogue's text rows.
 
+### Follow-up batch f1_text_nfcorpus_a
+
+- **Results.** colbertv2.0, answerai-colbert-small-v1, LateOn and mxbai-edge-colbert-v0-17m were
+  measured on NFCorpus (3,633 documents, 323 queries), each passing the SciFact check at 10 to 12
+  of 12. They are in `reports/universal/followup/f1_text_nfcorpus_a/`.
+- **Scoring.** `scripts/followup_predictions.py` scores the follow-up results against
+  `PREDICTIONS.md` and writes `reports/universal/followup/PREDICTIONS_STATUS.md`.
+- **Two predictions failed.**
+  - P3: LateOn's plain int4 retention on NFCorpus is 0.638. The prediction was below 0.6.
+  - P6: on answerai-colbert-small-v1, merging to 10% retains more than merging to 25% (0.858
+    against 0.797). The campaign data already held 4 such inversions in 80 units, all on DocVQA,
+    so a prediction "on all 18 units" was stronger than the data supported.
+- **Pending.** The other 12 are pending. A unit or two can't settle them yet, though the units in
+  so far meet every per-unit threshold except int4(mean)'s lower bound on answerai (0.924), which
+  P2 allows twice.
+- **Not predicted (exploratory).**
+  - Plain int4 collapses on answerai-colbert-small-v1 (0.455), a model neither in the degraded
+    set nor among the controls. Its int4 score correlation is high (0.982), the opposite of the
+    signal P12 and P14 expect.
+  - Binary keeps 0.241 on mxbai-edge-colbert-v0-17m.
+- **New notebook `f3b_answerai_scifact`.** It measures answerai on SciFact alone. P9 to P11
+  compare f3's enlarged corpus with the original one, and answerai's earlier SciFact run came from
+  the pre-campaign script, whose rows lack int4(mean) and the tiered index. The predictions are
+  unchanged.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

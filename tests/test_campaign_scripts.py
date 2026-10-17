@@ -127,3 +127,31 @@ def test_distractor_pages_are_appended_a_chunk_at_a_time_without_labels(monkeypa
     assert firsts == [0.0, 100, 101, 102, 103, 104, 200, 201] and out.attrs["model"] == "m"
     with pytest.raises(SystemExit, match="only 10 distractor pages"):
         pages._with_distractors(adapter, own, ["a", "b"], 11, "test", chunk=3)
+
+
+def test_prediction_status_waits_for_pending_units_but_fails_early():
+    score = _load("followup_predictions")
+
+    def unit(state, value=None):
+        u = score.Unit.__new__(score.Unit)
+        u.model, u.key, u.batch, u.state = "org/m", "nfcorpus", "f1", state
+        u.result = {"v": value} if state == "ran" else None
+        return u
+
+    ok = lambda r: r["v"] >= 0.95
+    assert score.each([unit("ran", 0.99), unit("pending")], ok)[0] == "pending"
+    assert score.each([unit("ran", 0.99), unit("ran", 0.96)], ok)[0] == "held"
+    assert score.each([unit("ran", 0.90), unit("pending")], ok)[0] == "failed"  # one miss sinks "every unit"
+    assert score.each([unit("ran", 0.90), unit("ran", 0.99), unit("pending")], ok, need=2)[0] == "pending"
+    assert score.each([unit("ran", 0.90), unit("ran", 0.99), unit("not run")], ok, need=2)[0] == "not testable"
+    assert score.each([unit("ran", 0.99), unit("ran", 0.99), unit("pending")], ok, need=2)[0] == "held"
+    assert score.combine([("held", "a"), ("pending", "b")])[0] == "pending"
+    assert score.combine([("pending", "a"), ("failed", "b")])[0] == "failed"
+
+
+def test_spearman_handles_ties_and_order():
+    rho = _load("followup_predictions").spearman
+    assert rho([1, 2, 3, 4], [10, 20, 30, 40]) == pytest.approx(1.0)
+    assert rho([1, 2, 3, 4], [4, 3, 2, 1]) == pytest.approx(-1.0)
+    assert rho([1, 1, 2, 3], [1, 2, 3, 4]) == pytest.approx(0.9486833, abs=1e-6)
+    assert rho([1, 1, 1], [1, 2, 3]) == 0.0
