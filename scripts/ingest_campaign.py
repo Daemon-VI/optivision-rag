@@ -13,6 +13,13 @@ which a case-insensitive file system would otherwise merge. The batch's environm
 reads. A later batch that measures a model again replaces its folder and its outcome; the
 earlier attempt stays listed under ``attempts``.
 
+A follow-up batch (named ``f<n>_...``, from ``notebooks/kaggle_followup``) measures models the
+campaign already holds, on other datasets or corpus sizes. Its archive goes to
+``reports/universal/followup/<batch>/<org>--<name>/`` instead, its environment files to
+``reports/universal/followup/<batch>/_batch/``, and its outcomes to
+``reports/universal/followup/outcomes.json`` under ``"<model> @ <batch>"``. The campaign's
+folders, outcomes and catalogue are not touched.
+
 Members are read straight from the archive. Only ``.json``, ``.log`` and ``.txt`` files under
 the batch folder are taken, never a path that leaves it, and nothing is executed.
 """
@@ -21,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -28,6 +36,8 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[1]
 CAMPAIGN = ROOT / "reports" / "universal" / "campaign"
 OUTCOMES = CAMPAIGN / "outcomes.json"
+FOLLOWUP = ROOT / "reports" / "universal" / "followup"
+FOLLOWUP_OUTCOMES = FOLLOWUP / "outcomes.json"
 ALLOWED = {".json", ".log", ".txt"}
 MAX_BYTES = 20 * 1024**2
 
@@ -48,7 +58,20 @@ def _ran_selection(record: dict) -> bool:
     return any(k.startswith("s7b ") for k in record.get("steps", {}))
 
 
+def is_followup(batch: str) -> bool:
+    return re.fullmatch(r"f\d+[a-z]?_[A-Za-z0-9_]+", batch) is not None
+
+
+def batch_of(archive: Path) -> str:
+    with zipfile.ZipFile(archive) as z:
+        tops = {PurePosixPath(m.filename).parts[0] for m in z.infolist() if not m.is_dir()}
+    if len(tops) != 1 or not next(iter(tops)).startswith("results_"):
+        raise SystemExit(f"{archive}: expected one results_<batch>/ folder, found {sorted(tops)}")
+    return next(iter(tops))[len("results_"):]
+
+
 def ingest(archive: Path, outcomes: dict) -> list[str]:
+    followup = is_followup(batch_of(archive))
     with zipfile.ZipFile(archive) as z:
         members = [m for m in z.infolist() if not m.is_dir()]
         tops = {PurePosixPath(m.filename).parts[0] for m in members}
@@ -64,12 +87,14 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
         summary = json.loads(z.read(f"{top}/batch_summary.json"))
         commit = z.read(f"{top}/commit.txt").decode().strip() if f"{top}/commit.txt" in z.namelist() else None
 
+        models_root = FOLLOWUP / batch if followup else CAMPAIGN
+        batch_dir = models_root / "_batch" if followup else CAMPAIGN / "batches" / batch
         destinations = {short: folder_of(r["model"]) for short, r in runs.items()}
         if len({d.lower() for d in destinations.values()}) != len(destinations):
             raise SystemExit(f"{archive}: two models would share a folder: {destinations}")
         for dest in destinations.values():
-            shutil.rmtree(CAMPAIGN / dest, ignore_errors=True)
-        shutil.rmtree(CAMPAIGN / "batches" / batch, ignore_errors=True)
+            shutil.rmtree(models_root / dest, ignore_errors=True)
+        shutil.rmtree(batch_dir, ignore_errors=True)
 
         skipped, orphans = [], []
         for m in members:
@@ -79,14 +104,14 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
                 skipped.append(m.filename)
                 continue
             if len(parts) == 2:
-                target = CAMPAIGN / "batches" / batch / parts[1]
+                target = batch_dir / parts[1]
             elif parts[1] in destinations and _selection_file(parts[2:]) and not _ran_selection(runs[parts[1]]):
                 # a selection study this folder's run never ran: left by another model with the same
                 # short name (lightonai/colbertv2.0 and colbert-ir/colbertv2.0 in batch 11_text)
-                target = CAMPAIGN / "batches" / batch / "orphans" / parts[1] / Path(*parts[2:])
+                target = batch_dir / "orphans" / parts[1] / Path(*parts[2:])
                 orphans.append(m.filename)
             elif parts[1] in destinations:
-                target = CAMPAIGN / destinations[parts[1]] / Path(*parts[2:])
+                target = models_root / destinations[parts[1]] / Path(*parts[2:])
             else:
                 skipped.append(m.filename)
                 continue
@@ -108,6 +133,11 @@ def ingest(archive: Path, outcomes: dict) -> list[str]:
                          finished_utc=record.get("finished_utc"), gpu_hours=_hours(record),
                          check_retriever_ok=check.get("ok"),
                          selection_study=_ran_selection(record))
+        if followup:
+            entry["spec"] = {k: v for k, v in (record or {}).get("spec", {}).items() if k != "model"}
+            outcomes[f"{model} @ {batch}"] = entry
+            lines.append(f"  {model}: {outcome}")
+            continue
         previous = outcomes.get(model)
         attempts = (previous or {}).get("attempts", [])
         if previous is not None and previous["batch"] != batch:  # the same archive again changes nothing
@@ -152,14 +182,25 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("archives", nargs="+", type=Path)
     a = ap.parse_args()
-    CAMPAIGN.mkdir(parents=True, exist_ok=True)
-    outcomes = json.loads(OUTCOMES.read_text(encoding="utf-8")) if OUTCOMES.exists() else {}
-    for archive in a.archives:
-        print("\n".join(ingest(archive, outcomes)))
-    OUTCOMES.write_text(json.dumps(dict(sorted(outcomes.items())), indent=1) + "\n", encoding="utf-8", newline="\n")
-    write_readme(outcomes)
-    measured = sum(1 for o in outcomes.values() if o["outcome"] == "measured")
-    print(f"{OUTCOMES.relative_to(ROOT)}: {len(outcomes)} models, {measured} measured")
+    followups = [x for x in a.archives if is_followup(batch_of(x))]
+    campaign = [x for x in a.archives if x not in followups]
+    if campaign:
+        CAMPAIGN.mkdir(parents=True, exist_ok=True)
+        outcomes = json.loads(OUTCOMES.read_text(encoding="utf-8")) if OUTCOMES.exists() else {}
+        for archive in campaign:
+            print("\n".join(ingest(archive, outcomes)))
+        OUTCOMES.write_text(json.dumps(dict(sorted(outcomes.items())), indent=1) + "\n", encoding="utf-8", newline="\n")
+        write_readme(outcomes)
+        measured = sum(1 for o in outcomes.values() if o["outcome"] == "measured")
+        print(f"{OUTCOMES.relative_to(ROOT)}: {len(outcomes)} models, {measured} measured")
+    if followups:  # their own folder and outcomes: the campaign's record is not touched
+        FOLLOWUP.mkdir(parents=True, exist_ok=True)
+        runs = json.loads(FOLLOWUP_OUTCOMES.read_text(encoding="utf-8")) if FOLLOWUP_OUTCOMES.exists() else {}
+        for archive in followups:
+            print("\n".join(ingest(archive, runs)))
+        FOLLOWUP_OUTCOMES.write_text(json.dumps(dict(sorted(runs.items())), indent=1) + "\n", encoding="utf-8",
+                                     newline="\n")
+        print(f"{FOLLOWUP_OUTCOMES.relative_to(ROOT)}: {len(runs)} runs")
     return 0
 
 

@@ -190,6 +190,43 @@
   records it. `batch_16_evie_retry` uses the 1,024-token page budget that EVIE-8B's card gives
   for its evaluation protocol.
 
+### Campaign analysis and follow-up measurements
+
+- **Analysis.** `reports/universal/campaign_analysis/` holds an exploratory multi-agent analysis
+  of the 55 measured models: `REPORT.md`, every finding with its skeptic's verdict
+  (`findings.json`), the scripts, and a literature digest.
+- **Predictions, written before the runs.** `PREDICTIONS.md` lists 14 predictions with fixed
+  thresholds for the follow-up batches. It is committed with their notebooks, before they ran.
+- **Eight follow-up notebooks** (`notebooks/kaggle_followup`, written by
+  `scripts/make_kaggle_batches.py`):
+  - `f1` and `f2`: text models on BEIR NFCorpus.
+  - `f3`: SciFact with 10,000 FiQA distractor documents.
+  - `f4` and `f5`: image models on ViDoRe arXivQA and TabFQuAD.
+  - `f6` and `f7`: DocVQA with 2,000 distractor pages.
+  - `f8`: the vector geometry of the models where plain int4 collapses, and of controls.
+- **Results go to their own folder.** `ingest_campaign.py` sends `f<n>_` archives to
+  `reports/universal/followup/<batch>/`, and the campaign's folders, outcomes and catalogue are
+  not touched.
+- **`measure_models.py` spec keys.** It accepts `datasets` (image datasets, or BEIR names for
+  text), `distractors` with `distractor_count`, a per-model `limit`, and `studies: false`
+  (encode and geometry only).
+- **Encoders.** `encode_vectors.py` takes `--distractors` and `--distractor-pages`, and streams
+  those pages a chunk at a time. `encode_text_vectors.py` takes `--dataset`, `--distractors`,
+  `--distractor-docs` and `--check-dataset`.
+- **Vector geometry is recorded after every encode.** `scripts/vector_geometry.py` writes
+  `geometry/<tag>.json` before the vectors are deleted. It records:
+  - the corpus-mean offset;
+  - the peak-to-RMS ratio per vector;
+  - how concentrated the second moment is in a few coordinates;
+  - per codec, how well each query token's scores survive encoding with the package's own
+    quantizers.
+- **Text check pairs.** They now take each query's most relevant document, and skip a pair whose
+  query is relevant to another chosen document. On every dataset they are drawn from SciFact
+  (`--check-dataset`). On NFCorpus's keyword queries, which have many relevant documents each,
+  "ranks its own document first" failed even for colbertv2.0 (2 of 12) in a local CPU check.
+- **Correction.** The 14a entry above gave the colbertv2.0 baselines as nDCG@5. They are nDCG@10,
+  the metric of the catalogue's text rows.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

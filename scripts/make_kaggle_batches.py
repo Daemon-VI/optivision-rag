@@ -131,6 +131,53 @@ BATCHES: list[tuple[str, str, list[str], list[dict]]] = [
          "processor_kwargs": {"size": {"longest_edge": 1024 * 32 * 32, "shortest_edge": 65536}}}]),
 ]
 
+#: Follow-up measurements of models the campaign already holds (reports/universal/campaign_analysis,
+#: section 6; the predictions they test are in reports/universal/campaign_analysis/PREDICTIONS.md,
+#: committed before they ran). Written to notebooks/kaggle_followup; their results are ingested
+#: into reports/universal/followup/<batch>/ and do not change the campaign's record or catalogue.
+NFCORPUS = {"kind": "text", "datasets": ["nfcorpus"]}
+PAGESETS = {"datasets": ["vidore/arxivqa_test_subsampled", "vidore/tabfquad_test_subsampled"]}
+SCALE_PAGES = {"datasets": ["vidore/docvqa_test_subsampled"], "distractor_count": 2000,
+               "distractors": ["vidore/syntheticDocQA_energy_test", "vidore/syntheticDocQA_healthcare_industry_test"]}
+SCALE_TEXT = {"kind": "text", "datasets": ["scifact"], "distractors": ["fiqa"], "distractor_count": 10000}
+GEOMETRY_TEXT = {"kind": "text", "studies": False, "limit": 1000}
+GEOMETRY_PAGES = {"datasets": ["vidore/docvqa_test_subsampled"], "studies": False, "limit": 100}
+FOLLOWUP: list[tuple[str, str, list[str], list[dict]]] = [
+    ("f1_text_nfcorpus_a", "text models on a second text dataset, BEIR NFCorpus (1 of 2)", [ST, "einops"], [
+        {"model": m, **NFCORPUS} for m in ("colbert-ir/colbertv2.0", "answerdotai/answerai-colbert-small-v1",
+                                           "lightonai/LateOn", "mixedbread-ai/mxbai-edge-colbert-v0-17m")]),
+    ("f2_text_nfcorpus_b", "text models on a second text dataset, BEIR NFCorpus (2 of 2)", [ST, "einops"], [
+        {"model": "lightonai/mLateOn", **NFCORPUS}, {"model": "lightonai/GTE-ModernColBERT-v1", **NFCORPUS},
+        {"model": "jinaai/jina-colbert-v2", **NFCORPUS, "trust_remote_code": True},
+        {"model": "LiquidAI/LFM2-ColBERT-350M", **NFCORPUS}]),
+    ("f3_text_scale", "SciFact with 10,000 FiQA distractor documents (corpus 5,183 -> 15,183)", [ST], [
+        {"model": m, **SCALE_TEXT} for m in ("colbert-ir/colbertv2.0", "answerdotai/answerai-colbert-small-v1")]),
+    ("f4_pages_128d", "image models on two other ViDoRe page sets (arXiv figures, French tables), 128-d", [], [
+        {"model": m, **F32, **PAGESETS} for m in ("vidore/colSmol-500M", "vidore/colpali-v1.3",
+                                                  "vidore/colqwen2.5-v0.2")]),
+    ("f5_pages_wide", "image models on two other ViDoRe page sets, 320-d and 2048-d", [ST], [
+        {"model": "vultr/VultronRetrieverCore-Qwen3.5-4.5B", **F32, **PAGESETS},
+        {"model": "tencent/EVIE-4.5B", **ST16, **PAGESETS}]),
+    ("f6_scale_colsmol", "DocVQA with 2,000 distractor pages (corpus 500 -> 2,500): ColSmol 500M", [], [
+        {"model": "vidore/colSmol-500M", **F32, **SCALE_PAGES}]),
+    ("f7_scale_colpali", "DocVQA with 2,000 distractor pages (corpus 500 -> 2,500): ColPali v1.3", [], [
+        {"model": "vidore/colpali-v1.3", **F32, **SCALE_PAGES}]),
+    ("f8_geometry", "vector geometry of models where plain int4 collapses, and of controls (encode only)",
+     [ST, "einops"], [
+        *({"model": m, **GEOMETRY_TEXT} for m in (
+            "lightonai/LateOn", "lightonai/mLateOn", "mixedbread-ai/mxbai-edge-colbert-v0-17m",
+            "mixedbread-ai/mxbai-edge-colbert-v0-32m", "lightonai/GTE-ModernColBERT-v1", "LiquidAI/LFM2-ColBERT-350M",
+            "lightonai/Reason-ModernColBERT", "lightonai/ColBERT-Zero", "mixedbread-ai/mxbai-colbert-large-v1",
+            "colbert-ir/colbertv2.0")),
+        {"model": "nvidia/nemotron-colembed-vl-4b-v2", **F32, **GEOMETRY_PAGES},
+        {"model": "nvidia/nemotron-colembed-vl-8b-v2", **F16, **GEOMETRY_PAGES},
+        {"model": "tencent/EVIE-4.5B", **ST16, **GEOMETRY_PAGES},
+        {"model": "tencent/EVIE-8B", **ST16, "batch_size": 1, "multi_gpu": True, **GEOMETRY_PAGES,
+         "processor_kwargs": {"size": {"longest_edge": 1024 * 32 * 32, "shortest_edge": 65536}}},
+        {"model": "vidore/colpali-v1.3", **F32, **GEOMETRY_PAGES}]),
+]
+OUT_FOLLOWUP = ROOT / "notebooks" / "kaggle_followup"
+
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
 #: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
 UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
@@ -240,6 +287,16 @@ def main() -> int:
     assert not missing and not unknown, (missing, unknown)
     print(f"wrote {len(BATCHES)} notebooks covering {len(set(seen))} models to {OUT.relative_to(ROOT)}; "
           f"{len(unmeasured)} of the registry still unmeasured")
+
+    OUT_FOLLOWUP.mkdir(parents=True, exist_ok=True)
+    for name, title, packages, models in FOLLOWUP:
+        shorts = [m["model"].split("/")[-1] for m in models]
+        assert len(set(shorts)) == len(shorts), f"batch {name}: two models share a short name"
+        assert {m["model"] for m in models} <= set(MODELS), f"batch {name}: a model is not in the registry"
+        assert name[0] == "f" and name.split("_")[0][1:].rstrip("abc").isdigit(), name  # ingest_campaign.is_followup
+        (OUT_FOLLOWUP / f"batch_{name}.ipynb").write_text(
+            json.dumps(notebook(name, title, packages, models), indent=1) + "\n", encoding="utf-8", newline="\n")
+    print(f"wrote {len(FOLLOWUP)} follow-up notebooks to {OUT_FOLLOWUP.relative_to(ROOT)}")
     return 0
 
 
