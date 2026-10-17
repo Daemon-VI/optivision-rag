@@ -134,9 +134,9 @@ Three things to know before loading:
   guessed; `check_retriever` reports the width the model produces.
 
 
-The registry holds 65 models: 55 measured, 0 untested, 10 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
+The registry holds 65 models: 57 measured, 0 untested, 8 unverified. The facts of the entries that were not measured here (width, loading calls, licence) were read from each model's card and repository files on 2026-10-12, at the revision the entry records.
 
-### Measured (55)
+### Measured (57)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
@@ -177,9 +177,11 @@ The registry holds 65 models: 55 measured, 0 untested, 10 unverified. The facts 
 | `vultr/VultronRetrieverCore-Qwen3.5-4.5B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `tencent/EVIE-4.5B` | image | 2048 | `sentence-transformers` | apache-2.0 |
+| `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `webAI-Official/webAI-ColVec1-4b` | image | 640 | `remote-code:colvec` | other |
+| `webAI-Official/webAI-ColVec1.1-8b` | image | 640 | `sentence-transformers` | other |
 | `Hcompany/NeoMME-260M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Hcompany/NeoMME-800M-Retriever-ST-late` | image | 128 | `sentence-transformers` | apache-2.0 |
 | `Cognitive-Lab/ColNetraEmbed` | image | 128 | `colpali-engine:colgemma3` | gemma |
@@ -221,7 +223,9 @@ Loading notes:
 - `vultr/VultronRetrieverCore-Qwen3.5-4.5B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `vultr/VultronRetrieverFlash-Qwen3.5-0.8B`: the card pins a colpali-engine git commit and needs causal-conv1d and flash-linear-attention
 - `tencent/EVIE-4.5B`: 2,048-d vectors (the card describes shorter prefixes as usable); its colpali route needs the fork bundled in the repository
+- `tencent/EVIE-8B`: measured with processor_kwargs={'size': {'longest_edge': 1024 * 32 * 32, 'shortest_edge': 65536}}, as its card gives for its evaluation protocol
 - `webAI-Official/webAI-ColVec1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
+- `webAI-Official/webAI-ColVec1.1-8b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `Cognitive-Lab/ColNetraEmbed`: the card installs a fork of colpali-engine (github.com/adithya-s-k/colpali); the released colpali-engine loads it here once the checkpoint's nested keys are mapped
 - `lightonai/colbertv2.0`: the sentence-transformers conversion of colbert-ir/colbertv2.0
 - `jinaai/jina-colbert-v2`: runs the repository's own modelling code: pass trust_remote_code=True; needs einops
@@ -239,14 +243,12 @@ Loading notes:
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 
-### Unverified (10)
+### Unverified (8)
 
 | model | modality | width | loader | licence |
 |---|---|---|---|---|
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
-| `tencent/EVIE-8B` | image | 4096 | `sentence-transformers` | apache-2.0 |
 | `webAI-Official/webAI-ColVec1.1-4b` | image | 640 | `sentence-transformers` | other |
-| `webAI-Official/webAI-ColVec1.1-8b` | image | 640 | `sentence-transformers` | other |
 | `ibm-granite/granite-vision-3.3-2b-embedding` | image | 128 | `remote-code:processor` | apache-2.0 |
 | `5CD-AI/Vintern-Embedding-1B` | image | 128 | `remote-code:processor` | not declared |
 | `jinaai/jina-embeddings-v4` | image | 128 | `remote-code:jina-v4` | not declared |
@@ -258,7 +260,6 @@ Loading notes:
 
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
 - `webAI-Official/webAI-ColVec1.1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
-- `webAI-Official/webAI-ColVec1.1-8b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `ibm-granite/granite-vision-3.3-2b-embedding`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.50
 - `5CD-AI/Vintern-Embedding-1B`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand
 - `jinaai/jina-embeddings-v4`: runs the repository's own modelling code: pass trust_remote_code=True; single-vector by default, the recipe asks for the 128-d multi-vector output; the card names the Qwen Research License
@@ -344,6 +345,8 @@ queries decides.
 | `nvidia/nemotron-colembed-vl-8b-v2` | infovqa_test_subsampled | ndcg@5 0.947 | `hierarchical_merge(0.33) > binary` | 96.7 | 0.995 [0.989, 1.001] |
 | `tencent/EVIE-4.5B` | docvqa_test_subsampled | ndcg@5 0.673 | `project(256) > binary` | 256.0 | 0.989 [0.970, 1.008] |
 | `tencent/EVIE-4.5B` | infovqa_test_subsampled | ndcg@5 0.947 | `project(256) > binary` | 256.0 | 0.995 [0.991, 0.999] |
+| `tencent/EVIE-8B` | docvqa_test_subsampled | ndcg@5 0.684 | `hierarchical_merge(0.33) > project(512) > int4(mean)` | 192.0 | 0.985 [0.970, 1.000] |
+| `tencent/EVIE-8B` | infovqa_test_subsampled | ndcg@5 0.945 | `hierarchical_merge(0.33) > project(512) > int4(mean)` | 192.1 | 0.997 [0.991, 1.003] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | docvqa_test_subsampled | ndcg@5 0.629 | `hierarchical_merge(0.33) > binary` | 94.0 | 1.001 [0.977, 1.024] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0` | infovqa_test_subsampled | ndcg@5 0.933 | `hierarchical_merge(0.33) > binary` | 93.9 | 0.982 [0.972, 0.991] |
 | `tsystems/colqwen2.5-3b-multilingual-v1.0-merged` | docvqa_test_subsampled | ndcg@5 0.628 | `hierarchical_merge(0.33) > binary` | 94.0 | 1.003 [0.980, 1.026] |
@@ -388,6 +391,8 @@ queries decides.
 | `vultr/VultronRetrieverPrime-Qwen3.5-8B` | infovqa_test_subsampled | ndcg@5 0.930 | `hierarchical_merge(0.33) > lloyd2(7)` | 48.4 | 0.989 [0.980, 0.997] |
 | `webAI-Official/webAI-ColVec1-4b` | docvqa_test_subsampled | ndcg@5 0.666 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.989 [0.971, 1.006] |
 | `webAI-Official/webAI-ColVec1-4b` | infovqa_test_subsampled | ndcg@5 0.941 | `hierarchical_merge(0.25) > lloyd2(7)` | 63.9 | 0.998 [0.989, 1.006] |
+| `webAI-Official/webAI-ColVec1.1-8b` | docvqa_test_subsampled | ndcg@5 0.640 | `hierarchical_merge(0.25) > binary` | 127.9 | 1.007 [0.988, 1.026] |
+| `webAI-Official/webAI-ColVec1.1-8b` | infovqa_test_subsampled | ndcg@5 0.945 | `hierarchical_merge(0.25) > binary` | 127.9 | 0.994 [0.989, 0.998] |
 
 Measured models without rows in the catalogue: `vidore/colSmol-256M`, `vidore/colqwen2-v1.0`. `vidore/colSmol-256M` was measured on generated corpora only, which have no fixed-pipeline study of this form; `vidore/colqwen2-v1.0` gives the same vectors as its pre-merged copy, which holds the rows.
 

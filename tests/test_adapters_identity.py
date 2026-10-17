@@ -171,7 +171,9 @@ def test_the_registry_statuses_have_not_moved():
                         # Kaggle batch 14b_neomme_retry, 2026-10-16
                         "Hcompany/NeoMME-800M-Retriever-ST-late",
                         # Kaggle batch 14a_text_retry, 2026-10-16
-                        "lightonai/colbertv2.0", "LiquidAI/LFM2.5-ColBERT-350M", "jinaai/jina-colbert-v2"}
+                        "lightonai/colbertv2.0", "LiquidAI/LFM2.5-ColBERT-350M", "jinaai/jina-colbert-v2",
+                        # Kaggle batches 15b_colvec8b_retry and 16_evie_retry, 2026-10-16
+                        "webAI-Official/webAI-ColVec1.1-8b", "tencent/EVIE-8B"}
     assert len(added) == 53 and set(added.values()) == {"measured", "unverified"}
     assert all(m.evidence for m in supported_models())
 

@@ -314,12 +314,14 @@ _MODELS: list[ModelInfo] = [
               notes="2,048-d vectors (the card describes shorter prefixes as usable); its colpali "
                     "route needs the fork bundled in the repository"),
     ModelInfo("tencent/EVIE-8B", "colqwen3.5", "image", "sentence-transformers", 4096,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; split over two "
-              "T4s on Kaggle 2026-10-16, it passed check_retriever (11 of 12) but ran GPU 0 out of memory in "
-              "attention on a page of ~8500 visual tokens (its processor allows 16,384 a page); the retry "
-              "uses its card's 1,024-token evaluation budget, not yet re-run; "
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~960 vectors/page) at its card's 1,024-token "
+              "evaluation page budget (its processor's default allows 16,384, which ran a T4 out of memory), "
+              "float16 inference (no float32 encoding, so the baseline is the float16-inference one) over two "
+              "Kaggle T4s, at the revision below, 2026-10-16; Kaggle batch 16_evie_retry; "
               "reports/universal/campaign/tencent--EVIE-8B",
-              license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b"),
+              license="apache-2.0", revision="cdc8f60e56d168591354cf919bb5a50a5d1f617b",
+              notes="measured with processor_kwargs={'size': {'longest_edge': 1024 * 32 * 32, "
+                    "'shortest_edge': 65536}}, as its card gives for its evaluation protocol"),
     ModelInfo("VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "colqwen3", "image", "sentence-transformers", 128,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1170 vectors/page), float16 inference (no "
               "float32 encoding, so the baseline is the float16-inference one) on one Kaggle T4, at the "
@@ -348,11 +350,10 @@ _MODELS: list[ModelInfo] = [
               license="other", revision="d88d0155d700b06382124ff985ddb07099155bb4",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("webAI-Official/webAI-ColVec1.1-8b", "colvec", "image", "sentence-transformers", 640,
-              UNVERIFIED, "loads through sentence-transformers MultiVectorEncoder per its model card; never encoded "
-              "here: in float16 it does not fit one 16 GB T4, and split over two (Kaggle 2026-10-16) its "
-              "own forward (modeling_colqwen35_bidirection.py) multiplied the projected vectors, on the "
-              "last GPU, by the attention mask on the first; the adapter now moves the projection head "
-              "to the input GPU, not yet re-run; "
+              MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1560 vectors/page), float16 inference (no "
+              "float32 encoding, so the baseline is the float16-inference one; its card states bfloat16) over "
+              "two Kaggle T4s with its projection head on the input GPU, at the revision below, 2026-10-16; "
+              "check_retriever passed with 10 of 12, the minimum; Kaggle batch 15b_colvec8b_retry; "
               "reports/universal/campaign/webAI-Official--webAI-ColVec1.1-8b",
               license="other", revision="0f712a2777fbba29b2a21bb68ffcfbb5272505ad",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),

@@ -160,6 +160,18 @@
   float32) and `batch_15b_colvec8b_retry` (8B, float16). The 8B is no longer listed as
   unloadable.
 
+### Kaggle measurement campaign, batches 15b_colvec8b_retry and 16_evie_retry
+
+- **`webAI-Official/webAI-ColVec1.1-8b` measured** in float16 over two T4s, with its projection
+  head on the input GPU. `check_retriever` passed with 10 of 12, the minimum.
+- **`tencent/EVIE-8B` measured** in float16 over two T4s, at the 1,024-token page budget its card
+  gives for its evaluation protocol (`processor_kwargs`, recorded in the registry notes).
+- Both selection studies completed. 57 of the 65 registry models are now measured; the catalogue
+  holds 55 models and 5492 rows.
+- Plain int4 held on EVIE-8B's 4096-d vectors (retention 1.001 and 1.000), but collapsed on
+  `nvidia/nemotron-colembed-vl-8b-v2`, which is also 4096-d (0.011 and 0.007). The collapse is not
+  a matter of width alone.
+
 ### Kaggle measurement campaign, batch 15a_colvec4b_retry
 
 - **Moving the projection head to the input GPU worked.** `webAI-Official/webAI-ColVec1.1-4b` ran
