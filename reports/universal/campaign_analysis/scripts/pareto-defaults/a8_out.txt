@@ -1,0 +1,112 @@
+pairs by baseline inference dtype: {'auto': 14, 'f16': 26, 'f32': 48}
+== float16-inference vs float32 (image only; confounded with model size/family) ==
+binary                                           f16 n=26 median 0.9924 | f32 n=48 median 0.9841 | p=0.04
+hierarchical_merge(0.25) > binary                f16 n=26 median 0.9820 | f32 n=48 median 0.9721 | p=0.04
+hierarchical_merge(0.25) > int8(per_vector)      f16 n=26 median 0.9946 | f32 n=48 median 0.9935 | p=0.95
+hierarchical_merge(0.25) > int4(mean)            f16 n=26 median 0.9930 | f32 n=48 median 0.9919 | p=0.96
+
+== cluster bootstrap over MODELS (resample models, keep both datasets) for coverage lo>=T ==
+float16                                          T=0.95 coverage 1.000 model-cluster boot CI [1.000,1.000] (51 models) comp 2.0x
+float16                                          T=0.97 coverage 1.000 model-cluster boot CI [1.000,1.000] (51 models) comp 2.0x
+float16                                          T=0.99 coverage 1.000 model-cluster boot CI [1.000,1.000] (51 models) comp 2.0x
+int8(per_vector)                                 T=0.95 coverage 1.000 model-cluster boot CI [1.000,1.000] (51 models) comp 3.9x
+int8(per_vector)                                 T=0.97 coverage 0.989 model-cluster boot CI [0.964,1.000] (51 models) comp 3.9x
+int8(per_vector)                                 T=0.99 coverage 0.966 model-cluster boot CI [0.922,1.000] (51 models) comp 3.9x
+int4(mean)                                       T=0.95 coverage 0.989 model-cluster boot CI [0.962,1.000] (51 models) comp 7.8x
+int4(mean)                                       T=0.97 coverage 0.977 model-cluster boot CI [0.942,1.000] (51 models) comp 7.8x
+int4(mean)                                       T=0.99 coverage 0.648 model-cluster boot CI [0.562,0.734] (51 models) comp 7.8x
+hierarchical_merge(0.5)                          T=0.95 coverage 0.977 model-cluster boot CI [0.940,1.000] (51 models) comp 2.0x
+hierarchical_merge(0.5)                          T=0.97 coverage 0.920 model-cluster boot CI [0.852,0.968] (51 models) comp 2.0x
+hierarchical_merge(0.5)                          T=0.99 coverage 0.443 model-cluster boot CI [0.357,0.527] (51 models) comp 2.0x
+hierarchical_merge(0.25) > int8(per_vector)      T=0.95 coverage 0.909 model-cluster boot CI [0.839,0.967] (51 models) comp 15.7x
+hierarchical_merge(0.25) > int8(per_vector)      T=0.97 coverage 0.682 model-cluster boot CI [0.576,0.777] (51 models) comp 15.7x
+hierarchical_merge(0.25) > int8(per_vector)      T=0.99 coverage 0.182 model-cluster boot CI [0.114,0.250] (51 models) comp 15.7x
+hierarchical_merge(0.25) > int4(mean)            T=0.95 coverage 0.864 model-cluster boot CI [0.778,0.933] (51 models) comp 30.9x
+hierarchical_merge(0.25) > int4(mean)            T=0.97 coverage 0.591 model-cluster boot CI [0.488,0.681] (51 models) comp 30.9x
+hierarchical_merge(0.25) > int4(mean)            T=0.99 coverage 0.182 model-cluster boot CI [0.115,0.253] (51 models) comp 30.9x
+lloyd2(7)                                        T=0.95 coverage 0.841 model-cluster boot CI [0.750,0.914] (51 models) comp 16.0x
+lloyd2(7)                                        T=0.97 coverage 0.705 model-cluster boot CI [0.617,0.785] (51 models) comp 16.0x
+lloyd2(7)                                        T=0.99 coverage 0.205 model-cluster boot CI [0.129,0.286] (51 models) comp 16.0x
+binary                                           T=0.95 coverage 0.716 model-cluster boot CI [0.625,0.798] (51 models) comp 32.0x
+binary                                           T=0.97 coverage 0.511 model-cluster boot CI [0.407,0.613] (51 models) comp 32.0x
+binary                                           T=0.99 coverage 0.125 model-cluster boot CI [0.067,0.193] (51 models) comp 32.0x
+hierarchical_merge(0.25) > binary                T=0.95 coverage 0.500 model-cluster boot CI [0.400,0.602] (51 models) comp 127.3x
+hierarchical_merge(0.25) > binary                T=0.97 coverage 0.250 model-cluster boot CI [0.165,0.337] (51 models) comp 127.3x
+hierarchical_merge(0.25) > binary                T=0.99 coverage 0.034 model-cluster boot CI [0.000,0.075] (51 models) comp 127.3x
+
+== dim>128 pairs: coverage and compression of project(128)-based pipelines ==
+pairs 24 models 12 [np.int64(320), np.int64(640), np.int64(2048), np.int64(2560), np.int64(4096)]
+int8(per_vector)                                           n=24 lo>=.95 24 lo>=.97 24 lo>=.99 22  comp median 4.0 [4.0,4.0] ret min 0.989
+int4(mean)                                                 n=24 lo>=.95 24 lo>=.97 24 lo>=.99 20  comp median 7.9 [7.9,8.0] ret min 0.995
+binary                                                     n=24 lo>=.95 24 lo>=.97 21 lo>=.99 10  comp median 32.0 [32.0,32.0] ret min 0.970
+project(128)                                               n=24 lo>=.95 20 lo>=.97 11 lo>=.99 3  comp median 3.8 [2.5,32.0] ret min 0.948
+project(128) > int8(per_vector)                            n=24 lo>=.95 19 lo>=.97 10 lo>=.99 3  comp median 14.8 [9.8,126.0] ret min 0.942
+project(128) > int4(mean)                                  n=24 lo>=.95 18 lo>=.97 9 lo>=.99 1  comp median 29.1 [19.4,248.2] ret min 0.911
+project(128) > binary                                      n=24 lo>=.95 14 lo>=.97 11 lo>=.99 0  comp median 120.0 [80.0,1024.0] ret min 0.904
+hierarchical_merge(0.25) > project(128) > int8(per_vector) n=24 lo>=.95 14 lo>=.97 7 lo>=.99 0  comp median 59.0 [39.3,503.5] ret min 0.916
+hierarchical_merge(0.25) > project(128) > int4(mean)       n=24 lo>=.95 14 lo>=.97 4 lo>=.99 0  comp median 116.2 [77.4,991.7] ret min 0.851
+hierarchical_merge(0.25) > project(128) > binary           n=24 lo>=.95 14 lo>=.97 6 lo>=.99 0  comp median 479.4 [319.4,4091.1] ret min 0.907
+hierarchical_merge(0.25) > int4(mean)                      n=24 lo>=.95 24 lo>=.97 19 lo>=.99 6  comp median 31.7 [31.5,31.9] ret min 0.979
+hierarchical_merge(0.25) > binary                          n=24 lo>=.95 21 lo>=.97 14 lo>=.99 3  comp median 127.8 [127.7,127.9] ret min 0.959
+
+== usable front: among rows with lo>=0.95, those not dominated in (comp up, lo up) ==
+int8(per_vector)                                    72
+int4                                                45
+float16                                             45
+hierarchical_merge(0.25) > int4                     43
+int4(mean)                                          42
+hierarchical_merge(0.33) > lloyd2(7)                35
+hierarchical_merge(0.25) > project(128) > binary    35
+hierarchical_merge(0.33) > int4                     31
+hierarchical_merge(0.33) > binary                   28
+hierarchical_merge(0.25) > lloyd2(7)                26
+hierarchical_merge(0.25) > int4(mean)               25
+hierarchical_merge(0.25) > binary                   25
+binary                                              24
+hierarchical_merge(0.33) > project(128) > binary    21
+
+== shipped pareto flag (point retention, bytes) from wide/*.json: recurrence ==
+label
+hierarchical_merge(0.25) > project(128) > binary    63
+hierarchical_merge(0.25) > project(16) > binary     63
+hierarchical_merge(0.25) > project(32) > binary     62
+hierarchical_merge(0.25) > int4                     42
+hierarchical_merge(0.25) > binary                   42
+hierarchical_merge(0.33) > project(128) > binary    40
+hierarchical_merge(0.33) > project(32) > binary     38
+int4                                                35
+hierarchical_merge(0.33) > lloyd2(7)                34
+hierarchical_merge(0.33) > project(16) > binary     33
+hierarchical_merge(0.33) > binary                   31
+int4(mean)                                          31
+int8(per_vector)                                    27
+hierarchical_merge(0.25) > lloyd2(7)                26
+mean front size 9.965909090909092
+
+of the shipped front rows, share with ret<0.9: 0.258 ; front rows with lo>=0.95: 0.597
+
+== per-model calibrated selection (selection_rules/*.json, 20 query splits, same corpus) vs fixed recipe ==
+files 59 rows 2478
+                                  files  met_mean  share_all_met  met_p10  comp_med  hmean
+rule                      target                                                          
+bonferroni 0.975          0.95       59     0.981          0.695     0.95    72.699  0.983
+                          0.97       59     0.970          0.576     0.90    23.463  0.992
+                          0.99       59     0.982          0.712     0.95     3.975  0.999
+calibrate() default       0.95       59     0.983          0.746     0.95    72.699  0.984
+                          0.97       59     0.978          0.678     0.90    15.889  0.993
+                          0.99       59     0.984          0.712     0.95     3.975  0.999
+lower 0.975               0.95       59     0.909          0.271     0.80   125.445  0.975
+                          0.97       59     0.883          0.153     0.75    63.785  0.986
+                          0.99       59     0.833          0.068     0.70     7.950  0.996
+lower 0.975 + margin 0.01 0.95       59     0.958          0.475     0.89    92.966  0.980
+                          0.97       59     0.949          0.475     0.85    30.409  0.991
+                          0.99       59     0.980          0.729     0.95     3.938  0.999
+lower 0.99                0.95       59     0.941          0.441     0.85   119.847  0.978
+                          0.97       59     0.916          0.288     0.80    49.673  0.988
+                          0.99       59     0.882          0.119     0.79     7.824  0.997
+lower 0.999               0.95       59     0.975          0.661     0.90    72.699  0.982
+                          0.97       59     0.964          0.542     0.90    27.187  0.992
+                          0.99       59     0.973          0.576     0.95     3.975  0.999
+point                     0.95       59     0.656          0.169     0.29   280.916  0.956
+                          0.97       59     0.538          0.085     0.30   188.382  0.968
+                          0.99       59     0.365          0.000     0.20    63.945  0.982

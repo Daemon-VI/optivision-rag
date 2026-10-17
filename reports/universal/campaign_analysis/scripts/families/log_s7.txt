@@ -1,0 +1,28 @@
+=== A. identical-weight replicate floor vs dtype/packaging pairs (RMSD of loss profile, L1b labels: 17 )
+                                 kind                               a                                      b   ds   rmsd  mean_loss_b_minus_a  indep_noise  base_a  base_b
+      floor f32-f32 adapter vs merged                    colpali-v1.2                    colpali-v1.2-merged  doc 0.0044               0.0016       0.0149  0.5580  0.5579
+      floor f32-f32 adapter vs merged                    colpali-v1.2                    colpali-v1.2-merged info 0.0025              -0.0002       0.0085  0.8194  0.8196
+      floor f32-f32 adapter vs merged colqwen2.5-3b-multilingual-v1.0 colqwen2.5-3b-multilingual-v1.0-merged  doc 0.0054              -0.0022       0.0133  0.6292  0.6282
+      floor f32-f32 adapter vs merged colqwen2.5-3b-multilingual-v1.0 colqwen2.5-3b-multilingual-v1.0-merged info 0.0011              -0.0002       0.0056  0.9326  0.9326
+                      f32 vs f16(-hf)                    colpali-v1.2                        colpali-v1.2-hf  doc 0.0136               0.0065       0.0154  0.5580  0.5789
+                      f32 vs f16(-hf)                    colpali-v1.2                        colpali-v1.2-hf info 0.0040               0.0007       0.0078  0.8194  0.8326
+                      f32 vs f16(-hf)             colpali-v1.2-merged                        colpali-v1.2-hf  doc 0.0133               0.0049       0.0155  0.5579  0.5789
+                      f32 vs f16(-hf)             colpali-v1.2-merged                        colpali-v1.2-hf info 0.0037               0.0009       0.0079  0.8196  0.8326
+                      f32 vs f16(-hf)                    colpali-v1.3                        colpali-v1.3-hf  doc 0.0214               0.0189       0.0173  0.5748  0.5902
+                      f32 vs f16(-hf)                    colpali-v1.3                        colpali-v1.3-hf info 0.0049              -0.0005       0.0068  0.8551  0.8563
+f16-hf vs f16-hf (different versions)                 colpali-v1.2-hf                        colpali-v1.3-hf  doc 0.0348               0.0292       0.0170  0.5789  0.5902
+f16-hf vs f16-hf (different versions)                 colpali-v1.2-hf                        colpali-v1.3-hf info 0.0045              -0.0001       0.0070  0.8326  0.8563
+      f32 v1.2 vs f32 v1.3 (versions)                    colpali-v1.2                           colpali-v1.3  doc 0.0214               0.0168       0.0158  0.5580  0.5748
+      f32 v1.2 vs f32 v1.3 (versions)                    colpali-v1.2                           colpali-v1.3 info 0.0097               0.0011       0.0076  0.8194  0.8551
+                 f32 v1.1 vs f32 v1.2                    colpali-v1.1                           colpali-v1.2  doc 0.0108               0.0010       0.0148  0.5732  0.5580
+                 f32 v1.1 vs f32 v1.2                    colpali-v1.1                           colpali-v1.2 info 0.0102              -0.0074       0.0082  0.8170  0.8194
+                 f32 v1.1 vs f32 v1.3                    colpali-v1.1                           colpali-v1.3  doc 0.0219               0.0178       0.0158  0.5732  0.5748
+                 f32 v1.1 vs f32 v1.3                    colpali-v1.1                           colpali-v1.3 info 0.0081              -0.0063       0.0073  0.8170  0.8551
+
+=== B. float16-inference effect, group fixed-effects regression of mean loss over L1b labels
+all L1b      n_profiles=68 n_models=34 f16 coef (loss, i.e. 1-retention) = +0.00030  95% CI [-0.00293, +0.00449]  (n f16 models 13)
+      with lvpd+ldim controls: f16 +0.00061  lvpd -0.01718 ldim -0.00339
+merge-only   n_profiles=68 n_models=34 f16 coef (loss, i.e. 1-retention) = +0.00104  95% CI [-0.00195, +0.00493]  (n f16 models 13)
+      with lvpd+ldim controls: f16 +0.00131  lvpd -0.01625 ldim -0.00285
+codec-only   n_profiles=68 n_models=34 f16 coef (loss, i.e. 1-retention) = -0.00066  95% CI [-0.00352, +0.00263]  (n f16 models 13)
+      with lvpd+ldim controls: f16 -0.00058  lvpd -0.00145 ldim -0.00115

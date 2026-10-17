@@ -1,0 +1,121 @@
+
+### lower bound >= 0.95: k/n (Wilson 95%) ; ALL = every measured pair for that label (95 for codec-only labels, 88 otherwise)
+sub                                                        ALL              image             docvqa            infovqa      text(scifact)            dim>128  comp_med  comp_min
+label                                                                                                                                                                            
+float16                                      95/95 [0.96-1.00]  80/80 [0.95-1.00]  40/40 [0.91-1.00]  40/40 [0.91-1.00]  15/15 [0.80-1.00]  24/24 [0.86-1.00]       2.0       2.0
+int8(per_vector)                             95/95 [0.96-1.00]  80/80 [0.95-1.00]  40/40 [0.91-1.00]  40/40 [0.91-1.00]  15/15 [0.80-1.00]  24/24 [0.86-1.00]       3.9       3.8
+int4(mean)                                   87/88 [0.94-1.00]  74/74 [0.95-1.00]  37/37 [0.91-1.00]  37/37 [0.91-1.00]  13/14 [0.69-0.99]  24/24 [0.86-1.00]       7.8       7.4
+hierarchical_merge(0.5)                      86/88 [0.92-0.99]  74/74 [0.95-1.00]  37/37 [0.91-1.00]  37/37 [0.91-1.00]  12/14 [0.60-0.96]  24/24 [0.86-1.00]       2.0       1.7
+hierarchical_merge(0.33) > int8(per_vector)  80/88 [0.83-0.95]  73/74 [0.93-1.00]  36/37 [0.86-1.00]  37/37 [0.91-1.00]   7/14 [0.27-0.73]  24/24 [0.86-1.00]      11.9       8.4
+hierarchical_merge(0.25) > int8(per_vector)  80/88 [0.83-0.95]  73/74 [0.93-1.00]  36/37 [0.86-1.00]  37/37 [0.91-1.00]   7/14 [0.27-0.73]  24/24 [0.86-1.00]      15.7       9.8
+hierarchical_merge(0.33) > int4(mean)        77/88 [0.79-0.93]  72/74 [0.91-0.99]  35/37 [0.82-0.99]  37/37 [0.91-1.00]   5/14 [0.16-0.61]  24/24 [0.86-1.00]      23.4      16.6
+hierarchical_merge(0.25) > int4(mean)        76/88 [0.78-0.92]  72/74 [0.91-0.99]  35/37 [0.82-0.99]  37/37 [0.91-1.00]   4/14 [0.12-0.55]  24/24 [0.86-1.00]      30.9      19.2
+lloyd2(7)                                    74/88 [0.75-0.90]  69/74 [0.85-0.97]  32/37 [0.72-0.94]  37/37 [0.91-1.00]   5/14 [0.16-0.61]  24/24 [0.86-1.00]      16.0      16.0
+binary                                       67/95 [0.61-0.79]  63/80 [0.69-0.86]  23/40 [0.42-0.71]  40/40 [0.91-1.00]   4/15 [0.11-0.52]  24/24 [0.86-1.00]      32.0      32.0
+hierarchical_merge(0.25) > lloyd2(7)         63/88 [0.61-0.80]  61/74 [0.72-0.89]  24/37 [0.49-0.78]  37/37 [0.91-1.00]   2/14 [0.04-0.40]  24/24 [0.86-1.00]      63.7      39.6
+hierarchical_merge(0.25) > binary            44/88 [0.40-0.60]  44/74 [0.48-0.70]  13/37 [0.22-0.51]  31/37 [0.69-0.92]   0/14 [0.00-0.22]  21/24 [0.69-0.96]     127.3      79.3
+
+### lower bound >= 0.97: k/n (Wilson 95%) ; ALL = every measured pair for that label (95 for codec-only labels, 88 otherwise)
+sub                                                        ALL              image             docvqa            infovqa      text(scifact)            dim>128  comp_med  comp_min
+label                                                                                                                                                                            
+float16                                      95/95 [0.96-1.00]  80/80 [0.95-1.00]  40/40 [0.91-1.00]  40/40 [0.91-1.00]  15/15 [0.80-1.00]  24/24 [0.86-1.00]       2.0       2.0
+int8(per_vector)                             94/95 [0.94-1.00]  80/80 [0.95-1.00]  40/40 [0.91-1.00]  40/40 [0.91-1.00]  14/15 [0.70-0.99]  24/24 [0.86-1.00]       3.9       3.8
+int4(mean)                                   86/88 [0.92-0.99]  73/74 [0.93-1.00]  36/37 [0.86-1.00]  37/37 [0.91-1.00]  13/14 [0.69-0.99]  24/24 [0.86-1.00]       7.8       7.4
+hierarchical_merge(0.5)                      81/88 [0.84-0.96]  72/74 [0.91-0.99]  35/37 [0.82-0.99]  37/37 [0.91-1.00]   9/14 [0.39-0.84]  24/24 [0.86-1.00]       2.0       1.7
+hierarchical_merge(0.33) > int8(per_vector)  71/88 [0.71-0.88]  66/74 [0.80-0.94]  29/37 [0.63-0.89]  37/37 [0.91-1.00]   5/14 [0.16-0.61]  22/24 [0.74-0.98]      11.9       8.4
+hierarchical_merge(0.25) > int8(per_vector)  60/88 [0.58-0.77]  58/74 [0.68-0.86]  24/37 [0.49-0.78]  34/37 [0.79-0.97]   2/14 [0.04-0.40]  20/24 [0.64-0.93]      15.7       9.8
+hierarchical_merge(0.33) > int4(mean)        66/88 [0.65-0.83]  62/74 [0.74-0.90]  25/37 [0.51-0.80]  37/37 [0.91-1.00]   4/14 [0.12-0.55]  20/24 [0.64-0.93]      23.4      16.6
+hierarchical_merge(0.25) > int4(mean)        52/88 [0.49-0.69]  51/74 [0.58-0.78]  17/37 [0.31-0.62]  34/37 [0.79-0.97]   1/14 [0.01-0.31]  19/24 [0.60-0.91]      30.9      19.2
+lloyd2(7)                                    62/88 [0.60-0.79]  58/74 [0.68-0.86]  21/37 [0.41-0.71]  37/37 [0.91-1.00]   4/14 [0.12-0.55]  22/24 [0.74-0.98]      16.0      16.0
+binary                                       47/95 [0.40-0.59]  45/80 [0.45-0.67]  12/40 [0.18-0.45]  33/40 [0.68-0.91]   2/15 [0.04-0.38]  21/24 [0.69-0.96]      32.0      32.0
+hierarchical_merge(0.25) > lloyd2(7)         39/88 [0.34-0.55]  39/74 [0.41-0.64]   7/37 [0.09-0.34]  32/37 [0.72-0.94]   0/14 [0.00-0.22]  17/24 [0.51-0.85]      63.7      39.6
+hierarchical_merge(0.25) > binary            22/88 [0.17-0.35]  22/74 [0.21-0.41]   2/37 [0.01-0.18]  20/37 [0.38-0.69]   0/14 [0.00-0.22]  14/24 [0.39-0.76]     127.3      79.3
+
+### lower bound >= 0.99: k/n (Wilson 95%) ; ALL = every measured pair for that label (95 for codec-only labels, 88 otherwise)
+sub                                                        ALL              image             docvqa            infovqa      text(scifact)            dim>128  comp_med  comp_min
+label                                                                                                                                                                            
+float16                                      95/95 [0.96-1.00]  80/80 [0.95-1.00]  40/40 [0.91-1.00]  40/40 [0.91-1.00]  15/15 [0.80-1.00]  24/24 [0.86-1.00]       2.0       2.0
+int8(per_vector)                             92/95 [0.91-0.99]  78/80 [0.91-0.99]  38/40 [0.83-0.99]  40/40 [0.91-1.00]  14/15 [0.70-0.99]  22/24 [0.74-0.98]       3.9       3.8
+int4(mean)                                   57/88 [0.54-0.74]  54/74 [0.62-0.82]  17/37 [0.31-0.62]  37/37 [0.91-1.00]   3/14 [0.08-0.48]  20/24 [0.64-0.93]       7.8       7.4
+hierarchical_merge(0.5)                      39/88 [0.34-0.55]  35/74 [0.36-0.59]   8/37 [0.11-0.37]  27/37 [0.57-0.85]   4/14 [0.12-0.55]  13/24 [0.35-0.72]       2.0       1.7
+hierarchical_merge(0.33) > int8(per_vector)  19/88 [0.14-0.31]  19/74 [0.17-0.37]   3/37 [0.03-0.21]  16/37 [0.29-0.59]   0/14 [0.00-0.22]   8/24 [0.18-0.53]      11.9       8.4
+hierarchical_merge(0.25) > int8(per_vector)  16/88 [0.12-0.28]  16/74 [0.14-0.32]   4/37 [0.04-0.25]  12/37 [0.20-0.49]   0/14 [0.00-0.22]   4/24 [0.07-0.36]      15.7       9.8
+hierarchical_merge(0.33) > int4(mean)        17/88 [0.12-0.29]  17/74 [0.15-0.34]   3/37 [0.03-0.21]  14/37 [0.24-0.54]   0/14 [0.00-0.22]   8/24 [0.18-0.53]      23.4      16.6
+hierarchical_merge(0.25) > int4(mean)        16/88 [0.12-0.28]  16/74 [0.14-0.32]   3/37 [0.03-0.21]  13/37 [0.22-0.51]   0/14 [0.00-0.22]   6/24 [0.12-0.45]      30.9      19.2
+lloyd2(7)                                    18/88 [0.13-0.30]  17/74 [0.15-0.34]   2/37 [0.01-0.18]  15/37 [0.26-0.57]   1/14 [0.01-0.31]  10/24 [0.24-0.61]      16.0      16.0
+binary                                       11/95 [0.07-0.20]  10/80 [0.07-0.22]  0/40 [-0.00-0.09]  10/40 [0.14-0.40]   1/15 [0.01-0.30]  10/24 [0.24-0.61]      32.0      32.0
+hierarchical_merge(0.25) > lloyd2(7)          4/88 [0.02-0.11]   4/74 [0.02-0.13]   0/37 [0.00-0.09]   4/37 [0.04-0.25]   0/14 [0.00-0.22]   2/24 [0.02-0.26]      63.7      39.6
+hierarchical_merge(0.25) > binary             3/88 [0.01-0.10]   3/74 [0.01-0.11]   0/37 [0.00-0.09]   3/37 [0.03-0.21]   0/14 [0.00-0.22]   3/24 [0.04-0.31]     127.3      79.3
+
+ int8(per_vector) lo<.99: 3
+                                                            key    lo   ret
+                                  lightonai/LateOn|BeIR/scifact 0.966 0.983
+nvidia/nemotron-colembed-vl-8b-v2|vidore/docvqa_test_subsampled 0.978 0.989
+nvidia/nemotron-colembed-vl-4b-v2|vidore/docvqa_test_subsampled 0.986 0.997
+
+ hierarchical_merge(0.5) lo<.99: 49
+                                                     key    lo   ret
+    mixedbread-ai/mxbai-edge-colbert-v0-32m|BeIR/scifact 0.935 0.956
+                    NeuML/colbert-bert-tiny|BeIR/scifact 0.935 0.962
+       mixedbread-ai/mxbai-colbert-large-v1|BeIR/scifact 0.962 0.977
+            vidore/colpali|vidore/docvqa_test_subsampled 0.964 0.981
+                          lightonai/mLateOn|BeIR/scifact 0.968 0.983
+ModernVBERT/colmodernvbert|vidore/docvqa_test_subsampled 0.968 0.985
+    mixedbread-ai/mxbai-edge-colbert-v0-17m|BeIR/scifact 0.970 0.988
+    vidore/colpali-v1.3-hf|vidore/docvqa_test_subsampled 0.972 0.990
+
+ int4(mean) lo<.99: 31
+
+== coverage frontier (labels non-dominated in median compression and coverage), image-only and text-only ==
+
+image T=0.95:
+                                           label    comp  cov  n  k
+                                      int4(mean)    7.76 1.00 74 74
+     hierarchical_merge(0.25) > int8(per_vector)   15.67 0.99 74 73
+           hierarchical_merge(0.25) > int4(mean)   30.87 0.97 74 72
+                 hierarchical_merge(0.25) > int4   30.87 0.91 74 67
+            hierarchical_merge(0.25) > lloyd2(7)   63.67 0.82 74 61
+               hierarchical_merge(0.33) > binary   96.58 0.70 74 52
+hierarchical_merge(0.33) > project(128) > binary   96.59 0.62 74 46
+               hierarchical_merge(0.25) > binary  127.34 0.59 74 44
+ hierarchical_merge(0.25) > project(16) > binary 1012.71 0.00 50  0
+
+image T=0.99:
+                                          label    comp  cov  n  k
+                                        float16    2.00 1.00 80 80
+                               int8(per_vector)    3.94 0.98 80 78
+                                     int4(mean)    7.76 0.73 74 54
+                                           int4    7.76 0.64 80 51
+    hierarchical_merge(0.33) > int8(per_vector)   11.89 0.26 74 19
+          hierarchical_merge(0.33) > int4(mean)   23.41 0.23 74 17
+          hierarchical_merge(0.25) > int4(mean)   30.87 0.22 74 16
+                hierarchical_merge(0.25) > int4   30.87 0.18 74 13
+                                         binary   32.00 0.12 80 10
+           hierarchical_merge(0.33) > lloyd2(7)   48.29 0.11 74  8
+              hierarchical_merge(0.33) > binary   96.58 0.07 74  5
+              hierarchical_merge(0.25) > binary  127.34 0.04 74  3
+hierarchical_merge(0.25) > project(16) > binary 1012.71 0.00 50  0
+
+text(scifact) T=0.95:
+                                               label    comp  cov  n  k
+                                    int8(per_vector)    3.94 1.00 15 15
+                                          int4(mean)    7.76 0.93 14 13
+                      project(64) > int8(per_vector)    7.76 0.83 12 10
+                            project(64) > int4(mean)   15.06 0.58 12  7
+         hierarchical_merge(0.25) > int8(per_vector)   15.67 0.50 14  7
+hierarchical_merge(0.33) > project(128) > int4(mean)   23.41 0.43 14  6
+hierarchical_merge(0.25) > project(128) > int4(mean)   30.87 0.36 14  5
+                                              binary   32.00 0.27 15  4
+    hierarchical_merge(0.33) > project(128) > binary   96.59 0.14 14  2
+    hierarchical_merge(0.25) > project(128) > binary  127.34 0.07 14  1
+     hierarchical_merge(0.25) > project(16) > binary 1012.71 0.00 13  0
+
+text(scifact) T=0.99:
+                                               label    comp  cov  n  k
+                                             float16    2.00 1.00 15 15
+                                    int8(per_vector)    3.94 0.93 15 14
+                                          int4(mean)    7.76 0.21 14  3
+                                                int4    7.76 0.13 15  2
+hierarchical_merge(0.33) > project(128) > int4(mean)   23.41 0.07 14  1
+                                              binary   32.00 0.07 15  1
+     hierarchical_merge(0.25) > project(16) > binary 1012.71 0.00 13  0

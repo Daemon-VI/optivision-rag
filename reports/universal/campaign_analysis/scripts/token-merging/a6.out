@@ -1,0 +1,75 @@
+--- loss by ABSOLUTE kept vectors per page (hierarchical cells), by dataset/modality
+             count                    mean                  median                
+ds          docvqa infovqa scifact  docvqa infovqa scifact  docvqa infovqa scifact
+absbin                                                                            
+(0, 20]        NaN     NaN     2.0     NaN     NaN  0.1284     NaN     NaN  0.1284
+(20, 30]       1.0     1.0    11.0  0.1939  0.0639  0.1162  0.1939  0.0639  0.0815
+(30, 50]       NaN     NaN     3.0     NaN     NaN  0.0768     NaN     NaN  0.0600
+(50, 75]       1.0     7.0    15.0  0.0927  0.0220  0.0459  0.0927  0.0193  0.0287
+(75, 100]     14.0     9.0    14.0  0.0296  0.0150  0.0271  0.0277  0.0151  0.0183
+(100, 150]    19.0    21.0    13.0  0.0209  0.0130  0.0089  0.0198  0.0125  0.0043
+(150, 250]    20.0    32.0     1.0  0.0084  0.0062  0.0166  0.0103  0.0052  0.0166
+(250, 500]    71.0    66.0     NaN  0.0067  0.0038     NaN  0.0064  0.0036     NaN
+(500, 2000]   31.0    21.0     NaN  0.0024  0.0021     NaN  0.0034  0.0017     NaN
+
+matched overlap abs in (50,150]: text vs image mean loss with model-bootstrap CI; and keep fractions involved
+30 50 n text 3 n image 0
+(50, 100) text n=29 mean 0.0368 (median keep 0.33) | image n=31 mean 0.0257 (median keep 0.11) | diff 0.0112 CI [-0.0045  0.0304]
+(100, 150) text n=13 mean 0.0089 (median keep 0.50) | image n=40 mean 0.0168 (median keep 0.10) | diff -0.0078 CI [-0.015   0.0005]
+
+Fraction-matched: keep fraction in same bins of k (hier), text vs image mean loss
+0.5 text 0.0111 (abs median 129) image 0.0031 (abs median 515)
+0.33 text 0.0286 (abs median 86) image 0.0056 (abs median 340)
+0.25 text 0.0476 (abs median 65) image 0.0076 (abs median 258)
+0.1 text 0.1184 (abs median 27) image 0.0220 (abs median 109)
+
+--- which predicts loss better: log(abs kept) or log(keep fraction)? Spearman with loss, pooled hier cells, by ds
+docvqa abs rho=-0.53  frac rho=-0.48  bv rho=-0.20
+infovqa abs rho=-0.64  frac rho=-0.54  bv rho=-0.20
+scifact abs rho=-0.67  frac rho=-0.69  bv rho=0.04
+pooled all hier cells: abs rho=-0.62 frac rho=-0.48
+OLS loss ~ ds + (log2 1/k)^2 + log2(bv): {'int': np.float64(0.1087), 'infovqa': np.float64(-0.0061), 'scifact': np.float64(0.0149), '(log2 1/k)^2': np.float64(0.0035), 'log2 bv': np.float64(-0.0112)}
+ model-bootstrap 95% CI for log2(bv) coef:  [-0.0194  0.001 ]  for (log2 1/k)^2: [0.0025 0.0049]
+
+--- within-model docvqa vs infovqa: does larger bv in a dataset go with LESS loss? (Delta bv vs Delta loss)
+0.25 all n=40 rho=-0.15 p=0.35 | models whose vpd differs between datasets n=31 rho=-0.15 p=0.42; mean log2(bv_doc/bv_info)=0.15
+0.1 all n=37 rho=-0.22 p=0.2 | models whose vpd differs between datasets n=29 rho=-0.34 p=0.07; mean log2(bv_doc/bv_info)=0.15
+median bv docvqa 1031 infovqa 988; share of models with bv_doc>bv_info: 0.78
+
+--- shape heterogeneity: cliff ratio L0.1/L0.25 and models with loss0.1 > 3x loss0.25 (+ >2pp)
+29 of 88
+                                       model       ds    L25    L10
+2                Cognitive-Lab/ColNetraEmbed   docvqa  0.093  0.194
+3                Cognitive-Lab/ColNetraEmbed  infovqa  0.025  0.064
+8                 LiquidAI/LFM2-ColBERT-350M  scifact  0.233  0.414
+12                ModernVBERT/colmodernvbert   docvqa  0.006  0.054
+13                ModernVBERT/colmodernvbert  infovqa  0.019  0.058
+14                   NeuML/colbert-bert-tiny  scifact  0.060  0.159
+15         TomoroAI/tomoro-colqwen3-embed-4b   docvqa  0.003  0.029
+17         TomoroAI/tomoro-colqwen3-embed-8b   docvqa  0.015  0.036
+24           athrael-soju/colqwen3.5-4.5B-v3   docvqa  0.015  0.047
+26                    colbert-ir/colbertv2.0  scifact  0.048  0.098
+27                    jinaai/jina-colbert-v2  scifact -0.000  0.208
+28                    lightonai/ColBERT-Zero  scifact  0.048  0.096
+29            lightonai/GTE-ModernColBERT-v1  scifact  0.006  0.031
+30                          lightonai/LateOn  scifact  0.050  0.090
+31            lightonai/Reason-ModernColBERT  scifact  0.017  0.047
+32                     lightonai/colbertv2.0  scifact  0.023  0.116
+33                         lightonai/mLateOn  scifact  0.025  0.123
+34      mixedbread-ai/mxbai-colbert-large-v1  scifact  0.025  0.067
+35   mixedbread-ai/mxbai-edge-colbert-v0-17m  scifact  0.020  0.056
+36   mixedbread-ai/mxbai-edge-colbert-v0-32m  scifact  0.029  0.073
+39     nomic-ai/colnomic-embed-multimodal-7b   docvqa  0.005  0.028
+45                         tencent/EVIE-4.5B   docvqa  0.005  0.026
+65                       vidore/colpali-v1.3   docvqa  0.009  0.034
+67                    vidore/colpali-v1.3-hf   docvqa  0.023  0.053
+71                  vidore/colqwen-omni-v0.1   docvqa  0.009  0.039
+72                  vidore/colqwen-omni-v0.1  infovqa  0.006  0.030
+73                      vidore/colqwen2-v0.1   docvqa  0.018  0.042
+79                    vidore/colqwen2.5-v0.1   docvqa  0.012  0.033
+87  vultr/VultronRetrieverFlash-Qwen3.5-0.8B   docvqa  0.007  0.030
+
+families n>=3 only eta^2 for L0.1 (image)
+families <ArrowStringArray>
+['colpali', 'colqwen', 'colqwen3', 'colqwen3.5']
+Length: 4, dtype: str n=27 eta2=0.14 perm p=0.298

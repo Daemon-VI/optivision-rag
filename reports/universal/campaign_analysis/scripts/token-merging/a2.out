@@ -1,0 +1,81 @@
+--- functional form of loss vs keep fraction k (pooled per dataset), through origin at k=1
+docvqa log2(1/k) slope=0.0068 SSE=0.0558
+docvqa 1-k slope=0.0184 SSE=0.0607
+docvqa 1/k-1 slope=0.0033 SSE=0.0530
+docvqa (log2 1/k)^2 slope=0.0026 SSE=0.0532
+docvqa power p=1.95 s=0.0028 ; model-bootstrap 95% p: [1.5 2.4]
+infovqa log2(1/k) slope=0.0042 SSE=0.0093
+infovqa 1-k slope=0.0112 SSE=0.0110
+infovqa 1/k-1 slope=0.0020 SSE=0.0085
+infovqa (log2 1/k)^2 slope=0.0016 SSE=0.0085
+infovqa power p=1.85 s=0.0019 ; model-bootstrap 95% p: [1.4 2.3]
+scifact log2(1/k) slope=0.0293 SSE=0.1990
+scifact 1-k slope=0.0794 SSE=0.2351
+scifact 1/k-1 slope=0.0137 SSE=0.1816
+scifact (log2 1/k)^2 slope=0.0111 SSE=0.1810
+scifact power p=1.90 s=0.0123 ; model-bootstrap 95% p: [1.6 2.4]
+
+--- redundancy: Spearman(base vectors/page, loss) by ds and ratio; also abs kept vectors
+docvqa 0.5 n=40 rho=-0.19 p=0.252 family-bootstrap 95% [-0.63  0.13]
+docvqa 0.33 n=40 rho=-0.14 p=0.372 family-bootstrap 95% [-0.54  0.1 ]
+docvqa 0.25 n=40 rho=-0.28 p=0.078 family-bootstrap 95% [-0.72 -0.02]
+docvqa 0.1 n=37 rho=-0.35 p=0.0312 family-bootstrap 95% [-0.7  -0.06]
+docvqa a n=40 rho=-0.14 p=0.381 family-bootstrap 95% [-0.49  0.04]
+infovqa 0.5 n=40 rho=-0.26 p=0.102 family-bootstrap 95% [-0.59  0.13]
+infovqa 0.33 n=40 rho=-0.43 p=0.00626 family-bootstrap 95% [-0.73 -0.06]
+infovqa 0.25 n=40 rho=-0.20 p=0.207 family-bootstrap 95% [-0.49  0.18]
+infovqa 0.1 n=37 rho=-0.33 p=0.0461 family-bootstrap 95% [-0.58  0.06]
+infovqa a n=40 rho=-0.05 p=0.746 family-bootstrap 95% [-0.55  0.47]
+scifact 0.5 n=15 rho=-0.28 p=0.316 family-bootstrap 95% [-0.28 -0.28]
+scifact 0.33 n=15 rho=0.29 p=0.3 family-bootstrap 95% [0.29 0.29]
+scifact 0.25 n=15 rho=0.04 p=0.879 family-bootstrap 95% [0.04 0.04]
+scifact 0.1 n=14 rho=0.08 p=0.799 family-bootstrap 95% [0.08 0.08]
+scifact a n=15 rho=-0.28 p=0.313 family-bootstrap 95% [-0.28 -0.28]
+
+Within-image: dim, baseline ndcg, bv vs loss at 0.1 (Spearman) per ds
+docvqa bv rho=-0.35 p=0.0312 n=37
+docvqa dim rho=0.07 p=0.673 n=37
+docvqa base rho=0.16 p=0.329 n=37
+infovqa bv rho=-0.33 p=0.0461 n=37
+infovqa dim rho=-0.41 p=0.0126 n=37
+infovqa base rho=-0.23 p=0.17 n=37
+
+Group bv strata (image), mean loss at 0.1 and 0.25
+                       L0.25          L0.1            La      
+                        mean count    mean count    mean count
+ds      bvbin                                                 
+docvqa  (0, 500]      0.0927     1  0.1939     1  0.0811     1
+        (500, 800]    0.0079    13  0.0278    11  0.0169    13
+        (800, 1100]   0.0084    14  0.0213    13  0.0252    14
+        (1100, 2000]  0.0062    10  0.0197    10  0.0143    10
+infovqa (0, 500]      0.0252     1  0.0639     1  0.0490     1
+        (500, 800]    0.0072    15  0.0192    13  0.0107    15
+        (800, 1100]   0.0032    13  0.0150    12  0.0110    13
+        (1100, 2000]  0.0044    11  0.0129    11  0.0100    11
+
+Absolute kept vectors at 0.1 vs loss, image: 
+docvqa abs0.1 rho=-0.44 p=0.00604
+infovqa abs0.1 rho=-0.12 p=0.466
+
+Text: bv vs loss
+0.5 rho=-0.28 p=0.316 n=15
+0.33 rho=0.29 p=0.3 n=15
+0.25 rho=0.04 p=0.879 n=15
+0.1 rho=0.08 p=0.799 n=14
+adaptive rho=-0.28 p=0.313 n=15
+                                      model       bv  dim   L0.5  L0.33  L0.25   L0.1     La    f16
+29           lightonai/GTE-ModernColBERT-v1  229.909  128  0.005  0.002  0.006  0.031  0.013  False
+31           lightonai/Reason-ModernColBERT  273.890  128  0.000  0.010  0.017  0.047  0.000  False
+35  mixedbread-ai/mxbai-edge-colbert-v0-17m  266.814   48  0.012  0.033  0.020  0.056  0.014  False
+34     mixedbread-ai/mxbai-colbert-large-v1  211.795  128  0.023  0.029  0.025  0.067  0.045  False
+36  mixedbread-ai/mxbai-edge-colbert-v0-32m  266.814   64  0.044  0.036  0.029  0.073  0.025  False
+9              LiquidAI/LFM2.5-ColBERT-350M  285.717  128  0.001  0.029  0.070  0.082  0.021  False
+30                         lightonai/LateOn  229.909  128 -0.004 -0.003  0.050  0.090  0.018  False
+28                   lightonai/ColBERT-Zero  269.519  128  0.002  0.053  0.048  0.096  0.014  False
+26                   colbert-ir/colbertv2.0  157.367  128  0.012  0.028  0.048  0.098  0.021  False
+32                    lightonai/colbertv2.0  235.653  128  0.008  0.010  0.023  0.116  0.015  False
+33                        lightonai/mLateOn  313.362  128  0.017  0.016  0.025  0.123  0.028  False
+14                  NeuML/colbert-bert-tiny  157.367  128  0.038  0.051  0.060  0.159  0.033  False
+27                   jinaai/jina-colbert-v2  257.600  128  0.004  0.011 -0.000  0.208  0.029  False
+8                LiquidAI/LFM2-ColBERT-350M  285.717  128  0.004  0.122  0.233  0.414  0.014  False
+23    answerdotai/answerai-colbert-small-v1  236.140   96  0.002  0.002  0.061    NaN  0.388  False

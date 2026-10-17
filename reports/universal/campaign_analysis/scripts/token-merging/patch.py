@@ -1,0 +1,5 @@
+s=open('a2.py').read()
+a=s.index("print('--- functional form");b=s.index("--- redundancy")
+b=s.rfind("print(",0,b)
+new=open('newblock.txt').read()
+open('a2.py','w').write(s[:a]+new+s[b:])

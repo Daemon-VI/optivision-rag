@@ -1,0 +1,69 @@
+infovqa 40 f16 13 fams ['colgemma', 'colmodernvbert', 'colpali', 'colqwen', 'colqwen3', 'colqwen3.5', 'colsmol', 'colvec', 'nemotron-colembed', 'neomme']
+lowest [(0.792, 'colpali'), (0.817, 'colpali-v1.1'), (0.819, 'colpali-v1.2'), (0.82, 'colpali-v1.2-merged')]
+C:\Users\Lenovo\AppData\Local\Temp\claude\C--Users-Lenovo\07215cc9-ee09-45ef-91e1-819ae4093530\scratchpad\research\verify\transfer-metrics-4\v3.py:17: RuntimeWarning: invalid value encountered in scalar divide
+  return (a*b).sum()/np.sqrt((a*a).sum()*(b*b).sum())
+== infovqa all 40
+1-8: k=17 rho=nan p=0.003(null sd nan) CI[nan,nan]
+8-32: k=17 rho=0.25 p=0.017(null sd 0.11) CI[0.04,0.47]
+32-128: k=14 rho=0.58 p=0.003(null sd 0.12) CI[0.42,0.67]
+128-1000000000000: k=8 rho=0.37 p=0.010(null sd 0.14) CI[0.04,0.62]
+== infovqa drop 2 lowest 38
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=17 rho=0.25 p=0.027(null sd 0.12)
+32-128: k=14 rho=0.58 p=0.003(null sd 0.13)
+128-1000000000000: k=8 rho=0.42 p=0.010(null sd 0.17)
+== infovqa drop min,max 38
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=17 rho=0.29 p=0.020(null sd 0.12)
+32-128: k=14 rho=0.58 p=0.003(null sd 0.13)
+128-1000000000000: k=8 rho=0.34 p=0.027(null sd 0.15)
+== infovqa drop f16 27
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=17 rho=0.19 p=0.143(null sd 0.12)
+32-128: k=14 rho=0.50 p=0.003(null sd 0.14)
+128-1000000000000: k=6 rho=0.54 p=0.007(null sd 0.20)
+== infovqa one/family 10
+1-8: k=10 rho=nan p=0.003(null sd nan)
+8-32: k=7 rho=0.23 p=0.432(null sd 0.29)
+32-128: k=5 rho=0.72 p=0.007(null sd 0.28)
+none
+docvqa 40 f16 13 fams ['colgemma', 'colmodernvbert', 'colpali', 'colqwen', 'colqwen3', 'colqwen3.5', 'colsmol', 'colvec', 'nemotron-colembed', 'neomme']
+lowest [(0.542, 'NeoMME-260M-Retrieve'), (0.556, 'colmodernvbert'), (0.558, 'colpali-v1.2-merged'), (0.558, 'colpali-v1.2')]
+== docvqa all 40
+1-8: k=17 rho=nan p=0.003(null sd nan) CI[nan,nan]
+8-32: k=18 rho=0.04 p=0.694(null sd 0.10) CI[-0.13,0.25]
+32-128: k=14 rho=0.35 p=0.003(null sd 0.12) CI[0.18,0.49]
+128-1000000000000: k=8 rho=0.27 p=0.073(null sd 0.15) CI[-0.03,0.50]
+== docvqa drop 2 lowest 38
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=18 rho=0.04 p=0.728(null sd 0.11)
+32-128: k=14 rho=0.36 p=0.010(null sd 0.13)
+128-1000000000000: k=8 rho=0.30 p=0.033(null sd 0.15)
+== docvqa drop min,max 38
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=18 rho=0.07 p=0.535(null sd 0.11)
+32-128: k=14 rho=0.37 p=0.010(null sd 0.13)
+128-1000000000000: k=8 rho=0.35 p=0.013(null sd 0.14)
+== docvqa drop f16 27
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=18 rho=0.10 p=0.528(null sd 0.14)
+32-128: k=14 rho=0.27 p=0.076(null sd 0.15)
+128-1000000000000: k=6 rho=0.36 p=0.037(null sd 0.17)
+== docvqa one/family 10
+1-8: k=10 rho=nan p=0.003(null sd nan)
+8-32: k=7 rho=0.15 p=0.654(null sd 0.29)
+32-128: k=5 rho=0.61 p=0.037(null sd 0.28)
+none
+scifact 15 f16 0 fams ['colbert']
+lowest [(0.489, 'colbert-bert-tiny'), (0.631, 'mxbai-colbert-large-'), (0.646, 'colbertv2.0'), (0.692, 'colbertv2.0')]
+== scifact all 15
+1-8: k=17 rho=nan p=0.003(null sd nan) CI[nan,nan]
+8-32: k=17 rho=0.01 p=0.944(null sd 0.18) CI[-0.22,0.28]
+32-128: k=14 rho=-0.04 p=0.850(null sd 0.19) CI[-0.43,0.33]
+128-1000000000000: k=6 rho=-0.15 p=0.575(null sd 0.25) CI[-0.58,0.27]
+== scifact drop 2 lowest 13
+1-8: k=17 rho=nan p=0.003(null sd nan)
+8-32: k=17 rho=-0.13 p=0.505(null sd 0.17)
+32-128: k=14 rho=-0.21 p=0.306(null sd 0.18)
+128-1000000000000: k=6 rho=-0.33 p=0.179(null sd 0.25)
+done

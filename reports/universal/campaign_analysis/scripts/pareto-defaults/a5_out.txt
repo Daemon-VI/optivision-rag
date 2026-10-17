@@ -1,0 +1,93 @@
+grid pairs 88 {'image': 74, 'text': 14}
+
+mean front size per pair: {'ret': np.float64(9.806818181818182), 'lo': np.float64(11.681818181818182)}
+
+front on ret: labels by # pairs on front (of 88)
+ycol                                            label  n
+ ret  hierarchical_merge(0.25) > project(16) > binary 63
+ ret hierarchical_merge(0.25) > project(128) > binary 63
+ ret  hierarchical_merge(0.25) > project(32) > binary 62
+ ret                  hierarchical_merge(0.25) > int4 42
+ ret                hierarchical_merge(0.25) > binary 42
+ ret hierarchical_merge(0.33) > project(128) > binary 40
+ ret  hierarchical_merge(0.33) > project(32) > binary 38
+ ret             hierarchical_merge(0.33) > lloyd2(7) 34
+ ret  hierarchical_merge(0.33) > project(16) > binary 33
+ ret                hierarchical_merge(0.33) > binary 33
+ ret                                       int4(mean) 30
+ ret                                             int4 30
+ ret             hierarchical_merge(0.25) > lloyd2(7) 26
+ ret                                 int8(per_vector) 26
+ ret                  hierarchical_merge(0.33) > int4 25
+
+front on lo: labels by # pairs on front (of 88)
+ycol                                            label  n
+  lo                                 int8(per_vector) 72
+  lo hierarchical_merge(0.25) > project(128) > binary 64
+  lo  hierarchical_merge(0.25) > project(16) > binary 63
+  lo  hierarchical_merge(0.25) > project(32) > binary 62
+  lo                                             int4 45
+  lo                  hierarchical_merge(0.25) > int4 45
+  lo                                          float16 45
+  lo                                       int4(mean) 42
+  lo                hierarchical_merge(0.25) > binary 41
+  lo             hierarchical_merge(0.33) > lloyd2(7) 41
+  lo  hierarchical_merge(0.33) > project(32) > binary 40
+  lo hierarchical_merge(0.33) > project(128) > binary 40
+  lo                hierarchical_merge(0.33) > binary 37
+  lo  hierarchical_merge(0.33) > project(16) > binary 33
+  lo             hierarchical_merge(0.25) > lloyd2(7) 33
+
+ORACLE T=0.95: per-pair max compression among 54~ labels: median 122.5x, IQR 63.8-127.9, by modal: {'image': 125.4, 'text': 30.8} by ds: {'docvqa': 96.7, 'infovqa': 127.8, 'scifact': 30.8}
+label
+hierarchical_merge(0.25) > project(128) > binary    31
+hierarchical_merge(0.25) > binary                   11
+hierarchical_merge(0.25) > int4                      8
+hierarchical_merge(0.33) > project(128) > binary     6
+hierarchical_merge(0.25) > project(80) > binary      6
+hierarchical_merge(0.33) > binary                    6
+hierarchical_merge(0.25) > lloyd2(7)                 4
+lloyd2(7)                                            2
+
+ORACLE T=0.97: per-pair max compression among 54~ labels: median 48.3x, IQR 23.5-125.4, by modal: {'image': 63.9, 'text': 11.9} by ds: {'docvqa': 31.0, 'infovqa': 125.4, 'scifact': 11.9}
+label
+hierarchical_merge(0.25) > project(128) > binary    13
+hierarchical_merge(0.25) > int4                     10
+hierarchical_merge(0.25) > lloyd2(7)                 8
+hierarchical_merge(0.33) > int4                      7
+hierarchical_merge(0.25) > binary                    7
+int4(mean)                                           6
+hierarchical_merge(0.33) > lloyd2(7)                 5
+hierarchical_merge(0.33) > binary                    5
+
+ORACLE T=0.99: per-pair max compression among 54~ labels: median 7.9x, IQR 7.8-30.1, by modal: {'image': 8.0, 'text': 3.9} by ds: {'docvqa': 7.9, 'infovqa': 29.7, 'scifact': 3.9}
+label
+int8(per_vector)                         18
+int4(mean)                               15
+int4                                     13
+hierarchical_merge(0.25) > int4           6
+hierarchical_merge(0.25) > int4(mean)     5
+lloyd2(7)                                 4
+hierarchical_merge(0.33) > int4           3
+binary                                    3
+
+LEAVE-ONE-UNIT-OUT default selection (88 grid pairs)
+ thr    C   unit  heldout_cov  k  n  median_comp                                                                                                                                             chosen
+0.95 0.90  model     0.909091 80 88       15.672                                                                                                {'hierarchical_merge(0.25) > int8(per_vector)': 51}
+0.95 0.90 family     0.852273 75 88       15.672 {'hierarchical_merge(0.25) > int4': 1, 'hierarchical_merge(0.25) > int8(per_vector)': 7, 'hierarchical_merge(0.25) > float16': 2, 'int4(mean)': 1}
+0.95 0.95  model     0.988636 87 88        7.757                                                                                                                                 {'int4(mean)': 51}
+0.95 0.95 family     0.886364 78 88        7.757                                                                                     {'hierarchical_merge(0.25) > int4(mean)': 1, 'int4(mean)': 10}
+0.95 1.00  model     0.988636 87 88        3.938                                                                                                          {'int8(per_vector)': 50, 'int4(mean)': 1}
+0.95 1.00 family     0.988636 87 88        3.938                                                                                                          {'int4(mean)': 1, 'int8(per_vector)': 10}
+0.97 0.90  model     0.977273 86 88        7.757                                                                                                                                 {'int4(mean)': 51}
+0.97 0.90 family     0.863636 76 88        7.757                                                                                                                       {'int4': 2, 'int4(mean)': 9}
+0.97 0.95  model     0.977273 86 88        7.757                                                                                                                                 {'int4(mean)': 51}
+0.97 0.95 family     0.977273 86 88        7.757                                                                                                                                 {'int4(mean)': 11}
+0.97 1.00  model     0.988636 87 88        2.000                                                                                                             {'float16': 50, 'int8(per_vector)': 1}
+0.97 1.00 family     0.988636 87 88        2.000                                                                                                             {'int8(per_vector)': 1, 'float16': 10}
+0.99 0.90  model     0.965909 85 88        3.938                                                                                                                           {'int8(per_vector)': 51}
+0.99 0.90 family     0.965909 85 88        3.938                                                                                                                           {'int8(per_vector)': 11}
+0.99 0.95  model     0.965909 85 88        3.938                                                                                                                           {'int8(per_vector)': 51}
+0.99 0.95 family     0.965909 85 88        3.938                                                                                                                           {'int8(per_vector)': 11}
+0.99 1.00  model     1.000000 88 88        2.000                                                                                                                                    {'float16': 51}
+0.99 1.00 family     1.000000 88 88        2.000                                                                                                                                    {'float16': 11}

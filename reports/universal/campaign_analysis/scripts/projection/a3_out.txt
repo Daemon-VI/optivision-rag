@@ -1,0 +1,46 @@
+all n= 292 models 51 | LOMO CV MSE isotonic(log k): 0.006348  isotonic(log k/D): 0.070583  OLS(logk,logD): 0.031651
+k<=160 n= 260 models 51 | LOMO CV MSE isotonic(log k): 0.007127  isotonic(log k/D): 0.073501  OLS(logk,logD): 0.017829
+rel>0.7 n= 219 models 49 | LOMO CV MSE isotonic(log k): 0.001724  isotonic(log k/D): 0.005882  OLS(logk,logD): 0.003893
+wide only D>128 n= 102 models 12 | LOMO CV MSE isotonic(log k): 0.001472  isotonic(log k/D): 0.003468  OLS(logk,logD): 0.002684
+log(loss)= 3.11 -2.35 log k +0.65 log D (n=172, models 49)
+cluster-boot 95% CI: logk [-2.64 -2.09]  logD [0.51 0.81]
+(if retention depended on k/D only, coef(logD) = -coef(logk); if on absolute k only, coef(logD)=0)
+
+threshold rel>=0.95
+      units  k_med  k_min  k_max  censored_low  censored_high
+D                                                            
+48        1   12.0   12.0   12.0             0              1
+64        1   16.0   16.0   16.0             0              1
+128      62   58.0   38.0   64.0             0              3
+320      12   72.0   40.0   95.0             2              0
+640       4   80.0   80.0   81.0             2              0
+2048      2  128.0  128.0  128.0             2              0
+2560      2  128.0  128.0  128.0             2              0
+4096      4  131.0  128.0  134.0             2              0
+uncensored n=73 models=45: k_thr ~ D^0.27, CI [0.25 0.32], spearman 0.68
+
+threshold rel>=0.98
+      units  k_med  k_min  k_max  censored_low  censored_high
+D                                                            
+48        1   12.0   12.0   12.0             0              1
+64        1   16.0   16.0   16.0             0              1
+128      62   64.0   53.0   64.0             0             33
+320      12   97.0   48.0  123.0             0              0
+640       4  136.0  117.0  152.0             0              0
+2048      2  128.0  128.0  128.0             2              0
+2560      2  185.0  139.0  231.0             0              0
+4096      4  225.0  198.0  241.0             0              0
+uncensored n=51 models=34: k_thr ~ D^0.38, CI [0.36 0.48], spearman 0.83
+
+threshold rel>=0.99
+      units  k_med  k_min  k_max  censored_low  censored_high
+D                                                            
+48        1   12.0   12.0   12.0             0              1
+64        1   16.0   16.0   16.0             0              1
+128      62   64.0   58.0   64.0             0             54
+320      12  123.0   71.0  160.0             0              2
+640       4  208.0  136.0  302.0             0              0
+2048      2  169.0  136.0  203.0             0              0
+2560      2  257.0  206.0  308.0             0              0
+4096      4  344.0  321.0  586.0             0              0
+uncensored n=30 models=20: k_thr ~ D^0.48, CI [0.39 0.6 ], spearman 0.93

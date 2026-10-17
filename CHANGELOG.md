@@ -141,7 +141,7 @@
   `lightonai/colbertv2.0`, `LiquidAI/LFM2.5-ColBERT-350M` and `jinaai/jina-colbert-v2`. Each ran
   at its registry pin. 55 of the 65 registry models are now measured; the catalogue holds 53
   models and 5206 rows.
-- `lightonai/colbertv2.0`'s float baseline (nDCG@5 0.692) differs from `colbert-ir/colbertv2.0`'s
+- `lightonai/colbertv2.0`'s float baseline (nDCG@10 0.692) differs from `colbert-ir/colbertv2.0`'s
   (0.646), although it is described as a conversion of the same model. Both ran through
   sentence-transformers, but a document gives about 236 vectors against about 157, so the two
   configurations truncate or tokenize documents differently. That was not investigated further.

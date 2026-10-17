@@ -1,0 +1,36 @@
+n profiles 66 models 33 gen3 models 14
+      lvpd   hid   f16
+gen3                  
+0     2.97  0.00  0.16
+1     3.01  0.86  0.57
+--- coefficients on LOSS (1-retention); negative = lower loss. Units: points of retention x100
+binary                               gen3 -1.59 [-2.19,-1.01]
+binary                               gen3 -0.20 [-1.12,+0.65] | lvpd -0.81 [-3.20,+1.65] | hid -1.36 [-2.10,-0.60] | f16 -0.48 [-0.98,-0.02]
+hierarchical_merge(0.1)              gen3 -0.77 [-2.24,+0.29]
+hierarchical_merge(0.1)              gen3 +0.87 [-0.51,+2.13] | lvpd -9.80 [-15.65,-1.94] | hid -1.06 [-2.14,+0.19] | f16 -0.76 [-1.78,+0.40]
+lloyd2(7)                            gen3 -0.65 [-1.00,-0.29]
+lloyd2(7)                            gen3 -0.20 [-0.92,+0.48] | lvpd -0.50 [-1.79,+0.72] | hid -0.24 [-0.80,+0.35] | f16 -0.54 [-0.86,-0.18]
+hierarchical_merge(0.25)             gen3 -0.31 [-1.00,+0.21]
+hierarchical_merge(0.25)             gen3 +0.81 [-0.17,+1.66] | lvpd -4.70 [-7.78,-0.82] | hid -0.92 [-1.65,+0.05] | f16 -0.32 [-0.85,+0.26]
+hierarchical_merge(0.33) > binary    gen3 -1.88 [-2.56,-1.15]
+hierarchical_merge(0.33) > binary    gen3 +0.33 [-0.98,+0.89] | lvpd -3.32 [-4.75,-0.36] | hid -2.08 [-2.46,-0.77] | f16 -0.67 [-1.20,-0.09]
+adaptive_merge(0.6)                  gen3 -0.42 [-1.18,+0.23]
+adaptive_merge(0.6)                  gen3 +0.89 [-0.30,+1.80] | lvpd -3.80 [-7.21,+0.89] | hid -1.12 [-2.00,+0.03] | f16 -0.44 [-1.26,+0.45]
+      binary  ...  adaptive_merge(0.6)
+gen3          ...                     
+0       2.41  ...                 1.73
+1       0.81  ...                 1.31
+
+[2 rows x 6 columns]
+              binary  hierarchical_merge(0.1)  lloyd2(7)
+model                                                   
+colpali         2.44                     1.15       1.30
+colqwen-omni    0.97                     3.48       0.35
+colqwen2        2.37                     3.17       0.54
+colqwen2.5      2.48                     1.71       1.20
+gemma-netra     2.37                    12.89       1.34
+modernvbert     5.20                     5.62       1.15
+neomme          1.55                     1.35       0.86
+qwen3.5         0.62                     2.15       0.46
+qwen3vl         0.95                     1.59       0.37
+smolvlm         2.35                     1.80       0.99

@@ -1,0 +1,30 @@
+pairs 95 {'image': 80, 'text': 15} {'docvqa': 40, 'infovqa': 40, 'scifact': 15} legacy 7
+
+RECIPE TABLE (col=lo means 95% bootstrap CI lower bound >= T). Best median compression with coverage>=C among labels measured on >=60 pairs; denominators = pairs where the label exists
+all   T=0.95 C=0.9: hierarchical_merge(0.25) > int8(per_vector) 80/88 cov=0.909 Wilson[0.83,0.95] comp_med=15.7x min=9.8x
+all   T=0.95 C=0.95: int4(mean) 87/88 cov=0.989 Wilson[0.94,1.00] comp_med=7.8x min=7.4x
+all   T=0.95 C=1.0: int8(per_vector) 95/95 cov=1.000 Wilson[0.96,1.00] comp_med=3.9x min=3.8x
+all   T=0.97 C=0.9: int4(mean) 86/88 cov=0.977 Wilson[0.92,0.99] comp_med=7.8x min=7.4x
+all   T=0.97 C=0.95: int4(mean) 86/88 cov=0.977 Wilson[0.92,0.99] comp_med=7.8x min=7.4x
+all   T=0.97 C=1.0: float16 95/95 cov=1.000 Wilson[0.96,1.00] comp_med=2.0x min=2.0x
+all   T=0.99 C=0.9: int8(per_vector) 92/95 cov=0.968 Wilson[0.91,0.99] comp_med=3.9x min=3.8x
+all   T=0.99 C=0.95: int8(per_vector) 92/95 cov=0.968 Wilson[0.91,0.99] comp_med=3.9x min=3.8x
+all   T=0.99 C=1.0: float16 95/95 cov=1.000 Wilson[0.96,1.00] comp_med=2.0x min=2.0x
+image T=0.95 C=0.9: hierarchical_merge(0.25) > int4 67/74 cov=0.905 Wilson[0.82,0.95] comp_med=30.9x min=19.2x
+image T=0.95 C=0.95: hierarchical_merge(0.25) > int4(mean) 72/74 cov=0.973 Wilson[0.91,0.99] comp_med=30.9x min=19.2x
+image T=0.95 C=1.0: int4(mean) 74/74 cov=1.000 Wilson[0.95,1.00] comp_med=7.8x min=7.4x
+image T=0.97 C=0.9: int4 74/80 cov=0.925 Wilson[0.85,0.97] comp_med=7.8x min=7.4x
+image T=0.97 C=0.95: int4(mean) 73/74 cov=0.986 Wilson[0.93,1.00] comp_med=7.8x min=7.4x
+image T=0.97 C=1.0: int8(per_vector) 80/80 cov=1.000 Wilson[0.95,1.00] comp_med=3.9x min=3.8x
+image T=0.99 C=0.9: int8(per_vector) 78/80 cov=0.975 Wilson[0.91,0.99] comp_med=3.9x min=3.8x
+image T=0.99 C=0.95: int8(per_vector) 78/80 cov=0.975 Wilson[0.91,0.99] comp_med=3.9x min=3.8x
+image T=0.99 C=1.0: float16 80/80 cov=1.000 Wilson[0.95,1.00] comp_med=2.0x min=2.0x
+text  T=0.95 C=0.9: int4(mean) 13/14 cov=0.929 Wilson[0.69,0.99] comp_med=7.8x min=7.4x
+text  T=0.95 C=0.95: int8(per_vector) 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=3.9x min=3.8x
+text  T=0.95 C=1.0: int8(per_vector) 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=3.9x min=3.8x
+text  T=0.97 C=0.9: int4(mean) 13/14 cov=0.929 Wilson[0.69,0.99] comp_med=7.8x min=7.4x
+text  T=0.97 C=0.95: float16 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=2.0x min=2.0x
+text  T=0.97 C=1.0: float16 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=2.0x min=2.0x
+text  T=0.99 C=0.9: int8(per_vector) 14/15 cov=0.933 Wilson[0.70,0.99] comp_med=3.9x min=3.8x
+text  T=0.99 C=0.95: float16 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=2.0x min=2.0x
+text  T=0.99 C=1.0: float16 15/15 cov=1.000 Wilson[0.80,1.00] comp_med=2.0x min=2.0x

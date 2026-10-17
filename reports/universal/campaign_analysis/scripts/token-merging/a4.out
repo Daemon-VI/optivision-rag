@@ -1,0 +1,220 @@
+--- noise floor: mean query-bootstrap SE of retention vs between-model SD of retention
+docvqa 0.5 SD(loss)=0.0068  rms SE=0.0069  share of variance that is sampling noise ~102%  mean CI half-width 0.0132
+docvqa 0.33 SD(loss)=0.0117  rms SE=0.0081  share of variance that is sampling noise ~48%  mean CI half-width 0.0156
+docvqa 0.25 SD(loss)=0.0163  rms SE=0.0089  share of variance that is sampling noise ~30%  mean CI half-width 0.0171
+docvqa 0.1 SD(loss)=0.0319  rms SE=0.0121  share of variance that is sampling noise ~14%  mean CI half-width 0.0231
+docvqa a SD(loss)=0.0170  rms SE=0.0119  share of variance that is sampling noise ~49%  mean CI half-width 0.0232
+infovqa 0.5 SD(loss)=0.0025  rms SE=0.0030  share of variance that is sampling noise ~141%  mean CI half-width 0.0057
+infovqa 0.33 SD(loss)=0.0039  rms SE=0.0037  share of variance that is sampling noise ~89%  mean CI half-width 0.0070
+infovqa 0.25 SD(loss)=0.0059  rms SE=0.0042  share of variance that is sampling noise ~51%  mean CI half-width 0.0080
+infovqa 0.1 SD(loss)=0.0126  rms SE=0.0059  share of variance that is sampling noise ~22%  mean CI half-width 0.0111
+infovqa a SD(loss)=0.0089  rms SE=0.0051  share of variance that is sampling noise ~33%  mean CI half-width 0.0097
+scifact 0.5 SD(loss)=0.0141  rms SE=0.0069  share of variance that is sampling noise ~24%  mean CI half-width 0.0124
+scifact 0.33 SD(loss)=0.0309  rms SE=0.0108  share of variance that is sampling noise ~12%  mean CI half-width 0.0199
+scifact 0.25 SD(loss)=0.0554  rms SE=0.0134  share of variance that is sampling noise ~6%  mean CI half-width 0.0249
+scifact 0.1 SD(loss)=0.0968  rms SE=0.0194  share of variance that is sampling noise ~4%  mean CI half-width 0.0370
+scifact a SD(loss)=0.0954  rms SE=0.0120  share of variance that is sampling noise ~2%  mean CI half-width 0.0213
+
+retention>1 share {'docvqa': np.float64(0.2), 'infovqa': np.float64(0.106), 'scifact': np.float64(0.05)}
+
+--- cells whose CI upper bound < 0.99 / < 0.95 (credibly lossy), by ratio and ds
+docvqa 0.5 n=40 hi<0.99: 0  hi<0.95: 0  lo>=0.99: 8
+docvqa 0.33 n=40 hi<0.99: 1  hi<0.95: 0  lo>=0.99: 4
+docvqa 0.25 n=40 hi<0.99: 2  hi<0.95: 1  lo>=0.99: 4
+docvqa 0.1 n=37 hi<0.99: 11  hi<0.95: 1  lo>=0.99: 1
+infovqa 0.5 n=40 hi<0.99: 0  hi<0.95: 0  lo>=0.99: 29
+infovqa 0.33 n=40 hi<0.99: 0  hi<0.95: 0  lo>=0.99: 17
+infovqa 0.25 n=40 hi<0.99: 1  hi<0.95: 0  lo>=0.99: 11
+infovqa 0.1 n=37 hi<0.99: 6  hi<0.95: 0  lo>=0.99: 0
+scifact 0.5 n=15 hi<0.99: 2  hi<0.95: 0  lo>=0.99: 4
+scifact 0.33 n=15 hi<0.99: 6  hi<0.95: 1  lo>=0.99: 0
+scifact 0.25 n=15 hi<0.99: 7  hi<0.95: 1  lo>=0.99: 0
+scifact 0.1 n=14 hi<0.99: 13  hi<0.95: 8  lo>=0.99: 0
+
+--- Adaptive(0.6) vs hierarchical at matched keep fraction (hier interpolated log-linearly in log keep, loss scale)
+cells in range 82 of 95 excluded (keep<0.1): 13
+docvqa n=32 median keep=0.159; adaptive loss 0.0208 vs hier-interp loss 0.0187; mean diff (adaptive-hier)=0.0020 CI [-0.0027  0.0067]; adaptive worse in 18; wilcoxon p=0.48
+infovqa n=36 median keep=0.197; adaptive loss 0.0113 vs hier-interp loss 0.0094; mean diff (adaptive-hier)=0.0019 CI [0.0003 0.0036]; adaptive worse in 24; wilcoxon p=0.028
+scifact n=14 median keep=0.323; adaptive loss 0.0208 vs hier-interp loss 0.0385; mean diff (adaptive-hier)=-0.0177 CI [-0.037  -0.0038]; adaptive worse in 5; wilcoxon p=0.042
+                                   model       ds    mod     ka     la     lh      d
+57            vidore/colpali-v1.2-merged   docvqa  image  0.123  0.020  0.004  0.016
+29  mixedbread-ai/mxbai-colbert-large-v1  scifact   text  0.302  0.045  0.027  0.017
+53                   vidore/colpali-v1.2   docvqa  image  0.123  0.024  0.002  0.022
+55                vidore/colpali-v1.2-hf   docvqa  image  0.113  0.043  0.011  0.032
+67               vidore/colqwen2-v1.0-hf   docvqa  image  0.260  0.039  0.006  0.033
+
+adaptive keep fraction (radius .6) across models: range per ds
+         count   mean    std    min    25%    50%    75%    max
+ds                                                             
+docvqa    40.0  0.164  0.070  0.038  0.113  0.142  0.220  0.316
+infovqa   40.0  0.207  0.089  0.079  0.133  0.187  0.269  0.394
+scifact   15.0  0.300  0.110  0.004  0.254  0.321  0.364  0.470
+adaptive keep vs loss spearman (within ds)
+docvqa rho=-0.17 p=0.29
+infovqa rho=-0.28 p=0.083
+scifact rho=-0.20 p=0.47
+
+adaptive radius 0.5/0.7 vs 0.6 for models that have them
+                                                                  ret     vpd
+model                                           ds      radius               
+ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1   docvqa  0.6     1.000  218.18
+                                                infovqa 0.6     0.993  270.42
+Cognitive-Lab/ColNetraEmbed                     docvqa  0.6     0.919   52.67
+                                                infovqa 0.6     0.951   54.89
+Hcompany/NeoMME-260M-Retriever-ST-late          docvqa  0.6     0.990  125.46
+                                                infovqa 0.6     0.981  120.11
+Hcompany/NeoMME-800M-Retriever-ST-late          docvqa  0.6     0.978  111.95
+                                                infovqa 0.6     0.981  109.08
+LiquidAI/LFM2-ColBERT-350M                      scifact 0.6     0.986   92.98
+LiquidAI/LFM2.5-ColBERT-350M                    scifact 0.6     0.979   84.43
+Metric-AI/ColQwen2.5-3b-multilingual-v1.0       docvqa  0.6     0.974  190.42
+                                                infovqa 0.6     0.983  213.53
+ModernVBERT/colmodernvbert                      docvqa  0.6     0.950  126.50
+                                                infovqa 0.6     0.965  133.54
+NeuML/colbert-bert-tiny                         scifact 0.6     0.967   74.01
+TomoroAI/tomoro-colqwen3-embed-4b               docvqa  0.6     0.985  196.06
+                                                infovqa 0.6     0.995  258.47
+TomoroAI/tomoro-colqwen3-embed-8b               docvqa  0.6     0.981  199.81
+                                                infovqa 0.6     0.994  256.47
+VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1     docvqa  0.6     0.979  147.40
+                                                infovqa 0.6     0.986  195.16
+VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1     docvqa  0.6     0.970  160.99
+                                                infovqa 0.6     0.991  212.72
+answerdotai/answerai-colbert-small-v1           scifact 0.5     0.614    1.00
+                                                        0.6     0.612    1.05
+                                                        0.7     0.624    1.81
+athrael-soju/colqwen3.5-4.5B-v3                 docvqa  0.6     0.977  118.30
+                                                infovqa 0.6     0.994  159.40
+colbert-ir/colbertv2.0                          scifact 0.6     0.979   66.53
+jinaai/jina-colbert-v2                          scifact 0.6     0.971   53.34
+lightonai/ColBERT-Zero                          scifact 0.6     0.986   86.60
+lightonai/GTE-ModernColBERT-v1                  scifact 0.6     0.987   83.15
+lightonai/LateOn                                scifact 0.6     0.982   48.22
+lightonai/Reason-ModernColBERT                  scifact 0.6     1.000   67.38
+lightonai/colbertv2.0                           scifact 0.6     0.985   88.14
+lightonai/mLateOn                               scifact 0.6     0.972   81.97
+mixedbread-ai/mxbai-colbert-large-v1            scifact 0.6     0.955   64.05
+mixedbread-ai/mxbai-edge-colbert-v0-17m         scifact 0.6     0.986   90.26
+mixedbread-ai/mxbai-edge-colbert-v0-32m         scifact 0.6     0.975   97.81
+nomic-ai/colnomic-embed-multimodal-3b           docvqa  0.6     1.006  358.92
+                                                infovqa 0.6     0.997  453.78
+nomic-ai/colnomic-embed-multimodal-7b           docvqa  0.6     0.997  236.47
+                                                infovqa 0.6     0.997  286.19
+nvidia/nemotron-colembed-vl-4b-v2               docvqa  0.6     0.979   73.87
+                                                infovqa 0.6     0.993   99.49
+nvidia/nemotron-colembed-vl-8b-v2               docvqa  0.6     0.987   86.15
+                                                infovqa 0.6     0.993  121.95
+tencent/EVIE-4.5B                               docvqa  0.6     0.978  107.60
+                                                infovqa 0.6     0.991  154.56
+tencent/EVIE-8B                                 docvqa  0.6     0.968  106.30
+                                                infovqa 0.6     0.996  136.35
+tsystems/colqwen2.5-3b-multilingual-v1.0        docvqa  0.6     1.008  144.62
+                                                infovqa 0.6     0.984  175.39
+tsystems/colqwen2.5-3b-multilingual-v1.0-merged docvqa  0.6     0.996  144.53
+                                                infovqa 0.6     0.984  175.38
+vidore/colSmol-500M                             docvqa  0.6     0.982  253.60
+                                                infovqa 0.6     1.000  237.67
+vidore/colpali                                  docvqa  0.6     0.987  117.37
+                                                infovqa 0.6     0.987  122.92
+vidore/colpali-v1.1                             docvqa  0.6     1.001  111.72
+                                                infovqa 0.6     0.982  123.25
+vidore/colpali-v1.2                             docvqa  0.6     0.976  126.56
+                                                infovqa 0.6     0.989  140.46
+vidore/colpali-v1.2-hf                          docvqa  0.6     0.957  116.08
+                                                infovqa 0.6     0.985  128.57
+vidore/colpali-v1.2-merged                      docvqa  0.6     0.980  126.59
+                                                infovqa 0.6     0.986  140.69
+vidore/colpali-v1.3                             docvqa  0.6     0.962  130.49
+                                                infovqa 0.6     0.996  125.38
+vidore/colpali-v1.3-hf                          docvqa  0.6     0.958  120.41
+                                                infovqa 0.6     0.990  115.38
+vidore/colpali-v1.3-merged                      docvqa  0.5     0.941   87.73
+                                                        0.6     0.962  122.20
+                                                        0.7     0.967  181.50
+                                                infovqa 0.5     0.976   81.56
+                                                        0.6     0.994  115.83
+                                                        0.7     0.997  172.03
+vidore/colqwen-omni-v0.1                        docvqa  0.6     0.986  158.49
+                                                infovqa 0.6     0.981  143.38
+vidore/colqwen2-v0.1                            docvqa  0.6     0.972  182.50
+                                                infovqa 0.6     0.985  209.99
+vidore/colqwen2-v1.0-hf                         docvqa  0.6     0.961  194.35
+                                                infovqa 0.6     0.990  213.42
+vidore/colqwen2-v1.0-merged                     docvqa  0.5     0.982  116.24
+                                                        0.6     0.991  168.99
+                                                        0.7     0.993  248.68
+                                                infovqa 0.5     0.989  129.38
+                                                        0.6     0.990  187.29
+                                                        0.7     0.997  270.18
+vidore/colqwen2.5-v0.1                          docvqa  0.6     0.975  183.89
+                                                infovqa 0.6     0.989  227.78
+vidore/colqwen2.5-v0.2                          docvqa  0.5     0.959  104.38
+                                                        0.6     0.969  151.43
+                                                        0.7     0.980  222.50
+                                                infovqa 0.5     0.995  131.70
+                                                        0.6     0.995  196.55
+                                                        0.7     0.998  287.67
+vidore/colsmolvlm-v0.1                          docvqa  0.6     0.998  454.69
+                                                infovqa 0.6     0.989  383.22
+vultr/VultronRetrieverCore-Qwen3.5-4.5B         docvqa  0.6     0.982  203.43
+                                                infovqa 0.6     0.992  268.34
+vultr/VultronRetrieverFlash-Qwen3.5-0.8B        docvqa  0.6     0.996  120.59
+                                                infovqa 0.6     0.983  163.66
+vultr/VultronRetrieverPrime-Qwen3.5-8B          docvqa  0.6     0.995  184.23
+                                                infovqa 0.6     0.998  244.41
+webAI-Official/webAI-ColVec1-4b                 docvqa  0.6     0.990  123.57
+                                                infovqa 0.6     0.994  131.34
+webAI-Official/webAI-ColVec1.1-8b               docvqa  0.6     0.971  164.59
+                                                infovqa 0.6     0.996  184.63
+
+Ward max_distance rows
+model                                  ds     
+answerdotai/answerai-colbert-small-v1  scifact    5
+vidore/colpali-v1.3-merged             docvqa     5
+                                       infovqa    5
+vidore/colqwen2-v1.0-merged            docvqa     5
+                                       infovqa    5
+vidore/colqwen2.5-v0.2                 docvqa     5
+                                       infovqa    5
+dtype: int64
+                                     model       ds    d     vpd    ret    comp
+115  answerdotai/answerai-colbert-small-v1  scifact  0.8   29.12  0.957   8.091
+116  answerdotai/answerai-colbert-small-v1  scifact  1.0   18.61  0.915  12.662
+117  answerdotai/answerai-colbert-small-v1  scifact  1.3   10.53  0.876  22.388
+118  answerdotai/answerai-colbert-small-v1  scifact  1.6    6.41  0.829  36.761
+119  answerdotai/answerai-colbert-small-v1  scifact  2.0    3.41  0.696  69.071
+351             vidore/colpali-v1.3-merged   docvqa  0.8  275.47  0.991   3.743
+352             vidore/colpali-v1.3-merged   docvqa  1.0  195.77  0.975   5.266
+353             vidore/colpali-v1.3-merged   docvqa  1.3  134.03  0.970   7.692
+354             vidore/colpali-v1.3-merged   docvqa  1.6   99.89  0.958  10.322
+355             vidore/colpali-v1.3-merged   docvqa  2.0   72.63  0.936  14.195
+362             vidore/colpali-v1.3-merged  infovqa  0.8  270.33  1.001   3.814
+363             vidore/colpali-v1.3-merged  infovqa  1.0  191.89  0.995   5.373
+364             vidore/colpali-v1.3-merged  infovqa  1.3  127.73  0.989   8.071
+365             vidore/colpali-v1.3-merged  infovqa  1.6   93.03  0.986  11.082
+366             vidore/colpali-v1.3-merged  infovqa  2.0   65.16  0.972  15.824
+403            vidore/colqwen2-v1.0-merged   docvqa  0.8  305.39  1.003   2.450
+404            vidore/colqwen2-v1.0-merged   docvqa  1.0  211.56  1.002   3.537
+405            vidore/colqwen2-v1.0-merged   docvqa  1.3  135.70  0.987   5.514
+406            vidore/colqwen2-v1.0-merged   docvqa  1.6   96.94  0.990   7.719
+407            vidore/colqwen2-v1.0-merged   docvqa  2.0   67.36  0.972  11.109
+414            vidore/colqwen2-v1.0-merged  infovqa  0.8  321.10  0.997   2.281
+415            vidore/colqwen2-v1.0-merged  infovqa  1.0  223.35  0.996   3.280
+416            vidore/colqwen2-v1.0-merged  infovqa  1.3  139.94  0.989   5.234
+417            vidore/colqwen2-v1.0-merged  infovqa  1.6   95.55  0.984   7.666
+418            vidore/colqwen2-v1.0-merged  infovqa  2.0   63.27  0.966  11.577
+435                 vidore/colqwen2.5-v0.2   docvqa  0.8  284.30  0.990   2.632
+436                 vidore/colqwen2.5-v0.2   docvqa  1.0  199.27  0.991   3.755
+437                 vidore/colqwen2.5-v0.2   docvqa  1.3  129.25  0.983   5.789
+438                 vidore/colqwen2.5-v0.2   docvqa  1.6   91.47  0.980   8.181
+439                 vidore/colqwen2.5-v0.2   docvqa  2.0   64.16  0.966  11.664
+446                 vidore/colqwen2.5-v0.2  infovqa  0.8  335.81  0.998   2.181
+447                 vidore/colqwen2.5-v0.2  infovqa  1.0  229.28  1.000   3.195
+448                 vidore/colqwen2.5-v0.2  infovqa  1.3  140.37  0.992   5.218
+449                 vidore/colqwen2.5-v0.2  infovqa  1.6   95.31  0.993   7.685
+450                 vidore/colqwen2.5-v0.2  infovqa  2.0   63.40  0.983  11.553
+
+Adaptive failures (retention<0.9 or vpd<5):
+                                    model       ds    a_v  a_ret
+2             Cognitive-Lab/ColNetraEmbed   docvqa  52.67  0.919
+23  answerdotai/answerai-colbert-small-v1  scifact   1.05  0.612

@@ -1,0 +1,56 @@
+achieved keep fraction
+          k0.5  k0.33  k0.25   k0.1
+ds                                 
+docvqa   0.500  0.331  0.251  0.101
+infovqa  0.500  0.331  0.251  0.101
+scifact  0.501  0.332  0.251  0.102
+
+Retention by ds and ratio: n, mean, median, 95%boot CI of mean, min, share>=.99,>=.98,>=.95
+docvqa 0.5 40 0.9961 0.9948 (np.float64(0.994), np.float64(0.9981)) 0.981 0.8 1.0 1.0
+docvqa 0.33 40 0.9929 0.9961 (np.float64(0.9891), np.float64(0.9961)) 0.94 0.72 0.92 0.98
+docvqa 0.25 40 0.9904 0.9914 (np.float64(0.9847), np.float64(0.9948)) 0.907 0.6 0.9 0.98
+docvqa 0.1 37 0.9731 0.9782 (np.float64(0.9613), np.float64(0.9814)) 0.806 0.24 0.46 0.92
+docvqa adaptive0.6 40 0.9793 0.9794 0.919 keepfrac 0.142
+infovqa 0.5 40 0.9976 0.9978 (np.float64(0.9969), np.float64(0.9984)) 0.993 1.0 1.0 1.0
+infovqa 0.33 40 0.9959 0.9962 (np.float64(0.9947), np.float64(0.9971)) 0.987 0.92 1.0 1.0
+infovqa 0.25 40 0.9944 0.9958 (np.float64(0.9926), np.float64(0.9961)) 0.975 0.88 0.95 1.0
+infovqa 0.1 37 0.9829 0.9865 (np.float64(0.9784), np.float64(0.9863)) 0.936 0.24 0.84 0.95
+infovqa adaptive0.6 40 0.9885 0.9902 0.951 keepfrac 0.187
+scifact 0.5 15 0.9889 0.9954 (np.float64(0.9815), np.float64(0.9951)) 0.956 0.6 0.8 1.0
+scifact 0.33 15 0.9714 0.9719 (np.float64(0.9543), np.float64(0.9843)) 0.878 0.27 0.47 0.8
+scifact 0.25 15 0.9524 0.9712 (np.float64(0.9212), np.float64(0.9734)) 0.767 0.13 0.27 0.67
+scifact 0.1 14 0.8816 0.9071 (np.float64(0.8258), np.float64(0.9221)) 0.586 0.0 0.0 0.14
+scifact adaptive0.6 15 0.9547 0.9791 0.612 keepfrac 0.321
+
+Step drops (paired, mean diff, bootstrap CI, Wilcoxon p)
+docvqa 0.5 -> 0.33 40 0.0032 (np.float64(0.0002), np.float64(0.0067)) p=0.083
+docvqa 0.33 -> 0.25 40 0.0024 (np.float64(0.0001), np.float64(0.0051)) p=0.18
+docvqa 0.25 -> 0.1 37 0.017 (np.float64(0.0118), np.float64(0.0234)) p=4.7e-08
+docvqa 0.5 -> 0.1 37 0.0229 (np.float64(0.0153), np.float64(0.0343)) p=3e-07
+docvqa 0.5 -> 0.25 40 0.0056 (np.float64(0.0019), np.float64(0.0107)) p=0.0031
+infovqa 0.5 -> 0.33 40 0.0018 (np.float64(0.0006), np.float64(0.0029)) p=0.0021
+infovqa 0.33 -> 0.25 40 0.0015 (np.float64(0.0001), np.float64(0.0029)) p=0.043
+infovqa 0.25 -> 0.1 37 0.0115 (np.float64(0.0091), np.float64(0.0143)) p=1.2e-07
+infovqa 0.5 -> 0.1 37 0.0149 (np.float64(0.0114), np.float64(0.0192)) p=1.1e-07
+infovqa 0.5 -> 0.25 40 0.0032 (np.float64(0.0017), np.float64(0.0049)) p=0.0004
+scifact 0.5 -> 0.33 15 0.0174 (np.float64(0.0052), np.float64(0.035)) p=0.01
+scifact 0.33 -> 0.25 15 0.019 (np.float64(0.0044), np.float64(0.0375)) p=0.055
+scifact 0.25 -> 0.1 14 0.0717 (np.float64(0.0444), np.float64(0.104)) p=0.00012
+scifact 0.5 -> 0.1 14 0.1066 (np.float64(0.0662), np.float64(0.164)) p=0.00012
+scifact 0.5 -> 0.25 15 0.0364 (np.float64(0.0131), np.float64(0.0694)) p=0.0026
+
+loss per halving of keep (percentage points), by segment, mean over model-datasets
+docvqa 0.5 0.33 0.537 pp per halving
+docvqa 0.33 0.25 0.618 pp per halving
+docvqa 0.25 0.1 1.363 pp per halving
+infovqa 0.5 0.33 0.315 pp per halving
+infovqa 0.33 0.25 0.386 pp per halving
+infovqa 0.25 0.1 0.985 pp per halving
+scifact 0.5 0.33 2.933 pp per halving
+scifact 0.33 0.25 4.745 pp per halving
+scifact 0.25 0.1 5.502 pp per halving
+
+Pooled hinge fit retention ~ 1 - s*max(0,c - log2(keep)), grid c
+docvqa n 157 knot log2keep=-0.95 (keep=0.518) slope=0.0116/halving SSE hinge=0.0538 vs linear=0.0537; knot boot 95%: keep [0.116 0.5  ]
+infovqa n 157 knot log2keep=-0.95 (keep=0.518) slope=0.0070/halving SSE hinge=0.0087 vs linear=0.0087; knot boot 95%: keep [0.406 0.5  ]
+scifact n 59 knot log2keep=-0.95 (keep=0.518) slope=0.0494/halving SSE hinge=0.1824 vs linear=0.1822; knot boot 95%: keep [0.392 0.5  ]

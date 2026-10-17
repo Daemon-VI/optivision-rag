@@ -1,0 +1,66 @@
+models with int4: 51 collapsed: 6
+                                           min  ...       bb
+model                                           ...         
+lightonai/GTE-ModernColBERT-v1           0.936  ...     text
+lightonai/LateOn                         0.297  ...     text
+lightonai/mLateOn                        0.765  ...     text
+mixedbread-ai/mxbai-edge-colbert-v0-17m  0.268  ...     text
+mixedbread-ai/mxbai-edge-colbert-v0-32m  0.792  ...     text
+nvidia/nemotron-colembed-vl-4b-v2        0.004  ...  qwen3vl
+nvidia/nemotron-colembed-vl-8b-v2        0.007  ...  qwen3vl
+
+[7 rows x 6 columns]
+consistency across datasets for image models: max-min of int4 retention for collapsed {'lightonai/LateOn': 0.0, 'lightonai/mLateOn': 0.0, 'mixedbread-ai/mxbai-edge-colbert-v0-17m': 0.0, 'mixedbread-ai/mxbai-edge-colbert-v0-32m': 0.0, 'nvidia/nemotron-colembed-vl-4b-v2': 0.005, 'nvidia/nemotron-colembed-vl-8b-v2': 0.004}
+group n 45 
+ sc     False  True 
+c                  
+False     30      9
+True       0      6 
+ Fisher OR inf p 0.0006144828890149366
+bb n 48 
+ sc     False  True 
+c                  
+False     26     16
+True       0      6 
+ Fisher OR inf p 0.006080179850698104
+label                                     int4  ...  dim
+model                                           ...     
+LiquidAI/LFM2-ColBERT-350M               0.992  ...  128
+LiquidAI/LFM2.5-ColBERT-350M             0.983  ...  128
+NeuML/colbert-bert-tiny                  1.005  ...  128
+colbert-ir/colbertv2.0                   0.997  ...  128
+jinaai/jina-colbert-v2                   0.988  ...  128
+lightonai/ColBERT-Zero                   0.994  ...  128
+lightonai/GTE-ModernColBERT-v1           0.936  ...  128
+lightonai/LateOn                         0.297  ...  128
+lightonai/Reason-ModernColBERT           0.996  ...  128
+lightonai/colbertv2.0                    1.003  ...  128
+lightonai/mLateOn                        0.765  ...  128
+mixedbread-ai/mxbai-colbert-large-v1     0.986  ...  128
+mixedbread-ai/mxbai-edge-colbert-v0-17m  0.268  ...   48
+mixedbread-ai/mxbai-edge-colbert-v0-32m  0.792  ...   64
+
+[14 rows x 6 columns]
+text spearman int4 vs binary 0.648 0.0121 n 14
+text spearman int4 vs lloyd2(7) 0.763 0.0015 n 14
+text spearman int4 vs dim 0.516 0.0591 n 14
+text spearman int4 vs hierarchical_merge(0.1) -0.393 0.164 n 14
+image int4 min 0.0039 n collapsed 4 of 74
+image int4(mean) range 0.9753 1.0105
+text int4(mean) range 0.9508 1.006
+                                               min    max  ...    group       bb
+model                                                      ...                  
+TomoroAI/tomoro-colqwen3-embed-4b            0.991  1.003  ...  qwen3vl  qwen3vl
+TomoroAI/tomoro-colqwen3-embed-8b            0.993  0.998  ...  qwen3vl  qwen3vl
+VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1  0.999  1.009  ...  qwen3vl  qwen3vl
+VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1  0.998  1.004  ...  qwen3vl  qwen3vl
+nvidia/nemotron-colembed-vl-4b-v2            0.004  0.009  ...  qwen3vl  qwen3vl
+nvidia/nemotron-colembed-vl-8b-v2            0.007  0.011  ...  qwen3vl  qwen3vl
+webAI-Official/webAI-ColVec1-4b              1.000  1.004  ...  qwen3vl  qwen3vl
+webAI-Official/webAI-ColVec1.1-8b            1.000  1.003  ...  qwen3vl  qwen3vl
+
+[8 rows x 6 columns]
+nvidia/nemotron-colembed-vl-4b-v2 2560
+nvidia/nemotron-colembed-vl-8b-v2 4096
+tencent/EVIE-4.5B 2048
+tencent/EVIE-8B 4096
