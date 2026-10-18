@@ -3,8 +3,8 @@
 Written by `scripts/followup_predictions.py` from the ingested follow-up results; do not edit by hand.
 The predictions and their thresholds are in `reports/universal/campaign_analysis/PREDICTIONS.md`.
 
-Batches in: `f1_text_nfcorpus_a`, `f2_text_nfcorpus_b`, `f3_text_scale`, `f4_pages_128d`, `f5_pages_wide`, `f6_scale_colsmol`, `f7_scale_colpali`.
-Still out: `f3b_answerai_scifact`, `f8_geometry`.
+Batches in: `f1_text_nfcorpus_a`, `f2_text_nfcorpus_b`, `f3_text_scale`, `f4_pages_128d`, `f5_pages_wide`, `f6_scale_colsmol`, `f7_scale_colpali`, `f3b_answerai_scifact`, `f8_geometry`.
+Still out: none.
 
 | Prediction | Status | Detail |
 |---|---|---|
@@ -16,11 +16,11 @@ Still out: `f3b_answerai_scifact`, `f8_geometry`.
 | P6 | failed | 15 of 18 units in so far meet it (need 18 of 18); misses: answerai-colbert-small-v1 / nfcorpus, colSmol-500M / tabfquad_test_subsampled, EVIE-4.5B / tabfquad_test_subsampled |
 | P7 | failed | nfcorpus: (mean recall@1, mean ndcg@5, rows) = (0.5262, 0.5248, 222) over 8 of 8 units | arxivqa_test_subsampled: (mean recall@1, mean ndcg@5, rows) = (0.8536, 0.8819, 161) over 5 of 5 units | tabfquad_test_subsampled: (mean recall@1, mean ndcg@5, rows) = (0.9135, 0.8975, 161) over 5 of 5 units |
 | P8 | held | default met rate {0.95: 0.9886, 0.97: 0.9886, 0.99: 0.9721}, point met rate at 0.99 = 0.4227, over 22 units |
-| P9 | pending | colbertv2.0: change {'int8(per_vector)': 0.0, 'int4(mean)': -0.0078} | answerai-colbert-small-v1: f3b_answerai_scifact pending | colSmol-500M: change {'int8(per_vector)': -0.0011, 'int4(mean)': 0.0091} | colpali-v1.3: change {'int8(per_vector)': -0.0043, 'int4(mean)': -0.0022} |
-| P10 | failed | colbertv2.0: (original, enlarged) {'binary': (1.0114, 1.0118), 'hierarchical_merge(0.25) > binary': (0.9523, 0.9526)} | answerai-colbert-small-v1: f3b_answerai_scifact pending | colSmol-500M: (original, enlarged) {'binary': (0.9771, 0.9624), 'hierarchical_merge(0.25) > binary': (0.9599, 0.9464)} | colpali-v1.3: (original, enlarged) {'binary': (0.9644, 0.9554), 'hierarchical_merge(0.25) > binary': (0.9431, 0.9154)} |
-| P11 | failed | colbertv2.0: tiered 1.0 -> 1.0 | answerai-colbert-small-v1: f3b_answerai_scifact pending | colSmol-500M: tiered 1.0013 -> 1.0002 | colpali-v1.3: tiered 1.0037 -> 0.9978 |
-| P12 | pending | f8 has not come back |
-| P13 | pending | f8 has not come back |
+| P9 | held | colbertv2.0: change {'int8(per_vector)': 0.0, 'int4(mean)': -0.0078} | answerai-colbert-small-v1: change {'int8(per_vector)': -0.0, 'int4(mean)': -0.0053} | colSmol-500M: change {'int8(per_vector)': -0.0011, 'int4(mean)': 0.0091} | colpali-v1.3: change {'int8(per_vector)': -0.0043, 'int4(mean)': -0.0022} |
+| P10 | failed | colbertv2.0: (original, enlarged) {'binary': (1.0114, 1.0118), 'hierarchical_merge(0.25) > binary': (0.9523, 0.9526)} | answerai-colbert-small-v1: (original, enlarged) {'binary': (0.9309, 0.9251), 'hierarchical_merge(0.25) > binary': (0.8426, 0.8365)} | colSmol-500M: (original, enlarged) {'binary': (0.9771, 0.9624), 'hierarchical_merge(0.25) > binary': (0.9599, 0.9464)} | colpali-v1.3: (original, enlarged) {'binary': (0.9644, 0.9554), 'hierarchical_merge(0.25) > binary': (0.9431, 0.9154)} |
+| P11 | failed | colbertv2.0: tiered 1.0 -> 1.0 | answerai-colbert-small-v1: tiered 0.9937 -> 0.9943 | colSmol-500M: tiered 1.0013 -> 1.0002 | colpali-v1.3: tiered 1.0037 -> 0.9978 |
+| P12 | held | AUC = 0.964 over 7 degraded and 8 controls |
+| P13 | held | peak_to_rms.median: {'nemotron-colembed-vl-4b-v2': 27.7315, 'nemotron-colembed-vl-8b-v2': 40.9729, 'LateOn': 6.1263} against the controls' highest 3.7545 | doc_cos_to_mean.median: {'mxbai-edge-colbert-v0-17m': 0.9633, 'mxbai-edge-colbert-v0-32m': 0.9446, 'mLateOn': 0.9844} against the controls' highest 0.9336 |
 | P14 | held | Spearman(statistic, plain int4 retention) = 0.8535 over 18 of 18 units |
 
 ## New-dataset units

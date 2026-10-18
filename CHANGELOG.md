@@ -301,6 +301,21 @@
   0.960 to 0.946, and the tiered index from 1.001 to 1.000. Both predictions stay failed, on
   colbertv2.0.
 
+### Follow-up batches f8_geometry and f3b_answerai_scifact (follow-up complete)
+
+- **Results.** f8 encoded 15 models for geometry only, each passing the check at 10 to 12 of 12.
+  f3b measured answerai-colbert-small-v1 on SciFact at 11 of 12.
+- **Final score: 9 of 14 predictions held, 5 failed.**
+  - **Held:** P1, P2, P4, P5, P8, P9, P12 (AUC 0.964), P13 and P14.
+  - **Failed:** P3, P6, P7, P10 and P11. For P11, answerai's tiered retention rose from 0.994 to
+    0.994 with the larger corpus, rather than falling.
+- **Summary.** `reports/universal/followup/SUMMARY.md` gives the outcome of each prediction,
+  caveats and exploratory notes. Two caveats:
+  - The P12/P14 statistic is computed from int4 itself, so it is not an independent property of
+    the vectors.
+  - answerai has the same geometry on NFCorpus and SciFact, but its plain int4 keeps 0.455 on
+    NFCorpus against 0.899 on SciFact.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

@@ -1,0 +1,55 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:answerai-colbert-small-v1_scifact
+== answerai-colbert-small-v1_scifact: 5183 docs, 300 queries, 96-d, 236 vectors/page
+   float32: nDCG@5 0.7308  0.09 MB/page  scan 171.9 ms/query
+   float32                                                        x    1.0    49.3s
+   float16                                                        x    2.0    49.5s
+   int8(per_vector)                                               x    3.9    49.7s
+   int4                                                           x    7.7    49.8s
+   int4(mean)                                                     x    7.7    50.4s
+   lloyd2(7)                                                      x   16.0    55.3s
+   binary                                                         x   32.0    49.3s
+   hierarchical_merge(0.5)                                        x    2.0    63.6s
+   hierarchical_merge(0.33)                                       x    3.0    55.6s
+   hierarchical_merge(0.25)                                       x    4.0    51.2s
+   hierarchical_merge(0.1)                                        x    9.8    44.6s
+   adaptive_merge(0.6)                                            x    2.7    36.6s
+   hierarchical_merge(0.33) > float16                             x    6.0    17.3s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   11.8    17.4s
+   hierarchical_merge(0.33) > int4                                x   23.1    17.6s
+   hierarchical_merge(0.33) > int4(mean)                          x   23.1    17.9s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.2    19.5s
+   hierarchical_merge(0.33) > binary                              x   96.3    17.4s
+   hierarchical_merge(0.25) > float16                             x    7.9    13.7s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.6    13.7s
+   hierarchical_merge(0.25) > int4                                x   30.5    13.8s
+   hierarchical_merge(0.25) > int4(mean)                          x   30.5    14.1s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   63.6    15.1s
+   hierarchical_merge(0.25) > binary                              x  127.2    13.6s
+   project(24, random)                                            x    4.0    47.1s
+   hierarchical_merge(0.33) > project(24)                         x   12.0    52.4s
+   hierarchical_merge(0.33) > project(12)                         x   24.1    53.9s
+   hierarchical_merge(0.33) > project(128)                        x    3.0    55.1s
+   hierarchical_merge(0.25) > project(24)                         x   15.9    51.0s
+   hierarchical_merge(0.25) > project(12)                         x   31.8    50.8s
+   hierarchical_merge(0.25) > project(128)                        x    4.0    51.2s
+   hierarchical_merge(0.33) > project(24) > int8(per_vector)      x   44.5    17.3s
+   hierarchical_merge(0.33) > project(24) > int4(mean)            x   82.6    17.5s
+   hierarchical_merge(0.33) > project(24) > binary                x  385.3    17.2s
+   hierarchical_merge(0.33) > project(12) > int8(per_vector)      x   82.6    17.1s
+   hierarchical_merge(0.33) > project(12) > int4(mean)            x  144.5    17.3s
+   hierarchical_merge(0.33) > project(12) > binary                x  578.0    17.7s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x   11.8    18.1s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x   23.1    18.6s
+   hierarchical_merge(0.33) > project(128) > binary               x   96.3    18.4s
+   hierarchical_merge(0.25) > project(24) > int8(per_vector)      x   58.7    15.0s
+   hierarchical_merge(0.25) > project(24) > int4(mean)            x  109.0    15.3s
+   hierarchical_merge(0.25) > project(24) > binary                x  508.7    15.0s
+   hierarchical_merge(0.25) > project(12) > int8(per_vector)      x  109.0    14.9s
+   hierarchical_merge(0.25) > project(12) > int4(mean)            x  190.8    15.0s
+   hierarchical_merge(0.25) > project(12) > binary                x  763.1    15.0s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x   15.6    15.5s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x   30.5    15.3s
+   hierarchical_merge(0.25) > project(128) > binary               x  127.2    14.5s
+   tiered binary               RAM      2.8 KB  ret 0.994
+   tiered ward 1/4 > binary    RAM      0.7 KB  ret 0.945
+== answerai-colbert-small-v1_scifact done in 1603s
