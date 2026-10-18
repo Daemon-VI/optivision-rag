@@ -1,0 +1,75 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:EVIE-4.5B_tabfquad_test_subsampled
+== EVIE-4.5B_tabfquad_test_subsampled: 280 docs, 280 queries, 2048-d, 680 vectors/page
+   float32: nDCG@5 0.6053  5.57 MB/page  scan 44.3 ms/query
+   float32                                                        x    1.0    11.2s
+   float16                                                        x    2.0    13.5s
+   int8(per_vector)                                               x    4.0    14.3s
+   int4                                                           x    8.0    16.3s
+   int4(mean)                                                     x    8.0    17.2s
+   lloyd2(7)                                                      x   16.0    35.2s
+   binary                                                         x   32.0    12.1s
+   hierarchical_merge(0.5)                                        x    2.0    50.8s
+   hierarchical_merge(0.33)                                       x    3.0    47.2s
+   hierarchical_merge(0.25)                                       x    4.0    46.2s
+   hierarchical_merge(0.1)                                        x    9.9    44.2s
+   adaptive_merge(0.6)                                            x    8.3    34.0s
+   hierarchical_merge(0.33) > float16                             x    6.0     4.4s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   12.1     4.7s
+   hierarchical_merge(0.33) > int4                                x   24.1     5.2s
+   hierarchical_merge(0.33) > int4(mean)                          x   24.1     5.5s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.4    11.4s
+   hierarchical_merge(0.33) > binary                              x   96.7     3.9s
+   hierarchical_merge(0.25) > float16                             x    8.0     3.4s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.9     3.6s
+   hierarchical_merge(0.25) > int4                                x   31.9     4.0s
+   hierarchical_merge(0.25) > int4(mean)                          x   31.9     4.3s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   63.8     8.6s
+   hierarchical_merge(0.25) > binary                              x  127.7     3.1s
+   project(1024)                                                  x    2.0    18.2s
+   project(512)                                                   x    4.0    13.8s
+   project(256)                                                   x    8.0    12.1s
+   project(128)                                                   x   16.0    10.8s
+   project(512, random)                                           x    4.0    12.0s
+   project(1024) > float16                                        x    4.0    10.7s
+   project(1024) > int8(per_vector)                               x    8.0    11.1s
+   project(1024) > int4(mean)                                     x   15.9    12.2s
+   project(1024) > binary                                         x   64.0    10.0s
+   project(512) > float16                                         x    8.0     8.9s
+   project(512) > int8(per_vector)                                x   15.9     9.2s
+   project(512) > int4(mean)                                      x   31.8     9.8s
+   project(512) > binary                                          x  128.0     8.6s
+   project(256) > float16                                         x   16.0     8.2s
+   project(256) > int8(per_vector)                                x   31.8     8.2s
+   project(256) > int4(mean)                                      x   63.0     8.4s
+   project(256) > binary                                          x  256.0     7.9s
+   project(128) > float16                                         x   32.0     7.6s
+   project(128) > int8(per_vector)                                x   63.0     7.7s
+   project(128) > int4(mean)                                      x  124.1     7.8s
+   project(128) > binary                                          x  512.0     7.6s
+   hierarchical_merge(0.33) > project(512)                        x   12.1    49.0s
+   hierarchical_merge(0.33) > project(256)                        x   24.2    47.6s
+   hierarchical_merge(0.33) > project(128)                        x   48.4    47.7s
+   hierarchical_merge(0.25) > project(512)                        x   16.0    47.6s
+   hierarchical_merge(0.25) > project(256)                        x   31.9    46.6s
+   hierarchical_merge(0.25) > project(128)                        x   63.9    46.2s
+   hierarchical_merge(0.33) > project(512) > int8(per_vector)     x   48.2     3.1s
+   hierarchical_merge(0.33) > project(512) > int4(mean)           x   96.0     3.4s
+   hierarchical_merge(0.33) > project(512) > binary               x  386.9     2.9s
+   hierarchical_merge(0.33) > project(256) > int8(per_vector)     x   96.0     2.9s
+   hierarchical_merge(0.33) > project(256) > int4(mean)           x  190.5     3.0s
+   hierarchical_merge(0.33) > project(256) > binary               x  773.9     2.7s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x  190.5     2.7s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x  375.2     2.7s
+   hierarchical_merge(0.33) > project(128) > binary               x 1547.7     2.6s
+   hierarchical_merge(0.25) > project(512) > int8(per_vector)     x   63.6     2.4s
+   hierarchical_merge(0.25) > project(512) > int4(mean)           x  126.7     2.6s
+   hierarchical_merge(0.25) > project(512) > binary               x  510.9     2.3s
+   hierarchical_merge(0.25) > project(256) > int8(per_vector)     x  126.7     2.2s
+   hierarchical_merge(0.25) > project(256) > int4(mean)           x  251.5     2.3s
+   hierarchical_merge(0.25) > project(256) > binary               x 1021.7     2.1s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x  251.5     2.1s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x  495.3     2.1s
+   hierarchical_merge(0.25) > project(128) > binary               x 2043.4     2.0s
+   tiered binary               RAM    174.0 KB  ret 1.022
+   tiered ward 1/4 > binary    RAM     43.6 KB  ret 1.022
+== EVIE-4.5B_tabfquad_test_subsampled done in 1020s

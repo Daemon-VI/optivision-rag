@@ -252,6 +252,42 @@
   the pre-campaign script, whose rows lack int4(mean) and the tiered index. The predictions are
   unchanged.
 
+### Follow-up batches f2, f3, f4, f5 and f7
+
+- **Results.** All 12 models were measured with every study, each passing the check at 10 to 12
+  of 12. That completes the 18 new-dataset units, plus 2 of the 4 corpus-size units (colbertv2.0
+  on SciFact with 10,000 FiQA documents, and colpali-v1.3 on DocVQA with 2,000 pages). Status is
+  in `reports/universal/followup/PREDICTIONS_STATUS.md`.
+- **Held:**
+  - P1: int8 on all 18 units.
+  - P2: int4(mean) point retention ≥ 0.93 on all 18, and its lower bound ≥ 0.95 on exactly 16.
+    The misses are answerai on NFCorpus and EVIE-4.5B on TabFQuAD.
+  - P4: median binary retention is 0.856 on NFCorpus and 0.995 on the page sets.
+  - P5: merge 0.25 followed by int8 meets its bound on 9 of 10 page-set units.
+  - P14: Spearman 0.854 between the int4 statistic and plain-int4 retention.
+- **Failed:**
+  - P3: LateOn, as reported for f1. All its other parts held: jina and colbertv2.0 stay at or above
+    0.9, and every image model is at or above 0.97.
+  - P6: three units where merging to 10% beats merging to 25%: answerai on NFCorpus,
+    colSmol-500M on TabFQuAD, and EVIE-4.5B on TabFQuAD.
+  - P7: recall@1 drops less than ndcg@5 on TabFQuAD (0.914 against 0.898) and on NFCorpus (0.526
+    against 0.525). It drops more only on arXivQA.
+  - P10 and P11: on colbertv2.0, binary, merge with binary, and the tiered index are not lower on
+    the enlarged corpus. Its baseline barely moves (0.623 to 0.621), so the FiQA documents
+    hardly compete with SciFact's. On colpali-v1.3, whose baseline drops from 0.575 to 0.505 with
+    the extra pages, both held.
+- **Pending:**
+  - P8: interim default met rates 0.988 / 0.991 / 0.971, and point 0.426 at target 0.99. It
+    waits for f6 and f3b.
+  - P9: waits for f6 and f3b. Both measured units so far change by less than 0.01.
+  - P12 and P13: wait for f8.
+- **Not predicted (exploratory).**
+  - answerai's plain int4 keeps 0.896 on SciFact with distractors (0.899 in its pre-campaign
+    SciFact run), against 0.455 on NFCorpus, so its collapse depends on the dataset.
+  - Merging is much weaker on NFCorpus for LFM2-ColBERT-350M: merge 0.25 / 0.1 keep 0.509 / 0.194,
+    against 0.755 / 0.560 on SciFact.
+  - jina-colbert-v2 keeps 0.548 at merge 0.1, against 0.785 on SciFact.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

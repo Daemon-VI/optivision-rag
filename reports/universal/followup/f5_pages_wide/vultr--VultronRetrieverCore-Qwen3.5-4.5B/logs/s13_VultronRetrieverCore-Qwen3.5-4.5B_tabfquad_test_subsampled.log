@@ -1,0 +1,70 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:VultronRetrieverCore-Qwen3.5-4.5B_tabfquad_test_subsampled
+== VultronRetrieverCore-Qwen3.5-4.5B_tabfquad_test_subsampled: 280 docs, 280 queries, 320-d, 768 vectors/page
+   float32: nDCG@5 0.6020  0.98 MB/page  scan 38.9 ms/query
+   float32                                                        x    1.0     9.1s
+   float16                                                        x    2.0     9.4s
+   int8(per_vector)                                               x    4.0     9.5s
+   int4                                                           x    7.9    10.0s
+   int4(mean)                                                     x    7.9    10.1s
+   lloyd2(7)                                                      x   16.0    12.0s
+   binary                                                         x   32.0     9.2s
+   hierarchical_merge(0.5)                                        x    2.0    44.8s
+   hierarchical_merge(0.33)                                       x    3.0    43.0s
+   hierarchical_merge(0.25)                                       x    4.0    42.1s
+   hierarchical_merge(0.1)                                        x    9.9    40.9s
+   adaptive_merge(0.6)                                            x    6.1     8.7s
+   hierarchical_merge(0.33) > float16                             x    6.0     3.2s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   12.0     3.3s
+   hierarchical_merge(0.33) > int4                                x   23.9     3.4s
+   hierarchical_merge(0.33) > int4(mean)                          x   23.9     3.4s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.4     4.0s
+   hierarchical_merge(0.33) > binary                              x   96.8     3.2s
+   hierarchical_merge(0.25) > float16                             x    8.0     2.4s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.9     2.5s
+   hierarchical_merge(0.25) > int4                                x   31.5     2.5s
+   hierarchical_merge(0.25) > int4(mean)                          x   31.5     2.6s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   63.9     3.1s
+   hierarchical_merge(0.25) > binary                              x  127.8     2.5s
+   project(160)                                                   x    2.0     9.4s
+   project(128)                                                   x    2.5     9.3s
+   project(80)                                                    x    4.0     9.2s
+   project(80, random)                                            x    4.0     8.7s
+   project(160) > float16                                         x    4.0     8.8s
+   project(160) > int8(per_vector)                                x    7.9     9.0s
+   project(160) > int4(mean)                                      x   15.6     9.2s
+   project(160) > binary                                          x   64.0     8.7s
+   project(128) > float16                                         x    5.0     8.7s
+   project(128) > int8(per_vector)                                x    9.8     8.9s
+   project(128) > int4(mean)                                      x   19.4     9.1s
+   project(128) > binary                                          x   80.0     8.7s
+   project(80) > float16                                          x    8.0     8.6s
+   project(80) > int8(per_vector)                                 x   15.6     8.7s
+   project(80) > int4(mean)                                       x   30.5     8.8s
+   project(80) > binary                                           x  128.0     8.5s
+   hierarchical_merge(0.33) > project(80)                         x   12.1    42.8s
+   hierarchical_merge(0.33) > project(40)                         x   24.2    42.5s
+   hierarchical_merge(0.33) > project(128)                        x    7.6    42.9s
+   hierarchical_merge(0.25) > project(80)                         x   16.0    42.2s
+   hierarchical_merge(0.25) > project(40)                         x   31.9    41.9s
+   hierarchical_merge(0.25) > project(128)                        x   10.0    42.1s
+   hierarchical_merge(0.33) > project(80) > int8(per_vector)      x   47.2     3.0s
+   hierarchical_merge(0.33) > project(80) > int4(mean)            x   92.2     3.0s
+   hierarchical_merge(0.33) > project(80) > binary                x  387.1     2.9s
+   hierarchical_merge(0.33) > project(40) > int8(per_vector)      x   92.2     2.9s
+   hierarchical_merge(0.33) > project(40) > int4(mean)            x  175.9     2.9s
+   hierarchical_merge(0.33) > project(40) > binary                x  774.2     2.9s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x   29.8     3.1s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x   58.6     3.1s
+   hierarchical_merge(0.33) > project(128) > binary               x  241.9     3.0s
+   hierarchical_merge(0.25) > project(80) > int8(per_vector)      x   62.3     2.3s
+   hierarchical_merge(0.25) > project(80) > int4(mean)            x  121.7     2.3s
+   hierarchical_merge(0.25) > project(80) > binary                x  511.1     2.2s
+   hierarchical_merge(0.25) > project(40) > int8(per_vector)      x  121.7     2.2s
+   hierarchical_merge(0.25) > project(40) > int4(mean)            x  232.3     2.2s
+   hierarchical_merge(0.25) > project(40) > binary                x 1022.1     2.2s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x   39.3     2.3s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x   77.4     2.4s
+   hierarchical_merge(0.25) > project(128) > binary               x  319.4     2.3s
+   tiered binary               RAM     30.7 KB  ret 1.000
+   tiered ward 1/4 > binary    RAM      7.7 KB  ret 1.000
+== VultronRetrieverCore-Qwen3.5-4.5B_tabfquad_test_subsampled done in 777s
