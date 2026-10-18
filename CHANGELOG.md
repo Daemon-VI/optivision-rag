@@ -288,6 +288,19 @@
     against 0.755 / 0.560 on SciFact.
   - jina-colbert-v2 keeps 0.548 at merge 0.1, against 0.785 on SciFact.
 
+### Follow-up batch f6_scale_colsmol
+
+- **Results.** colSmol-500M was measured on DocVQA with 2,000 distractor pages, passing the check at
+  11 of 12. Its baseline drops from 0.575 to 0.473.
+- **P8 held.** With every selection unit in, over 22 units, the `calibrate()` default's held-out
+  met rate is 0.989, 0.989 and 0.972 at targets 0.95, 0.97 and 0.99. The point rule's is 0.423
+  at 0.99.
+- **P9:** colSmol's change is -0.001 for int8 and +0.009 for int4(mean), both under 0.01. P9 now
+  waits only for f3b.
+- **P10 and P11 on colSmol.** They held: binary fell from 0.977 to 0.962, merge with binary from
+  0.960 to 0.946, and the tiered index from 1.001 to 1.000. Both predictions stay failed, on
+  colbertv2.0.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched
