@@ -316,6 +316,24 @@
   - answerai has the same geometry on NFCorpus and SciFact, but its plain int4 keeps 0.455 on
     NFCorpus against 0.899 on SciFact.
 
+### Follow-up analysis (exploratory)
+
+- **What it is.** `reports/universal/followup/analysis/REPORT.md` analyses the follow-up data from
+  six angles. Each finding was re-checked by a second script: of 30 findings, 3 were confirmed,
+  26 weakened and corrected, and 1 refuted. The scripts are under `analysis/scripts/`.
+- **Evidence label.** Post hoc and in-sample. No package code, record, catalogue or prediction
+  changed.
+- **Main findings:**
+  - **answerai's plain int4 collapse comes from per-vector norm noise.** Renormalising each decoded
+    vector, by changing only the stored float16 scale, took ndcg@10 retention from 0.414 to 0.970
+    on NFCorpus and from 0.888 to 1.001 on SciFact, on a CPU re-encode. Other models are untested.
+  - **float16 and int8 had a lower bound ≥ 0.95 on 103 of 103 units; int4(mean) on 100.** Binary
+    was safe on 4 of 25 text units.
+  - **A geometry statistic that needs no codec run flags every int4 collapse in-sample.** It is
+    the second-moment share of the top 4 coordinates, with a thin margin.
+  - **Calibrating on one text dataset needs a margin.** The colpali preset's binary failed the bar
+    on 17 of 27 DocVQA 128-d units.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched
