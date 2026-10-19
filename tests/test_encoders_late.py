@@ -345,3 +345,89 @@ def test_an_unknown_loader_is_refused_with_the_known_ones():
 def test_every_registry_loader_is_one_load_adapter_can_build():
     loaders = set(supported_loaders())
     assert {info.loader for info in MODELS.values()} <= loaders
+
+
+# ------------------------------------------------------------------ 0.4.1 regressions
+
+
+def test_check_retriever_counts_a_tie_as_a_miss_so_a_constant_encoder_fails():
+    encoder = _engine()
+    encoder.model.table = encoder.model.table[:1].repeat(64, 1)  # every token the same unit vector
+    pages, queries = _pairs()
+    report = check_retriever(TokenEncoderAdapter(encoder), pages, queries)
+    assert report["query_ranks_own_document_first"] == 0 and not report["ok"]
+    two_pages, two_queries = _pairs(2)
+    report = check_retriever(TokenEncoderAdapter(encoder), two_pages, two_queries, allowed_misses=0)
+    assert report["query_ranks_own_document_first"] == 0 and not report["ok"]
+
+
+def test_check_retriever_needs_more_pairs_than_twice_the_allowed_misses():
+    pages, queries = _pairs(3)
+    with pytest.raises(ValueError, match="at least 6"):
+        check_retriever(TokenEncoderAdapter(_engine()), pages, queries)  # allowed_misses=2
+    assert check_retriever(TokenEncoderAdapter(_engine()), pages, queries, allowed_misses=0)["ok"]
+
+
+def test_a_stacked_numpy_output_is_split_into_rows():
+    from optivision.encoders.late import _as_list, _rows
+
+    emb = np.zeros((2, 3, DIM), np.float32)
+    emb[:, :2, 0] = 1.0  # the third row of each item is zero padding
+    rows = _as_list(emb)
+    assert [r.shape for r in rows] == [(2, DIM), (2, DIM)]
+    masked = _rows(emb, np.array([[1, 0, 0], [1, 1, 0]]))
+    assert [r.shape[0] for r in masked] == [1, 2]
+
+
+def test_the_engine_encoder_records_and_passes_its_pinned_revision(monkeypatch):
+    from optivision.encoders import colvlm
+
+    assert _engine(revision="abc123").info()["revision"] == "abc123"
+    assert _engine().info()["revision"] is None
+    seen = []
+    monkeypatch.setattr(colvlm, "_adapter_base", lambda checkpoint, revision=None: None)
+    monkeypatch.setattr(colvlm, "_from_pretrained", lambda cls, ckpt, dtype, **extra: seen.append(extra))
+    colvlm._load_model(object, "org/full", None, revision="abc123")
+    colvlm._load_model(object, "org/full", None)
+    assert seen == [{"revision": "abc123"}, {}]
+
+
+def test_load_adapter_pins_the_measured_colqwen35_revision(monkeypatch):
+    from optivision.encoders import late
+
+    built = {}
+
+    def fake_init(self, model_name, family, **kwargs):
+        built.update(model=model_name, family=family, **kwargs)
+        self.checkpoint, self.loader = model_name, f"colpali-engine:{family}"
+
+    monkeypatch.setattr(late.ColEngineTokenEncoder, "__init__", fake_init)
+    monkeypatch.setattr(late.ColEngineTokenEncoder, "encode_queries", lambda self, q: [], raising=False)
+    model_id = "athrael-soju/colqwen3.5-4.5B-v3"
+    load_adapter(model_id)
+    assert MODELS[model_id].revision == "c4ea4b92ff3322d68bfd6c65e492c69d0176f910"
+    assert built["revision"] == "c4ea4b92ff3322d68bfd6c65e492c69d0176f910"
+    load_adapter(model_id, revision="latest-sha")
+    assert built["revision"] == "latest-sha"  # the caller can still override the pin
+
+
+def test_injected_model_device_and_dtype_come_from_its_parameters():
+    """M5: an injected model's inputs go where its parameters are, not to the class default "cpu"."""
+    model = TinyModel()
+    model.marker = torch.nn.Parameter(torch.zeros(1, dtype=torch.float64))  # first parameter decides
+    enc = ColEngineTokenEncoder("org/tiny", "colqwen3.5", model=model, processor=TinyProcessor())
+    first = next(model.parameters())
+    assert enc.device == str(first.device)
+    assert enc.torch_dtype == first.dtype
+    assert enc.info()["dtype"] != "None"
+    remote = RemoteCodeEncoder("org/tiny", "tomoro", model=model, processor=TinyProcessor())
+    assert remote.device == str(first.device) and remote.torch_dtype == torch.float64
+    bare = RemoteCodeEncoder("org/tiny", "tomoro", model=TinyModel(), processor=TinyProcessor())
+    assert bare.device == "cpu"  # no parameters to read: the default stands
+
+    class Fake:  # a stand-in that reports a GPU device without needing one
+        def parameters(self):
+            return iter([SimpleNamespace(device="cuda:0", dtype=torch.float16)])
+
+    enc2 = ColEngineTokenEncoder("org/tiny", "colqwen3.5", model=Fake(), processor=TinyProcessor())
+    assert enc2.device == "cuda:0" and enc2.torch_dtype == torch.float16

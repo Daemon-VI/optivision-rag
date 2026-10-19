@@ -245,3 +245,18 @@ def test_an_unregistered_model_has_no_identity_because_its_dimension_is_not_aske
     with pytest.warns(UserWarning, match="unverified"):
         adapter = SentenceTransformersAdapter("some/unknown-model", model=_StubModel())
     assert adapter.identity() is None and adapter.dimension is None
+
+
+# ------------------------------------------------------------------ 0.4.1 regressions
+
+
+def test_page_and_text_adapter_corpora_carry_the_encoder_identity():
+    adapter = PageEncoderAdapter(SyntheticEncoder(dim=16, grid=8, noise=0.0))
+    pages = [(PageRef("a", 1), make_page()), (PageRef("b", 1), make_page(ink_rows=1))]
+    docs = adapter.encode_documents(pages)
+    assert docs.attrs["encoder_identity"] == adapter.identity().to_dict()
+    assert adapter.encode_queries(["memo"]).attrs["encoder_identity"]["dimension"] == 16
+    text = SentenceTransformersAdapter("answerdotai/answerai-colbert-small-v1", model=_StubModel())
+    attrs = text.encode_documents(["a document"]).attrs
+    assert attrs["encoder_identity"]["model_id"] == "answerdotai/answerai-colbert-small-v1"
+    assert text.encode_queries(["q"]).attrs["encoder_identity"] == text.identity().to_dict()

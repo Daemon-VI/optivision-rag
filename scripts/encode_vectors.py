@@ -106,7 +106,7 @@ def main() -> int:
 
         first = {pid: q for qid, q in queries for pid in qrels[qid]}
         pairs = [(im, first[pid]) for pid, im in zip(ids, images) if pid in first][: a.check_pairs]
-        if len(pairs) >= 2:
+        if len(pairs) >= 6:  # check_retriever needs 2 * allowed_misses + 2 pairs (default 2)
             pages = [im for im, _ in pairs]
             if isinstance(adapter, PageEncoderAdapter):
                 pages = [(PageRef(f"check{i}", 1), im) for i, im in enumerate(pages)]

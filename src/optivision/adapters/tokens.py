@@ -132,15 +132,19 @@ def check_retriever(adapter: EncoderAdapter, documents: Sequence[Any], queries: 
     every value is finite, the largest deviation of a row norm from 1, how many queries
     rank their own document first under exact MaxSim, and ``ok``: finite, one width (equal
     to ``expected_dim`` when given), unit-norm within ``unit_norm_tolerance``, and at most
-    ``allowed_misses`` queries that do not rank their own document first.
+    ``allowed_misses`` queries that do not rank their own document first. A tie with another
+    document is a miss, and at least ``2 * allowed_misses + 2`` pairs are required.
 
     ``ok`` shows that the model was loaded and driven correctly on these pairs. It is not a
     measurement of retrieval quality and says nothing about compression.
     """
     if len(documents) != len(queries):
         raise ValueError(f"got {len(documents)} documents for {len(queries)} queries; pass matched pairs")
-    if len(documents) < 2:
-        raise ValueError("pass at least two document/query pairs")
+    # With few pairs, allowed_misses would let an encoder that ranks nothing pass: require
+    # more than twice as many pairs as allowed misses, so a pass needs a majority of hits.
+    min_pairs = max(2, 2 * int(allowed_misses) + 2)
+    if len(documents) < min_pairs:
+        raise ValueError(f"pass at least {min_pairs} document/query pairs for allowed_misses={allowed_misses}")
     docs = adapter.encode_documents(list(documents))
     qs = adapter.encode_queries(list(queries))
     doc_arrays = [np.asarray(docs[i].vectors, dtype=np.float32) for i in range(len(docs))]
@@ -149,7 +153,11 @@ def check_retriever(adapter: EncoderAdapter, documents: Sequence[Any], queries: 
     finite = bool(np.isfinite(everything).all())
     norm_error = float(np.abs(np.linalg.norm(everything, axis=1) - 1.0).max()) if finite else float("nan")
     scores = np.array([[float((q @ d.T).max(axis=1).sum()) for d in doc_arrays] for q in query_arrays])
-    own = int((scores.argmax(axis=1) == np.arange(len(query_arrays))).sum())
+    # A hit is a query whose own document scores strictly above every other document; a tie
+    # (as from a constant or collapsed encoder) is a miss, not argmax's first index.
+    idx = np.arange(len(query_arrays))
+    rivals = np.where(np.eye(len(idx), dtype=bool), -np.inf, scores).max(axis=1)
+    own = int((scores[idx, idx] > rivals).sum())
     dim = int(docs.dimension)
     same_width = int(qs.dimension) == dim and (expected_dim is None or dim == int(expected_dim))
     report: dict[str, Any] = {

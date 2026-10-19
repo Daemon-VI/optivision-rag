@@ -764,4 +764,7 @@ def encode_and_certify(
             raise TypeError(f"encode_and_certify() takes no {name!r} argument; it comes from the model")
     corpus = adapter.encode_documents(list(documents), ids=document_ids)
     query_corpus = adapter.encode_queries(list(queries), ids=query_ids)
-    return certify(corpus, query_corpus, qrels, **certify_options)
+    encoder = None
+    if "encoder_identity" not in corpus.attrs:
+        encoder = adapter.identity()  # an adapter that does not write the identity into its corpus
+    return certify(corpus, query_corpus, qrels, encoder=encoder, **certify_options)

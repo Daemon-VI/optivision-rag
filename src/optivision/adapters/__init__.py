@@ -559,6 +559,9 @@ class PageEncoderAdapter(EncoderAdapter):
             attrs["model"] = checkpoint
         if self.info is not None:
             attrs["model_status"] = self.info.status
+        identity = self.identity()
+        if identity is not None:
+            attrs["encoder_identity"] = identity.to_dict()  # certify() records it from here
         return attrs
 
     def identity(self) -> EncoderIdentity | None:
@@ -632,8 +635,11 @@ class SentenceTransformersAdapter(EncoderAdapter):
 
     def _to_corpus(self, outputs: Sequence[Any], ids: Sequence[str] | None) -> MultiVectorCorpus:
         arrays = [np.asarray(o.detach().cpu().float().numpy() if hasattr(o, "detach") else o) for o in outputs]
-        attrs = {"model": self.model_id, "loader": "sentence-transformers",
-                 "model_status": self.info.status if self.info else UNVERIFIED}
+        attrs: dict[str, Any] = {"model": self.model_id, "loader": "sentence-transformers",
+                                 "model_status": self.info.status if self.info else UNVERIFIED}
+        identity = self.identity()
+        if identity is not None:
+            attrs["encoder_identity"] = identity.to_dict()  # certify() records it from here
         return MultiVectorCorpus.from_arrays(arrays, ids=ids, attrs=attrs)
 
     def encode_documents(self, documents: Sequence[Any], ids: Sequence[str] | None = None) -> MultiVectorCorpus:
@@ -699,6 +705,8 @@ def load_adapter(model_id: str, loader: str | None = None, **kwargs: Any) -> Enc
         from .tokens import TokenEncoderAdapter
 
         kwargs.setdefault("expected_dim", width)
+        if info is not None and info.revision is not None:
+            kwargs.setdefault("revision", info.revision)  # the commit the registry entry was measured at
         return TokenEncoderAdapter(ColEngineTokenEncoder(model_id, family, **kwargs), info=info)
     if name == "nemotron":
         from ..encoders.nemotron import NemotronColEmbedEncoder  # needs torch + transformers
