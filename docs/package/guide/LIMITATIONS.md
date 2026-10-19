@@ -38,7 +38,9 @@ between package and research), `../METHOD_C_SPEC.md`, `../ARCHITECTURE_AUDIT.md`
   package branch has a different tree, because it adds files. X1 to X3 were not re-run.
 - The 2,560-dimensional Nemotron results (`../../UNIVERSAL.md`, R12) come from the empirical rule
   of `calibrate()`. The selection rule was not run on that encoder.
-- Not validated: ColQwen3, ColNomic, 4,096-d models, ViDoRe V2 and V3, million-page corpora,
+- Not validated with `optimize()` or `certify()`: the catalogue models beyond the six of
+  `PACKAGE.md`, whose rows are fixed-pipeline measurements only (`MODELS.md`). Not validated
+  at all: ViDoRe V2 and V3, million-page corpora,
   database connectors beyond NumPy and Qdrant (`PACKAGE.md`).
 
 ## 3. The default candidate list

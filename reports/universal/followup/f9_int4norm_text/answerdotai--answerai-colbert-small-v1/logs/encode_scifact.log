@@ -1,0 +1,19 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py answerdotai/answerai-colbert-small-v1 --dataset scifact --out /tmp/optdata/vectors --check-pairs 12 --batch-size 32
+answerdotai/answerai-colbert-small-v1: registry status measured, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating corpus split:   0%|          | 0/5183 [00:00<?, ? examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 53703.92 examples/s]
+Generating queries split:   0%|          | 0/1109 [00:00<?, ? examples/s]Generating queries split: 100%|██████████| 1109/1109 [00:00<00:00, 208802.04 examples/s]
+Generating train split:   0%|          | 0/919 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 919/919 [00:00<00:00, 77950.32 examples/s]
+Generating test split:   0%|          | 0/339 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 339/339 [00:00<00:00, 120794.24 examples/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 2458.45it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: answerdotai/answerai-colbert-small-v1
+Key           | Status     |  | 
+--------------+------------+--+-
+linear.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+{"loaded": "answerdotai/answerai-colbert-small-v1", "revision": null}
+One or more queries filled the entire query_expansion length of 32 tokens: any content beyond it was truncated, as this model always processes queries at exactly this width.
+{"check_retriever": {"pairs": 12, "dimension": 96, "query_dimension": 96, "vectors_per_document": [133, 262, 276, 248, 252, 256, 221, 250, 224, 276, 270, 250], "vectors_per_query": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 11, "ok": true}}
+{"tag": "answerai-colbert-small-v1_scifact", "docs": 5183, "vectors": 1221388, "dim": 96, "queries": 300, "doc_seconds": 29.6, "query_seconds": 0.2}

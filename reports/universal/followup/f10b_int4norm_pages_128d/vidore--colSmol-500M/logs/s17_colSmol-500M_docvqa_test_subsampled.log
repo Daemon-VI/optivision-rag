@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:colSmol-500M_docvqa_test_subsampled
+== colSmol-500M_docvqa_test_subsampled: 500 docs, 451 queries, 128-d, 1060 vectors/doc
+   float32: nDCG@5 0.5752; int4 norm ratio sd 0.0101, int4norm 0.00022
+   float32                                      x    1.0     3.3s
+   float16                                      x    2.0     3.5s
+   int8(per_vector)                             x    3.9     3.7s
+   int4                                         x    7.8     3.9s
+   int4norm                                     x    7.8     4.0s
+   int4(mean)                                   x    7.8     4.1s
+   int4norm(mean)                               x    7.8     4.4s
+   lloyd2(7)                                    x   16.0     5.2s
+   binary                                       x   32.0     3.2s
+   hierarchical_merge(0.33) > int8(per_vector)  x    9.8    42.4s
+   hierarchical_merge(0.33) > int4              x   19.3     1.2s
+   hierarchical_merge(0.33) > int4norm          x   19.3     1.2s
+   hierarchical_merge(0.33) > int4(mean)        x   19.3     1.3s
+   hierarchical_merge(0.33) > int4norm(mean)    x   19.3     1.4s
+   hierarchical_merge(0.33) > binary            x   79.7     0.9s
+   hierarchical_merge(0.25) > int8(per_vector)  x   11.9    42.2s
+   hierarchical_merge(0.25) > int4              x   23.5     0.9s
+   hierarchical_merge(0.25) > int4norm          x   23.5     1.0s
+   hierarchical_merge(0.25) > int4(mean)        x   23.5     1.0s
+   hierarchical_merge(0.25) > int4norm(mean)    x   23.5     1.1s
+   hierarchical_merge(0.25) > binary            x   97.1     0.7s
+== colSmol-500M_docvqa_test_subsampled done in 137s

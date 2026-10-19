@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:mxbai-edge-colbert-v0-32m_scidocs
+== mxbai-edge-colbert-v0-32m_scidocs: 25657 docs, 1000 queries, 64-d, 198 vectors/doc
+   float32: nDCG@5 0.1377; int4 norm ratio sd 0.0125, int4norm 0.00023
+   float32                                      x    1.0    27.1s
+   float16                                      x    2.0    27.9s
+   int8(per_vector)                             x    3.9    29.2s
+   int4                                         x    7.5    30.4s
+   int4norm                                     x    7.5    30.3s
+   int4(mean)                                   x    7.5    30.9s
+   int4norm(mean)                               x    7.5    32.7s
+   lloyd2(7)                                    x   16.0    37.0s
+   binary                                       x   32.0    27.4s
+   hierarchical_merge(0.33) > int8(per_vector)  x   11.7   141.9s
+   hierarchical_merge(0.33) > int4              x   22.6    10.8s
+   hierarchical_merge(0.33) > int4norm          x   22.6    11.1s
+   hierarchical_merge(0.33) > int4(mean)        x   22.6    11.3s
+   hierarchical_merge(0.33) > int4norm(mean)    x   22.6    11.9s
+   hierarchical_merge(0.33) > binary            x   96.2     9.7s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.4   139.3s
+   hierarchical_merge(0.25) > int4              x   29.9     8.6s
+   hierarchical_merge(0.25) > int4norm          x   29.9     8.8s
+   hierarchical_merge(0.25) > int4(mean)        x   29.9     9.1s
+   hierarchical_merge(0.25) > int4norm(mean)    x   29.9     9.5s
+   hierarchical_merge(0.25) > binary            x  127.0     7.9s
+== mxbai-edge-colbert-v0-32m_scidocs done in 738s

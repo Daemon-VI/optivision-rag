@@ -65,6 +65,34 @@ def test_loader_maps_every_tensor_and_refuses_partial_loads(tmp_path):
         _from_pretrained(colpali_models.ColQwen2, str(broken), torch.float32)
 
 
+def test_segment_mapping_only_when_it_accounts_for_every_key():
+    from optivision.encoders.colvlm import _segment_mapping
+
+    missing = ["language_model.layers.0.w", "language_model.norm.weight"]
+    unexpected = ["language_model.model.layers.0.w", "language_model.model.norm.weight"]
+    assert _segment_mapping(missing, unexpected) == {r"^language_model\.model\.": "language_model."}
+    # a key that maps onto nothing, or a missing key nothing maps onto: no rules
+    assert _segment_mapping(missing, [*unexpected, "other.extra.bias"]) is None
+    assert _segment_mapping([*missing, "custom_text_proj.weight"], unexpected) is None
+
+
+def test_loader_maps_a_checkpoint_nested_one_level_deeper(tmp_path):
+    # Cognitive-Lab/ColNetraEmbed stores its language model as `language_model.model.*`
+    state = _tiny_colqwen2_checkpoint(tmp_path)
+    nested = {("language_model.model." + k[len("language_model."):]) if k.startswith("language_model.") else k:
+              v.detach().clone().contiguous() for k, v in state.items()}
+    deep = tmp_path / "deep"
+    deep.mkdir()
+    safetensors_torch.save_file(nested, str(deep / "model.safetensors"))
+    (deep / "config.json").write_text((tmp_path / "config.json").read_text())
+    model = _from_pretrained(colpali_models.ColQwen2, str(deep), torch.float32)
+    loaded = model.state_dict()
+    for key, value in state.items():
+        assert torch.equal(loaded[key], value), key
+    assert model.loading_report["key_remap"] == {r"^language_model\.model\.": "language_model."}
+    assert model.loading_report["unexpected"] == []
+
+
 def test_multi_gpu_map_never_splits_a_decoder_layer(tmp_path):
     from optivision.encoders.colvlm import layer_device_map
 
@@ -86,3 +114,37 @@ def test_multi_gpu_map_never_splits_a_decoder_layer(tmp_path):
         assert any(name == k or name.startswith(k + ".") for k in dm), name
     with pytest.raises(RuntimeError, match="does not fit"):
         layer_device_map(model, [total // 4, total // 4])
+
+
+class _BareLoader(torch.nn.Module):
+    """A remote-code class whose from_pretrained ignores output_loading_info, like ColVec1."""
+
+    def __init__(self):
+        super().__init__()
+        self.proj = torch.nn.Linear(4, 2)
+        self.head = torch.nn.Linear(2, 2)
+
+    @classmethod
+    def from_pretrained(cls, checkpoint, **kwargs):
+        model = cls()
+        state = safetensors_torch.load_file(f"{checkpoint}/model.safetensors")
+        model.load_state_dict(state, strict=False)  # silently skips what does not match
+        return model
+
+
+def test_loader_checks_a_model_returned_without_loading_info(tmp_path):
+    reference = _BareLoader()
+    safetensors_torch.save_file({k: v.contiguous() for k, v in reference.state_dict().items()},
+                                str(tmp_path / "model.safetensors"))
+    model = _from_pretrained(_BareLoader, str(tmp_path), torch.float32)
+    assert model.loading_report == {"missing_allowed": [], "unexpected": []}
+    assert torch.equal(model.proj.weight, reference.proj.weight)
+
+    partial = tmp_path / "partial"
+    partial.mkdir()
+    safetensors_torch.save_file({"proj.weight": reference.proj.weight.contiguous(),
+                                 "proj.bias": reference.proj.bias.contiguous(),
+                                 "renamed.head.weight": reference.head.weight.contiguous()},
+                                str(partial / "model.safetensors"))
+    with pytest.raises(RuntimeError, match="would be random"):
+        _from_pretrained(_BareLoader, str(partial), torch.float32)

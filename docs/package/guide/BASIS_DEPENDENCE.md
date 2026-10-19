@@ -136,6 +136,7 @@ weakest case over the parameters: `pca` and `project` read queries when fitted o
 | `float32` | bits | orthogonal | no | no | no | 0 | stores the values unchanged |
 | `hierarchical_merge` | tokens | orthogonal | no | no | no | 1 | Ward clustering on pairwise distances (needs SciPy) |
 | `int4` | bits | signed_permutation | no | no | no | 0 | per-vector scale, levels -7..7, on each coordinate |
+| `int4norm` | bits | signed_permutation | no | no | no | 0 | int4's levels, with the scale that keeps each vector's norm (experimental) |
 | `int8` | bits | signed_permutation | no | no | no | 0 | fixed step, per-vector scale or per-dimension range, on each coordinate |
 | `lloyd2` | bits | none | no | yes | no | 0 | an internal seeded rotation, then 2-bit levels |
 | `pca` | dimensions | orthogonal | yes | no | yes | 2 | canonical up to sign when the eigenvalues are distinct and not tied at the cut |

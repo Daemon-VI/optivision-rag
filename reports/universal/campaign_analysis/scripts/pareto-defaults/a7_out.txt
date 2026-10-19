@@ -1,0 +1,79 @@
+== 1. DocVQA minus InfoVQA retention, paired by model (image models with both) ==
+float16                                          n=37 mean diff -0.0001 [-0.0002,+0.0000] docvqa<infovqa in 3/37, wilcoxon p=1.4e-01
+int8(per_vector)                                 n=37 mean diff -0.0005 [-0.0013,+0.0001] docvqa<infovqa in 16/37, wilcoxon p=2.7e-01
+int4(mean)                                       n=37 mean diff -0.0002 [-0.0024,+0.0018] docvqa<infovqa in 17/37, wilcoxon p=9.1e-01
+lloyd2(7)                                        n=37 mean diff -0.0068 [-0.0111,-0.0027] docvqa<infovqa in 27/37, wilcoxon p=2.6e-03
+binary                                           n=37 mean diff -0.0151 [-0.0199,-0.0105] docvqa<infovqa in 33/37, wilcoxon p=4.7e-08
+hierarchical_merge(0.5)                          n=37 mean diff -0.0017 [-0.0041,+0.0008] docvqa<infovqa in 23/37, wilcoxon p=1.7e-01
+hierarchical_merge(0.25)                         n=37 mean diff -0.0042 [-0.0096,+0.0005] docvqa<infovqa in 22/37, wilcoxon p=1.3e-01
+hierarchical_merge(0.25) > int8(per_vector)      n=37 mean diff -0.0048 [-0.0100,-0.0000] docvqa<infovqa in 24/37, wilcoxon p=7.9e-02
+hierarchical_merge(0.25) > int4(mean)            n=37 mean diff -0.0078 [-0.0138,-0.0023] docvqa<infovqa in 25/37, wilcoxon p=6.5e-03
+hierarchical_merge(0.25) > binary                n=37 mean diff -0.0181 [-0.0244,-0.0121] docvqa<infovqa in 32/37, wilcoxon p=1.3e-05
+baseline nDCG@5 docvqa median 0.614 infovqa median 0.924
+
+== 2. Spearman(retention, baseline nDCG@5) within dataset (model-level) ==
+binary                                      docvqa   n=37 rho=+0.51 p=0.00
+binary                                      infovqa  n=37 rho=+0.62 p=0.00
+binary                                      scifact  n=14 rho=-0.24 p=0.41
+hierarchical_merge(0.25) > binary           docvqa   n=37 rho=+0.39 p=0.02
+hierarchical_merge(0.25) > binary           infovqa  n=37 rho=+0.68 p=0.00
+hierarchical_merge(0.25) > binary           scifact  n=14 rho=-0.21 p=0.46
+hierarchical_merge(0.25) > int8(per_vector) docvqa   n=37 rho=-0.23 p=0.18
+hierarchical_merge(0.25) > int8(per_vector) infovqa  n=37 rho=+0.10 p=0.56
+hierarchical_merge(0.25) > int8(per_vector) scifact  n=14 rho=-0.12 p=0.68
+lloyd2(7)                                   docvqa   n=37 rho=+0.34 p=0.04
+lloyd2(7)                                   infovqa  n=37 rho=+0.37 p=0.02
+lloyd2(7)                                   scifact  n=14 rho=-0.27 p=0.35
+
+== 3. int4 (uncentred) vs int4(mean) (centred) ==
+n=88 mean gain from centring +0.0672, median +0.00065, centred > plain in 51, equal-ish(|d|<.003) 47
+plain int4 lo<0.95 in 9 pairs; centred lo<0.95 in 1
+                                                                  dim_p modal_p  ret_p  ret_c   lo_p   lo_c
+key                                                                                                        
+lightonai/GTE-ModernColBERT-v1|BeIR/scifact                         128    text  0.936  0.998  0.910  0.987
+lightonai/LateOn|BeIR/scifact                                       128    text  0.297  0.951  0.249  0.923
+lightonai/mLateOn|BeIR/scifact                                      128    text  0.765  1.000  0.714  0.989
+mixedbread-ai/mxbai-edge-colbert-v0-17m|BeIR/scifact                 48    text  0.268  0.993  0.225  0.976
+mixedbread-ai/mxbai-edge-colbert-v0-32m|BeIR/scifact                 64    text  0.792  0.986  0.751  0.973
+nvidia/nemotron-colembed-vl-4b-v2|vidore/docvqa_test_subsampled    2560   image  0.009  0.998  0.001  0.985
+nvidia/nemotron-colembed-vl-4b-v2|vidore/infovqa_test_subsampled   2560   image  0.004  1.002  0.001  0.998
+nvidia/nemotron-colembed-vl-8b-v2|vidore/docvqa_test_subsampled    4096   image  0.011  0.996  0.003  0.987
+nvidia/nemotron-colembed-vl-8b-v2|vidore/infovqa_test_subsampled   4096   image  0.007  0.999  0.001  0.995
+dim>=2048: {'ret_p': [0.009, 0.004, 0.011, 0.007, 1.003, 0.999, 1.001, 1.0], 'ret_c': [0.998, 1.002, 0.996, 0.999, 1.0, 1.0, 1.001, 0.999]}
+
+== 4. native dim effect (image, binary & int4 plain) ==
+binary      docvqa   dim>128 n=12 median ret 0.9909 | dim=128 n=25 median 0.9699 | MWU p=0.000
+binary      infovqa  dim>128 n=12 median ret 0.9982 | dim=128 n=25 median 0.9860 | MWU p=0.000
+int4        docvqa   dim>128 n=12 median ret 0.9962 | dim=128 n=25 median 0.9982 | MWU p=0.390
+int4        infovqa  dim>128 n=12 median ret 0.9993 | dim=128 n=25 median 0.9993 | MWU p=0.758
+lloyd2(7)   docvqa   dim>128 n=12 median ret 0.9940 | dim=128 n=25 median 0.9908 | MWU p=0.149
+lloyd2(7)   infovqa  dim>128 n=12 median ret 0.9977 | dim=128 n=25 median 0.9937 | MWU p=0.012
+
+== 5. token merge hm(0.25) retention vs vectors/page ==
+image n= 74 median ret 0.994 vpd range 68-731 spearman(vpd,ret)=0.22 p=0.054
+text n= 14 median ret 0.973 vpd range 40-79 spearman(vpd,ret)=-0.04 p=0.899
+image vs text hm(0.25) ret: image median 0.9943 text median 0.9731 MWU p=9.3e-06
+
+== 6. P(lo>=0.95) text vs image, Fisher exact (fully confounded with dataset) ==
+int4(mean)                                       image 74/74 text 13/14 p=1.6e-01
+lloyd2(7)                                        image 69/74 text 5/14 p=5.2e-06
+binary                                           image 59/74 text 4/14 p=3.3e-04
+hierarchical_merge(0.25) > int8(per_vector)      image 73/74 text 7/14 p=4.0e-06
+hierarchical_merge(0.25) > int4(mean)            image 72/74 text 4/14 p=1.3e-08
+hierarchical_merge(0.25) > binary                image 44/74 text 0/14 p=3.6e-05
+hierarchical_merge(0.33) > int8(per_vector)      image 73/74 text 7/14 p=4.0e-06
+
+== 7. image: P(lo>=.95) docvqa vs infovqa ==
+binary                                               docvqa 22/37 infovqa 37/37 p=1.0e-05
+lloyd2(7)                                            docvqa 32/37 infovqa 37/37 p=5.4e-02
+hierarchical_merge(0.25) > binary                    docvqa 13/37 infovqa 31/37 p=3.9e-05
+hierarchical_merge(0.25) > int4(mean)                docvqa 35/37 infovqa 37/37 p=4.9e-01
+hierarchical_merge(0.25) > project(128) > binary     docvqa 8/37 infovqa 33/37 p=4.6e-09
+
+== 8. baseline inference dtype (float16 vs float32) on retention ==
+{}
+binary                                           image f16 n=0 median nan | f32 n=0 median nan | MWU p=nan
+hierarchical_merge(0.25) > binary                image f16 n=0 median nan | f32 n=0 median nan | MWU p=nan
+hierarchical_merge(0.25) > int8(per_vector)      image f16 n=0 median nan | f32 n=0 median nan | MWU p=nan
+
+TESTS RUN in this script: 46

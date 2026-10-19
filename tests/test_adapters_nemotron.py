@@ -20,6 +20,7 @@ from optivision.adapters import (
     MEASURED,
     MODELS,
     UNTESTED,
+    UNVERIFIED,
     EncoderAdapter,
     NemotronAdapter,
     PageEncoderAdapter,
@@ -166,7 +167,8 @@ def test_the_registry_entries_follow_the_committed_measurements():
     assert "never encoded here" not in MODELS[FOUR_B].evidence
     assert "float16 inference" in MODELS[EIGHT_B].evidence
     assert "NEMOTRON_8B.md" in MODELS[EIGHT_B].evidence
-    assert UNTESTED in {m.status for m in MODELS.values()}
+    # the last untested entry, lightonai/colbertv2.0, was measured in batch 14a_text_retry
+    assert {m.status for m in MODELS.values()} <= {MEASURED, UNTESTED, UNVERIFIED}
 
 
 # ------------------------------------------------------- the adapter, end to end

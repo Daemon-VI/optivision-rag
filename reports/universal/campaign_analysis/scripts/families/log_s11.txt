@@ -1,0 +1,32 @@
+     binary       hierarchical_merge(0.33) > binary      
+       mean count                              mean count
+dim                                                      
+128    2.34    42                              3.17    42
+320    0.87    12                              1.44    12
+640    0.43     4                              0.46     4
+2048   0.17     2                              0.49     2
+2560   0.66     2                              1.64     2
+4096   0.50     4                              0.96     4
+doc spearman(binary loss, log dim) -0.653 p 0.0000 n 33
+info spearman(binary loss, log dim) -0.736 p 0.0000 n 33
+within-group x dataset (demeaned) spearman -0.340 p 0.0080 n 60 groups with >1 model
+qwen3.5
+ds     doc  info
+dim             
+320   1.38  0.20
+2048  0.19  0.15
+4096  0.67  0.15
+qwen3vl
+ds     doc  info
+dim             
+128   2.49  0.96
+320   1.75  0.29
+640   0.78  0.10
+2560  1.10  0.23
+4096  0.96  0.23
+pooled ds-demeaned Pearson(log dim, binary loss)=-0.499 ; model-level permutation p (two-sided)=0.0012
+--- merge(0.1) loss vs log10 vpd
+drop None doc spearman -0.449 p 0.0088 n 33
+drop None info spearman -0.307 p 0.0823 n 33
+drop Cognitive-Lab/ColNetraEmbed doc spearman -0.395 p 0.0254 n 32
+drop Cognitive-Lab/ColNetraEmbed info spearman -0.239 p 0.1872 n 32

@@ -1,0 +1,60 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:NeoMME-800M-Retriever-ST-late_docvqa_test_subsampled
+== NeoMME-800M-Retriever-ST-late_docvqa_test_subsampled: 500 docs, 451 queries, 128-d, 2921 vectors/page
+   float32: nDCG@5 0.5805  1.50 MB/page  scan 114.7 ms/query
+   float32                                                        x    1.0    50.2s
+   float16                                                        x    2.0    51.1s
+   int8(per_vector)                                               x    3.9    51.4s
+   int4                                                           x    7.8    52.2s
+   int4(mean)                                                     x    7.8    52.6s
+   lloyd2(7)                                                      x   16.0    59.4s
+   binary                                                         x   32.0    50.5s
+   hierarchical_merge(0.5)                                        x    2.0   531.1s
+   hierarchical_merge(0.33)                                       x    3.0   522.9s
+   hierarchical_merge(0.25)                                       x    4.0   514.2s
+   hierarchical_merge(0.1)                                        x   10.0   511.5s
+   adaptive_merge(0.6)                                            x   26.1    19.6s
+   hierarchical_merge(0.33) > float16                             x    6.1    17.2s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   11.9    17.4s
+   hierarchical_merge(0.33) > int4                                x   23.5    17.5s
+   hierarchical_merge(0.33) > int4(mean)                          x   23.5    17.8s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.5    19.9s
+   hierarchical_merge(0.33) > binary                              x   96.9    17.1s
+   hierarchical_merge(0.25) > float16                             x    8.0    13.0s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.7    13.1s
+   hierarchical_merge(0.25) > int4                                x   31.0    13.3s
+   hierarchical_merge(0.25) > int4(mean)                          x   31.0    13.5s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   64.0    15.0s
+   hierarchical_merge(0.25) > binary                              x  127.9    13.0s
+   project(64)                                                    x    2.0    50.5s
+   project(32, random)                                            x    4.0    49.4s
+   project(64) > float16                                          x    4.0    50.1s
+   project(64) > int8(per_vector)                                 x    7.8    50.0s
+   project(64) > int4(mean)                                       x   15.1    50.8s
+   project(64) > binary                                           x   64.0    49.7s
+   hierarchical_merge(0.33) > project(32)                         x   12.1   520.0s
+   hierarchical_merge(0.33) > project(16)                         x   24.2   521.2s
+   hierarchical_merge(0.33) > project(128)                        x    3.0   517.5s
+   hierarchical_merge(0.25) > project(32)                         x   16.0   515.0s
+   hierarchical_merge(0.25) > project(16)                         x   32.0   514.4s
+   hierarchical_merge(0.25) > project(128)                        x    4.0   513.1s
+   hierarchical_merge(0.33) > project(32) > int8(per_vector)      x   45.6    16.4s
+   hierarchical_merge(0.33) > project(32) > int4(mean)            x   86.2    16.4s
+   hierarchical_merge(0.33) > project(32) > binary                x  387.7    16.3s
+   hierarchical_merge(0.33) > project(16) > int8(per_vector)      x   86.2    16.2s
+   hierarchical_merge(0.33) > project(16) > int4(mean)            x  155.1    16.4s
+   hierarchical_merge(0.33) > project(16) > binary                x  775.5    16.2s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x   11.9    17.2s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x   23.5    17.5s
+   hierarchical_merge(0.33) > project(128) > binary               x   96.9    16.8s
+   hierarchical_merge(0.25) > project(32) > int8(per_vector)      x   60.2    12.4s
+   hierarchical_merge(0.25) > project(32) > int4(mean)            x  113.7    12.5s
+   hierarchical_merge(0.25) > project(32) > binary                x  511.7    12.4s
+   hierarchical_merge(0.25) > project(16) > int8(per_vector)      x  113.7    12.4s
+   hierarchical_merge(0.25) > project(16) > int4(mean)            x  204.7    12.5s
+   hierarchical_merge(0.25) > project(16) > binary                x 1023.4    12.4s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x   15.7    13.1s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x   31.0    13.4s
+   hierarchical_merge(0.25) > project(128) > binary               x  127.9    12.8s
+   tiered binary               RAM     46.7 KB  ret 1.000
+   tiered ward 1/4 > binary    RAM     11.7 KB  ret 1.000
+== NeoMME-800M-Retriever-ST-late_docvqa_test_subsampled done in 6694s

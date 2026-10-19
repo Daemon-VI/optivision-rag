@@ -74,15 +74,13 @@ def _rows(emb: Any, mask: Any) -> list[np.ndarray]:
     """
     import torch
 
-    emb = emb.detach().to("cpu", torch.float32)
+    emb = torch.as_tensor(emb).detach().to("cpu", torch.float32)  # numpy output too
     if emb.ndim == 2:
         emb = emb.unsqueeze(0)
     if emb.ndim != 3:
         raise ValueError(f"expected [batch, tokens, dim] embeddings, got shape {tuple(emb.shape)}")
-    if not torch.isfinite(emb).all():
-        raise ValueError("the model returned non-finite embeddings")
     if mask is not None:
-        mask = mask.detach().to("cpu")
+        mask = torch.as_tensor(mask).detach().to("cpu")
         if mask.ndim == 1:
             mask = mask.unsqueeze(0)
         if tuple(mask.shape) != tuple(emb.shape[:2]):
@@ -90,6 +88,8 @@ def _rows(emb: Any, mask: Any) -> list[np.ndarray]:
     out = []
     for i in range(emb.shape[0]):
         item = emb[i] if mask is None else emb[i][mask[i].bool()]
+        if not torch.isfinite(item).all():  # checked on kept rows: overflow at padding is dropped with it
+            raise ValueError("the model returned non-finite embeddings")
         item = item[item.norm(dim=-1) > _ZERO_ROW]
         out.append(np.ascontiguousarray(item.numpy()))
     return out
@@ -130,6 +130,19 @@ def _resolve_revision(model_name: str, revision: str | None, known: str | None) 
     from huggingface_hub import model_info
 
     return str(model_info(model_name).sha)
+
+
+def _adopt_model_placement(enc: Any, model: Any) -> None:
+    """Take device and dtype from an injected model's parameters, so inputs go where the model is."""
+    try:
+        param = next(iter(model.parameters()))
+    except Exception:  # noqa: BLE001 - an injected stand-in may have no parameters
+        return
+    device = getattr(param, "device", None)
+    if device is not None:
+        enc.device = str(device)
+    if getattr(param, "dtype", None) is not None:
+        enc.torch_dtype = param.dtype
 
 
 class _TokenEncoder:
@@ -177,7 +190,8 @@ class _TokenEncoder:
     def info(self) -> dict[str, Any]:
         return {"model": self.checkpoint, "revision": self.revision, "dim": self.dim, "loader": self.loader,
                 "device": self.device, "dtype": str(self.torch_dtype), "loading_report": self.loading_report,
-                "adapter_merge_check": self.adapter_merge_check, "placement": self.placement}
+                "adapter_merge_check": self.adapter_merge_check, "placement": self.placement,
+                **({"max_num_visual_tokens": cap} if (cap := getattr(self, "max_num_visual_tokens", None)) else {})}
 
     def _images(self, images: list[Any]) -> list[np.ndarray]:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -197,15 +211,20 @@ class ColEngineTokenEncoder(_TokenEncoder):
 
     def __init__(self, model_name: str, family: str, device: str = "auto", dtype: str = "auto",
                  multi_gpu: bool = False, expected_dim: int | None = None, page_batch_size: int = 1,
-                 query_batch_size: int = 8, model: Any = None, processor: Any = None) -> None:
+                 query_batch_size: int = 8, model: Any = None, processor: Any = None,
+                 max_num_visual_tokens: int | None = None, revision: str | None = None) -> None:
         if family not in COLENGINE_FAMILIES:
             raise ValueError(f"unknown colpali-engine family {family!r}; choose from {sorted(COLENGINE_FAMILIES)}")
         self.loader = f"colpali-engine:{family}"
+        model_injected = model is not None
         self.family = family
         self.checkpoint = model_name
+        self.revision = revision  # the commit loaded; info() and the adapter identity record it
         self.expected_dim = expected_dim
         self.page_batch_size = max(1, int(page_batch_size))
         self.query_batch_size = max(1, int(query_batch_size))
+        self.max_num_visual_tokens = max_num_visual_tokens
+        pin: dict[str, Any] = {} if revision is None else {"revision": revision}
         if model is None or processor is None:
             try:
                 from colpali_engine import models as cpm
@@ -219,7 +238,7 @@ class ColEngineTokenEncoder(_TokenEncoder):
             self.device = _resolve_device(device)
             self.torch_dtype = _resolve_dtype(dtype, self.device)
             if model is None:
-                model = _load_model(getattr(cpm, model_cls_name), model_name, self.torch_dtype)
+                model = _load_model(getattr(cpm, model_cls_name), model_name, self.torch_dtype, **pin)
                 self.loading_report = getattr(model, "loading_report", None)
                 self.adapter_merge_check = getattr(model, "adapter_merge_check", None)
                 unloaded = [n for n, p in model.named_parameters() if p.device.type == "meta"]
@@ -228,7 +247,11 @@ class ColEngineTokenEncoder(_TokenEncoder):
                 model, self.device, self.placement = place_model(model, self.device, multi_gpu)
                 model = model.eval()
             if processor is None:
-                processor = getattr(cpm, proc_cls_name).from_pretrained(model_name)
+                processor = getattr(cpm, proc_cls_name).from_pretrained(
+                    model_name, **pin,
+                    **({"max_num_visual_tokens": int(max_num_visual_tokens)} if max_num_visual_tokens else {}))
+        if model_injected:
+            _adopt_model_placement(self, model)
         self.model = model
         self.processor = processor
 
@@ -338,6 +361,7 @@ class RemoteCodeEncoder(_TokenEncoder):
         if recipe.style == "model":
             # a model method returns no attention mask, so a padded batch could not be unpadded here
             self.page_batch_size = self.query_batch_size = 1
+        model_injected = model is not None
         injected = model is not None and (processor is not None or not recipe.needs_processor)
         if injected:
             self.revision = revision
@@ -366,6 +390,8 @@ class RemoteCodeEncoder(_TokenEncoder):
             if processor is None and recipe.needs_processor:
                 processor = AutoProcessor.from_pretrained(model_name, revision=self.revision,
                                                           trust_remote_code=True, **dict(recipe.processor_kwargs))
+        if model_injected:
+            _adopt_model_placement(self, model)
         self.model = model
         self.processor = processor
 

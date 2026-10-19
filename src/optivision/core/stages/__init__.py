@@ -40,6 +40,7 @@ from .codecs import (
     Int4Quantizer,
     Int8Quantizer,
     Lloyd2Quantizer,
+    NormPreservingInt4Quantizer,
 )
 from .projections import (
     DimensionProjector,
@@ -83,6 +84,7 @@ __all__ = [
     "Int4Quantizer",
     "Int8Quantizer",
     "Lloyd2Quantizer",
+    "NormPreservingInt4Quantizer",
     "PCAProjector",
     "PipelineTraits",
     "Quantizer",

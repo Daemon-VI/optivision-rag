@@ -28,7 +28,7 @@ and 5,183 documents with 451, 494 and 300 queries):
 
 Each cell: median compression chosen (vs float32) · splits whose choice met the target on the held-out half · mean held-out retention. At SciFact 0.99 no configuration qualified in 6 of 20 splits.
 
-Tested coverage is exactly six encoders:
+`optimize()` has been evaluated end to end, on held-out queries, on exactly six encoders:
 - ColPali-v1.3, ColQwen2-v1.0 and ColQwen2.5-v0.2 (ViDoRe V1 DocVQA and InfoVQA,
   500 pages each);
 - NVIDIA Nemotron ColEmbed 4B, 2,560-d (the same two ViDoRe V1 splits; licensed
@@ -36,8 +36,16 @@ Tested coverage is exactly six encoders:
 - ColSmol-256M (a 60-page generated corpus only);
 - answerai-colbert-small-v1 (BEIR SciFact).
 
+Beyond those six, as of 0.5.0 the catalogue (`optivision models`) holds fixed-pipeline
+measurements for 55 models: 40 page models on ViDoRe V1 DocVQA and InfoVQA and 15 text models on
+BEIR SciFact, 48 to 4,096 dimensions, ColQwen3, ColNomic and 4,096-d models among them. Those
+rows say how fixed pipelines kept retention on those corpora; they show what to try, not what
+`optimize()` or `certify()` will choose and hold on yours. Follow-up batches added NFCorpus,
+SciDocs, ArxivQA and TabFQuAD for some models, and held-out checks of `calibrate()` on 22 units
+(`reports/universal/followup/SUMMARY.md`, P8).
+
 Other models' vectors are accepted, but their compression behaviour is
-unmeasured. ColQwen3, ColNomic, 4,096-d models, ViDoRe V2/V3, million-page
+unmeasured. ViDoRe V2/V3, million-page
 corpora and database connectors beyond numpy/Qdrant are not validated.
 
 There is no guarantee that a target is met. The confidence bound applies to each

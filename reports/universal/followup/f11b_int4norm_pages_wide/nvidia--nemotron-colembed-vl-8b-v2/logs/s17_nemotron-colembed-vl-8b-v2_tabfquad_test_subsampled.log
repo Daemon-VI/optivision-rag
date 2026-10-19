@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:nemotron-colembed-vl-8b-v2_tabfquad_test_subsampled
+== nemotron-colembed-vl-8b-v2_tabfquad_test_subsampled: 280 docs, 280 queries, 4096-d, 590 vectors/doc
+   float32: nDCG@5 0.6124; int4 norm ratio sd 0.0223, int4norm 0.00024
+   float32                                      x    1.0     8.5s
+   float16                                      x    2.0    11.5s
+   int8(per_vector)                             x    4.0    13.0s
+   int4                                         x    8.0    16.2s
+   int4norm                                     x    8.0    17.3s
+   int4(mean)                                   x    8.0    18.2s
+   int4norm(mean)                               x    8.0    19.8s
+   lloyd2(7)                                    x   16.0    73.5s
+   binary                                       x   32.0     8.9s
+   hierarchical_merge(0.33) > int8(per_vector)  x   12.1    67.0s
+   hierarchical_merge(0.33) > int4              x   24.1     4.8s
+   hierarchical_merge(0.33) > int4norm          x   24.1     5.3s
+   hierarchical_merge(0.33) > int4(mean)        x   24.1     5.5s
+   hierarchical_merge(0.33) > int4norm(mean)    x   24.1     6.2s
+   hierarchical_merge(0.33) > binary            x   96.7     2.7s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.9    63.7s
+   hierarchical_merge(0.25) > int4              x   31.9     3.7s
+   hierarchical_merge(0.25) > int4norm          x   31.9     4.0s
+   hierarchical_merge(0.25) > int4(mean)        x   31.9     4.4s
+   hierarchical_merge(0.25) > int4norm(mean)    x   31.9     4.7s
+   hierarchical_merge(0.25) > binary            x  127.6     2.1s
+== nemotron-colembed-vl-8b-v2_tabfquad_test_subsampled done in 380s

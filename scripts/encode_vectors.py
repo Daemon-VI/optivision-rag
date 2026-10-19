@@ -16,6 +16,10 @@ larger than ColSmol, plus ``datasets`` and the model's own library. Query and pa
 ids follow ``optivision.corpus.load_vidore_subset``: page ``i`` is
 ``f"{i:05d}::p1"`` and each distinct query is relevant to the first row it
 appears on.
+
+``--distractors`` adds pages of other image datasets (the first ``--distractor-pages`` rows,
+in the order given) as pages no query is labelled with, so that only the corpus grows; they are
+read and encoded a chunk at a time, never all held as images. The tag gets ``_plus<N>``.
 """
 
 from __future__ import annotations
@@ -30,6 +34,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from optivision.adapters import MODELS, PageEncoderAdapter, load_adapter
 from optivision.types import PageRef
+
+
+def _gpu_budgets() -> dict[int, int]:
+    """``max_memory`` for a sentence-transformers model spread with ``device_map="auto"``.
+
+    GPU 0 also holds the inputs, the vision activations and every page's outputs, so it gets
+    a smaller share of the weights (tencent/EVIE-8B ran GPU 0 out of memory in its forward pass
+    with an even split, Kaggle 2026-10-16).
+    """
+    import torch
+
+    return {i: int(torch.cuda.get_device_properties(i).total_memory * (0.45 if i == 0 else 0.85))
+            for i in range(torch.cuda.device_count())}
 
 
 def main() -> int:
@@ -55,7 +72,17 @@ def main() -> int:
     ap.add_argument("--check-pairs", type=int, default=12,
                     help="pages on which check_retriever runs before the full encode (0 skips it); the run "
                          "stops if the vectors are not finite, unit-norm and retrieving their own page")
+    ap.add_argument("--processor-kwargs", type=json.loads, default=None,
+                    help="JSON for a sentence-transformers model's processor, e.g. the page budget "
+                         "a model card's evaluation used")
+    ap.add_argument("--batch-size", type=int, default=4,
+                    help="items per encode call on the sentence-transformers path (pages are large)")
+    ap.add_argument("--distractors", default="", help="comma-separated HF image datasets to add unlabelled pages from")
+    ap.add_argument("--distractor-pages", type=int, default=0, help="how many distractor pages to add")
     a = ap.parse_args()
+    distractors = [d for d in a.distractors.split(",") if d]
+    if bool(distractors) != bool(a.distractor_pages):
+        raise SystemExit("--distractors and --distractor-pages go together")
 
     from datasets import load_dataset
 
@@ -65,6 +92,8 @@ def main() -> int:
     if a.limit:
         ds = ds.select(range(min(a.limit, len(ds))))
     if a.backend == "nemotron":
+        if distractors:
+            raise SystemExit("--distractors is not supported on the --backend nemotron path")
         return encode_nemotron(a, info)
     if a.backend:
         from optivision.encoders.colvlm import ColVLMEncoder
@@ -78,14 +107,31 @@ def main() -> int:
             options.update(dtype=a.dtype, multi_gpu=a.multi_gpu)
         if loader.startswith("remote-code:"):
             options.update(trust_remote_code=a.trust_remote_code, revision=a.revision)
+        if loader == "sentence-transformers":
+            options.update(batch_size=a.batch_size, encode_kwargs={"show_progress_bar": False})
+            if a.dtype != "auto":
+                options["dtype"] = a.dtype
+            if a.trust_remote_code:
+                options["trust_remote_code"] = True
+            # the registry's pin unless --revision says otherwise ("latest": the Hub's main branch)
+            revision = a.revision or (info.revision if info else None)
+            if revision and revision != "latest":
+                options["revision"] = revision
+            if a.multi_gpu:
+                options["model_kwargs"] = {"device_map": "auto", "max_memory": _gpu_budgets()}
+            if a.processor_kwargs:
+                options["processor_kwargs"] = a.processor_kwargs
         adapter = load_adapter(a.model, loader=a.loader, **options)
-    encoder = getattr(adapter, "encoder", None)
+    encoder = getattr(adapter, "encoder", adapter)
     run_info = {
         "device": getattr(encoder, "device", None),
         "dtype": str(getattr(encoder, "torch_dtype", a.dtype)),
         "adapter_merge_check": getattr(encoder, "adapter_merge_check", None),
         "loading_report": getattr(encoder, "loading_report", None),
         "placement": getattr(encoder, "placement", None),
+        "max_num_visual_tokens": getattr(encoder, "max_num_visual_tokens", None),
+        "revision": getattr(encoder, "revision", None),
+        "processor_kwargs": a.processor_kwargs,
     }
     print(json.dumps({"loaded": a.model, **run_info}), flush=True)
 
@@ -106,7 +152,7 @@ def main() -> int:
 
         first = {pid: q for qid, q in queries for pid in qrels[qid]}
         pairs = [(im, first[pid]) for pid, im in zip(ids, images) if pid in first][: a.check_pairs]
-        if len(pairs) >= 2:
+        if len(pairs) >= 6:  # check_retriever needs 2 * allowed_misses + 2 pairs (default 2)
             pages = [im for im, _ in pairs]
             if isinstance(adapter, PageEncoderAdapter):
                 pages = [(PageRef(f"check{i}", 1), im) for i, im in enumerate(pages)]
@@ -117,18 +163,24 @@ def main() -> int:
                 print("CHECK FAILED: the model does not behave like a retriever on these pages; nothing was written")
                 return 1
 
+    filenames = [row.get("image_filename") for row in ds.select_columns(["image_filename"])]         if "image_filename" in ds.column_names else []
+    repeated = len(filenames) - len(set(filenames)) if filenames else 0
+    if repeated:  # this loader takes each row as its own page: a repeated page would be a second copy
+        print(json.dumps({"warning": f"{repeated} rows repeat an image_filename; each row is a page here"}), flush=True)
+
     t0 = time.time()
-    if isinstance(adapter, PageEncoderAdapter):
-        docs = adapter.encode_documents([(PageRef(pid.split("::")[0], 1), im) for pid, im in zip(ids, images)])
-    else:
-        docs = adapter.encode_documents(images, ids=ids)
+    docs = _encode_pages(adapter, images, ids)
+    del images
+    if distractors:
+        docs = _with_distractors(adapter, docs, distractors, a.distractor_pages, a.split)
     t1 = time.time()
     qs = adapter.encode_queries([q for _, q in queries], ids=[qid for qid, _ in queries])
     t2 = time.time()
 
-    tag = f"{a.model.split('/')[-1]}_{a.dataset.split('/')[-1]}"
+    tag = tag_for(a.model, a.dataset, a.distractor_pages)
     a.out.mkdir(parents=True, exist_ok=True)
-    docs.attrs.update({"model": a.model, "dataset": a.dataset, "encode_seconds": t1 - t0, **run_info})
+    docs.attrs.update({"model": a.model, "dataset": a.dataset, "encode_seconds": t1 - t0,
+                       "distractors": distractors, "distractor_pages": a.distractor_pages, **run_info})
     docs.save(a.out / f"{tag}_docs.npz")
     qs.save(a.out / f"{tag}_queries.npz")
     (a.out / f"{tag}_qrels.json").write_text(json.dumps(qrels), encoding="utf-8")
@@ -136,6 +188,54 @@ def main() -> int:
                       "queries": len(qs), "doc_seconds": round(t1 - t0, 1), "query_seconds": round(t2 - t1, 1),
                       **run_info}))
     return 0
+
+
+def tag_for(model: str, dataset: str, distractor_pages: int = 0) -> str:
+    return f"{model.split('/')[-1]}_{dataset.split('/')[-1]}" + (f"_plus{distractor_pages}" if distractor_pages else "")
+
+
+def _encode_pages(adapter, images: list, ids: list[str]):
+    if isinstance(adapter, PageEncoderAdapter):
+        return adapter.encode_documents([(PageRef(pid.split("::")[0], 1), im) for pid, im in zip(ids, images, strict=True)])
+    return adapter.encode_documents(images, ids=ids)
+
+
+def _with_distractors(adapter, docs, names: list[str], count: int, split: str, chunk: int = 32):
+    """``docs`` followed by the first ``count`` pages of the named datasets (ids ``x<j>::p1``)."""
+    from datasets import load_dataset
+
+    from optivision.representation import MultiVectorCorpus
+
+    arrays = [docs.vectors[docs.offsets[i]:docs.offsets[i + 1]] for i in range(len(docs))]
+    ids = list(docs.ids)
+    images, pids, t0 = [], [], time.time()
+
+    def flush() -> None:
+        extra = _encode_pages(adapter, images, pids)
+        arrays.extend(extra.vectors[extra.offsets[i]:extra.offsets[i + 1]] for i in range(len(extra)))
+        ids.extend(pids)
+        images.clear()
+        pids.clear()
+
+    added = 0
+    for name in names:
+        for row in load_dataset(name, split=split):
+            if added == count:
+                break
+            images.append(row["image"].convert("RGB"))
+            pids.append(f"x{added:05d}::p1")
+            added += 1
+            if len(images) == chunk:
+                flush()
+                print(f"  distractor pages: {added}/{count} ({(time.time() - t0) / added:.2f} s/page)", flush=True)
+        if added == count:
+            break
+    if images:
+        flush()
+    if added < count:
+        raise SystemExit(f"only {added} distractor pages in {names}, {count} asked for")
+    print(json.dumps({"distractors": names, "distractor_pages": added, "corpus": len(ids)}), flush=True)
+    return MultiVectorCorpus.from_arrays(arrays, ids=ids, attrs=dict(docs.attrs))
 
 
 def encode_nemotron(a, info) -> int:

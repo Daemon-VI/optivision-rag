@@ -1,0 +1,63 @@
+models with both 40
+--- DocVQA vs InfoVQA paired (loss docvqa - loss infovqa), models in both
+L0.5 n=40 mean diff=0.0016 CI [-0.0007  0.0039] wilcoxon p=0.18, docvqa worse in 24/40 (sign p=0.27); ratio of mean losses 1.68
+L0.33 n=40 mean diff=0.0030 CI [-0.0003  0.0068] wilcoxon p=0.11, docvqa worse in 26/40 (sign p=0.081); ratio of mean losses 1.73
+L0.25 n=40 mean diff=0.0040 CI [-0.0005  0.009 ] wilcoxon p=0.13, docvqa worse in 24/40 (sign p=0.27); ratio of mean losses 1.71
+L0.1 n=37 mean diff=0.0097 CI [0.0026 0.019 ] wilcoxon p=0.012, docvqa worse in 21/37 (sign p=0.51); ratio of mean losses 1.57
+La n=40 mean diff=0.0092 CI [0.0047 0.0139] wilcoxon p=0.00092, docvqa worse in 28/40 (sign p=0.017); ratio of mean losses 1.79
+
+--- Is it just baseline level? corr of loss with baseline ndcg across image cells; docvqa vs infovqa baseline
+mean base docvqa 0.616 infovqa 0.901
+L0.25 spearman(base,loss) pooled image: rho=-0.12 p=0.295 | docvqa rho=0.21 p=0.19 infovqa rho=-0.06 p=0.73 
+L0.1 spearman(base,loss) pooled image: rho=-0.20 p=0.0869 | docvqa rho=0.16 p=0.33 infovqa rho=-0.23 p=0.17 
+La spearman(base,loss) pooled image: rho=-0.38 p=0.000491 | docvqa rho=-0.15 p=0.36 infovqa rho=-0.41 p=0.0092 
+
+--- model-level consistency: Spearman of loss between DocVQA and InfoVQA across models
+L0.5 rho=-0.12 p=0.45 n=40
+L0.33 rho=0.02 p=0.93 n=40
+L0.25 rho=-0.21 p=0.19 n=40
+L0.1 rho=0.19 p=0.25 n=37
+La rho=0.08 p=0.64 n=40
+
+--- does mild loss predict heavy loss? Spearman across model-ds cells within dataset
+docvqa L0.5 L0.1 rho=0.44 p=0.0067 n=37
+docvqa L0.33 L0.1 rho=0.55 p=0.00043 n=37
+docvqa L0.25 L0.1 rho=0.66 p=1.1e-05 n=37
+docvqa L0.5 L0.25 rho=0.63 p=1.3e-05 n=40
+infovqa L0.5 L0.1 rho=0.20 p=0.24 n=37
+infovqa L0.33 L0.1 rho=0.26 p=0.13 n=37
+infovqa L0.25 L0.1 rho=0.68 p=3.9e-06 n=37
+infovqa L0.5 L0.25 rho=0.38 p=0.016 n=40
+scifact L0.5 L0.1 rho=0.07 p=0.82 n=14
+scifact L0.33 L0.1 rho=0.30 p=0.3 n=14
+scifact L0.25 L0.1 rho=0.38 p=0.18 n=14
+scifact L0.5 L0.25 rho=-0.12 p=0.68 n=15
+
+--- text (SciFact) vs image: DESCRIPTIVE ONLY (modality, dataset, vpd, n_docs, n_q all confounded)
+L0.5 text median 0.0046 (n=15) image median 0.0025 (n=80) diff CI [-0.002   0.0127] MWU p=0.042
+L0.33 text median 0.0281 (n=15) image median 0.0039 (n=80) diff CI [0.0055 0.0298] MWU p=0.00023
+L0.25 text median 0.0288 (n=15) image median 0.0057 (n=80) diff CI [0.0153 0.0532] MWU p=2.5e-06
+L0.1 text median 0.0929 (n=14) image median 0.0159 (n=74) diff CI [0.0513 0.1067] MWU p=3e-08
+La text median 0.0209 (n=15) image median 0.0136 (n=80) diff CI [-0.0005  0.0164] MWU p=0.033
+
+keep fraction at which median loss reaches 1%/2%/5% (interp on median-loss-vs-keep over models), by ds
+docvqa median loss [0.0052 0.0039 0.0086 0.0218] mean loss [0.0039 0.0071 0.0096 0.0269]
+   median loss reaches 1% at keep~0.227
+   median loss reaches 2% at keep~0.113
+   median loss reaches 5% at keep~None
+infovqa median loss [0.0021 0.0039 0.0041 0.0135] mean loss [0.0024 0.0041 0.0056 0.0171]
+   median loss reaches 1% at keep~0.141
+   median loss reaches 2% at keep~None
+   median loss reaches 5% at keep~None
+scifact median loss [0.0046 0.0281 0.0288 0.0929] mean loss [0.0111 0.0286 0.0476 0.1184]
+   median loss reaches 1% at keep~0.454
+   median loss reaches 2% at keep~0.381
+   median loss reaches 5% at keep~0.185
+
+--- per-model keep fraction needed for loss<=2%/5% (interpolated, log-linear), count of models by bucket
+docvqa loss<=2% smallest measured keep achieving it: {0.1: 17, 0.25: 21, 0.5: 2}
+docvqa loss<=5% smallest measured keep achieving it: {0.1: 34, 0.25: 5, 0.5: 1}
+infovqa loss<=2% smallest measured keep achieving it: {0.1: 31, 0.25: 7, 0.33: 2}
+infovqa loss<=5% smallest measured keep achieving it: {0.1: 35, 0.25: 5}
+scifact loss<=2% smallest measured keep achieving it: {0.25: 4, 0.33: 4, 0.5: 4, 1.0: 3}
+scifact loss<=5% smallest measured keep achieving it: {0.1: 2, 0.25: 8, 0.33: 3, 0.5: 2}

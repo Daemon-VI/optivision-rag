@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -39,13 +40,30 @@ def _listing(status: str | None, as_json: bool) -> None:
                                 "license": m.license, "measured_rows": m.model_id in with_rows,
                                 "evidence": m.evidence} for m in models], indent=1))
         return
-    table = Table(title=f"{len(models)} models" + (f" with status {status}" if status else ""))
-    for column in ("model", "modality", "dim", "loader", "status", "rows"):
-        table.add_column(column)
+    id_width = max((len(m.model_id) for m in models), default=5)
+    loader_width = max((len(m.loader) for m in models), default=6)
+    # model ids are never cut (they must be copyable); the loader column is shown only when it
+    # fits whole: id + input(5) + dim(4) + loader + status(10) + rows(4) + 2 per separator
+    show_loader = console.width >= id_width + 5 + 4 + loader_width + 10 + 4 + 10
+    table = Table(title=f"{len(models)} models" + (f" with status {status}" if status else ""),
+                  box=box.SIMPLE_HEAD, pad_edge=False, show_edge=False, collapse_padding=True)
+    table.add_column("model", no_wrap=True, min_width=id_width)
+    table.add_column("input", no_wrap=True)  # the modality; a short header keeps 80 columns uncut
+    table.add_column("dim", justify="right", no_wrap=True)
+    if show_loader:
+        table.add_column("loader", no_wrap=True)
+    table.add_column("status", no_wrap=True)
+    table.add_column("rows", no_wrap=True)
     for m in models:
-        table.add_row(m.model_id, m.modality, "?" if m.dimension is None else str(m.dimension), m.loader,
-                      m.status, "yes" if m.model_id in with_rows else "")
+        cells = [m.model_id, m.modality, "?" if m.dimension is None else str(m.dimension)]
+        if show_loader:
+            cells.append(m.loader)
+        cells += [m.status, "yes" if m.model_id in with_rows else ""]
+        table.add_row(*cells)
     console.print(table)
+    if not show_loader:
+        console.print("(terminal too narrow for the loader column; `optivision models <model id>` or --json "
+                      "shows it)")
     console.print("status: measured = compression measured here on real output; untested = loading path known to "
                   "work (measured sibling, or checked here), compression not measured; unverified = written against the model card, never run here.\n"
                   "rows = fixed-pipeline measurements available: optivision models <model id>")
@@ -61,12 +79,16 @@ def _detail(model_id: str, min_retention: float, as_json: bool) -> None:
                    "pass its vectors as arrays, or load it with load_adapter(model_id, loader=...).")
         raise typer.Exit(2)
     has_rows = model_id in measured_models()
+    # a measured model without rows of its own may be measured through a sibling its evidence names
+    named = [m for m in measured_models() if m != model_id and m in info.evidence]
+    via = max(named, key=len) if (info.status == "measured" and not has_rows and named) else None
     shortlist = measured_shortlist(model_id, min_retention) if has_rows else []
     if as_json:
         typer.echo(json.dumps({"model_id": info.model_id, "family": info.family, "modality": info.modality,
                                "loader": info.loader, "dimension": info.dimension, "status": info.status,
                                "license": info.license, "revision": info.revision, "notes": info.notes,
                                "evidence": info.evidence,
+                               "measured_via": via,
                                "measured": measured_results(model_id) if has_rows else {},
                                "shortlist": shortlist, "min_retention": min_retention}, indent=1))
         return
@@ -78,8 +100,17 @@ def _detail(model_id: str, min_retention: float, as_json: bool) -> None:
         console.print(f"notes: {info.notes}")
     console.print(f"evidence: {info.evidence}")
     if not has_rows:
-        console.print("\nNo fixed-pipeline measurements of this model are stored. Encode your pages and run "
-                      "`optivision certify` on your own queries.")
+        if via:
+            console.print(f"\nMeasured via equivalence with {via}: this id gives the same vectors (see the "
+                          f"evidence), so that model's fixed-pipeline measurements apply: "
+                          f"`optivision models {via}`.")
+        elif info.status == "measured":
+            console.print("\nMeasured outside the fixed-pipeline study (see the evidence for where), so no "
+                          "fixed-pipeline rows are stored for this id. Encode your pages and run "
+                          "`optivision certify` on your own queries.")
+        else:
+            console.print("\nNo fixed-pipeline measurements of this model are stored. Encode your pages and run "
+                          "`optivision certify` on your own queries.")
         return
     results = measured_results(model_id)
     for dataset, entry in results.items():
@@ -112,6 +143,9 @@ def models(
     """List the known models, or show how one loads and what was measured for it."""
     if status is not None and status not in STATUSES:
         _err.print(f"[red]--status must be one of {', '.join(STATUSES)}[/red]")
+        raise typer.Exit(2)
+    if not 0.0 < min_retention <= 1.5:  # the range measured_shortlist accepts
+        _err.print(f"[red]--min-retention must be a retention such as 0.97, got {min_retention}[/red]")
         raise typer.Exit(2)
     if model_id is None:
         _listing(status, as_json)

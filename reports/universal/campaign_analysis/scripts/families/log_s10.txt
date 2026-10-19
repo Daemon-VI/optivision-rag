@@ -1,0 +1,23 @@
+large minus small loss, points of retention (positive = larger model compresses WORSE)
+set                 all L1b  binary  codec-only  merge-only
+pair                                                       
+nemotron 4b>8b        -0.05   -0.07        0.16        0.07
+EVIE 4.5B>8B           0.19    0.24        0.16        0.06
+Vultron 0.8B>4.5B      0.16    0.50        0.19        0.13
+Vultron 4.5B>8B       -0.08   -1.10       -0.48       -0.15
+Sauerkraut 2b>4b      -0.34   -1.01       -0.48       -0.10
+tomoro 4b>8b           0.01   -1.15       -0.34        0.55
+nomic 3b>7b           -0.26   -1.34       -0.59       -0.17
+NeoMME 260M>800M       0.17    0.78        0.45       -0.01
+mxbai-edge 17m>32m   -12.13  -45.56      -20.00        1.44
+all L1b      mean -1.37 pts [-4.09,+0.07] bootstrap over pairs; larger worse in 4/9 (sign test p=1.000)
+merge-only   mean +0.20 pts [-0.05,+0.56] bootstrap over pairs; larger worse in 5/9 (sign test p=1.000)
+codec-only   mean -2.33 pts [-6.83,+0.07] bootstrap over pairs; larger worse in 4/9 (sign test p=1.000)
+binary       mean -5.41 pts [-15.61,+0.01] bootstrap over pairs; larger worse in 3/9 (sign test p=0.508)
+image-only all L1b mean -0.03 larger worse 4/8
+image-only merge-only mean +0.05 larger worse 4/8
+image-only codec-only mean -0.12 larger worse 4/8
+image-only binary mean -0.39 larger worse 3/8
+Vultron mean L1b loss pts doc [np.float64(1.03), np.float64(1.25), np.float64(1.09)]
+Vultron mean L1b loss pts info [np.float64(0.6), np.float64(0.69), np.float64(0.7)]
+image models with known size 16 spearman(loss, log size) within doc: 0.167 p 0.536 ; info: -0.678 p 0.004

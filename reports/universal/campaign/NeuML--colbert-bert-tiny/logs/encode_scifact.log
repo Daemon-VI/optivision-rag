@@ -1,0 +1,18 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py NeuML/colbert-bert-tiny --out /tmp/optdata/vectors --batch-size 32
+NeuML/colbert-bert-tiny: registry status untested, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating corpus split:   0%|          | 0/5183 [00:00<?, ? examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 37080.13 examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 35574.50 examples/s]
+Generating queries split:   0%|          | 0/1109 [00:00<?, ? examples/s]Generating queries split: 100%|██████████| 1109/1109 [00:00<00:00, 370754.28 examples/s]
+Generating train split:   0%|          | 0/919 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 919/919 [00:00<00:00, 69853.13 examples/s]
+Generating test split:   0%|          | 0/339 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 339/339 [00:00<00:00, 145133.11 examples/s]
+Loading weights:   0%|          | 0/39 [00:00<?, ?it/s]Loading weights: 100%|██████████| 39/39 [00:00<00:00, 3466.00it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: NeuML/colbert-bert-tiny
+Key           | Status     |  | 
+--------------+------------+--+-
+linear.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+One or more queries filled the entire query_expansion length of 32 tokens: any content beyond it was truncated, as this model always processes queries at exactly this width.
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [133, 152, 173, 168, 156, 148, 161, 167, 169, 167, 160, 161], "vectors_per_query": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 11, "ok": true}}
+{"tag": "colbert-bert-tiny_scifact", "docs": 5183, "vectors": 815632, "dim": 128, "queries": 300, "doc_seconds": 5.2, "query_seconds": 0.1}

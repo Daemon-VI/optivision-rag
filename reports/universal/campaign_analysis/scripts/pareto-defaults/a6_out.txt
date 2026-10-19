@@ -1,0 +1,78 @@
+pairs 88 {'image': 74, 'text': 14} baseline dtype: {'torch.float32': 42, 'float16': 16, 'None': 14, 'torch.float16': 10, 'float32': 6} src {'campaign': 80, 'older': 8}
+
+== TIERED (binary/ward>binary hot in RAM, int8 all-vectors cold on disk, 50 candidates) ==
+
+hot=binary: n=88  ram compression median 32.0x (min 32.0, max 32.0); disk compression median 3.51x
+   lo>=0.95 all: 84/88;   lo>=0.95 image: 74/74;   lo>=0.95 text: 10/14;
+   lo>=0.97 all: 82/88;   lo>=0.97 image: 74/74;   lo>=0.97 text: 8/14;
+   lo>=0.99 all: 72/88;   lo>=0.99 image: 67/74;   lo>=0.99 text: 5/14;
+   retention median 1.0000, min 0.615, share ret>=1: 0.58
+   hot ms median 52.2 rescore ms median 3.15
+
+hot=ward 1/4 > binary: n=88  ram compression median 127.3x (min 79.3, max 127.9); disk compression median 3.82x
+   lo>=0.95 all: 81/88;   lo>=0.95 image: 74/74;   lo>=0.95 text: 7/14;
+   lo>=0.97 all: 80/88;   lo>=0.97 image: 74/74;   lo>=0.97 text: 6/14;
+   lo>=0.99 all: 66/88;   lo>=0.99 image: 64/74;   lo>=0.99 text: 2/14;
+   retention median 0.9998, min 0.542, share ret>=1: 0.48
+   hot ms median 13.8 rescore ms median 3.07
+
+binary: tiered minus untiered retention (same RAM): mean +0.0311 CI [+0.0209,+0.0427] median +0.0149 n=88 wilcoxon p=2.49e-15
+   lo>=0.95: untiered 62/88 -> tiered 84/88
+   lo>=0.97: untiered 45/88 -> tiered 82/88
+   lo>=0.99: untiered 11/88 -> tiered 72/88
+   docvqa: mean gain +0.0240 (n=37), untiered mean ret 0.975 tiered 0.999
+   infovqa: mean gain +0.0097 (n=37), untiered mean ret 0.990 tiered 1.000
+   scifact: mean gain +0.1062 (n=14), untiered mean ret 0.851 tiered 0.957
+
+ward 1/4 > binary: tiered minus untiered retention (same RAM): mean +0.0486 CI [+0.0351,+0.0637] median +0.0274 n=88 wilcoxon p=5.26e-16
+   lo>=0.95: untiered 44/88 -> tiered 81/88
+   lo>=0.97: untiered 22/88 -> tiered 80/88
+   lo>=0.99: untiered 3/88 -> tiered 66/88
+   docvqa: mean gain +0.0356 (n=37), untiered mean ret 0.963 tiered 0.998
+   infovqa: mean gain +0.0190 (n=37), untiered mean ret 0.981 tiered 1.000
+   scifact: mean gain +0.1609 (n=14), untiered mean ret 0.765 tiered 0.925
+
+binary: spearman(untiered ret, tiered gain)= SignificanceResult(statistic=np.float64(-0.9885527103659613), pvalue=np.float64(1.9935362728688645e-72))
+
+candidate share: image 50/500=10%; scifact 50/5183=0.96%
+scifact tiered vs image tiered ret (binary hot): {'mean': {'image': 1.0, 'text': 0.957}, 'min': {'image': 0.989, 'text': 0.615}, 'count': {'image': 74, 'text': 14}}
+
+== SCAN LATENCY (maxsim on decoded vectors; compression of the codec does not reduce this) ==
+                 rel_scan  rel_bytes  rel_vpd  rel_dim     n
+group                                                       
+codec               1.010      0.129    1.000     1.00   616
+dim                 0.968      0.250    1.000     0.25   240
+dim+codec           0.970      0.064    1.000     0.50   608
+token               0.270      0.258    0.258     1.00   440
+token+codec         0.330      0.041    0.330     1.00  1056
+token+dim           0.290      0.064    0.330     0.25   528
+token+dim+codec     0.296      0.009    0.330     0.25  1584
+
+log(rel_scan) = a + 0.914*log(rel_vpd) + 0.087*log(rel_dim)  R2=0.897; bootstrap-over-pairs CI vpd [0.885,0.942] dim [0.055,0.118]
+codec-only rel_scan median by label:
+label
+binary              1.014
+float16             1.007
+float32             1.000
+int4                1.013
+int4(mean)          1.013
+int8(per_vector)    1.006
+lloyd2(7)           1.095
+
+spearman(compression, 1/rel_scan) all rows: SignificanceResult(statistic=np.float64(0.3975896597211621), pvalue=np.float64(1.0334506215062396e-191))
+spearman among token-merge only rows: SignificanceResult(statistic=np.float64(0.1761611036558135), pvalue=np.float64(1.5456958543453647e-26))
+float16                                          n=88 rel_scan median 1.007 IQR [1.002,1.015]  compression median 2.0x
+int8(per_vector)                                 n=88 rel_scan median 1.006 IQR [1.001,1.013]  compression median 3.9x
+int4(mean)                                       n=88 rel_scan median 1.013 IQR [1.007,1.025]  compression median 7.8x
+binary                                           n=88 rel_scan median 1.014 IQR [1.006,1.024]  compression median 32.0x
+hierarchical_merge(0.25) > int8(per_vector)      n=88 rel_scan median 0.266 IQR [0.259,0.274]  compression median 15.7x
+hierarchical_merge(0.25) > int4(mean)            n=88 rel_scan median 0.266 IQR [0.262,0.277]  compression median 30.9x
+hierarchical_merge(0.25) > binary                n=88 rel_scan median 0.266 IQR [0.262,0.277]  compression median 127.3x
+hierarchical_merge(0.33) > int8(per_vector)      n=88 rel_scan median 0.344 IQR [0.340,0.354]  compression median 11.9x
+
+baseline scan ms vs vpd*n_docs: spearman SignificanceResult(statistic=np.float64(0.8075491024424329), pvalue=np.float64(2.015099981958335e-21))
+ds
+docvqa      51.984926
+infovqa     56.133835
+scifact    140.480396
+Name: scan, dtype: float64

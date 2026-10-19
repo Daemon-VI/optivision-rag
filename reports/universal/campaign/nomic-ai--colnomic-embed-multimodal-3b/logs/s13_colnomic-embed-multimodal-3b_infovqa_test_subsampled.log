@@ -1,0 +1,60 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:colnomic-embed-multimodal-3b_infovqa_test_subsampled
+== colnomic-embed-multimodal-3b_infovqa_test_subsampled: 500 docs, 494 queries, 128-d, 1171 vectors/page
+   float32: nDCG@5 0.9270  0.60 MB/page  scan 61.8 ms/query
+   float32                                                        x    1.0    28.7s
+   float16                                                        x    2.0    29.3s
+   int8(per_vector)                                               x    3.9    29.4s
+   int4                                                           x    7.8    29.7s
+   int4(mean)                                                     x    7.8    29.9s
+   lloyd2(7)                                                      x   16.0    33.0s
+   binary                                                         x   32.0    28.8s
+   hierarchical_merge(0.5)                                        x    2.0    78.2s
+   hierarchical_merge(0.33)                                       x    3.0    72.7s
+   hierarchical_merge(0.25)                                       x    3.9    70.5s
+   hierarchical_merge(0.1)                                        x    9.2    65.5s
+   adaptive_merge(0.6)                                            x    2.6    28.8s
+   hierarchical_merge(0.33) > float16                             x    5.9    10.0s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   11.7    10.2s
+   hierarchical_merge(0.33) > int4                                x   23.0    10.2s
+   hierarchical_merge(0.33) > int4(mean)                          x   23.0    10.2s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   47.5    11.3s
+   hierarchical_merge(0.33) > binary                              x   95.1     9.9s
+   hierarchical_merge(0.25) > float16                             x    7.8     7.7s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.3     7.7s
+   hierarchical_merge(0.25) > int4                                x   30.2     7.7s
+   hierarchical_merge(0.25) > int4(mean)                          x   30.2     7.8s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   62.2     8.5s
+   hierarchical_merge(0.25) > binary                              x  124.4     7.6s
+   project(64)                                                    x    2.0    28.9s
+   project(32, random)                                            x    4.0    28.5s
+   project(64) > float16                                          x    4.0    28.8s
+   project(64) > int8(per_vector)                                 x    7.8    28.4s
+   project(64) > int4(mean)                                       x   15.1    28.6s
+   project(64) > binary                                           x   64.0    28.4s
+   hierarchical_merge(0.33) > project(32)                         x   11.9    71.8s
+   hierarchical_merge(0.33) > project(16)                         x   23.8    71.4s
+   hierarchical_merge(0.33) > project(128)                        x    3.0    72.1s
+   hierarchical_merge(0.25) > project(32)                         x   15.5    69.0s
+   hierarchical_merge(0.25) > project(16)                         x   31.1    69.8s
+   hierarchical_merge(0.25) > project(128)                        x    3.9    69.9s
+   hierarchical_merge(0.33) > project(32) > int8(per_vector)      x   44.7     9.7s
+   hierarchical_merge(0.33) > project(32) > int4(mean)            x   84.5     9.7s
+   hierarchical_merge(0.33) > project(32) > binary                x  380.2     9.6s
+   hierarchical_merge(0.33) > project(16) > int8(per_vector)      x   84.5     9.6s
+   hierarchical_merge(0.33) > project(16) > int4(mean)            x  152.1     9.6s
+   hierarchical_merge(0.33) > project(16) > binary                x  760.5     9.6s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x   11.7    10.1s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x   23.0    10.3s
+   hierarchical_merge(0.33) > project(128) > binary               x   95.1     9.9s
+   hierarchical_merge(0.25) > project(32) > int8(per_vector)      x   58.5     7.4s
+   hierarchical_merge(0.25) > project(32) > int4(mean)            x  110.6     7.5s
+   hierarchical_merge(0.25) > project(32) > binary                x  497.6     7.4s
+   hierarchical_merge(0.25) > project(16) > int8(per_vector)      x  110.6     7.4s
+   hierarchical_merge(0.25) > project(16) > int4(mean)            x  199.0     7.5s
+   hierarchical_merge(0.25) > project(16) > binary                x  995.1     7.4s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x   15.3     7.7s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x   30.2     7.8s
+   hierarchical_merge(0.25) > project(128) > binary               x  124.4     7.6s
+   tiered binary               RAM     18.7 KB  ret 0.999
+   tiered ward 1/4 > binary    RAM      4.8 KB  ret 1.000
+== colnomic-embed-multimodal-3b_infovqa_test_subsampled done in 1489s

@@ -1,0 +1,74 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py vidore/colSmol-500M vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --dtype float32 --batch-size 4 --multi-gpu --distractors vidore/syntheticDocQA_energy_test,vidore/syntheticDocQA_healthcare_industry_test --distractor-pages 2000
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+vidore/colSmol-500M: registry status measured
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:00<00:02, 195.34 examples/s]Generating test split:  40%|████      | 200/500 [00:00<00:01, 289.08 examples/s]Generating test split:  60%|██████    | 300/500 [00:00<00:00, 333.97 examples/s]Generating test split:  80%|████████  | 400/500 [00:02<00:00, 127.63 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 194.44 examples/s]
+[transformers] Model config: pad_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 128002. This may result in unexpected behavior.
+Loading weights:   0%|          | 0/490 [00:00<?, ?it/s]Loading weights:  18%|█▊        | 89/490 [00:00<00:00, 867.08it/s]Loading weights:  36%|███▌      | 176/490 [00:00<00:00, 853.40it/s]Loading weights:  53%|█████▎    | 262/490 [00:00<00:00, 795.67it/s]Loading weights:  78%|███████▊  | 382/490 [00:00<00:00, 941.00it/s]Loading weights: 100%|██████████| 490/490 [00:00<00:00, 1000.44it/s]
+{"loaded": "vidore/colSmol-500M", "device": "cuda:0", "dtype": "torch.float32", "adapter_merge_check": {"base": "vidore/ColSmolVLM-Instruct-500M-base", "lora_modules": 224, "probe": "model.text_model.layers.0.self_attn.q_proj.weight", "max_abs_change": 0.05034318566322327}, "loading_report": {"missing_allowed": [], "unexpected": []}, "placement": {"devices": ["0"], "decoder_layers_per_device": {"0": 32}, "budget_bytes": [10945226342, 13290631987]}, "max_num_visual_tokens": null, "revision": null, "processor_kwargs": null}
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [875, 1139, 1139, 1139, 1139, 875, 1139, 1139, 1139, 1139, 1139, 1139], "vectors_per_query": [23, 22, 22, 16, 19, 22, 18, 23, 24, 17, 16, 21], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 11, "ok": true}}
+Generating test split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating test split:  10%|█         | 100/1000 [00:00<00:01, 468.12 examples/s]Generating test split:  20%|██        | 200/1000 [00:00<00:01, 654.64 examples/s]Generating test split:  40%|████      | 400/1000 [00:00<00:00, 955.04 examples/s]Generating test split:  60%|██████    | 600/1000 [00:00<00:00, 1027.41 examples/s]Generating test split:  80%|████████  | 800/1000 [00:00<00:00, 1097.60 examples/s]Generating test split: 100%|██████████| 1000/1000 [00:00<00:00, 1113.09 examples/s]
+  distractor pages: 32/2000 (2.54 s/page)
+  distractor pages: 64/2000 (2.33 s/page)
+  distractor pages: 96/2000 (2.24 s/page)
+  distractor pages: 128/2000 (2.21 s/page)
+  distractor pages: 160/2000 (2.19 s/page)
+  distractor pages: 192/2000 (2.18 s/page)
+  distractor pages: 224/2000 (2.17 s/page)
+  distractor pages: 256/2000 (2.16 s/page)
+  distractor pages: 288/2000 (2.16 s/page)
+  distractor pages: 320/2000 (2.16 s/page)
+  distractor pages: 352/2000 (2.15 s/page)
+  distractor pages: 384/2000 (2.15 s/page)
+  distractor pages: 416/2000 (2.15 s/page)
+  distractor pages: 448/2000 (2.14 s/page)
+  distractor pages: 480/2000 (2.14 s/page)
+  distractor pages: 512/2000 (2.13 s/page)
+  distractor pages: 544/2000 (2.13 s/page)
+  distractor pages: 576/2000 (2.13 s/page)
+  distractor pages: 608/2000 (2.13 s/page)
+  distractor pages: 640/2000 (2.13 s/page)
+  distractor pages: 672/2000 (2.13 s/page)
+  distractor pages: 704/2000 (2.13 s/page)
+  distractor pages: 736/2000 (2.13 s/page)
+  distractor pages: 768/2000 (2.13 s/page)
+  distractor pages: 800/2000 (2.13 s/page)
+  distractor pages: 832/2000 (2.12 s/page)
+  distractor pages: 864/2000 (2.12 s/page)
+  distractor pages: 896/2000 (2.12 s/page)
+  distractor pages: 928/2000 (2.12 s/page)
+  distractor pages: 960/2000 (2.12 s/page)
+  distractor pages: 992/2000 (2.12 s/page)
+Generating test split:   0%|          | 0/1000 [00:00<?, ? examples/s]Generating test split:  10%|█         | 100/1000 [00:00<00:01, 518.75 examples/s]Generating test split:  20%|██        | 200/1000 [00:00<00:01, 709.15 examples/s]Generating test split:  30%|███       | 300/1000 [00:00<00:00, 812.10 examples/s]Generating test split:  40%|████      | 400/1000 [00:00<00:00, 704.80 examples/s]Generating test split:  50%|█████     | 500/1000 [00:00<00:00, 780.79 examples/s]Generating test split:  60%|██████    | 600/1000 [00:00<00:00, 808.77 examples/s]Generating test split:  70%|███████   | 700/1000 [00:00<00:00, 820.65 examples/s]Generating test split:  80%|████████  | 800/1000 [00:01<00:00, 814.46 examples/s]Generating test split:  90%|█████████ | 900/1000 [00:01<00:00, 821.44 examples/s]Generating test split: 100%|██████████| 1000/1000 [00:01<00:00, 846.94 examples/s]
+  distractor pages: 1024/2000 (2.13 s/page)
+  distractor pages: 1056/2000 (2.13 s/page)
+  distractor pages: 1088/2000 (2.12 s/page)
+  distractor pages: 1120/2000 (2.12 s/page)
+  distractor pages: 1152/2000 (2.12 s/page)
+  distractor pages: 1184/2000 (2.11 s/page)
+  distractor pages: 1216/2000 (2.11 s/page)
+  distractor pages: 1248/2000 (2.11 s/page)
+  distractor pages: 1280/2000 (2.11 s/page)
+  distractor pages: 1312/2000 (2.10 s/page)
+  distractor pages: 1344/2000 (2.10 s/page)
+  distractor pages: 1376/2000 (2.10 s/page)
+  distractor pages: 1408/2000 (2.10 s/page)
+  distractor pages: 1440/2000 (2.09 s/page)
+  distractor pages: 1472/2000 (2.09 s/page)
+  distractor pages: 1504/2000 (2.09 s/page)
+  distractor pages: 1536/2000 (2.09 s/page)
+  distractor pages: 1568/2000 (2.08 s/page)
+  distractor pages: 1600/2000 (2.08 s/page)
+  distractor pages: 1632/2000 (2.08 s/page)
+  distractor pages: 1664/2000 (2.08 s/page)
+  distractor pages: 1696/2000 (2.08 s/page)
+  distractor pages: 1728/2000 (2.08 s/page)
+  distractor pages: 1760/2000 (2.08 s/page)
+  distractor pages: 1792/2000 (2.08 s/page)
+  distractor pages: 1824/2000 (2.08 s/page)
+  distractor pages: 1856/2000 (2.07 s/page)
+  distractor pages: 1888/2000 (2.07 s/page)
+  distractor pages: 1920/2000 (2.07 s/page)
+  distractor pages: 1952/2000 (2.07 s/page)
+  distractor pages: 1984/2000 (2.07 s/page)
+{"distractors": ["vidore/syntheticDocQA_energy_test", "vidore/syntheticDocQA_healthcare_industry_test"], "distractor_pages": 2000, "corpus": 2500}
+{"tag": "colSmol-500M_docvqa_test_subsampled_plus2000", "docs": 2500, "vectors": 2693919, "dim": 128, "queries": 451, "doc_seconds": 5145.7, "query_seconds": 3.5, "device": "cuda:0", "dtype": "torch.float32", "adapter_merge_check": {"base": "vidore/ColSmolVLM-Instruct-500M-base", "lora_modules": 224, "probe": "model.text_model.layers.0.self_attn.q_proj.weight", "max_abs_change": 0.05034318566322327}, "loading_report": {"missing_allowed": [], "unexpected": []}, "placement": {"devices": ["0"], "decoder_layers_per_device": {"0": 32}, "budget_bytes": [10945226342, 13290631987]}, "max_num_visual_tokens": null, "revision": null, "processor_kwargs": null}

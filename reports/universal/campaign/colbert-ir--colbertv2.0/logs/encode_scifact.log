@@ -1,0 +1,16 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py colbert-ir/colbertv2.0 --out /tmp/optdata/vectors --batch-size 32
+colbert-ir/colbertv2.0: registry status unverified, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py:793: UserWarning: colbert-ir/colbertv2.0: the sentence-transformers adapter is unverified in this repository; check retrieval quality before relying on it
+  return SentenceTransformersAdapter(model_id, **kwargs)
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 2464.66it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: colbert-ir/colbertv2.0
+Key           | Status     |  | 
+--------------+------------+--+-
+linear.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+One or more queries filled the entire query_expansion length of 32 tokens: any content beyond it was truncated, as this model always processes queries at exactly this width.
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [133, 152, 173, 168, 156, 148, 161, 167, 169, 167, 160, 161], "vectors_per_query": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 10, "ok": true}}
+{"tag": "colbertv2.0_scifact", "docs": 5183, "vectors": 815632, "dim": 128, "queries": 300, "doc_seconds": 61.2, "query_seconds": 0.6}

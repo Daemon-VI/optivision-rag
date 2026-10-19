@@ -24,16 +24,16 @@ from .conftest import make_page
 STATUSES = {
     "vidore/colpali-v1.3-merged": "measured",
     "vidore/colSmol-256M": "measured",
-    "vidore/colSmol-500M": "untested",
+    "vidore/colSmol-500M": "measured",  # Kaggle batch 02, 2026-10-14 (reports/universal/campaign)
     "vidore/colqwen2-v1.0-merged": "measured",
     "vidore/colqwen2-v1.0": "measured",
     "vidore/colqwen2.5-v0.2": "measured",
     "nvidia/nemotron-colembed-vl-4b-v2": "measured",
     "nvidia/nemotron-colembed-vl-8b-v2": "measured",  # run committed 2026-10-12 (reports/universal/wide)
-    "nomic-ai/colnomic-embed-multimodal-7b": "untested",  # its card loads it with the measured ColQwen2_5 class
-    "colbert-ir/colbertv2.0": "unverified",
+    "nomic-ai/colnomic-embed-multimodal-7b": "measured",  # Kaggle batch 04, 2026-10-14 (reports/universal/campaign)
+    "colbert-ir/colbertv2.0": "measured",  # Kaggle batch 11_text, 2026-10-15 (reports/universal/campaign)
     "answerdotai/answerai-colbert-small-v1": "measured",
-    "lightonai/GTE-ModernColBERT-v1": "untested",  # passed check_retriever here 2026-10-12
+    "lightonai/GTE-ModernColBERT-v1": "measured",  # Kaggle batch 11_text, 2026-10-15 (reports/universal/campaign)
 }
 
 
@@ -143,8 +143,38 @@ def test_the_registry_statuses_have_not_moved():
     assert {k: statuses[k] for k in STATUSES} == STATUSES
     added = {k: v for k, v in statuses.items() if k not in STATUSES}
     measured = {k for k, v in added.items() if v == "measured"}
-    assert measured == {"athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b"}
-    assert len(added) == 53 and set(added.values()) == {"measured", "untested", "unverified"}
+    assert measured == {"athrael-soju/colqwen3.5-4.5B-v3", "TomoroAI/tomoro-colqwen3-embed-4b",
+                        # Kaggle batches 01-04, 2026-10-14 (reports/universal/campaign)
+                        "vidore/colpali", "vidore/colpali-v1.1", "vidore/colpali-v1.2", "vidore/colpali-v1.2-merged",
+                        "vidore/colpali-v1.3", "vidore/colsmolvlm-v0.1", "vidore/colqwen2-v0.1",
+                        "nomic-ai/colnomic-embed-multimodal-3b", "tsystems/colqwen2.5-3b-multilingual-v1.0",
+                        "tsystems/colqwen2.5-3b-multilingual-v1.0-merged", "vidore/colqwen-omni-v0.1",
+                        "ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1",
+                        # Kaggle batches 05 and 08, 2026-10-15
+                        "ModernVBERT/colmodernvbert", "vidore/colpali-v1.2-hf", "vidore/colpali-v1.3-hf",
+                        "vidore/colqwen2-v1.0-hf", "TomoroAI/tomoro-colqwen3-embed-8b",
+                        # Kaggle batch 07, 2026-10-15
+                        "vultr/VultronRetrieverFlash-Qwen3.5-0.8B", "vultr/VultronRetrieverCore-Qwen3.5-4.5B",
+                        "vultr/VultronRetrieverPrime-Qwen3.5-8B",
+                        # Kaggle batch 06, 2026-10-15
+                        "VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1", "VAGOsolutions/SauerkrautLM-ColQwen3-4b-v0.1",
+                        "tencent/EVIE-4.5B",
+                        # Kaggle batch 12_retry, 2026-10-15 (after the page cap and the key remap)
+                        "vidore/colqwen2.5-v0.1", "Metric-AI/ColQwen2.5-3b-multilingual-v1.0",
+                        "Cognitive-Lab/ColNetraEmbed",
+                        # Kaggle batches 11_text and 13_retry, 2026-10-15
+                        "NeuML/colbert-bert-tiny", "mixedbread-ai/mxbai-edge-colbert-v0-17m",
+                        "mixedbread-ai/mxbai-edge-colbert-v0-32m", "lightonai/Reason-ModernColBERT",
+                        "lightonai/ColBERT-Zero", "lightonai/LateOn", "lightonai/mLateOn",
+                        "mixedbread-ai/mxbai-colbert-large-v1", "LiquidAI/LFM2-ColBERT-350M",
+                        "Hcompany/NeoMME-260M-Retriever-ST-late", "webAI-Official/webAI-ColVec1-4b",
+                        # Kaggle batch 14b_neomme_retry, 2026-10-16
+                        "Hcompany/NeoMME-800M-Retriever-ST-late",
+                        # Kaggle batch 14a_text_retry, 2026-10-16
+                        "lightonai/colbertv2.0", "LiquidAI/LFM2.5-ColBERT-350M", "jinaai/jina-colbert-v2",
+                        # Kaggle batches 15b_colvec8b_retry and 16_evie_retry, 2026-10-16
+                        "webAI-Official/webAI-ColVec1.1-8b", "tencent/EVIE-8B"}
+    assert len(added) == 53 and set(added.values()) == {"measured", "unverified"}
     assert all(m.evidence for m in supported_models())
 
 
@@ -153,8 +183,8 @@ def test_an_entry_that_was_not_measured_here_says_so_and_names_its_revision():
         if info.model_id in STATUSES:
             continue
         assert info.revision and len(info.revision) == 40, info.model_id
-        if info.status != "measured":
-            assert "never" in info.evidence, info.model_id  # "never encoded here" / "never run here"
+        if info.status != "measured":  # "never encoded here", or a failed run that says so
+            assert any(w in info.evidence for w in ("never", "not yet re-run", "cannot be loaded")), info.model_id
         assert info.dimension is None or info.dimension > 0
     without_width = [m.model_id for m in supported_models() if m.dimension is None]
     assert without_width == ["nvidia/llama-nemoretriever-colembed-1b-v1",
@@ -245,3 +275,18 @@ def test_an_unregistered_model_has_no_identity_because_its_dimension_is_not_aske
     with pytest.warns(UserWarning, match="unverified"):
         adapter = SentenceTransformersAdapter("some/unknown-model", model=_StubModel())
     assert adapter.identity() is None and adapter.dimension is None
+
+
+# ------------------------------------------------------------------ 0.4.1 regressions
+
+
+def test_page_and_text_adapter_corpora_carry_the_encoder_identity():
+    adapter = PageEncoderAdapter(SyntheticEncoder(dim=16, grid=8, noise=0.0))
+    pages = [(PageRef("a", 1), make_page()), (PageRef("b", 1), make_page(ink_rows=1))]
+    docs = adapter.encode_documents(pages)
+    assert docs.attrs["encoder_identity"] == adapter.identity().to_dict()
+    assert adapter.encode_queries(["memo"]).attrs["encoder_identity"]["dimension"] == 16
+    text = SentenceTransformersAdapter("answerdotai/answerai-colbert-small-v1", model=_StubModel())
+    attrs = text.encode_documents(["a document"]).attrs
+    assert attrs["encoder_identity"]["model_id"] == "answerdotai/answerai-colbert-small-v1"
+    assert text.encode_queries(["q"]).attrs["encoder_identity"] == text.identity().to_dict()

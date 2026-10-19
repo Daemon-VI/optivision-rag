@@ -31,6 +31,7 @@ ALLOWED_OPTIVISION = {
     "optivision.stages.merge",
     "optivision.stages.project",
     "optivision.stages.quantize",
+    "optivision.stages.int4norm",  # array-only like quantize, but new in 0.5.0, so not pinned
     "optivision.storage",
 }
 #: Names core may take from modules that also hold page- or legacy-specific code.

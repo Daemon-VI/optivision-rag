@@ -1,0 +1,13 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py lightonai/colbertv2.0 --out /tmp/optdata/vectors --batch-size 32
+lightonai/colbertv2.0: registry status untested, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating corpus split:   0%|          | 0/5183 [00:00<?, ? examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 39751.60 examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 38795.81 examples/s]
+Generating queries split:   0%|          | 0/1109 [00:00<?, ? examples/s]Generating queries split: 100%|██████████| 1109/1109 [00:00<00:00, 348817.63 examples/s]
+Generating train split:   0%|          | 0/919 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 919/919 [00:00<00:00, 51626.87 examples/s]
+Generating test split:   0%|          | 0/339 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 339/339 [00:00<00:00, 140196.12 examples/s]
+Converting SentenceTransformer model lightonai/colbertv2.0 to MultiVectorEncoder.
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 2624.41it/s]
+{"loaded": "lightonai/colbertv2.0", "revision": "0b9b1e380096a3b72b6b4877f68d59effb62e0f2"}
+One or more queries filled the entire query_expansion length of 32 tokens: any content beyond it was truncated, as this model always processes queries at exactly this width.
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [133, 262, 276, 248, 252, 256, 221, 250, 224, 276, 270, 250], "vectors_per_query": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 11, "ok": true}}
+{"tag": "colbertv2.0_scifact", "docs": 5183, "vectors": 1221388, "dim": 128, "queries": 300, "doc_seconds": 90.2, "query_seconds": 0.6}

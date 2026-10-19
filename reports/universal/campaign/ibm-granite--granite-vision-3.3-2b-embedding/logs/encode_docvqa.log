@@ -1,0 +1,39 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py ibm-granite/granite-vision-3.3-2b-embedding vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --trust-remote-code --dtype float32 --batch-size 4 --multi-gpu --revision latest
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+ibm-granite/granite-vision-3.3-2b-embedding: registry status unverified
+Generating test split:   0%|          | 0/500 [00:00<?, ? examples/s]Generating test split:  20%|██        | 100/500 [00:01<00:05, 67.90 examples/s]Generating test split:  40%|████      | 200/500 [00:01<00:02, 134.52 examples/s]Generating test split:  60%|██████    | 300/500 [00:01<00:01, 195.75 examples/s]Generating test split:  80%|████████  | 400/500 [00:02<00:00, 241.98 examples/s]Generating test split: 100%|██████████| 500/500 [00:02<00:00, 221.46 examples/s]
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files:  33%|███▎      | 1/3 [00:15<00:31, 15.89s/it]Fetching 3 files:  67%|██████▋   | 2/3 [00:48<00:26, 26.00s/it]Fetching 3 files: 100%|██████████| 3/3 [00:57<00:00, 18.17s/it]Fetching 3 files: 100%|██████████| 3/3 [00:57<00:00, 19.27s/it]
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 200, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 93, in main
+    adapter = load_adapter(a.model, loader=a.loader, **options)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 785, in load_adapter
+    return TokenEncoderAdapter(RemoteCodeEncoder(model_id, name.split(":", 1)[1], **kwargs), info=info)
+                               ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/late.py", line 363, in __init__
+    model = _from_pretrained(AutoModel, model_name, self.torch_dtype, **extra)
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 192, in _from_pretrained
+    model, info = _load_with_info(model_cls, checkpoint, dtype, mapping, extra)
+                  ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 176, in _load_with_info
+    return model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/auto_factory.py", line 385, in from_pretrained
+    return model_class.from_pretrained(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py", line 4350, in from_pretrained
+    model = cls(config, *model_args, **model_kwargs)
+  File "/tmp/hf/modules/transformers_modules/ibm_hyphen_granite/granite_hyphen_vision_hyphen_3_dot_3_hyphen_2b_hyphen_embedding/baa53d1e1ac95baefb15e4aa9fdcc471ac728c83/modeling_granite_vision_embedding.py", line 107, in __init__
+    if model.language_model._tied_weights_keys is not None:
+       ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1968, in __getattr__
+    raise AttributeError(
+        f"'{type(self).__name__}' object has no attribute '{name}'"
+    )
+AttributeError: 'LlavaNextWithCustomPacking' object has no attribute 'language_model'

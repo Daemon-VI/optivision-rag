@@ -1,5 +1,446 @@
 # Changelog
 
+## 0.5.0 (2026-10-19)
+
+**In short.**
+- **The measured catalogue grew from 8 models and 972 rows to 55 models and 5,492 rows.** 57 of
+  the 65 registry models are now `measured`, from the Kaggle campaign below. The other 8 stay
+  `unverified`: they could not be loaded, or they failed `check_retriever`.
+- **New experimental codec: `NormPreservingInt4Quantizer`** (registry name `int4norm`, labels
+  `int4norm` and `int4norm(mean)`), in `optivision.stages` and `optivision.core.stages`.
+  - It is int4 with the float16 scale chosen so that each decoded vector keeps the norm of the
+    vector it codes. Its levels, code size and decoder are `Int4Quantizer`'s.
+  - Measured, centred: ndcg@5 retention of at least 0.95 on all 46 model-dataset units of the
+    follow-up, and an interval lower bound of at least 0.95 on 45 (against 41 for `int4(mean)`).
+  - That was 19 models; 5 of the 10 predictions written before the run failed, and the analysis
+    behind the numbers above is exploratory (`reports/universal/followup/INT4NORM_SUMMARY.md`,
+    `int4norm_analysis/REPORT.md`).
+  - So it is in no default, no candidate space and no `optivision.__all__`: it is used only when
+    named. Its own module, `stages/int4norm.py`, leaves the files pinned for X1-X3 unchanged.
+- **Fixes from the review of 0.4.0** (2026-10-14).
+  - H1: adapters record the encoder identity that `certify()` writes.
+  - H2: registry revision pins reach the loaders.
+  - M1: `check_retriever` counts ties as misses and needs at least `2 * allowed_misses + 2` pairs.
+  - M3: 3-D numpy output is split into rows.
+  - M4: `vidore/colqwen2-v1.0` explains how it was measured.
+  - M5: an injected model's inputs go to the model's device.
+  - L2: the non-finite check runs on kept rows only.
+  - L4: nemotron-colembed-vl-4b-v2 declares CC-BY-NC-4.0 and its pinned revision.
+  - L5: an out-of-range `--min-retention` exits with code 2.
+  - L8: a PyLate encoder without a registry entry is a text model.
+  - The 80-column `optivision models` table.
+- **Still open from that review.**
+  - M2: remote-code recipes do not cast inputs to the model dtype.
+  - L1: parity of batched or bf16 encoding with the measured runs.
+  - L3: a mismatched mask is dropped silently.
+  - L6: hardcoded text in `build_models_doc.py`.
+  - L7: label sets across datasets are not checked.
+- **Unchanged.** `optimize()`, `calibrate()`, `certify()`, the file formats, and every stage name
+  registered in 0.4.0.
+
+### Kaggle measurement campaign, batches 01-04
+
+- **14 more models measured** on ViDoRe V1 DocVQA + InfoVQA (500 pages each) over two Kaggle
+  T4s, at the revisions pinned in the registry: `vidore/colpali`, `colpali-v1.1`, `-v1.2`,
+  `-v1.2-merged`, `-v1.3`, `vidore/colsmolvlm-v0.1`, `vidore/colSmol-500M`,
+  `vidore/colqwen2-v0.1`, `vidore/colqwen-omni-v0.1`, `nomic-ai/colnomic-embed-multimodal-3b`
+  and `-7b` (float16 inference), `tsystems/colqwen2.5-3b-multilingual-v1.0` and its `-merged`
+  copy, `ApsaraStackMaaS/EvoQwen2.5-VL-Retriever-7B-v1` (float16 inference). Their registry
+  status is `measured` and the catalogue (`presets/measured.json`) holds their fixed-pipeline
+  rows: 22 models, 2484 rows. 24 of the 65 registry models are measured. Records:
+  `reports/universal/campaign/`, one folder per model plus `outcomes.json`.
+- **Four failures are recorded, not hidden.** `vidore/colqwen2.5-v0.1` and
+  `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` ran a T4 out of memory on one page at their
+  checkpoints' own page-size limit (16384 visual tokens). `Cognitive-Lab/ColNetraEmbed`'s load
+  was refused because its language-model keys are nested one level deeper than ColGemma3
+  expects. `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` cannot be loaded at all: its adapter
+  names a base model that is not on the Hugging Face Hub (now `unverified`).
+- **Page-resolution cap.** `ColVLMEncoder` and `ColEngineTokenEncoder` take
+  `max_num_visual_tokens`. Registry entries can carry `load_options`, which `load_adapter`
+  passes unless the caller overrides them. The two ColQwen2.5 checkpoints above get the
+  768-token cap their model cards state. A cap set on an encoder is part of the encoder
+  identity.
+- **Nested checkpoint keys.** When the weights a load leaves missing are exactly the
+  checkpoint's unmatched tensors one nesting level off, the loader reloads once with those
+  names mapped and records the rules in `loading_report["key_remap"]`. Any other mismatch is
+  still an error.
+- `scripts/ingest_campaign.py` copies a batch's `results_<batch>.zip` into the repository.
+  `scripts/build_measured_catalog.py` reads `campaign/outcomes.json`. A retry notebook,
+  `notebooks/kaggle_batches/batch_12_retry.ipynb`, re-runs the three models the fixes cover.
+
+### Kaggle measurement campaign, batches 05 and 08-10
+
+- **5 more models measured**, at their pinned revisions (each equal to the Hub's main):
+  `vidore/colpali-v1.2-hf`, `vidore/colpali-v1.3-hf`, `vidore/colqwen2-v1.0-hf` (float16
+  inference through sentence-transformers 6.1.0), `ModernVBERT/colmodernvbert` (float32,
+  sentence-transformers) and `TomoroAI/tomoro-colqwen3-embed-8b` (float16 over two T4s). That
+  is the first time the sentence-transformers image path has run here. 29 of the 65 registry
+  models are now measured; the catalogue holds 27 models and 3044 rows.
+- **11 failures are recorded in the registry evidence**:
+  - The two `Hcompany/NeoMME` models need transformers 5.17; the session had 5.16.1.
+  - `tencent/EVIE-8B` and `webAI-Official/webAI-ColVec1.1-8b` were split over two GPUs, but
+    sentence-transformers moved them back onto one, which ran out of memory.
+  - `webAI-Official/webAI-ColVec1-4b`'s own `from_pretrained` returns no loading info.
+  - `nvidia/llama-nemotron-colembed-vl-3b-v2` passed `check_retriever` but was killed for host
+    memory: 500 pages of ~1800 × 3072 float32 vectors.
+  - `jinaai/jina-embeddings-v4`, `ibm-granite/granite-vision-3.3-2b-embedding` and
+    `5CD-AI/Vintern-Embedding-1B` ship remote code that fails under transformers 5.
+  - The two `nvidia/llama-nemoretriever-colembed` v1 models import flash_attn, which does not
+    run on a T4.
+- **The sentence-transformers adapter keeps a `device_map` placement.** sentence-transformers'
+  `encode` calls `model.to(device)` on every call; the adapter now leaves the split in place.
+- **A `from_pretrained` that returns the model alone is still checked.** The loader compares
+  the model's state-dict keys with the tensor names in the checkpoint's safetensors headers
+  and refuses the load if any weight would be random, as before.
+- `notebooks/kaggle_batches/batch_13_retry.ipynb` re-runs the five models these fixes cover,
+  with transformers>=5.17.
+
+### Kaggle measurement campaign, batch 07
+
+- **3 more models measured** through colpali-engine (ColQwen3_5), at their pinned revisions:
+  `vultr/VultronRetrieverFlash-Qwen3.5-0.8B` and `vultr/VultronRetrieverCore-Qwen3.5-4.5B`
+  (float32), `vultr/VultronRetrieverPrime-Qwen3.5-8B` (float16 inference over two T4s; the
+  session had no time left for its selection study). 32 of the 65 registry models are now
+  measured; the catalogue holds 30 models and 3428 rows.
+
+### Kaggle measurement campaign, batch 06
+
+- **3 more models measured** through sentence-transformers 6.1.0 (float16 inference, one T4), at
+  their pinned revisions: `VAGOsolutions/SauerkrautLM-ColQwen3-2b-v0.1`, `-4b-v0.1` and
+  `tencent/EVIE-4.5B` (2048 dimensions). 35 of the 65 registry models are now measured; the
+  catalogue holds 33 models and 3782 rows.
+- `webAI-Official/webAI-ColVec1.1-4b` loaded but failed `check_retriever`: 9 of 12 queries
+  ranked their own page first, and 10 are required. Its card states bfloat16 weights and
+  evaluation, which a T4 cannot run natively. `batch_14c_colvec_retry` runs it in float32 over two T4s
+  (it was added to `batch_13_retry` after that batch had already been imported).
+
+### Kaggle measurement campaign, batch 12_retry
+
+- **The three re-runs after the batch 01-04 fixes are measured** (float32 over two T4s, at
+  their pinned revisions). `vidore/colqwen2.5-v0.1` and
+  `Metric-AI/ColQwen2.5-3b-multilingual-v1.0` ran with pages capped at 768 visual tokens (about
+  740 vectors per page). `Cognitive-Lab/ColNetraEmbed` loaded with the released colpali-engine
+  0.3.18 once its nested `language_model.model.*` keys were mapped; the mapping is recorded in
+  `loading_report["key_remap"]`. 38 of the 65 registry models are now measured; the catalogue
+  holds 36 models and 4106 rows.
+
+### Kaggle measurement campaign, batches 11_text and 13_retry
+
+- **13 more models measured.** 11 text models were measured on BEIR SciFact through
+  sentence-transformers 6.1.0: `NeuML/colbert-bert-tiny`, the two `mixedbread-ai/mxbai-edge-colbert-v0`
+  models (17m, 32m), `colbert-ir/colbertv2.0`, `lightonai/GTE-ModernColBERT-v1`,
+  `Reason-ModernColBERT`, `ColBERT-Zero`, `LateOn`, `mLateOn`, `mixedbread-ai/mxbai-colbert-large-v1`
+  and `LiquidAI/LFM2-ColBERT-350M`. Two image models were also measured:
+  `Hcompany/NeoMME-260M-Retriever-ST-late` (with transformers 5.19.0) and
+  `webAI-Official/webAI-ColVec1-4b` (its weights checked against the checkpoint's tensor names).
+  51 of the 65 registry models are now measured; the catalogue holds 49 models and 4936 rows.
+  `colbert-ir/colbertv2.0` and `GTE-ModernColBERT-v1` are pinned to the Hub commit that was
+  measured.
+- **lightonai/colbertv2.0's results were lost.** It shares the short name `colbertv2.0` with
+  `colbert-ir/colbertv2.0` in the same batch, and the later run overwrote its folder. Only its
+  selection study survived, and the ingest set it aside in `campaign/batches/11_text/orphans/`.
+  The ingest now marks a model whose results are missing as incomplete, and keeps a
+  selection-study file out of a folder whose run never made one. `measure_models.py` and
+  `make_kaggle_batches.py` now refuse two models with the same short name in one batch.
+- **Text runs now measure the registry's pin.** `encode_vectors.py` and `encode_text_vectors.py`
+  pass the registry's revision to sentence-transformers. Batches up to now loaded the Hub's main
+  branch, which matched the pin for every model measured. The loaded revision is recorded in the
+  run info.
+- **Split sentence-transformers models leave GPU 0 more room.** GPU 0's share of the weights is
+  capped at 45% of its memory. `tencent/EVIE-8B` was split over the two T4s this time, but still
+  ran GPU 0 out of memory in its forward pass.
+- **Still unmeasured:**
+  - `Hcompany/NeoMME-800M-Retriever-ST-late` ran out of GPU memory in attention at 4 pages per
+    batch.
+  - `LiquidAI/LFM2.5-ColBERT-350M` ran out of session time in its study.
+  - `jinaai/jina-colbert-v2` was not reached.
+  - `webAI-Official/webAI-ColVec1.1-8b` cannot run on T4s: in float16 it does not fit one, and
+    split over two, its own forward multiplies tensors that sit on different GPUs.
+- Four notebooks re-run the rest, side by side, because one would need more than an 11-hour
+  session:
+  - `batch_14a_text_retry` runs the three text models.
+  - `batch_14b_neomme_retry` runs NeoMME-800M one page at a time.
+  - `batch_14c_colvec_retry` runs `webAI-ColVec1.1-4b` in float32 over two T4s.
+  - `batch_14d_evie_retry` runs EVIE-8B.
+
+  `batch_13_retry.ipynb` is back to the list that ran.
+
+### Kaggle measurement campaign, batch 14b_neomme_retry
+
+- **`Hcompany/NeoMME-800M-Retriever-ST-late` measured.** It ran in float32 on one T4, one page per
+  batch, with transformers 5.20.0, and the selection study completed. 52 of the 65 registry models
+  are now measured; the catalogue holds 50 models and 5044 rows.
+
+### Kaggle measurement campaign, batch 14a_text_retry
+
+- **Three more text models measured on BEIR SciFact, each with its selection study:**
+  `lightonai/colbertv2.0`, `LiquidAI/LFM2.5-ColBERT-350M` and `jinaai/jina-colbert-v2`. Each ran
+  at its registry pin. 55 of the 65 registry models are now measured; the catalogue holds 53
+  models and 5206 rows.
+- `lightonai/colbertv2.0`'s float baseline (nDCG@10 0.692) differs from `colbert-ir/colbertv2.0`'s
+  (0.646), although it is described as a conversion of the same model. Both ran through
+  sentence-transformers, but a document gives about 236 vectors against about 157, so the two
+  configurations truncate or tokenize documents differently. That was not investigated further.
+
+### Kaggle measurement campaign, batch 14c_colvec_retry
+
+- **`webAI-Official/webAI-ColVec1.1-4b` failed again, over two T4s in float32.** Its own forward
+  (`modeling_colqwen35_bidirection.py`) multiplies the projection head's output, which
+  `device_map="auto"` put on the last GPU, by the attention mask, which is on the first. The 8B
+  model failed the same way in batch 13_retry.
+- **The sentence-transformers adapter moves a split model's small heads to the input device.**
+  Top-level modules holding at most 2% of the parameters go to the device the inputs are on,
+  and accelerate's hook copies the hidden states across. `placement["heads_on_input_device"]`
+  names the modules moved.
+- Two notebooks re-run the ColVec1.1 models with the fix: `batch_15a_colvec4b_retry` (4B,
+  float32) and `batch_15b_colvec8b_retry` (8B, float16). The 8B is no longer listed as
+  unloadable.
+
+### Kaggle measurement campaign, batches 15b_colvec8b_retry and 16_evie_retry
+
+- **`webAI-Official/webAI-ColVec1.1-8b` measured** in float16 over two T4s, with its projection
+  head on the input GPU. `check_retriever` passed with 10 of 12, the minimum.
+- **`tencent/EVIE-8B` measured** in float16 over two T4s, at the 1,024-token page budget its card
+  gives for its evaluation protocol (`processor_kwargs`, recorded in the registry notes).
+- Both selection studies completed. 57 of the 65 registry models are now measured; the catalogue
+  holds 55 models and 5492 rows.
+- Plain int4 held on EVIE-8B's 4096-d vectors (retention 1.001 and 1.000), but collapsed on
+  `nvidia/nemotron-colembed-vl-8b-v2`, which is also 4096-d (0.011 and 0.007). The collapse is not
+  a matter of width alone.
+
+### Kaggle measurement campaign, batch 15a_colvec4b_retry
+
+- **Moving the projection head to the input GPU worked.** `webAI-Official/webAI-ColVec1.1-4b` ran
+  over two T4s in float32 with `lm_head` and `embedding_proj_layer` on GPU 0.
+- **It still failed `check_retriever`, with 9 of 12 queries, the same as in float16.** It was
+  loaded as its card shows, so precision is ruled out as the cause. It stays unverified and is
+  not re-run. Its card reports ViDoRe V3 only.
+
+### Kaggle measurement campaign, batch 14d_evie_retry
+
+- **`tencent/EVIE-8B` passed `check_retriever` (11 of 12) but ran out of memory in the encode.**
+  Its processor allows 16,384 visual tokens a page, against about 1,000 for `EVIE-4.5B`. One
+  DocVQA page of about 8500 tokens needed 4.4 GiB for a single attention call on GPU 0.
+- **A batch can pass `processor_kwargs` to a sentence-transformers page model.**
+  `measure_models.py` forwards it as `encode_vectors.py --processor-kwargs`, and the run info
+  records it. `batch_16_evie_retry` uses the 1,024-token page budget that EVIE-8B's card gives
+  for its evaluation protocol.
+
+### Campaign analysis and follow-up measurements
+
+- **Analysis.** `reports/universal/campaign_analysis/` holds an exploratory multi-agent analysis
+  of the 55 measured models: `REPORT.md`, every finding with its skeptic's verdict
+  (`findings.json`), the scripts, and a literature digest.
+- **Predictions, written before the runs.** `PREDICTIONS.md` lists 14 predictions with fixed
+  thresholds for the follow-up batches. It is committed with their notebooks, before they ran.
+- **Eight follow-up notebooks** (`notebooks/kaggle_followup`, written by
+  `scripts/make_kaggle_batches.py`):
+  - `f1` and `f2`: text models on BEIR NFCorpus.
+  - `f3`: SciFact with 10,000 FiQA distractor documents.
+  - `f4` and `f5`: image models on ViDoRe arXivQA and TabFQuAD.
+  - `f6` and `f7`: DocVQA with 2,000 distractor pages.
+  - `f8`: the vector geometry of the models where plain int4 collapses, and of controls.
+- **Results go to their own folder.** `ingest_campaign.py` sends `f<n>_` archives to
+  `reports/universal/followup/<batch>/`, and the campaign's folders, outcomes and catalogue are
+  not touched.
+- **`measure_models.py` spec keys.** It accepts `datasets` (image datasets, or BEIR names for
+  text), `distractors` with `distractor_count`, a per-model `limit`, and `studies: false`
+  (encode and geometry only).
+- **Encoders.** `encode_vectors.py` takes `--distractors` and `--distractor-pages`, and streams
+  those pages a chunk at a time. `encode_text_vectors.py` takes `--dataset`, `--distractors`,
+  `--distractor-docs` and `--check-dataset`.
+- **Vector geometry is recorded after every encode.** `scripts/vector_geometry.py` writes
+  `geometry/<tag>.json` before the vectors are deleted. It records:
+  - the corpus-mean offset;
+  - the peak-to-RMS ratio per vector;
+  - how concentrated the second moment is in a few coordinates;
+  - per codec, how well each query token's scores survive encoding with the package's own
+    quantizers.
+- **Text check pairs.** They now take each query's most relevant document, and skip a pair whose
+  query is relevant to another chosen document. On every dataset they are drawn from SciFact
+  (`--check-dataset`). On NFCorpus's keyword queries, which have many relevant documents each,
+  "ranks its own document first" failed even for colbertv2.0 (2 of 12) in a local CPU check.
+- **Correction.** The 14a entry above gave the colbertv2.0 baselines as nDCG@5. They are nDCG@10,
+  the metric of the catalogue's text rows.
+
+### Follow-up batch f1_text_nfcorpus_a
+
+- **Results.** colbertv2.0, answerai-colbert-small-v1, LateOn and mxbai-edge-colbert-v0-17m were
+  measured on NFCorpus (3,633 documents, 323 queries), each passing the SciFact check at 10 to 12
+  of 12. They are in `reports/universal/followup/f1_text_nfcorpus_a/`.
+- **Scoring.** `scripts/followup_predictions.py` scores the follow-up results against
+  `PREDICTIONS.md` and writes `reports/universal/followup/PREDICTIONS_STATUS.md`.
+- **Two predictions failed.**
+  - P3: LateOn's plain int4 retention on NFCorpus is 0.638. The prediction was below 0.6.
+  - P6: on answerai-colbert-small-v1, merging to 10% retains more than merging to 25% (0.858
+    against 0.797). The campaign data already held 4 such inversions in 80 units, all on DocVQA,
+    so a prediction "on all 18 units" was stronger than the data supported.
+- **Pending.** The other 12 are pending. A unit or two can't settle them yet, though the units in
+  so far meet every per-unit threshold except int4(mean)'s lower bound on answerai (0.924), which
+  P2 allows twice.
+- **Not predicted (exploratory).**
+  - Plain int4 collapses on answerai-colbert-small-v1 (0.455), a model neither in the degraded
+    set nor among the controls. Its int4 score correlation is high (0.982), the opposite of the
+    signal P12 and P14 expect.
+  - Binary keeps 0.241 on mxbai-edge-colbert-v0-17m.
+- **New notebook `f3b_answerai_scifact`.** It measures answerai on SciFact alone. P9 to P11
+  compare f3's enlarged corpus with the original one, and answerai's earlier SciFact run came from
+  the pre-campaign script, whose rows lack int4(mean) and the tiered index. The predictions are
+  unchanged.
+
+### Follow-up batches f2, f3, f4, f5 and f7
+
+- **Results.** All 12 models were measured with every study, each passing the check at 10 to 12
+  of 12. That completes the 18 new-dataset units, plus 2 of the 4 corpus-size units (colbertv2.0
+  on SciFact with 10,000 FiQA documents, and colpali-v1.3 on DocVQA with 2,000 pages). Status is
+  in `reports/universal/followup/PREDICTIONS_STATUS.md`.
+- **Held:**
+  - P1: int8 on all 18 units.
+  - P2: int4(mean) point retention ≥ 0.93 on all 18, and its lower bound ≥ 0.95 on exactly 16.
+    The misses are answerai on NFCorpus and EVIE-4.5B on TabFQuAD.
+  - P4: median binary retention is 0.856 on NFCorpus and 0.995 on the page sets.
+  - P5: merge 0.25 followed by int8 meets its bound on 9 of 10 page-set units.
+  - P14: Spearman 0.854 between the int4 statistic and plain-int4 retention.
+- **Failed:**
+  - P3: LateOn, as reported for f1. All its other parts held: jina and colbertv2.0 stay at or above
+    0.9, and every image model is at or above 0.97.
+  - P6: three units where merging to 10% beats merging to 25%: answerai on NFCorpus,
+    colSmol-500M on TabFQuAD, and EVIE-4.5B on TabFQuAD.
+  - P7: recall@1 drops less than ndcg@5 on TabFQuAD (0.914 against 0.898) and on NFCorpus (0.526
+    against 0.525). It drops more only on arXivQA.
+  - P10 and P11: on colbertv2.0, binary, merge with binary, and the tiered index are not lower on
+    the enlarged corpus. Its baseline barely moves (0.623 to 0.621), so the FiQA documents
+    hardly compete with SciFact's. On colpali-v1.3, whose baseline drops from 0.575 to 0.505 with
+    the extra pages, both held.
+- **Pending:**
+  - P8: interim default met rates 0.988 / 0.991 / 0.971, and point 0.426 at target 0.99. It
+    waits for f6 and f3b.
+  - P9: waits for f6 and f3b. Both measured units so far change by less than 0.01.
+  - P12 and P13: wait for f8.
+- **Not predicted (exploratory).**
+  - answerai's plain int4 keeps 0.896 on SciFact with distractors (0.899 in its pre-campaign
+    SciFact run), against 0.455 on NFCorpus, so its collapse depends on the dataset.
+  - Merging is much weaker on NFCorpus for LFM2-ColBERT-350M: merge 0.25 / 0.1 keep 0.509 / 0.194,
+    against 0.755 / 0.560 on SciFact.
+  - jina-colbert-v2 keeps 0.548 at merge 0.1, against 0.785 on SciFact.
+
+### Follow-up batch f6_scale_colsmol
+
+- **Results.** colSmol-500M was measured on DocVQA with 2,000 distractor pages, passing the check at
+  11 of 12. Its baseline drops from 0.575 to 0.473.
+- **P8 held.** With every selection unit in, over 22 units, the `calibrate()` default's held-out
+  met rate is 0.989, 0.989 and 0.972 at targets 0.95, 0.97 and 0.99. The point rule's is 0.423
+  at 0.99.
+- **P9:** colSmol's change is -0.001 for int8 and +0.009 for int4(mean), both under 0.01. P9 now
+  waits only for f3b.
+- **P10 and P11 on colSmol.** They held: binary fell from 0.977 to 0.962, merge with binary from
+  0.960 to 0.946, and the tiered index from 1.001 to 1.000. Both predictions stay failed, on
+  colbertv2.0.
+
+### Follow-up batches f8_geometry and f3b_answerai_scifact (follow-up complete)
+
+- **Results.** f8 encoded 15 models for geometry only, each passing the check at 10 to 12 of 12.
+  f3b measured answerai-colbert-small-v1 on SciFact at 11 of 12.
+- **Final score: 9 of 14 predictions held, 5 failed.**
+  - **Held:** P1, P2, P4, P5, P8, P9, P12 (AUC 0.964), P13 and P14.
+  - **Failed:** P3, P6, P7, P10 and P11. For P11, answerai's tiered retention rose from 0.994 to
+    0.994 with the larger corpus, rather than falling.
+- **Summary.** `reports/universal/followup/SUMMARY.md` gives the outcome of each prediction,
+  caveats and exploratory notes. Two caveats:
+  - The P12/P14 statistic is computed from int4 itself, so it is not an independent property of
+    the vectors.
+  - answerai has the same geometry on NFCorpus and SciFact, but its plain int4 keeps 0.455 on
+    NFCorpus against 0.899 on SciFact.
+
+### Follow-up analysis (exploratory)
+
+- **What it is.** `reports/universal/followup/analysis/REPORT.md` analyses the follow-up data from
+  six angles. Each finding was re-checked by a second script: of 30 findings, 3 were confirmed,
+  26 weakened and corrected, and 1 refuted. The scripts are under `analysis/scripts/`.
+- **Evidence label.** Post hoc and in-sample. No package code, record, catalogue or prediction
+  changed.
+- **Main findings:**
+  - **answerai's plain int4 collapse comes from per-vector norm noise.** Renormalising each decoded
+    vector, by changing only the stored float16 scale, took ndcg@10 retention from 0.414 to 0.970
+    on NFCorpus and from 0.888 to 1.001 on SciFact, on a CPU re-encode. Other models are untested.
+  - **float16 and int8 had a lower bound ≥ 0.95 on 103 of 103 units; int4(mean) on 100.** Binary
+    was safe on 4 of 25 text units.
+  - **A geometry statistic that needs no codec run flags every int4 collapse in-sample.** It is
+    the second-moment share of the top 4 coordinates, with a thin margin.
+  - **Calibrating on one text dataset needs a margin.** The colpali preset's binary failed the bar
+    on 17 of 27 DocVQA 128-d units.
+
+### int4 with a norm-preserving scale (exploratory, study-only), and the batches that test it
+
+**Nothing under `src/` changes.**
+- `compose.py`, `stages/quantize.py`, `scoring.py` and `calibration.py` are among the files
+  byte-pinned for X1-X3 (`scripts/research/x_common.py check_code`).
+- A first version changed them and broke that check (`tests/test_x_harness.py`), so it was never
+  committed.
+- The codec and the faster scoring below therefore live in `scripts/universal_study/`, next to the
+  study that uses them.
+- They are not package API: the codec is not a registered stage.
+
+- **`NormPreservingInt4Quantizer`** (`scripts/universal_study/int4norm_codec.py`).
+  - It keeps int4's levels and code size, and stores the per-vector float16 scale so that the
+    decoded vector has the norm of the vector it codes.
+  - With `center="mean"`, that norm is measured with the mean added back.
+  - Decoding is `Int4Quantizer`'s.
+  - Labels: `int4norm` and `int4norm(mean)`. `PREDICTIONS_INT4NORM.md` calls them `int4(norm)` and
+    `int4(mean, norm)`.
+- **Local check, exploratory.** On a CPU re-encode of answerai-colbert-small-v1, ndcg@10 retention:
+
+  | | plain int4 | `int4norm` | `int4norm(mean)` | `int4(mean)` |
+  |---|---|---|---|---|
+  | NFCorpus | 0.414 | 0.968 | 0.998 | 0.924 |
+  | SciFact | 0.888 | 0.999 | 0.999 | — |
+
+  It has not been measured on any other model, and it is not a default anywhere.
+- **New study script, `scripts/universal_study/s17_int4_norm.py`.** It runs the codecs, including
+  the four int4 variants, and Ward 1/3 and 1/4 merging followed by them. It also records
+  decoded-norm statistics and per-query nDCG@10.
+- **`measure_models.py`.** A spec's new `study` key chooses the studies (default `["s13"]`). An
+  unknown study stops the model before it is encoded.
+- **Faster GPU scoring, same scores: `scripts/universal_study/device_scoring.py`.** Its
+  `maxsim_matrix` takes the per-page max on the `OPTIVISION_SCORE_DEVICE` device
+  (`scatter_reduce` with `amax`). Only the page maxima come back, instead of the whole similarity
+  block.
+  - The per-query sum is the same numpy call.
+  - `use_for_calibration()` makes `calibration.score_space` score with it, in the calling process.
+    Only s17 calls it.
+  - Scores are bit-identical to `scoring.maxsim_matrix` on the same device:
+    `tests/test_followup_study_helpers.py`, plus a local check on 800 answerai NFCorpus documents
+    (float32 and `int4norm(mean)` codes).
+  - Why. On SciDocs the old path spent about 650 s per row bringing blocks back, so s13 took
+    293 min for answerai alone.
+  - On Kaggle's T4 it brought SciDocs to about 33 to 68 s per row.
+- **First run lost to an unpushed branch.**
+  - The five notebooks `f9` to `f13` first ran on 2026-10-18/19 at `0ea1c02`, which has no s17.
+    That commit's `measure_models.py` ignores `study`, so they ran s13 only.
+  - The results are ingested under those names: 39 units. The 27 measured before reproduce to 4
+    decimals.
+  - Q10 depends only on s13 and is scored from them: it **failed**.
+  - Details: `reports/universal/followup/INT4NORM_RUN_NOTES.md`.
+- **Five rerun notebooks, `f9b` to `f13b`,** in `notebooks/kaggle_followup_int4norm/`, run s17 only:
+  - 12 text models on SciFact and NFCorpus.
+  - 7 page models on DocVQA and TabFQuAD, nemotron included.
+  - 8 text models on BEIR SciDocs; mLateOn at batch size 8, after running out of GPU memory at 32.
+  - SciFact with 10,000 TREC-COVID distractors. This one is exploratory: no prediction depends on it.
+  - A notebook that names a study the cloned branch lacks now stops before any GPU work.
+- **Predictions.** Q1 to Q10 are in `reports/universal/followup/PREDICTIONS_INT4NORM.md`.
+  - The file was written on 2026-10-18 at 12:07, before the first run, and is committed unchanged.
+    It was not committed before that run, so its timing rests on the file time, not on git.
+  - No `int4norm` or `int4norm(mean)` value existed before the reruns.
+  - `scripts/int4norm_predictions.py` scores them into `PREDICTIONS_INT4NORM_STATUS.md`.
+- **Results of the reruns (2026-10-19, 11.4 GPU h): 5 held, 5 failed.**
+  - Held: Q1, Q2 (8 of 10, the minimum), Q4 (24 of 24), Q5 (Spearman −0.723) and Q9.
+  - Failed: Q3 (LateOn NFCorpus `int4norm` 0.9006, against below 0.9), Q6 (colpali-v1.3 DocVQA lost
+    0.012, against 0.01), Q7 (nemotron-4b TabFQuAD `int4norm` 0.743, against below 0.5), Q8
+    (EVIE-4.5B TabFQuAD lower bound 0.927) and Q10.
+  - Exploratory: `int4norm(mean)` has a lower bound of at least 0.95 on 45 of the 46 units,
+    against 41 for `int4(mean)`.
+  - It stays study-only. Details: `reports/universal/followup/INT4NORM_SUMMARY.md`.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

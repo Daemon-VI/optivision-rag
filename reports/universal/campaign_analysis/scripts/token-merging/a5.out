@@ -1,0 +1,73 @@
+--- redundancy re-test excluding ColNetraEmbed (only image model with <500 vpd)
+L0.5 docvqa rho=-0.18 p=0.28 n=39 | infovqa rho=-0.24 p=0.15 n=39
+L0.33 docvqa rho=-0.08 p=0.64 n=39 | infovqa rho=-0.38 p=0.017 n=39
+L0.25 docvqa rho=-0.22 p=0.17 n=39 | infovqa rho=-0.14 p=0.39 n=39
+L0.1 docvqa rho=-0.30 p=0.076 n=36 | infovqa rho=-0.27 p=0.11 n=36
+La docvqa rho=-0.07 p=0.65 n=39 | infovqa rho=0.02 p=0.89 n=39
+
+--- pooled image, dataset-demeaned ranks: Spearman(bv, loss) within-dataset ranks
+L0.25 rho=-0.24 p=0.03 n=80 ; model-bootstrap 95% CI [-0.45 -0.04]
+L0.1 rho=-0.34 p=0.0028 n=74 ; model-bootstrap 95% CI [-0.52 -0.1 ]
+La rho=-0.10 p=0.39 n=80 ; model-bootstrap 95% CI [-0.35  0.15]
+
+--- adaptive keep fraction (a redundancy proxy: how few reps cover the page at cos .6) vs ward loss
+L0.5 docvqa rho=0.07 p=0.68 n=40 | infovqa rho=0.09 p=0.58 n=40 | scifact rho=0.63 p=0.011 n=15
+L0.25 docvqa rho=0.15 p=0.36 n=40 | infovqa rho=0.14 p=0.38 n=40 | scifact rho=0.05 p=0.87 n=15
+L0.1 docvqa rho=0.28 p=0.091 n=37 | infovqa rho=0.16 p=0.35 n=37 | scifact rho=0.04 p=0.9 n=14
+
+--- cross-dataset reliability of tolerance (docvqa vs infovqa) with model-bootstrap CI
+L0.33 rho=0.02 CI [-0.35  0.37] n=40
+L0.25 rho=-0.21 CI [-0.56  0.15] n=40
+L0.1 rho=0.19 CI [-0.19  0.54] n=37
+La rho=0.08 CI [-0.29  0.4 ] n=40
+
+--- replicate/sibling pairs (near-identical checkpoints): loss difference as an empirical noise scale
+c                                                                                                   L0.1   L0.25   L0.33    L0.5      La
+a                                        b                                               ds                                             
+lightonai/colbertv2.0                    colbert-ir/colbertv2.0                          scifact  0.0186 -0.0247 -0.0182 -0.0038 -0.0059
+tsystems/colqwen2.5-3b-multilingual-v1.0 tsystems/colqwen2.5-3b-multilingual-v1.0-merged docvqa   0.0033  0.0051 -0.0003  0.0013 -0.0128
+                                                                                         infovqa -0.0020  0.0011 -0.0001  0.0002  0.0000
+vidore/colpali-v1.2                      vidore/colpali-v1.2-hf                          docvqa  -0.0100  0.0031  0.0023 -0.0157 -0.0186
+                                                                                         infovqa -0.0076  0.0007  0.0052  0.0046 -0.0036
+                                         vidore/colpali-v1.2-merged                      docvqa  -0.0016  0.0009  0.0003  0.0008  0.0039
+                                                                                         infovqa -0.0035  0.0017  0.0028  0.0018 -0.0028
+vidore/colpali-v1.3                      vidore/colpali-v1.3-hf                          docvqa  -0.0191 -0.0134 -0.0306 -0.0135 -0.0047
+                                                                                         infovqa  0.0044  0.0014 -0.0030 -0.0043 -0.0057
+                                         vidore/colpali-v1.3-merged                      docvqa      NaN -0.0020 -0.0123 -0.0051 -0.0004
+                                                                                         infovqa     NaN -0.0008 -0.0053  0.0001 -0.0019
+vidore/colqwen2-v1.0-hf                  vidore/colqwen2-v1.0-merged                     docvqa      NaN  0.0121  0.0039  0.0062  0.0304
+                                                                                         infovqa     NaN  0.0002  0.0001 -0.0037  0.0007
+RMS diff by metric (pp): {'L0.1': 1.01, 'L0.25': 0.87, 'L0.33': 1.08, 'L0.5': 0.66, 'La': 1.1}
+
+--- float16-inference baseline confound (image): loss by f16 flag
+L0.25 f16 n=26 mean 0.0068 | other n=54 mean 0.0080 | MWU p=0.96
+L0.1 f16 n=26 mean 0.0188 | other n=48 mean 0.0237 | MWU p=0.69
+La f16 n=26 mean 0.0154 | other n=54 mean 0.0165 | MWU p=0.62
+
+--- family means of loss at 0.1 (image, docvqa+infovqa averaged per model first)
+                    n     L25     L10      La         bv
+family                                                  
+colgemma            1  0.0590  0.1289  0.0650   269.0000
+colmodernvbert      1  0.0127  0.0562  0.0421   896.5020
+colpali             8  0.0052  0.0138  0.0193  1031.6250
+colqwen            12  0.0067  0.0214  0.0124   824.2822
+colqwen3            4  0.0078  0.0202  0.0150  1169.5850
+colqwen3.5          6  0.0077  0.0215  0.0126   954.8067
+colsmol             2  0.0034  0.0180  0.0079  1049.0200
+colvec              2 -0.0001  0.0082  0.0120  1363.4195
+nemotron-colembed   2  0.0077  0.0150  0.0122   748.3200
+neomme              2  0.0050  0.0135  0.0174  2148.1430
+eta^2(family) for L0.1 = 0.89, permutation p=0.0006 (families of size 1 inflate eta^2)
+
+worst/best 5 image models by mean L0.1
+            family                                   model   L0.25    L0.1      La        bv    dim
+3          colpali                     vidore/colpali-v1.1  0.0017  0.0030  0.0084  1031.000  128.0
+4          colpali                     vidore/colpali-v1.2  0.0020  0.0044  0.0177  1031.000  128.0
+34          colvec         webAI-Official/webAI-ColVec1-4b -0.0008  0.0066  0.0076  1169.380  640.0
+6          colpali              vidore/colpali-v1.2-merged  0.0007  0.0069  0.0172  1031.000  128.0
+39          neomme  Hcompany/NeoMME-800M-Retriever-ST-late  0.0039  0.0094  0.0203  2148.143  128.0
+1   colmodernvbert              ModernVBERT/colmodernvbert  0.0127  0.0562  0.0421   896.502  128.0
+0         colgemma             Cognitive-Lab/ColNetraEmbed  0.0590  0.1289  0.0650   269.000  128.0
+9          colpali              vidore/colpali-v1.3-merged  0.0062     NaN  0.0222  1038.000  128.0
+19         colqwen             vidore/colqwen2-v1.0-merged  0.0015     NaN  0.0091   751.530  128.0
+21         colqwen                  vidore/colqwen2.5-v0.2  0.0076     NaN  0.0182   751.530  128.0

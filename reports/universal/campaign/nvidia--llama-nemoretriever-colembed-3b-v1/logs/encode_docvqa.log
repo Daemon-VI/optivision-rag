@@ -1,0 +1,68 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_vectors.py nvidia/llama-nemoretriever-colembed-3b-v1 vidore/docvqa_test_subsampled --out /tmp/optdata/vectors --check-pairs 12 --trust-remote-code --dtype float32 --batch-size 4 --multi-gpu --revision latest
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] Encountered exception while importing flash_attn: No module named 'flash_attn'
+nvidia/llama-nemoretriever-colembed-3b-v1: registry status unverified
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 200, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_vectors.py", line 93, in main
+    adapter = load_adapter(a.model, loader=a.loader, **options)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 785, in load_adapter
+    return TokenEncoderAdapter(RemoteCodeEncoder(model_id, name.split(":", 1)[1], **kwargs), info=info)
+                               ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/late.py", line 363, in __init__
+    model = _from_pretrained(AutoModel, model_name, self.torch_dtype, **extra)
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 192, in _from_pretrained
+    model, info = _load_with_info(model_cls, checkpoint, dtype, mapping, extra)
+                  ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/encoders/colvlm.py", line 176, in _load_with_info
+    return model_cls.from_pretrained(checkpoint, dtype=dtype, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/auto_factory.py", line 336, in from_pretrained
+    config, kwargs = AutoConfig.from_pretrained(
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/auto/configuration_auto.py", line 405, in from_pretrained
+    config_class = get_class_from_dynamic_module(
+        class_ref, pretrained_model_name_or_path, code_revision=code_revision, **kwargs
+    )
+  File "/usr/local/lib/python3.13/dist-packages/transformers/dynamic_module_utils.py", line 612, in get_class_from_dynamic_module
+    final_module = get_cached_module_file(
+        repo_id,
+    ...<7 lines>...
+        repo_type=repo_type,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/transformers/dynamic_module_utils.py", line 490, in get_cached_module_file
+    get_cached_module_file(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        _commit_hash=commit_hash,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/dynamic_module_utils.py", line 490, in get_cached_module_file
+    get_cached_module_file(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        _commit_hash=commit_hash,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/dynamic_module_utils.py", line 441, in get_cached_module_file
+    modules_needed = check_imports(resolved_module_file)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/dynamic_module_utils.py", line 258, in check_imports
+    raise ImportError(
+    ...<2 lines>...
+    )
+ImportError: This modeling file requires the following packages that were not found in your environment: flash_attn. Run `pip install flash_attn`
