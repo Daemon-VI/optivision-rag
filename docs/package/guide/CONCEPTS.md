@@ -102,7 +102,16 @@ A **stage** is one step that changes how the vectors are stored. There are three
 |---|---|---|---|
 | token reducer | keeps fewer vectors per document, by pruning or merging | `adaptive_merge`, `hierarchical_merge`, `redundancy`, `random_prune` | documents only |
 | projection | maps every vector to another coordinate system, usually with fewer dimensions | `pca`, `random_projection`, `truncate`, `project`, `rotation` | documents and queries, with the same map |
-| codec (quantizer) | stores each coordinate with fewer bits | `float32`, `float16`, `int8`, `int4`, `binary`, `lloyd2` | documents only |
+| codec (quantizer) | stores each coordinate with fewer bits | `float32`, `float16`, `int8`, `int4`, `int4norm`, `binary`, `lloyd2` | documents only |
+
+`int4norm` (experimental, new in 0.5.0) is `int4` with the stored float16 scale chosen so
+that each decoded vector keeps the norm of the vector it codes. The levels, the bytes and the
+decoder are `int4`'s. With `center="mean"` it is the codec that held its bar most often in the
+follow-up measurements: ndcg@5 retention at least 0.95 on all 46 model-dataset units, and the
+lower end of the interval at least 0.95 on 45, against 41 for `int4(mean)`
+(`reports/universal/followup/INT4NORM_SUMMARY.md`). Those were 19 models on five datasets, and 5
+of the 10 predictions written before the run failed, so it is in no default and no candidate
+space: name it yourself, and check it with `certify()` on your own queries.
 
 A fourth registered name, `spatial`, prunes by page pixels and grid position. It needs page images
 and lives outside the model-agnostic layer.

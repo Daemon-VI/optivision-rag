@@ -29,6 +29,7 @@ from optivision.core.stages import (
     Int4Quantizer,
     Int8Quantizer,
     Lloyd2Quantizer,
+    NormPreservingInt4Quantizer,
     PCAProjector,
     Quantizer,
     RandomProjector,
@@ -81,6 +82,8 @@ STAGE_CASES = {
     "int8(per_dimension,center)": lambda: Int8Quantizer("per_dimension", center="mean"),
     "int4": lambda: Int4Quantizer(),
     "int4(center)": lambda: Int4Quantizer(center="mean"),
+    "int4norm": lambda: NormPreservingInt4Quantizer(),
+    "int4norm(center)": lambda: NormPreservingInt4Quantizer(center="mean"),
     "lloyd2": lambda: Lloyd2Quantizer(seed=3),
 }
 PIPELINE_CASES = {
@@ -115,7 +118,7 @@ def joint():
 
 # the kind of each case, from the stage name in its id (no factory is called at import time)
 _TOKEN_NAMES = {"adaptive_merge", "hierarchical_merge", "random_prune", "redundancy"}
-_QUANTIZER_NAMES = {"float32", "float16", "binary", "int8", "int4", "lloyd2"}
+_QUANTIZER_NAMES = {"float32", "float16", "binary", "int8", "int4", "int4norm", "lloyd2"}
 QUANTIZERS = {k: v for k, v in STAGE_CASES.items() if k.split("(")[0] in _QUANTIZER_NAMES}
 TOKEN = {k: v for k, v in STAGE_CASES.items() if k.split("(")[0] in _TOKEN_NAMES}
 
@@ -155,6 +158,7 @@ class TestRegistry:
             *("RandomPruner", "RedundancyPruner", "PCAProjector", "RandomProjector"),
             *("TruncateProjector", "DimensionProjector", "BinaryQuantizer", "Float16Quantizer"),
             *("Float32Quantizer", "Int4Quantizer", "Int8Quantizer", "Lloyd2Quantizer"),
+            "NormPreservingInt4Quantizer",
         ]
         for name in names:
             assert getattr(core_stages, name) is getattr(library_stages, name), name
@@ -170,7 +174,7 @@ class TestRegistry:
             "RandomPruner",
             "RedundancyPruner",
         }
-        assert len(codecs.__all__) == 6
+        assert len(codecs.__all__) == 7
 
     def test_the_page_specific_pruner_stays_out_of_core(self):
         assert not hasattr(core_stages, "SpatialPruner")
@@ -334,6 +338,7 @@ class TestQuantizerContract:
             "float16": 2 * d,
             "binary": (d + 7) // 8,
             "int4": (d + 1) // 2 + 2,
+            "int4norm": (d + 1) // 2 + 2,
             "lloyd2": (d + 3) // 4,
         }
         for name, expected in widths.items():
@@ -356,7 +361,8 @@ class TestQuantizerContract:
 
     @pytest.mark.parametrize(
         "name",
-        ["float32", "float16", "int8(fixed)", "int8(per_vector)", "int8(per_dimension)", "int4"],
+        ["float32", "float16", "int8(fixed)", "int8(per_vector)", "int8(per_dimension)", "int4",
+         "int4norm"],
     )
     def test_zero_vectors_decode_to_exact_zeros(self, data, name):
         docs, _ = data
@@ -466,6 +472,7 @@ class TestStageLifecycle:
             "binary(center)",
             "int8(per_dimension)",
             "int4(center)",
+            "int4norm(center)",
             "lloyd2",
             "adaptive_merge(center)",
         ],
@@ -491,6 +498,7 @@ class TestStageLifecycle:
             "int8(fixed)",
             "int8(per_vector)",
             "int4",
+            "int4norm",
             "truncate",
             "hierarchical_merge",
             "random_prune",

@@ -128,8 +128,9 @@ def encode(texts):
 
 
 adapter = CallableAdapter(encode, encode)
-documents = ["1 2 3 4 5 6", "7 8 9 10 11 12", "13 14 15 16 17 18"]
-report = check_retriever(adapter, documents, ["2 3", "8 9", "14 15"])
+documents = [" ".join(str(6 * i + k) for k in range(1, 7)) for i in range(6)]  # 6 pairs: the minimum
+queries = [f"{6 * i + 2} {6 * i + 3}" for i in range(6)]  # for the default allowed_misses=2
+report = check_retriever(adapter, documents, queries)
 print(report["ok"], report["dimension"], report["query_ranks_own_document_first"])
 ```
 

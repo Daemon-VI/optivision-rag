@@ -84,7 +84,7 @@ measures instead of prescribing.
 
 ### Tested coverage
 
-Exactly six encoders have been measured:
+`optimize()` has been evaluated end to end, on held-out queries, on exactly six encoders:
 
 - **ColPali-v1.3**: ViDoRe V1 DocVQA and InfoVQA (500 pages each, 451 and 494
   queries) and a generated corpus (60 pages).
@@ -104,12 +104,19 @@ Exactly six encoders have been measured:
   points); a sanity check, not evidence.
 - **answerai-colbert-small-v1** (text): BEIR SciFact (5,183 abstracts, 300 queries).
 
+Beyond those six, as of 0.5.0 the catalogue (`optivision models`) holds fixed-pipeline
+measurements for 55 models: 40 page models on ViDoRe V1 DocVQA and InfoVQA and 15 text models on
+BEIR SciFact, 48 to 4,096 dimensions, ColQwen3, ColNomic and 4,096-d models among them. Those
+rows say how fixed pipelines kept retention on those corpora; they show what to try, not what
+`optimize()` or `certify()` will choose and hold on yours. Follow-up batches added NFCorpus,
+SciDocs, ArxivQA and TabFQuAD for some models, and held-out checks of `calibrate()` on 22 units
+(`reports/universal/followup/SUMMARY.md`, P8).
+
 Any other model's vectors go in through `from_arrays`, but how they compress is
 **unmeasured** until someone runs `scripts/universal_study/`. Corpora so far
-have 500–5,183 documents, and retention measurably falls as distractors are
-added (release audit, §7). ColQwen3, ColNomic, 4,096-d models (the 8B ColEmbed
-loader exists but was not benchmarked), ViDoRe V2/V3, million-page corpora and
-database connectors beyond numpy/Qdrant are **future work**, not results.
+have 500–25,657 documents, and retention measurably falls as distractors are
+added (release audit, §7). ViDoRe V2/V3, million-page corpora and database
+connectors beyond numpy/Qdrant are **future work**, not results.
 
 ### What is not claimed
 

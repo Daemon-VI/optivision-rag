@@ -7,6 +7,7 @@ stored. How much a codec keeps therefore depends on the coordinate basis; see
 
 from __future__ import annotations
 
+from optivision.stages.int4norm import NormPreservingInt4Quantizer
 from optivision.stages.quantize import (
     BinaryQuantizer,
     Float16Quantizer,
@@ -23,4 +24,5 @@ __all__ = [
     "Int4Quantizer",
     "Int8Quantizer",
     "Lloyd2Quantizer",
+    "NormPreservingInt4Quantizer",
 ]

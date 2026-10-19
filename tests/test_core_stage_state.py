@@ -28,6 +28,7 @@ from optivision.core.stages import (
     Int4Quantizer,
     Int8Quantizer,
     Lloyd2Quantizer,
+    NormPreservingInt4Quantizer,
     PCAProjector,
     RandomProjector,
     RandomPruner,
@@ -66,6 +67,7 @@ SINGLE = {
     "int8(fixed,center)": lambda: Int8Quantizer("fixed", center="mean"),
     "int8(per_vector,center)": lambda: Int8Quantizer("per_vector", center="mean"),
     "int4(center)": lambda: Int4Quantizer(center="mean"),
+    "int4norm(center)": lambda: NormPreservingInt4Quantizer(center="mean"),
     "lloyd2": lambda: Lloyd2Quantizer(seed=5),
 }
 CHAINS = {
@@ -92,6 +94,7 @@ STATELESS = {
     "int8(fixed)": lambda: Int8Quantizer("fixed"),
     "int8(per_vector)": lambda: Int8Quantizer("per_vector"),
     "int4": lambda: Int4Quantizer(),
+    "int4norm": lambda: NormPreservingInt4Quantizer(),
     "truncate": lambda: TruncateProjector(8),
     "project(truncate)": lambda: DimensionProjector(8, method="truncate"),
     "hierarchical_merge": lambda: hierarchical(ratio=0.5),

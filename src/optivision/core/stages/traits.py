@@ -795,6 +795,19 @@ _builtin(
 )
 
 
+_builtin(
+    "int4norm",
+    "bits",
+    _S,
+    "int4's levels -7..7 of the largest absolute component, with the float16 scale chosen so that "
+    "each decoded vector keeps the norm of the vector it codes (with the mean added back when "
+    "centred): unchanged by permuting or flipping axes, changed by a rotation." + _CENTRE,
+    refine=_int4,
+    has_fitted_state=True,
+    stochastic=True,
+)
+
+
 def _binary(stage: Stage, g: StageTraits) -> StageTraits:
     centred = _centred(stage)
     return dataclasses.replace(

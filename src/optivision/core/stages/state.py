@@ -33,6 +33,7 @@ import numpy as np
 
 from optivision.core.identity import array_digest, digest
 from optivision.stages.base import Stage
+from optivision.stages.int4norm import NormPreservingInt4Quantizer
 from optivision.stages.merge import AdaptiveMerge
 from optivision.stages.project import DimensionProjector, PCAProjector, RandomProjector
 from optivision.stages.quantize import (
@@ -239,6 +240,7 @@ _BUILDERS: dict[type, Callable[[Any], _Handler]] = {
     BinaryQuantizer: _mean_only,
     Int8Quantizer: _int8,
     Int4Quantizer: _mean_only,
+    NormPreservingInt4Quantizer: _mean_only,
     Lloyd2Quantizer: _lloyd2,
 }
 _FACADES = (DimensionProjector,)

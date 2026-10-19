@@ -67,7 +67,19 @@ def test_int4norm_edge_cases_labels_and_the_registry():
         codec.NormPreservingInt4Quantizer(center="mean").encode(zero)
     assert Pipeline([codec.NormPreservingInt4Quantizer()]).label() == "int4norm"
     assert Pipeline([codec.NormPreservingInt4Quantizer(center="mean")]).label() == "int4norm(mean)"
-    assert "int4norm" not in STAGES and STAGES["int4"] is Int4Quantizer  # not a package stage
+    # the study's copy is unregistered; the package stage of 0.5.0 is the registered one
+    assert STAGES["int4norm"] is not codec.NormPreservingInt4Quantizer and STAGES["int4"] is Int4Quantizer
+
+
+def test_the_package_stage_writes_the_same_codes_as_the_study_codec():
+    from optivision.stages import NormPreservingInt4Quantizer
+
+    rng = np.random.default_rng(5)
+    docs = MultiVectorCorpus.from_arrays([rng.normal(size=(40, 33)).astype(np.float32) + 0.3 for _ in range(6)])
+    study = _load("int4norm_codec").NormPreservingInt4Quantizer
+    for center in (None, "mean"):
+        a, b = study(center=center).fit(docs), NormPreservingInt4Quantizer(center=center).fit(docs)
+        assert np.array_equal(a.encode(docs.vectors), b.encode(docs.vectors))
 
 
 # ------------------------------------------------------------ device_scoring

@@ -1,6 +1,42 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-10-19)
+
+**In short.**
+- **The measured catalogue grew from 8 models and 972 rows to 55 models and 5,492 rows.** 57 of
+  the 65 registry models are now `measured`, from the Kaggle campaign below. The other 8 stay
+  `unverified`: they could not be loaded, or they failed `check_retriever`.
+- **New experimental codec: `NormPreservingInt4Quantizer`** (registry name `int4norm`, labels
+  `int4norm` and `int4norm(mean)`), in `optivision.stages` and `optivision.core.stages`.
+  - It is int4 with the float16 scale chosen so that each decoded vector keeps the norm of the
+    vector it codes. Its levels, code size and decoder are `Int4Quantizer`'s.
+  - Measured, centred: ndcg@5 retention of at least 0.95 on all 46 model-dataset units of the
+    follow-up, and an interval lower bound of at least 0.95 on 45 (against 41 for `int4(mean)`).
+  - That was 19 models; 5 of the 10 predictions written before the run failed, and the analysis
+    behind the numbers above is exploratory (`reports/universal/followup/INT4NORM_SUMMARY.md`,
+    `int4norm_analysis/REPORT.md`).
+  - So it is in no default, no candidate space and no `optivision.__all__`: it is used only when
+    named. Its own module, `stages/int4norm.py`, leaves the files pinned for X1-X3 unchanged.
+- **Fixes from the review of 0.4.0** (2026-10-14).
+  - H1: adapters record the encoder identity that `certify()` writes.
+  - H2: registry revision pins reach the loaders.
+  - M1: `check_retriever` counts ties as misses and needs at least `2 * allowed_misses + 2` pairs.
+  - M3: 3-D numpy output is split into rows.
+  - M4: `vidore/colqwen2-v1.0` explains how it was measured.
+  - M5: an injected model's inputs go to the model's device.
+  - L2: the non-finite check runs on kept rows only.
+  - L4: nemotron-colembed-vl-4b-v2 declares CC-BY-NC-4.0 and its pinned revision.
+  - L5: an out-of-range `--min-retention` exits with code 2.
+  - L8: a PyLate encoder without a registry entry is a text model.
+  - The 80-column `optivision models` table.
+- **Still open from that review.**
+  - M2: remote-code recipes do not cast inputs to the model dtype.
+  - L1: parity of batched or bf16 encoding with the measured runs.
+  - L3: a mismatched mask is dropped silently.
+  - L6: hardcoded text in `build_models_doc.py`.
+  - L7: label sets across datasets are not checked.
+- **Unchanged.** `optimize()`, `calibrate()`, `certify()`, the file formats, and every stage name
+  registered in 0.4.0.
 
 ### Kaggle measurement campaign, batches 01-04
 

@@ -13,6 +13,7 @@ from .base import (
     register,
     stage_from_dict,
 )
+from .int4norm import NormPreservingInt4Quantizer
 from .merge import AdaptiveMerge, HierarchicalMerge, RandomPruner
 from .project import DimensionProjector, PCAProjector, RandomProjector, TruncateProjector
 from .prune import RedundancyPruner, SpatialPruner
@@ -38,6 +39,7 @@ __all__ = [
     "Int4Quantizer",
     "Int8Quantizer",
     "Lloyd2Quantizer",
+    "NormPreservingInt4Quantizer",
     "PCAProjector",
     "Quantizer",
     "RandomProjector",
