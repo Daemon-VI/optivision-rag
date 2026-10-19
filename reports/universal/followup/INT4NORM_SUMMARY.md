@@ -86,5 +86,7 @@ None of this was predicted; it is description, not evidence.
 | **Total** | **11.4 h** | | |
 
 - **The GPU page max worked.** On SciDocs, s17 took 697 to 1,421 s per model for 21 rows: about 33
-  to 68 s per row, against about 650 s per row on the old path.
+  to 68 s per row. On the old path, s13 averaged 358 s per row for answerai and 231 s for LateOn
+  (over 49 and 54 rows of mixed cost).
+- **Exploratory analysis of these results:** `int4norm_analysis/REPORT.md`.
 - **The estimate.** 11.4 h is at the low end of the README's 11.5 to 26 h.
