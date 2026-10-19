@@ -130,6 +130,15 @@ def test_the_models_command_lists_every_model_and_filters_by_status():
     assert {m["model_id"] for m in measured if m["measured_rows"]} == set(measured_models())
     assert runner.invoke(app, ["models"]).exit_code == 0
     assert runner.invoke(app, ["models", "--status", "blessed"]).exit_code == 2
+    bad = runner.invoke(app, ["models", "vidore/colpali-v1.3", "--min-retention", "2"])
+    assert bad.exit_code == 2 and "--min-retention" in bad.output and "Traceback" not in bad.output
+
+
+def test_the_nemotron_4b_entry_declares_its_licence_and_the_revision_its_loader_pins():
+    from optivision.encoders.nemotron import KNOWN
+
+    info = MODELS["nvidia/nemotron-colembed-vl-4b-v2"]
+    assert info.license == "cc-by-nc-4.0" and info.revision == KNOWN[info.model_id][1]
 
 
 def test_the_models_command_shows_one_model_with_its_caveat():
@@ -228,3 +237,58 @@ def test_the_models_page_equals_what_the_registry_and_the_catalogue_give():
     assert page.replace("\r\n", "\n") == module.render()
     for model_id in MODELS:
         assert f"`{model_id}`" in page
+
+
+# ------------------------------------------------------------------ 0.4.1 regressions
+
+
+def test_encode_and_certify_records_the_identity_of_an_adapter_that_does_not_write_it():
+    class _Silent(_Adapter):
+        def _corpus(self, source, ids, name):  # like a 0.4.0 page / sentence-transformers adapter
+            arrays = [np.asarray(source[i].vectors) for i in range(len(source))]
+            return corpus_from_arrays(arrays, ids, name=name)
+
+    adapter = _Silent(n_docs=30, n_queries=120)
+    assert "encoder_identity" not in adapter.encode_documents([], None).attrs
+    result = encode_and_certify(adapter, ["d"] * 30, ["q"] * 120, adapter.qrels, target=0.9,
+                                space=_space(), created="2026-10-12T00:00:00Z")
+    recorded = json.dumps(result.certificate.to_dict())
+    assert "test/synthetic" in recorded and '"r1"' in recorded
+
+
+def test_the_models_listing_never_cuts_a_model_id_at_80_columns(monkeypatch):
+    from rich.console import Console
+
+    from optivision import cli_models
+
+    monkeypatch.setattr(cli_models, "console", Console(width=80, force_terminal=False))
+    with cli_models.console.capture() as captured:
+        cli_models._listing(None, False)
+    output = captured.get()
+    assert "…" not in output
+    for model_id in MODELS:
+        assert model_id in output
+    wide = Console(width=200, force_terminal=False)
+    monkeypatch.setattr(cli_models, "console", wide)
+    with wide.capture() as captured:
+        cli_models._listing(None, False)
+    assert "colpali-engine:colqwen3.5" in captured.get()
+
+
+def test_measured_models_without_rows_explain_how_they_were_measured():
+    """M4: no "measured" label followed by "No fixed-pipeline measurements ... are stored"."""
+    runner = CliRunner(env={"COLUMNS": "200"})
+    for model_id in NO_ROWS:
+        out = runner.invoke(app, ["models", model_id])
+        assert out.exit_code == 0 and "measured)" in out.output
+        assert "No fixed-pipeline measurements" not in out.output
+    twin = runner.invoke(app, ["models", "vidore/colqwen2-v1.0"]).output
+    assert "Measured via equivalence with vidore/colqwen2-v1.0-merged" in " ".join(twin.split())
+    detail = json.loads(runner.invoke(app, ["models", "vidore/colqwen2-v1.0", "--json"]).output)
+    assert detail["measured_via"] == "vidore/colqwen2-v1.0-merged"
+    smol = " ".join(runner.invoke(app, ["models", "vidore/colSmol-256M"]).output.split())
+    assert "Measured outside the fixed-pipeline study" in smol
+    assert json.loads(runner.invoke(app, ["models", "vidore/colSmol-256M", "--json"]).output)["measured_via"] is None
+    never = next(m for m, info in MODELS.items() if info.status != MEASURED and m not in measured_models())
+    unmeasured = runner.invoke(app, ["models", never]).output
+    assert "No fixed-pipeline measurements" in unmeasured

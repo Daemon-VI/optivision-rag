@@ -84,7 +84,7 @@ def _resolve_dtype(dtype: str, device: str):
     return torch.bfloat16
 
 
-def _adapter_base(checkpoint: str) -> str | None:
+def _adapter_base(checkpoint: str, revision: str | None = None) -> str | None:
     """The base model of an adapter-only checkpoint, or None for full weights."""
     import json
     import os
@@ -98,14 +98,14 @@ def _adapter_base(checkpoint: str) -> str | None:
     from huggingface_hub import file_exists, hf_hub_download, try_to_load_from_cache
 
     try:
-        has_adapter = file_exists(checkpoint, "adapter_config.json")
-        has_config = file_exists(checkpoint, "config.json")
+        has_adapter = file_exists(checkpoint, "adapter_config.json", revision=revision)
+        has_config = file_exists(checkpoint, "config.json", revision=revision)
     except Exception:  # noqa: BLE001 -- offline or Hub unreachable (error types vary by hub version): use the cache
-        has_adapter = isinstance(try_to_load_from_cache(checkpoint, "adapter_config.json"), str)
-        has_config = isinstance(try_to_load_from_cache(checkpoint, "config.json"), str)
+        has_adapter = isinstance(try_to_load_from_cache(checkpoint, "adapter_config.json", revision=revision), str)
+        has_config = isinstance(try_to_load_from_cache(checkpoint, "config.json", revision=revision), str)
     if not has_adapter or has_config:
         return None
-    with open(hf_hub_download(checkpoint, "adapter_config.json"), encoding="utf-8") as f:
+    with open(hf_hub_download(checkpoint, "adapter_config.json", revision=revision), encoding="utf-8") as f:
         return json.load(f).get("base_model_name_or_path")
 
 
@@ -249,15 +249,20 @@ def _from_pretrained(model_cls, checkpoint: str, dtype, **extra: Any):
     return model
 
 
-def _load_model(model_cls, checkpoint: str, dtype):
-    """Full checkpoints load directly; adapter-only ones are merged explicitly."""
-    base_id = _adapter_base(checkpoint)
+def _load_model(model_cls, checkpoint: str, dtype, revision: str | None = None):
+    """Full checkpoints load directly; adapter-only ones are merged explicitly.
+
+    ``revision`` pins ``checkpoint`` (the full weights, or the adapter of an adapter-only
+    repository). The base model an adapter names is loaded at its default revision.
+    """
+    extra: dict[str, Any] = {} if revision is None else {"revision": revision}
+    base_id = _adapter_base(checkpoint) if revision is None else _adapter_base(checkpoint, revision)
     if base_id is None:
-        return _from_pretrained(model_cls, checkpoint, dtype)
+        return _from_pretrained(model_cls, checkpoint, dtype, **extra)
     from peft import PeftModel
 
     base = _from_pretrained(model_cls, base_id, dtype)
-    peft_model = PeftModel.from_pretrained(base, checkpoint)
+    peft_model = PeftModel.from_pretrained(base, checkpoint, **extra)
     # LoRA initialises every B matrix to zero, so a B still at zero was never loaded.
     lora_b = {n: prm for n, prm in peft_model.named_parameters() if ".lora_B." in n}
     if not lora_b:

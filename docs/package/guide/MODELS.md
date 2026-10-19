@@ -146,7 +146,7 @@ The registry holds 65 models: 57 measured, 0 untested, 8 unverified. The facts o
 | `vidore/colqwen2-v1.0-merged` | image | 128 | `colpali-engine:colqwen2` | not declared |
 | `vidore/colqwen2-v1.0` | image | 128 | `colpali-engine:colqwen2` | not declared |
 | `vidore/colqwen2.5-v0.2` | image | 128 | `colpali-engine:colqwen2.5` | not declared |
-| `nvidia/nemotron-colembed-vl-4b-v2` | image | 2560 | `nemotron` | not declared |
+| `nvidia/nemotron-colembed-vl-4b-v2` | image | 2560 | `nemotron` | cc-by-nc-4.0 |
 | `nvidia/nemotron-colembed-vl-8b-v2` | image | 4096 | `nemotron` | cc-by-nc-4.0 |
 | `athrael-soju/colqwen3.5-4.5B-v3` | image | 320 | `colpali-engine:colqwen3.5` | apache-2.0 |
 | `TomoroAI/tomoro-colqwen3-embed-4b` | image | 320 | `remote-code:tomoro` | apache-2.0 |

@@ -104,7 +104,8 @@ _MODELS: list[ModelInfo] = [
     ModelInfo("nvidia/nemotron-colembed-vl-4b-v2", "nemotron-colembed", "image", "nemotron", 2560,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~750 vectors/page), float32 over two "
               "Kaggle T4s, pinned revision 0ed152d9, 2026-10-02; reports/universal/wide (docs/UNIVERSAL.md, R12); "
-              "CC-BY-NC-4.0"),
+              "CC-BY-NC-4.0",
+              license="cc-by-nc-4.0", revision="0ed152d91f8ad4c5d48296b51c220f686641a398"),
     ModelInfo("nvidia/nemotron-colembed-vl-8b-v2", "nemotron-colembed", "image", "nemotron", 4096,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~750 vectors/page), float16 inference over "
               "two Kaggle T4s (no float32 encoding exists, so the baseline is the float16-inference one), pinned "
@@ -644,6 +645,9 @@ class PageEncoderAdapter(EncoderAdapter):
             attrs["model"] = checkpoint
         if self.info is not None:
             attrs["model_status"] = self.info.status
+        identity = self.identity()
+        if identity is not None:
+            attrs["encoder_identity"] = identity.to_dict()  # certify() records it from here
         return attrs
 
     def identity(self) -> EncoderIdentity | None:
@@ -831,10 +835,13 @@ class SentenceTransformersAdapter(EncoderAdapter):
         return arrays
 
     def _to_corpus(self, arrays: Sequence[np.ndarray], ids: Sequence[str] | None) -> MultiVectorCorpus:
-        attrs = {"model": self.model_id, "loader": "sentence-transformers",
-                 "model_status": self.info.status if self.info else UNVERIFIED}
+        attrs: dict[str, Any] = {"model": self.model_id, "loader": "sentence-transformers",
+                                 "model_status": self.info.status if self.info else UNVERIFIED}
         if self.dtype is not None:
             attrs["inference_dtype"] = self.dtype
+        identity = self.identity()
+        if identity is not None:
+            attrs["encoder_identity"] = identity.to_dict()  # certify() records it from here
         return MultiVectorCorpus.from_arrays(list(arrays), ids=ids, attrs=attrs)
 
     def encode_documents(self, documents: Sequence[Any], ids: Sequence[str] | None = None) -> MultiVectorCorpus:
@@ -902,6 +909,8 @@ def load_adapter(model_id: str, loader: str | None = None, **kwargs: Any) -> Enc
         from .tokens import TokenEncoderAdapter
 
         kwargs.setdefault("expected_dim", width)
+        if info is not None and info.revision is not None:
+            kwargs.setdefault("revision", info.revision)  # the commit the registry entry was measured at
         return TokenEncoderAdapter(ColEngineTokenEncoder(model_id, family, **kwargs), info=info)
     if name == "nemotron":
         from ..encoders.nemotron import NemotronColEmbedEncoder  # needs torch + transformers
