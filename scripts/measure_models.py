@@ -20,7 +20,7 @@ Only ``model`` is required (``kind`` defaults to the registry's modality). ``pip
 packages to install before that model (they stay installed for the rest of the session).
 ``processor_kwargs`` goes to a sentence-transformers page model's processor (a page budget).
 
-Follow-up measurements use four more keys:
+Follow-up measurements use five more keys:
 
 - ``datasets``: HF image datasets for an image model (default ViDoRe V1 DocVQA and InfoVQA),
   or BEIR names for a text model (default ``["scifact"]``).
@@ -29,6 +29,8 @@ Follow-up measurements use four more keys:
   ``encode_text_vectors.py --distractors``).
 - ``limit``: pages or documents per dataset for this model.
 - ``studies``: ``false`` to encode and record the vectors' geometry only.
+- ``study``: which fixed-pipeline studies run on each split, from ``STUDIES`` (default
+  ``["s13"]``); ``s17`` is the int4 norm study (``s17_int4_norm.py``, into ``int4norm/``).
 
 After every encode, ``scripts/vector_geometry.py`` writes ``geometry/<tag>.json`` (statistics
 of the vectors, before they are deleted).
@@ -54,6 +56,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 IMAGE_SPLITS = {"docvqa": "vidore/docvqa_test_subsampled", "infovqa": "vidore/infovqa_test_subsampled"}
 RESERVE_SECONDS = 15 * 60  # kept for packaging the results
+
+
+#: the fixed-pipeline studies a spec's ``study`` key can name; ``s13`` is the default
+STUDIES = {"s13": "s13_wide_study.py", "s17": "s17_int4_norm.py"}
 
 
 def split_key(dataset: str) -> str:
@@ -114,6 +120,10 @@ def measure(spec: dict, out: Path, data: Path, session: Session, selection: bool
     from optivision.adapters import MODELS
 
     model = spec["model"]
+    chosen = spec.get("study") or ["s13"]
+    chosen = [chosen] if isinstance(chosen, str) else list(chosen)
+    if unknown := [s for s in chosen if s not in STUDIES]:
+        raise ValueError(f"unknown study {unknown}; known: {sorted(STUDIES)}")
     info = MODELS.get(model)
     kind = spec.get("kind") or ("text" if info is not None and info.modality == "text" else "image")
     short = model.split("/")[-1]
@@ -192,9 +202,10 @@ def measure(spec: dict, out: Path, data: Path, session: Session, selection: bool
         tags_studied = tags
     for tag in tags_studied:
         shutil.copy(vectors / f"{tag}_qrels.json", folder / f"{tag}_qrels.json")
-        record["steps"][f"s13 {tag}"] = run_step(
-            [py, str(ROOT / "scripts" / "universal_study" / "s13_wide_study.py"), f"vec:{tag}"],
-            folder / "logs" / f"s13_{tag}.log", session, env)
+        for study in chosen:
+            record["steps"][f"{study} {tag}"] = run_step(
+                [py, str(ROOT / "scripts" / "universal_study" / STUDIES[study]), f"vec:{tag}"],
+                folder / "logs" / f"{study}_{tag}.log", session, env)
     if selection:
         for tag in tags_studied:
             record["steps"][f"s7b {tag}"] = run_step(
@@ -207,9 +218,10 @@ def measure(spec: dict, out: Path, data: Path, session: Session, selection: bool
     shutil.rmtree(hub / f"models--{model.replace('/', '--')}", ignore_errors=True)
     record["finished_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     statuses = [s["status"] for s in record["steps"].values()]
-    studies = [k for k in record["steps"] if k.startswith("s13 ")]
-    expected = len(spec.get("datasets") or (IMAGE_SPLITS if kind == "image" else ["scifact"]))
-    encoded_only = spec.get("studies", True) is False and len(tags) == expected
+    studies = [k for k in record["steps"] if k.split(" ")[0] in chosen]
+    n_sets = len(spec.get("datasets") or (IMAGE_SPLITS if kind == "image" else ["scifact"]))
+    expected = n_sets * len(chosen)
+    encoded_only = spec.get("studies", True) is False and len(tags) == n_sets
     record["outcome"] = ("encoded (geometry only)" if encoded_only
                          else "measured" if studies and all(record["steps"][k]["status"] == "ok" for k in studies)
                          and len(studies) == expected

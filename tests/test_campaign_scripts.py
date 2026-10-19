@@ -33,6 +33,15 @@ def test_the_three_scripts_name_vector_files_alike():
     assert measure.tag_for("colpali", "vidore/infovqa_test_subsampled", 2000) == "colpali_infovqa_test_subsampled_plus2000"
 
 
+def test_a_spec_names_known_studies_and_an_unknown_one_fails_before_encoding(tmp_path):
+    measure = _load("measure_models")
+    assert measure.STUDIES["s13"] == "s13_wide_study.py" and (ROOT / "universal_study" / measure.STUDIES["s17"]).exists()
+    with pytest.raises(ValueError, match="unknown study"):
+        measure.measure({"model": "colbert-ir/colbertv2.0", "study": ["s99"]}, tmp_path, tmp_path,
+                        measure.Session(1.0), False, "python")
+    assert not any(tmp_path.iterdir())
+
+
 def test_image_step_names_keep_the_two_default_splits():
     split_key = _load("measure_models").split_key
     assert split_key("vidore/docvqa_test_subsampled") == "docvqa"
@@ -155,3 +164,24 @@ def test_spearman_handles_ties_and_order():
     assert rho([1, 2, 3, 4], [4, 3, 2, 1]) == pytest.approx(-1.0)
     assert rho([1, 1, 2, 3], [1, 2, 3, 4]) == pytest.approx(0.9486833, abs=1e-6)
     assert rho([1, 1, 1], [1, 2, 3]) == 0.0
+
+
+def test_int4norm_scidocs_flag_rule_excuses_only_flagged_models(monkeypatch):
+    score = _load("int4norm_predictions")
+
+    def unit(model, int4):
+        u = score.Unit.__new__(score.Unit)
+        u.model, u.key, u.batch, u.state = model, "scidocs", "f12b_text_scidocs", "ran"
+        rows = [{"label": lab, "retention:ndcg@5": v, "retention_ci:ndcg@5": [v - 0.01, v + 0.01]}
+                for lab, v in (("int8(per_vector)", 0.99), ("int4", int4), ("int4norm(mean)", 0.99))]
+        u.result = {"dataset": f"{model.split('/')[1]}_scidocs", "rows": rows}
+        return u
+
+    def units(control_int4):
+        return [unit(m, 0.10 if m in score.FLAGGED else control_int4) for m in score.SCIDOCS]
+
+    assert len(score.SCIDOCS) == 8 and {"colbert-ir/colbertv2.0", "jinaai/jina-colbert-v2"} == set(score.SCIDOCS) - score.FLAGGED
+    monkeypatch.setattr(score, "scidocs_units", lambda: units(0.95))
+    assert score.q9()[0] == "held"  # the flagged models' collapse is allowed
+    monkeypatch.setattr(score, "scidocs_units", lambda: units(0.85))
+    assert score.q9()[0] == "failed"  # an unflagged model below 0.90 sinks the clause

@@ -182,6 +182,50 @@ FOLLOWUP: list[tuple[str, str, list[str], list[dict]]] = [
 ]
 OUT_FOLLOWUP = ROOT / "notebooks" / "kaggle_followup"
 
+#: The int4 norm round (reports/universal/followup/analysis/REPORT.md, section 1): the same follow-up
+#: layout, with the predictions in reports/universal/followup/PREDICTIONS_INT4NORM.md, committed before
+#: these ran. s17 is the int4 norm study; no selection study.
+#: f9 to f13 first ran on 2026-10-18 at 0ea1c02, a commit without s17, and so ran s13 only; those
+#: results are kept under their names, and these "b" batches run s17 on the same units
+#: (reports/universal/followup/INT4NORM_RUN_NOTES.md).
+S17 = {"study": ["s17"]}
+TWO_TEXT = {"kind": "text", "datasets": ["scifact", "nfcorpus"], **S17}
+TWO_PAGES = {"datasets": ["vidore/docvqa_test_subsampled", "vidore/tabfquad_test_subsampled"], **S17}
+SCIDOCS = {"kind": "text", "datasets": ["scidocs"], **S17}
+SCALE_SAME_DOMAIN = {"kind": "text", "datasets": ["scifact"], "distractors": ["trec-covid"],
+                     "distractor_count": 10000, **S17}
+FOLLOWUP_INT4NORM: list[tuple[str, str, list[str], list[dict]]] = [
+    ("f9b_int4norm_text", "int4 with a norm-preserving scale: 12 text models on SciFact and NFCorpus",
+     [ST, "einops"], [
+        {"model": m, **TWO_TEXT} for m in (
+            "answerdotai/answerai-colbert-small-v1", "lightonai/LateOn", "lightonai/mLateOn",
+            "mixedbread-ai/mxbai-edge-colbert-v0-17m", "mixedbread-ai/mxbai-edge-colbert-v0-32m",
+            "lightonai/GTE-ModernColBERT-v1", "LiquidAI/LFM2-ColBERT-350M", "colbert-ir/colbertv2.0",
+            "lightonai/ColBERT-Zero", "lightonai/Reason-ModernColBERT", "mixedbread-ai/mxbai-colbert-large-v1")]
+        + [{"model": "jinaai/jina-colbert-v2", **TWO_TEXT, "trust_remote_code": True}]),
+    ("f10b_int4norm_pages_128d", "int4 with a norm-preserving scale: 128-d page models on DocVQA and TabFQuAD", [], [
+        {"model": m, **F32, **TWO_PAGES} for m in ("vidore/colpali-v1.3", "vidore/colSmol-500M",
+                                                   "vidore/colqwen2.5-v0.2")]),
+    ("f11b_int4norm_pages_wide", "int4 with a norm-preserving scale: wide page models (plain int4 collapses on nemotron)",
+     [ST], [
+        {"model": "nvidia/nemotron-colembed-vl-4b-v2", **F32, **TWO_PAGES},
+        {"model": "nvidia/nemotron-colembed-vl-8b-v2", **F16, **TWO_PAGES},
+        {"model": "tencent/EVIE-4.5B", **ST16, **TWO_PAGES},
+        {"model": "vultr/VultronRetrieverCore-Qwen3.5-4.5B", **F32, **TWO_PAGES}]),
+    ("f12b_text_scidocs", "a third text dataset, BEIR SciDocs (25,657 documents, short title queries)",
+     [ST, "einops"], [
+        {"model": "answerdotai/answerai-colbert-small-v1", **SCIDOCS}, {"model": "lightonai/LateOn", **SCIDOCS},
+        {"model": "lightonai/mLateOn", **SCIDOCS, "batch_size": 8},  # f12: out of GPU memory at 32
+        *[{"model": m, **SCIDOCS} for m in (
+            "mixedbread-ai/mxbai-edge-colbert-v0-17m", "mixedbread-ai/mxbai-edge-colbert-v0-32m",
+            "lightonai/GTE-ModernColBERT-v1", "colbert-ir/colbertv2.0")],
+        {"model": "jinaai/jina-colbert-v2", **SCIDOCS, "trust_remote_code": True}]),
+    ("f13b_text_scale_same_domain", "SciFact with 10,000 TREC-COVID documents, distractors from the same domain",
+     [ST], [
+        {"model": m, **SCALE_SAME_DOMAIN} for m in ("colbert-ir/colbertv2.0", "answerdotai/answerai-colbert-small-v1")]),
+]
+OUT_FOLLOWUP_INT4NORM = ROOT / "notebooks" / "kaggle_followup_int4norm"
+
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
 #: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
 UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
@@ -198,9 +242,16 @@ def code(text: str) -> dict:
             "source": text.strip("\n").splitlines(keepends=True)}
 
 
-def notebook(name: str, title: str, packages: list[str], models: list[dict]) -> dict:
+def notebook(name: str, title: str, packages: list[str], models: list[dict], selection: bool = True) -> dict:
     listing = "\n".join(f"- `{m['model']}`" for m in models)
     remote = any(m.get("trust_remote_code") for m in models)
+    # f9 to f13 once cloned a branch without s17 and ran s13 instead; stop before any GPU work if so
+    study_check = '''
+studies = sorted({s for spec in BATCH for s in spec.get("study") or []})
+known = open(f"{REPO}/scripts/measure_models.py", encoding="utf-8").read()
+if missing := [s for s in studies if f'"{s}":' not in known]:
+    raise SystemExit(f"the {BRANCH} branch on GitHub has no study {missing}; push it, then run again")
+''' if any(m.get("study") for m in models) else ""
     cells = [
         md(f"""
 # OptiVision measurement batch {name}: {title}
@@ -221,7 +272,7 @@ BRANCH = "{BRANCH}"
 BATCH = {pprint.pformat(models, width=100, sort_dicts=False)}
 EXTRA_PIP = {packages!r}
 DEADLINE_HOURS = 11.0
-SELECTION = True   # also run the selection study for a model when the session has time to spare
+SELECTION = {selection!r}   # also run the selection study for a model when the session has time to spare
 '''),
         code('''
 import json, os, shutil, subprocess, sys, time
@@ -236,7 +287,7 @@ NAME = "''' + name + '''"
 RESULTS = f"{WORK}/results_{NAME}"
 os.environ["HF_HOME"] = "/tmp/hf"
 !rm -rf {REPO} && git clone -q --depth 1 --branch {BRANCH} https://github.com/Daemon-VI/optivision-rag.git {REPO}
-!cd {REPO} && git log --oneline -1
+!cd {REPO} && git log --oneline -1''' + study_check + '''
 !pip install -q -e "{REPO}[bench,merge,vlm]" 2>&1 | tail -2
 !pip install -q -U colpali-engine 2>&1 | tail -1
 for package in EXTRA_PIP:
@@ -292,15 +343,16 @@ def main() -> int:
     print(f"wrote {len(BATCHES)} notebooks covering {len(set(seen))} models to {OUT.relative_to(ROOT)}; "
           f"{len(unmeasured)} of the registry still unmeasured")
 
-    OUT_FOLLOWUP.mkdir(parents=True, exist_ok=True)
-    for name, title, packages, models in FOLLOWUP:
-        shorts = [m["model"].split("/")[-1] for m in models]
-        assert len(set(shorts)) == len(shorts), f"batch {name}: two models share a short name"
-        assert {m["model"] for m in models} <= set(MODELS), f"batch {name}: a model is not in the registry"
-        assert name[0] == "f" and name.split("_")[0][1:].rstrip("abc").isdigit(), name  # ingest_campaign.is_followup
-        (OUT_FOLLOWUP / f"batch_{name}.ipynb").write_text(
-            json.dumps(notebook(name, title, packages, models), indent=1) + "\n", encoding="utf-8", newline="\n")
-    print(f"wrote {len(FOLLOWUP)} follow-up notebooks to {OUT_FOLLOWUP.relative_to(ROOT)}")
+    for out, batches, selection in ((OUT_FOLLOWUP, FOLLOWUP, True), (OUT_FOLLOWUP_INT4NORM, FOLLOWUP_INT4NORM, False)):
+        out.mkdir(parents=True, exist_ok=True)
+        for name, title, packages, models in batches:
+            shorts = [m["model"].split("/")[-1] for m in models]
+            assert len(set(shorts)) == len(shorts), f"batch {name}: two models share a short name"
+            assert {m["model"] for m in models} <= set(MODELS), f"batch {name}: a model is not in the registry"
+            assert name[0] == "f" and name.split("_")[0][1:].rstrip("abc").isdigit(), name  # ingest_campaign.is_followup
+            (out / f"batch_{name}.ipynb").write_text(json.dumps(
+                notebook(name, title, packages, models, selection), indent=1) + "\n", encoding="utf-8", newline="\n")
+        print(f"wrote {len(batches)} follow-up notebooks to {out.relative_to(ROOT)}")
     return 0
 
 

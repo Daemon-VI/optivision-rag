@@ -1,0 +1,94 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py lightonai/mLateOn --dataset scidocs --out /tmp/optdata/vectors --check-pairs 12 --batch-size 32
+lightonai/mLateOn: registry status measured, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/134 [00:00<?, ?it/s]Loading weights: 100%|██████████| 134/134 [00:00<00:00, 2100.00it/s]
+{"loaded": "lightonai/mLateOn", "revision": "bbd883ae1fadb563056ff73b1061ae8172a3fcda"}
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [125, 343, 447, 660, 452, 585, 235, 228, 207, 263, 278, 258], "vectors_per_query": [13, 30, 18, 17, 18, 27, 17, 12, 15, 22, 25, 14], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 12, "ok": true}}
+Traceback (most recent call last):
+  File "/kaggle/working/optivision-rag/scripts/encode_text_vectors.py", line 174, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/kaggle/working/optivision-rag/scripts/encode_text_vectors.py", line 157, in main
+    docs = adapter.encode_documents(texts, ids=ids)
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 841, in encode_documents
+    return self._to_corpus(self._encode(self.model.encode_document, documents), ids)
+                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/optivision-rag/src/optivision/adapters/__init__.py", line 830, in _encode
+    arrays.extend(self._host(o) for o in method(items[start : start + self.batch_size], **self.encode_kwargs))
+                                         ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 563, in encode_document
+    return self.encode(
+           ~~~~~~~~~~~^
+        inputs=inputs,
+        ^^^^^^^^^^^^^^
+    ...<12 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/multi_vector_encoder/model.py", line 867, in encode
+    features = self(features, task=task)
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/model.py", line 569, in forward
+    input = module(input, **module_kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/sentence_transformers/base/modules/transformer.py", line 1650, in forward
+    model_output = model_method(**filtered_kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py", line 1068, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/utils/output_capturing.py", line 262, in wrapper
+    outputs = func(self, *args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/modernbert/modeling_modernbert.py", line 469, in forward
+    hidden_states = encoder_layer(
+        hidden_states,
+    ...<2 lines>...
+        **kwargs,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/transformers/modeling_layers.py", line 114, in __call__
+    return super().__call__(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/modernbert/modeling_modernbert.py", line 325, in forward
+    attn_output, _ = self.attn(
+                     ~~~~~~~~~^
+        self.attn_norm(hidden_states),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/transformers/models/modernbert/modeling_modernbert.py", line 286, in forward
+    attn_output, attn_weights = attention_interface(
+                                ~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<8 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/transformers/integrations/sdpa_attention.py", line 158, in sdpa_attention_forward
+    attn_output = torch.nn.functional.scaled_dot_product_attention(
+        query,
+    ...<6 lines>...
+        **sdpa_kwargs,
+    )
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 5.11 GiB. GPU 0 has a total capacity of 14.56 GiB of which 770.81 MiB is free. Including non-PyTorch memory, this process has 13.81 GiB memory in use. Of the allocated memory 12.45 GiB is allocated by PyTorch, and 1.23 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

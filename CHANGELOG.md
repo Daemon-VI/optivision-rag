@@ -334,6 +334,70 @@
   - **Calibrating on one text dataset needs a margin.** The colpali preset's binary failed the bar
     on 17 of 27 DocVQA 128-d units.
 
+### int4 with a norm-preserving scale (exploratory, study-only), and the batches that test it
+
+**Nothing under `src/` changes.**
+- `compose.py`, `stages/quantize.py`, `scoring.py` and `calibration.py` are among the files
+  byte-pinned for X1-X3 (`scripts/research/x_common.py check_code`).
+- A first version changed them and broke that check (`tests/test_x_harness.py`), so it was never
+  committed.
+- The codec and the faster scoring below therefore live in `scripts/universal_study/`, next to the
+  study that uses them.
+- They are not package API: the codec is not a registered stage.
+
+- **`NormPreservingInt4Quantizer`** (`scripts/universal_study/int4norm_codec.py`).
+  - It keeps int4's levels and code size, and stores the per-vector float16 scale so that the
+    decoded vector has the norm of the vector it codes.
+  - With `center="mean"`, that norm is measured with the mean added back.
+  - Decoding is `Int4Quantizer`'s.
+  - Labels: `int4norm` and `int4norm(mean)`. `PREDICTIONS_INT4NORM.md` calls them `int4(norm)` and
+    `int4(mean, norm)`.
+- **Local check, exploratory.** On a CPU re-encode of answerai-colbert-small-v1, ndcg@10 retention:
+
+  | | plain int4 | `int4norm` | `int4norm(mean)` | `int4(mean)` |
+  |---|---|---|---|---|
+  | NFCorpus | 0.414 | 0.968 | 0.998 | 0.924 |
+  | SciFact | 0.888 | 0.999 | 0.999 | — |
+
+  It has not been measured on any other model, and it is not a default anywhere.
+- **New study script, `scripts/universal_study/s17_int4_norm.py`.** It runs the codecs, including
+  the four int4 variants, and Ward 1/3 and 1/4 merging followed by them. It also records
+  decoded-norm statistics and per-query nDCG@10.
+- **`measure_models.py`.** A spec's new `study` key chooses the studies (default `["s13"]`). An
+  unknown study stops the model before it is encoded.
+- **Faster GPU scoring, same scores: `scripts/universal_study/device_scoring.py`.** Its
+  `maxsim_matrix` takes the per-page max on the `OPTIVISION_SCORE_DEVICE` device
+  (`scatter_reduce` with `amax`). Only the page maxima come back, instead of the whole similarity
+  block.
+  - The per-query sum is the same numpy call.
+  - `use_for_calibration()` makes `calibration.score_space` score with it, in the calling process.
+    Only s17 calls it.
+  - Scores are bit-identical to `scoring.maxsim_matrix` on the same device:
+    `tests/test_followup_study_helpers.py`, plus a local check on 800 answerai NFCorpus documents
+    (float32 and `int4norm(mean)` codes).
+  - Why. On SciDocs the old path spent about 650 s per row bringing blocks back, so s13 took
+    293 min for answerai alone.
+  - The CUDA speed-up has not been timed yet.
+- **First run lost to an unpushed branch.**
+  - The five notebooks `f9` to `f13` first ran on 2026-10-18/19 at `0ea1c02`, which has no s17.
+    That commit's `measure_models.py` ignores `study`, so they ran s13 only.
+  - The results are ingested under those names: 39 units. The 27 measured before reproduce to 4
+    decimals.
+  - Q10 depends only on s13 and is scored from them: it **failed**.
+  - Details: `reports/universal/followup/INT4NORM_RUN_NOTES.md`.
+- **Five rerun notebooks, `f9b` to `f13b`,** in `notebooks/kaggle_followup_int4norm/`, run s17 only:
+  - 12 text models on SciFact and NFCorpus.
+  - 7 page models on DocVQA and TabFQuAD, nemotron included.
+  - 8 text models on BEIR SciDocs; mLateOn at batch size 8, after running out of GPU memory at 32.
+  - SciFact with 10,000 TREC-COVID distractors. This one is exploratory: no prediction depends on it.
+  - A notebook that names a study the cloned branch lacks now stops before any GPU work.
+- **Predictions.** Q1 to Q10 are in `reports/universal/followup/PREDICTIONS_INT4NORM.md`.
+  - The file was written on 2026-10-18 at 12:07, before the first run, and is committed unchanged.
+    It was not committed before that run, so its timing rests on the file time, not on git.
+  - Every prediction about `int4norm` or `int4norm(mean)` is still blind.
+  - `scripts/int4norm_predictions.py` scores them into `PREDICTIONS_INT4NORM_STATUS.md`. Today:
+    Q10 failed, and Q1 to Q9 are pending.
+
 ## 0.4.0 (2026-10-12)
 
 Built on the `research-investigation` work (`91564fd`); this section also holds the batched

@@ -1,0 +1,29 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:mxbai-edge-colbert-v0-17m_scidocs
+== mxbai-edge-colbert-v0-17m_scidocs: 25657 docs, 1000 queries, 48-d, 198 vectors/page
+   float32: nDCG@5 0.1450  0.04 MB/page  scan 334.7 ms/query
+   float32                                                        x    1.0   332.6s
+   float16                                                        x    2.0   334.0s
+   int8(per_vector)                                               x    3.8   335.7s
+   int4                                                           x    7.4   335.4s
+   int4(mean)                                                     x    7.4   337.0s
+   lloyd2(7)                                                      x   16.0   363.9s
+   binary                                                         x   32.0   334.5s
+   hierarchical_merge(0.5)                                        x    2.0   302.2s
+   hierarchical_merge(0.33)                                       x    3.0   250.7s
+   hierarchical_merge(0.25)                                       x    4.0   225.2s
+   hierarchical_merge(0.1)                                        x    9.8   178.7s
+   adaptive_merge(0.6)                                            x    2.5   217.8s
+   hierarchical_merge(0.33) > float16                             x    6.0   125.2s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   11.5   125.1s
+   hierarchical_merge(0.33) > int4                                x   22.2   125.4s
+   hierarchical_merge(0.33) > int4(mean)                          x   22.2   125.4s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.1   134.2s
+   hierarchical_merge(0.33) > binary                              x   96.2   124.9s
+   hierarchical_merge(0.25) > float16                             x    7.9   100.0s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.2   100.5s
+   hierarchical_merge(0.25) > int4                                x   29.3   100.7s
+   hierarchical_merge(0.25) > int4(mean)                          x   29.3   100.5s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   63.5   106.9s
+   hierarchical_merge(0.25) > binary                              x  127.0    99.8s
+   project(12, random)                                            x    4.0   329.5s
+   hierarchical_merge(0.33) > project(12)                         x   12.0   247.9s

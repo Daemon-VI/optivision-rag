@@ -1,0 +1,55 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s13_wide_study.py vec:mxbai-edge-colbert-v0-32m_nfcorpus
+== mxbai-edge-colbert-v0-32m_nfcorpus: 3633 docs, 323 queries, 64-d, 286 vectors/page
+   float32: nDCG@5 0.4047  0.07 MB/page  scan 41.7 ms/query
+   float32                                                        x    1.0    12.0s
+   float16                                                        x    2.0    12.4s
+   int8(per_vector)                                               x    3.9    12.7s
+   int4                                                           x    7.5    12.8s
+   int4(mean)                                                     x    7.5    13.0s
+   lloyd2(7)                                                      x   16.0    14.3s
+   binary                                                         x   32.0    11.8s
+   hierarchical_merge(0.5)                                        x    2.0    37.9s
+   hierarchical_merge(0.33)                                       x    3.0    36.0s
+   hierarchical_merge(0.25)                                       x    4.0    35.1s
+   hierarchical_merge(0.1)                                        x    9.8    33.6s
+   adaptive_merge(0.6)                                            x    2.7    20.2s
+   hierarchical_merge(0.33) > float16                             x    6.0     4.4s
+   hierarchical_merge(0.33) > int8(per_vector)                    x   11.7     4.4s
+   hierarchical_merge(0.33) > int4                                x   22.7     4.4s
+   hierarchical_merge(0.33) > int4(mean)                          x   22.7     4.6s
+   hierarchical_merge(0.33) > lloyd2(7)                           x   48.2     5.0s
+   hierarchical_merge(0.33) > binary                              x   96.5     4.3s
+   hierarchical_merge(0.25) > float16                             x    8.0     3.5s
+   hierarchical_merge(0.25) > int8(per_vector)                    x   15.4     3.4s
+   hierarchical_merge(0.25) > int4                                x   30.0     3.5s
+   hierarchical_merge(0.25) > int4(mean)                          x   30.0     3.6s
+   hierarchical_merge(0.25) > lloyd2(7)                           x   63.7     3.9s
+   hierarchical_merge(0.25) > binary                              x  127.3     3.4s
+   project(16, random)                                            x    4.0    11.2s
+   hierarchical_merge(0.33) > project(16)                         x   12.1    36.2s
+   hierarchical_merge(0.33) > project(8)                          x   24.1    36.3s
+   hierarchical_merge(0.33) > project(128)                        x    3.0    36.4s
+   hierarchical_merge(0.25) > project(16)                         x   15.9    34.7s
+   hierarchical_merge(0.25) > project(8)                          x   31.8    34.7s
+   hierarchical_merge(0.25) > project(128)                        x    4.0    34.7s
+   hierarchical_merge(0.33) > project(16) > int8(per_vector)      x   42.9     4.2s
+   hierarchical_merge(0.33) > project(16) > int4(mean)            x   77.2     4.2s
+   hierarchical_merge(0.33) > project(16) > binary                x  385.9     4.0s
+   hierarchical_merge(0.33) > project(8) > int8(per_vector)       x   77.2     4.2s
+   hierarchical_merge(0.33) > project(8) > int4(mean)             x  128.6     4.2s
+   hierarchical_merge(0.33) > project(8) > binary                 x  771.8     4.1s
+   hierarchical_merge(0.33) > project(128) > int8(per_vector)     x   11.7     4.4s
+   hierarchical_merge(0.33) > project(128) > int4(mean)           x   22.7     4.7s
+   hierarchical_merge(0.33) > project(128) > binary               x   96.5     4.4s
+   hierarchical_merge(0.25) > project(16) > int8(per_vector)      x   56.6     3.3s
+   hierarchical_merge(0.25) > project(16) > int4(mean)            x  101.9     3.4s
+   hierarchical_merge(0.25) > project(16) > binary                x  509.3     3.4s
+   hierarchical_merge(0.25) > project(8) > int8(per_vector)       x  101.9     3.4s
+   hierarchical_merge(0.25) > project(8) > int4(mean)             x  169.8     3.4s
+   hierarchical_merge(0.25) > project(8) > binary                 x 1018.6     3.4s
+   hierarchical_merge(0.25) > project(128) > int8(per_vector)     x   15.4     3.5s
+   hierarchical_merge(0.25) > project(128) > int4(mean)           x   30.0     3.7s
+   hierarchical_merge(0.25) > project(128) > binary               x  127.3     3.4s
+   tiered binary               RAM      2.3 KB  ret 0.877
+   tiered ward 1/4 > binary    RAM      0.6 KB  ret 0.852
+== mxbai-edge-colbert-v0-32m_nfcorpus done in 648s
