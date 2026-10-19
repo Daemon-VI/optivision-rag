@@ -377,7 +377,7 @@
     (float32 and `int4norm(mean)` codes).
   - Why. On SciDocs the old path spent about 650 s per row bringing blocks back, so s13 took
     293 min for answerai alone.
-  - The CUDA speed-up has not been timed yet.
+  - On Kaggle's T4 it brought SciDocs to about 33 to 68 s per row.
 - **First run lost to an unpushed branch.**
   - The five notebooks `f9` to `f13` first ran on 2026-10-18/19 at `0ea1c02`, which has no s17.
     That commit's `measure_models.py` ignores `study`, so they ran s13 only.
@@ -394,9 +394,16 @@
 - **Predictions.** Q1 to Q10 are in `reports/universal/followup/PREDICTIONS_INT4NORM.md`.
   - The file was written on 2026-10-18 at 12:07, before the first run, and is committed unchanged.
     It was not committed before that run, so its timing rests on the file time, not on git.
-  - Every prediction about `int4norm` or `int4norm(mean)` is still blind.
-  - `scripts/int4norm_predictions.py` scores them into `PREDICTIONS_INT4NORM_STATUS.md`. Today:
-    Q10 failed, and Q1 to Q9 are pending.
+  - No `int4norm` or `int4norm(mean)` value existed before the reruns.
+  - `scripts/int4norm_predictions.py` scores them into `PREDICTIONS_INT4NORM_STATUS.md`.
+- **Results of the reruns (2026-10-19, 11.4 GPU h): 5 held, 5 failed.**
+  - Held: Q1, Q2 (8 of 10, the minimum), Q4 (24 of 24), Q5 (Spearman −0.723) and Q9.
+  - Failed: Q3 (LateOn NFCorpus `int4norm` 0.9006, against below 0.9), Q6 (colpali-v1.3 DocVQA lost
+    0.012, against 0.01), Q7 (nemotron-4b TabFQuAD `int4norm` 0.743, against below 0.5), Q8
+    (EVIE-4.5B TabFQuAD lower bound 0.927) and Q10.
+  - Exploratory: `int4norm(mean)` has a lower bound of at least 0.95 on 45 of the 46 units,
+    against 41 for `int4(mean)`.
+  - It stays study-only. Details: `reports/universal/followup/INT4NORM_SUMMARY.md`.
 
 ## 0.4.0 (2026-10-12)
 

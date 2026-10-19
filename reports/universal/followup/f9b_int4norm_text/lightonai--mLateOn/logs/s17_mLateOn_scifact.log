@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:mLateOn_scifact
+== mLateOn_scifact: 5183 docs, 300 queries, 128-d, 313 vectors/doc
+   float32: nDCG@5 0.7456; int4 norm ratio sd 0.0121, int4norm 0.00023
+   float32                                      x    1.0     4.4s
+   float16                                      x    2.0     5.3s
+   int8(per_vector)                             x    3.9     6.0s
+   int4                                         x    7.8     6.8s
+   int4norm                                     x    7.8     7.1s
+   int4(mean)                                   x    7.8     7.1s
+   int4norm(mean)                               x    7.8     8.0s
+   lloyd2(7)                                    x   16.0    10.6s
+   binary                                       x   32.0     4.6s
+   hierarchical_merge(0.33) > int8(per_vector)  x   11.9    74.5s
+   hierarchical_merge(0.33) > int4              x   23.4     2.1s
+   hierarchical_merge(0.33) > int4norm          x   23.4     2.2s
+   hierarchical_merge(0.33) > int4(mean)        x   23.4     2.3s
+   hierarchical_merge(0.33) > int4norm(mean)    x   23.4     2.6s
+   hierarchical_merge(0.33) > binary            x   96.5     1.4s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.7    73.7s
+   hierarchical_merge(0.25) > int4              x   30.9     1.6s
+   hierarchical_merge(0.25) > int4norm          x   30.9     1.7s
+   hierarchical_merge(0.25) > int4(mean)        x   30.9     1.8s
+   hierarchical_merge(0.25) > int4norm(mean)    x   30.9     2.0s
+   hierarchical_merge(0.25) > binary            x  127.4     1.1s
+== mLateOn_scifact done in 237s

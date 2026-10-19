@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:jina-colbert-v2_scidocs
+== jina-colbert-v2_scidocs: 25657 docs, 1000 queries, 128-d, 214 vectors/doc
+   float32: nDCG@5 0.1604; int4 norm ratio sd 0.0099, int4norm 0.00020
+   float32                                      x    1.0    64.1s
+   float16                                      x    2.0    67.6s
+   int8(per_vector)                             x    3.9    69.8s
+   int4                                         x    7.8    72.5s
+   int4norm                                     x    7.8    74.0s
+   int4(mean)                                   x    7.8    74.3s
+   int4norm(mean)                               x    7.8    77.4s
+   lloyd2(7)                                    x   16.0    88.5s
+   binary                                       x   32.0    65.3s
+   hierarchical_merge(0.33) > int8(per_vector)  x   11.8   212.4s
+   hierarchical_merge(0.33) > int4              x   23.3    25.0s
+   hierarchical_merge(0.33) > int4norm          x   23.3    25.1s
+   hierarchical_merge(0.33) > int4(mean)        x   23.3    25.4s
+   hierarchical_merge(0.33) > int4norm(mean)    x   23.3    26.9s
+   hierarchical_merge(0.33) > binary            x   96.3    22.5s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.6   206.2s
+   hierarchical_merge(0.25) > int4              x   30.8    19.7s
+   hierarchical_merge(0.25) > int4norm          x   30.8    20.2s
+   hierarchical_merge(0.25) > int4(mean)        x   30.8    20.2s
+   hierarchical_merge(0.25) > int4norm(mean)    x   30.8    21.0s
+   hierarchical_merge(0.25) > binary            x  127.1    17.8s
+== jina-colbert-v2_scidocs done in 1420s

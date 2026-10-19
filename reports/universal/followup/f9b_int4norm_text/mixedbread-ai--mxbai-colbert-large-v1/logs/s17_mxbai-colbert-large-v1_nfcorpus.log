@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:mxbai-colbert-large-v1_nfcorpus
+== mxbai-colbert-large-v1_nfcorpus: 3633 docs, 323 queries, 128-d, 209 vectors/doc
+   float32: nDCG@5 0.3418; int4 norm ratio sd 0.0100, int4norm 0.00020
+   float32                                      x    1.0    11.4s
+   float16                                      x    2.0    12.0s
+   int8(per_vector)                             x    3.9    12.3s
+   int4                                         x    7.8    12.7s
+   int4norm                                     x    7.8    12.9s
+   int4(mean)                                   x    7.8    13.0s
+   int4norm(mean)                               x    7.8    13.5s
+   lloyd2(7)                                    x   16.0    15.4s
+   binary                                       x   32.0    11.6s
+   hierarchical_merge(0.33) > int8(per_vector)  x   11.9    28.6s
+   hierarchical_merge(0.33) > int4              x   23.4     4.0s
+   hierarchical_merge(0.33) > int4norm          x   23.4     4.0s
+   hierarchical_merge(0.33) > int4(mean)        x   23.4     4.2s
+   hierarchical_merge(0.33) > int4norm(mean)    x   23.4     4.4s
+   hierarchical_merge(0.33) > binary            x   96.4     3.8s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.6    27.9s
+   hierarchical_merge(0.25) > int4              x   30.8     3.2s
+   hierarchical_merge(0.25) > int4norm          x   30.8     3.3s
+   hierarchical_merge(0.25) > int4(mean)        x   30.8     3.4s
+   hierarchical_merge(0.25) > int4norm(mean)    x   30.8     3.5s
+   hierarchical_merge(0.25) > binary            x  127.0     3.1s
+== mxbai-colbert-large-v1_nfcorpus done in 225s

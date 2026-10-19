@@ -43,9 +43,9 @@ ones written before any result was seen.
   - the `dim` (projection-only) rows of every unit.
 
   No `int4` value outside `f13` has been read.
-- **What is still blind.** Every value of `int4(norm)` and `int4(mean, norm)` (labelled
-  `int4norm` and `int4norm(mean)`; see the rerun section). No run has
-  produced them yet.
+- **What was still blind.** Every value of `int4(norm)` and `int4(mean, norm)` (labelled
+  `int4norm` and `int4norm(mean)`; see the rerun section). None existed before the `f9b` to `f13b`
+  results were ingested on 2026-10-19; `INT4NORM_SUMMARY.md` scores them.
 
 ## Q10, scored from s13
 
@@ -104,4 +104,11 @@ ones written before any result was seen.
       does not change any value a prediction reads.
     - It changes only how long a row takes. The old path spent about 650 s per SciDocs row
       copying similarity blocks back to the CPU.
-    - The CUDA speed-up has not been measured yet; the step times in `run.json` will show it.
+    - On SciDocs it took about 33 to 68 s per row (`run.json` step times; `INT4NORM_SUMMARY.md`).
+
+## The rerun's outcome
+
+- **All ran.** `f9b` to `f13b` ran at `248ae2b` on 2026-10-19, with s17 only, and every model was
+  measured: 46 units for Q1 to Q9 and the 2 `f13b` units. 11.4 GPU hours in all.
+- **Result.** Q1, Q2, Q4, Q5 and Q9 held; Q3, Q6, Q7, Q8 and Q10 failed. `INT4NORM_SUMMARY.md` has
+  the values and margins.

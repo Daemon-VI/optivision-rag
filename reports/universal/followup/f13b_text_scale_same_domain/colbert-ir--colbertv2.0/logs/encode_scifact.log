@@ -1,0 +1,21 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/encode_text_vectors.py colbert-ir/colbertv2.0 --dataset scifact --out /tmp/optdata/vectors --check-pairs 12 --batch-size 32 --distractors trec-covid --distractor-docs 10000
+colbert-ir/colbertv2.0: registry status measured, loader sentence-transformers
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating corpus split:   0%|          | 0/5183 [00:00<?, ? examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 49377.70 examples/s]Generating corpus split: 100%|██████████| 5183/5183 [00:00<00:00, 48180.15 examples/s]
+Generating queries split:   0%|          | 0/1109 [00:00<?, ? examples/s]Generating queries split: 100%|██████████| 1109/1109 [00:00<00:00, 199411.95 examples/s]
+Generating train split:   0%|          | 0/919 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 919/919 [00:00<00:00, 66453.44 examples/s]
+Generating test split:   0%|          | 0/339 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 339/339 [00:00<00:00, 154517.39 examples/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 2638.80it/s]
+[transformers] [1mBertModel LOAD REPORT[0m from: colbert-ir/colbertv2.0
+Key           | Status     |  | 
+--------------+------------+--+-
+linear.weight | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+{"loaded": "colbert-ir/colbertv2.0", "revision": "c1e84128e85ef755c096a95bdb06b47793b13acf"}
+One or more queries filled the entire query_expansion length of 32 tokens: any content beyond it was truncated, as this model always processes queries at exactly this width.
+{"check_retriever": {"pairs": 12, "dimension": 128, "query_dimension": 128, "vectors_per_document": [133, 152, 173, 168, 156, 148, 161, 167, 169, 167, 160, 161], "vectors_per_query": [32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32], "finite": true, "unit_norm_max_error": 1.1920928955078125e-07, "query_ranks_own_document_first": 10, "ok": true}}
+Generating corpus split:   0%|          | 0/171332 [00:00<?, ? examples/s]Generating corpus split: 100%|██████████| 171332/171332 [00:00<00:00, 200485.58 examples/s]Generating corpus split: 100%|██████████| 171332/171332 [00:00<00:00, 195088.99 examples/s]
+{"distractors": ["trec-covid"], "distractor_docs": 10000, "corpus": 15183}
+{"tag": "colbertv2.0_scifact_plus10000", "docs": 15183, "vectors": 2074391, "dim": 128, "queries": 300, "doc_seconds": 172.2, "query_seconds": 0.6}

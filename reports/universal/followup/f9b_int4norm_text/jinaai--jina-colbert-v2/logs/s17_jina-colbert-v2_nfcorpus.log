@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:jina-colbert-v2_nfcorpus
+== jina-colbert-v2_nfcorpus: 3633 docs, 323 queries, 128-d, 257 vectors/doc
+   float32: nDCG@5 0.4002; int4 norm ratio sd 0.0100, int4norm 0.00020
+   float32                                      x    1.0     3.8s
+   float16                                      x    2.0     4.4s
+   int8(per_vector)                             x    3.9     4.8s
+   int4                                         x    7.8     5.1s
+   int4norm                                     x    7.8     5.3s
+   int4(mean)                                   x    7.8     5.4s
+   int4norm(mean)                               x    7.8     6.0s
+   lloyd2(7)                                    x   16.0     7.4s
+   binary                                       x   32.0     3.8s
+   hierarchical_merge(0.33) > int8(per_vector)  x   11.9    35.9s
+   hierarchical_merge(0.33) > int4              x   23.4     1.6s
+   hierarchical_merge(0.33) > int4norm          x   23.4     1.5s
+   hierarchical_merge(0.33) > int4(mean)        x   23.4     1.7s
+   hierarchical_merge(0.33) > int4norm(mean)    x   23.4     1.9s
+   hierarchical_merge(0.33) > binary            x   96.3     1.2s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.7    35.0s
+   hierarchical_merge(0.25) > int4              x   30.9     1.3s
+   hierarchical_merge(0.25) > int4norm          x   30.9     1.2s
+   hierarchical_merge(0.25) > int4(mean)        x   30.9     1.3s
+   hierarchical_merge(0.25) > int4norm(mean)    x   30.9     1.5s
+   hierarchical_merge(0.25) > binary            x  127.3     1.0s
+== jina-colbert-v2_nfcorpus done in 140s

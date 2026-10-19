@@ -1,0 +1,25 @@
+$ /usr/bin/python3 /kaggle/working/optivision-rag/scripts/universal_study/s17_int4_norm.py vec:VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled
+== VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled: 500 docs, 451 queries, 320-d, 1221 vectors/doc
+   float32: nDCG@5 0.6560; int4 norm ratio sd 0.0073, int4norm 0.00021
+   float32                                      x    1.0     5.1s
+   float16                                      x    2.0     6.0s
+   int8(per_vector)                             x    4.0     6.5s
+   int4                                         x    7.9     7.1s
+   int4norm                                     x    7.9     7.4s
+   int4(mean)                                   x    7.9     7.5s
+   int4norm(mean)                               x    7.9     8.2s
+   lloyd2(7)                                    x   16.0    10.8s
+   binary                                       x   32.0     5.0s
+   hierarchical_merge(0.33) > int8(per_vector)  x   12.0   140.6s
+   hierarchical_merge(0.33) > int4              x   23.9     1.9s
+   hierarchical_merge(0.33) > int4norm          x   23.9     2.0s
+   hierarchical_merge(0.33) > int4(mean)        x   23.9     2.0s
+   hierarchical_merge(0.33) > int4norm(mean)    x   23.9     2.3s
+   hierarchical_merge(0.33) > binary            x   96.9     1.3s
+   hierarchical_merge(0.25) > int8(per_vector)  x   15.9   141.5s
+   hierarchical_merge(0.25) > int4              x   31.6     1.4s
+   hierarchical_merge(0.25) > int4norm          x   31.6     1.5s
+   hierarchical_merge(0.25) > int4(mean)        x   31.6     1.5s
+   hierarchical_merge(0.25) > int4norm(mean)    x   31.6     1.7s
+   hierarchical_merge(0.25) > binary            x  127.9     0.9s
+== VultronRetrieverCore-Qwen3.5-4.5B_docvqa_test_subsampled done in 371s
