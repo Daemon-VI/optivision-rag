@@ -470,3 +470,63 @@ def test_injected_model_device_and_dtype_come_from_its_parameters():
 
     enc2 = ColEngineTokenEncoder("org/tiny", "colqwen3.5", model=Fake(), processor=TinyProcessor())
     assert enc2.device == "cuda:0" and enc2.torch_dtype == torch.float16
+
+
+class _PixelProcessor(TinyProcessor):
+    """Like TinyProcessor, plus float32 pixel values, as an InternVL processor returns them."""
+
+    def process_images(self, images=None):
+        batch = super().process_images(images)
+        return {**batch, "pixel_values": torch.ones(len(images), 3, 2, 2)}
+
+
+class _HalfModel(TinyModel):
+    """Records the dtype its inputs arrive in; its one parameter is float16."""
+
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.zeros(1, dtype=torch.float16))
+        self.seen = {}
+
+    def forward(self, input_ids, attention_mask=None, pixel_values=None):
+        self.seen = {"input_ids": input_ids.dtype, "attention_mask": attention_mask.dtype,
+                     "pixel_values": None if pixel_values is None else pixel_values.dtype}
+        return super().forward(input_ids, attention_mask)
+
+
+def test_a_cast_inputs_recipe_casts_floating_inputs_to_the_model_dtype():
+    """M2: the vintern recipe casts pixel values to the model dtype, as its card does by hand."""
+    assert RECIPES["vintern"].cast_inputs and not RECIPES["processor"].cast_inputs
+    model = _HalfModel()
+    RemoteCodeEncoder("org/tiny", "vintern", model=model, processor=_PixelProcessor()).encode_images([_page(40, 0)])
+    assert model.seen == {"input_ids": torch.long, "attention_mask": torch.long, "pixel_values": torch.float16}
+    RemoteCodeEncoder("org/tiny", "processor", model=model, processor=_PixelProcessor()).encode_images([_page(40, 0)])
+    assert model.seen["pixel_values"] == torch.float32  # the other recipes leave the batch as built
+
+
+def test_info_records_the_batch_sizes_and_whether_the_mask_was_applied():
+    """L1: batch size is part of what makes vectors comparable, so info() records it."""
+    enc = RemoteCodeEncoder("org/tiny", "tomoro", model=TinyModel(wrap=True), processor=TinyProcessor(),
+                            query_batch_size=1)
+    assert enc.info()["mask_applied"] is None
+    enc.encode_queries(["1 2", "3"])
+    info = enc.info()
+    assert info["query_batch_size"] == 1 and info["page_batch_size"] == 1 and info["mask_applied"] is True
+
+
+def test_a_mask_that_does_not_fit_is_warned_about_once_and_recorded():
+    """L3: a mask of another length is not applied; the encoder says so instead of staying silent."""
+    from optivision.encoders.late import _rows
+
+    owner = SimpleNamespace(mask_applied=None)
+    emb = np.zeros((1, 3, DIM), np.float32)
+    emb[0, :, 0] = 1.0
+    with pytest.warns(RuntimeWarning, match="does not match"):
+        rows = _rows(emb, np.array([[1, 1]]), owner=owner)
+    assert rows[0].shape[0] == 3 and owner.mask_applied is False
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        _rows(emb, np.array([[1, 1]]), owner=owner)  # once per encoder: no second warning
+

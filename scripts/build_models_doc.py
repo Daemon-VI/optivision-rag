@@ -24,8 +24,9 @@ from optivision.adapters import (
     supported_loaders,
     supported_models,
 )
+from optivision.adapters.measured import _measured_via
 
-OUT = ROOT / "docs" / "package" / "guide" / "MODELS.md"
+OUT =ROOT / "docs" / "package" / "guide" / "MODELS.md"
 
 #: known late-interaction models that no loader of this package builds, and why (checked 2026-10-12)
 NO_LOADER = [
@@ -270,11 +271,13 @@ def render() -> str:
             parts.append(f"Loading notes:\n\n{notes}\n")
     parts.append(MEASURED_HEAD + measured_table() + "\n")
     without_rows = [m.model_id for m in supported_models("measured") if m.model_id not in measured_models()]
-    parts.append("Measured models without rows in the catalogue: "
-                 + ", ".join(f"`{m}`" for m in without_rows)
-                 + ". `vidore/colSmol-256M` was measured on generated corpora only, which have no fixed-pipeline "
-                   "study of this form; `vidore/colqwen2-v1.0` gives the same vectors as its pre-merged copy, "
-                   "which holds the rows.\n")
+    if without_rows:
+        why = []
+        for m in without_rows:
+            via = _measured_via(m)
+            why.append(f"`{m}` gives the same vectors as `{via}`, which holds the rows" if via else
+                       f"`{m}` was measured outside the fixed-pipeline study (its evidence says where)")
+        parts.append("Measured models without rows in the catalogue: " + "; ".join(why) + ".\n")
     parts.append("The runs added in 0.4.0 (Kaggle, two T4 GPUs each, the same two 500-page splits and study "
                  "scripts as the earlier wide-model run):\n\n"
                  "| model | revision | inference | record |\n|---|---|---|---|\n"

@@ -292,3 +292,22 @@ def test_measured_models_without_rows_explain_how_they_were_measured():
     never = next(m for m, info in MODELS.items() if info.status != MEASURED and m not in measured_models())
     unmeasured = runner.invoke(app, ["models", never]).output
     assert "No fixed-pipeline measurements" in unmeasured
+
+
+def test_measured_via_names_the_sibling_whose_rows_apply():
+    """L6: the CLI and MODELS.md explain measured models without rows by one rule."""
+    from optivision.adapters.measured import _measured_via
+
+    assert _measured_via("vidore/colqwen2-v1.0") == "vidore/colqwen2-v1.0-merged"
+    assert _measured_via("vidore/colSmol-256M") is None  # measured, but outside the fixed-pipeline study
+    assert _measured_via("vidore/colqwen2-v1.0-merged") is None  # has rows of its own
+
+
+def test_the_builder_refuses_label_sets_that_differ_across_datasets():
+    """L7: a label present in one dataset only would make measured_shortlist drop it silently."""
+    builder = _builder()
+    rows = [{"label": "float16"}, {"label": "int8"}]
+    builder.check_labels({"m": {"a": {"rows": rows}, "b": {"rows": list(rows)}}})
+    with pytest.raises(ValueError, match="label sets differ"):
+        builder.check_labels({"m": {"a": {"rows": rows}, "b": {"rows": [{"label": "float16"}, {"label": "x"}]}}})
+

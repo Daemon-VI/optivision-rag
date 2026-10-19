@@ -71,7 +71,12 @@ def _listing(status: str | None, as_json: bool) -> None:
 
 def _detail(model_id: str, min_retention: float, as_json: bool) -> None:
     from .adapters import MODELS
-    from .adapters.measured import measured_models, measured_results, measured_shortlist
+    from .adapters.measured import (
+        _measured_via,
+        measured_models,
+        measured_results,
+        measured_shortlist,
+    )
 
     info = MODELS.get(model_id)
     if info is None:
@@ -79,9 +84,7 @@ def _detail(model_id: str, min_retention: float, as_json: bool) -> None:
                    "pass its vectors as arrays, or load it with load_adapter(model_id, loader=...).")
         raise typer.Exit(2)
     has_rows = model_id in measured_models()
-    # a measured model without rows of its own may be measured through a sibling its evidence names
-    named = [m for m in measured_models() if m != model_id and m in info.evidence]
-    via = max(named, key=len) if (info.status == "measured" and not has_rows and named) else None
+    via = _measured_via(model_id)  # a measured model without rows may be measured through a sibling
     shortlist = measured_shortlist(model_id, min_retention) if has_rows else []
     if as_json:
         typer.echo(json.dumps({"model_id": info.model_id, "family": info.family, "modality": info.modality,
