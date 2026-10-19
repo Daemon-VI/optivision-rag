@@ -120,6 +120,7 @@ Loaders `load_adapter(model_id, loader=...)` accepts for a checkpoint that is no
 `remote-code:nvidia-colembed`,
 `remote-code:processor`,
 `remote-code:tomoro`,
+`remote-code:vintern`,
 `pylate`,
 `sentence-transformers`.
 
@@ -251,7 +252,7 @@ Loading notes:
 | `Metric-AI/ColQwen2.5-7b-multilingual-v1.0` | image | 128 | `colpali-engine:colqwen2.5` | mit |
 | `webAI-Official/webAI-ColVec1.1-4b` | image | 640 | `sentence-transformers` | other |
 | `ibm-granite/granite-vision-3.3-2b-embedding` | image | 128 | `remote-code:processor` | apache-2.0 |
-| `5CD-AI/Vintern-Embedding-1B` | image | 128 | `remote-code:processor` | not declared |
+| `5CD-AI/Vintern-Embedding-1B` | image | 128 | `remote-code:vintern` | not declared |
 | `jinaai/jina-embeddings-v4` | image | 128 | `remote-code:jina-v4` | not declared |
 | `nvidia/llama-nemoretriever-colembed-1b-v1` | image | ? | `remote-code:nvidia-colembed` | other |
 | `nvidia/llama-nemoretriever-colembed-3b-v1` | image | ? | `remote-code:nvidia-colembed` | other |
@@ -262,7 +263,7 @@ Loading notes:
 - `Metric-AI/ColQwen2.5-7b-multilingual-v1.0`: adapter-only repository: merged explicitly over its base model on load
 - `webAI-Official/webAI-ColVec1.1-4b`: runs the repository's own modelling code: pass trust_remote_code=True
 - `ibm-granite/granite-vision-3.3-2b-embedding`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.50
-- `5CD-AI/Vintern-Embedding-1B`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand
+- `5CD-AI/Vintern-Embedding-1B`: runs the repository's own modelling code: pass trust_remote_code=True; the card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand, which the vintern recipe repeats (cast_inputs)
 - `jinaai/jina-embeddings-v4`: runs the repository's own modelling code: pass trust_remote_code=True; single-vector by default, the recipe asks for the 128-d multi-vector output; the card names the Qwen Research License
 - `nvidia/llama-nemoretriever-colembed-1b-v1`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires transformers==4.49.0 and flash-attn; no file of the repository states the output width
 - `nvidia/llama-nemoretriever-colembed-3b-v1`: runs the repository's own modelling code: pass trust_remote_code=True; the card requires transformers==4.49.0 and flash-attn; no file of the repository states the output width
@@ -395,7 +396,7 @@ queries decides.
 | `webAI-Official/webAI-ColVec1.1-8b` | docvqa_test_subsampled | ndcg@5 0.640 | `hierarchical_merge(0.25) > binary` | 127.9 | 1.007 [0.988, 1.026] |
 | `webAI-Official/webAI-ColVec1.1-8b` | infovqa_test_subsampled | ndcg@5 0.945 | `hierarchical_merge(0.25) > binary` | 127.9 | 0.994 [0.989, 0.998] |
 
-Measured models without rows in the catalogue: `vidore/colSmol-256M`, `vidore/colqwen2-v1.0`. `vidore/colSmol-256M` was measured on generated corpora only, which have no fixed-pipeline study of this form; `vidore/colqwen2-v1.0` gives the same vectors as its pre-merged copy, which holds the rows.
+Measured models without rows in the catalogue: `vidore/colSmol-256M` was measured outside the fixed-pipeline study (its evidence says where); `vidore/colqwen2-v1.0` gives the same vectors as `vidore/colqwen2-v1.0-merged`, which holds the rows.
 
 The runs added in 0.4.0 (Kaggle, two T4 GPUs each, the same two 500-page splits and study scripts as the earlier wide-model run):
 

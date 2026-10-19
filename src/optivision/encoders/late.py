@@ -32,6 +32,7 @@ Nothing here chooses or alters compression settings by model.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -66,11 +67,13 @@ COLENGINE_FAMILIES: dict[str, tuple[str, str]] = {
 _ZERO_ROW = 1e-6
 
 
-def _rows(emb: Any, mask: Any) -> list[np.ndarray]:
+def _rows(emb: Any, mask: Any, owner: Any = None) -> list[np.ndarray]:
     """``[batch, tokens, dim]`` (or one item's ``[tokens, dim]``) to per-item float32 arrays.
 
     A row is dropped when the attention mask says it is padding, and when its norm is zero
-    (these models multiply their output by the mask, so a padded row is exactly zero).
+    (these models multiply their output by the mask, so a padded row is exactly zero). A mask
+    whose shape does not match the output is not applied; that is warned about once per
+    ``owner`` (the encoder) and recorded as its ``mask_applied = False``.
     """
     import torch
 
@@ -84,7 +87,17 @@ def _rows(emb: Any, mask: Any) -> list[np.ndarray]:
         if mask.ndim == 1:
             mask = mask.unsqueeze(0)
         if tuple(mask.shape) != tuple(emb.shape[:2]):
-            mask = None  # a mask of another length (prefix tokens removed by the model) is not applied
+            # a mask of another length (prefix tokens removed by the model) is not applied
+            if owner is None or getattr(owner, "mask_applied", None) is not False:
+                warnings.warn(
+                    f"attention mask of shape {tuple(mask.shape)} does not match the output's "
+                    f"{tuple(emb.shape[:2])}; it is not applied and only exact-zero rows are removed, "
+                    "so padding the model did not zero is kept", RuntimeWarning, stacklevel=3)
+            if owner is not None:
+                owner.mask_applied = False
+            mask = None
+        elif owner is not None and getattr(owner, "mask_applied", None) is None:
+            owner.mask_applied = True
     out = []
     for i in range(emb.shape[0]):
         item = emb[i] if mask is None else emb[i][mask[i].bool()]
@@ -160,6 +173,7 @@ class _TokenEncoder:
     placement: Any = None
     page_batch_size: int = 1
     query_batch_size: int = 1
+    mask_applied: bool | None = None  # None until a batch with a mask was seen
 
     def _note_width(self, arrays: Sequence[np.ndarray]) -> None:
         for a in arrays:
@@ -191,6 +205,8 @@ class _TokenEncoder:
         return {"model": self.checkpoint, "revision": self.revision, "dim": self.dim, "loader": self.loader,
                 "device": self.device, "dtype": str(self.torch_dtype), "loading_report": self.loading_report,
                 "adapter_merge_check": self.adapter_merge_check, "placement": self.placement,
+                "page_batch_size": self.page_batch_size, "query_batch_size": self.query_batch_size,
+                "mask_applied": self.mask_applied,
                 **({"max_num_visual_tokens": cap} if (cap := getattr(self, "max_num_visual_tokens", None)) else {})}
 
     def _images(self, images: list[Any]) -> list[np.ndarray]:  # pragma: no cover - abstract
@@ -261,7 +277,7 @@ class ColEngineTokenEncoder(_TokenEncoder):
         batch = {k: (v.to(self.device) if hasattr(v, "to") else v) for k, v in dict(batch).items()}
         with torch.inference_mode():
             out = self.model(**batch)
-        return _rows(getattr(out, "embeddings", out), batch.get("attention_mask"))
+        return _rows(getattr(out, "embeddings", out), batch.get("attention_mask"), owner=self)
 
     def _images(self, images: list[Any]) -> list[np.ndarray]:
         return self._forward(self.processor.process_images(images))
@@ -298,6 +314,7 @@ class Recipe:
     model_kwargs: Mapping[str, Any] = field(default_factory=dict)
     output: str = "embeddings"
     needs_processor: bool = True
+    cast_inputs: bool = False  # cast floating batch tensors to the model dtype, as some cards do by hand
     exercised: bool = False  # True only if a run of this repository used these calls
 
     def __post_init__(self) -> None:
@@ -313,9 +330,13 @@ RECIPES: dict[str, Recipe] = {
                      processor_kwargs={"max_num_visual_tokens": 1280}, exercised=True),
     # The recipes below repeat the calls of a model card and have not been run by this repository.
     # processor.process_images(images) / processor.process_queries(queries), then model(**batch):
-    # ibm-granite/granite-vision-3.3-2b-embedding, 5CD-AI/Vintern-Embedding-1B
+    # ibm-granite/granite-vision-3.3-2b-embedding
     "processor": Recipe(style="processor", image_method="process_images", query_method="process_queries",
                         output=""),
+    # 5CD-AI/Vintern-Embedding-1B: the same calls; its card casts the inputs to the model dtype by
+    # hand, because InternVL's extract_feature does not (bfloat16 weights, float32 pixel values)
+    "vintern": Recipe(style="processor", image_method="process_images", query_method="process_queries",
+                      output="", cast_inputs=True),
     # webAI-Official/webAI-ColVec1-*: keyword arguments, queries under ``texts``
     "colvec": Recipe(style="processor", image_method="process_images", query_method="process_queries",
                      image_arg="images", query_arg="texts"),
@@ -410,10 +431,20 @@ class RemoteCodeEncoder(_TokenEncoder):
             with torch.inference_mode():
                 return _as_list(self._call(self.model, method, arg, items, kwargs))
         batch = dict(self._call(self.processor, method, arg, items, kwargs))
-        batch = {k: (v.to(self.device) if hasattr(v, "to") else v) for k, v in batch.items()}
+        dtype = (getattr(self, "torch_dtype", None) or getattr(self.model, "dtype", None)) if recipe.cast_inputs else None
+
+        def move(v: Any) -> Any:
+            if not hasattr(v, "to"):
+                return v
+            if dtype is not None and getattr(v, "is_floating_point", lambda: False)():
+                return v.to(self.device, dtype)
+            return v.to(self.device)
+
+        batch = {k: move(v) for k, v in batch.items()}
         with torch.inference_mode():
             out = self.model(**batch)
-        return _rows(getattr(out, recipe.output, out) if recipe.output else out, batch.get("attention_mask"))
+        return _rows(getattr(out, recipe.output, out) if recipe.output else out, batch.get("attention_mask"),
+                     owner=self)
 
     def _images(self, images: list[Any]) -> list[np.ndarray]:
         r = self.recipe

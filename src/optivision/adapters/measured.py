@@ -43,6 +43,22 @@ def measured_models() -> list[str]:
     return sorted(_catalog()["models"])
 
 
+def _measured_via(model_id: str) -> str | None:
+    """The catalogue model whose rows a measured id without rows of its own is measured through.
+
+    That is the longest catalogue id its registry evidence names (``vidore/colqwen2-v1.0`` names
+    its pre-merged copy); None when the id has rows, is not measured, or names none.
+    """
+    from . import MODELS
+
+    info = MODELS.get(model_id)
+    rows = measured_models()
+    if info is None or info.status != "measured" or model_id in rows:
+        return None
+    named = [m for m in rows if m != model_id and m in info.evidence]
+    return max(named, key=len) if named else None
+
+
 def measured_results(model_id: str, dataset: str | None = None) -> dict[str, dict[str, Any]]:
     """The catalogue entries of one model: ``{dataset: entry}``.
 

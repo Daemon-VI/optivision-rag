@@ -116,13 +116,14 @@ _MODELS: list[ModelInfo] = [
               "T4s, colpali-engine 0.3.18, 2026-10-06; reports/universal/wide/colqwen3.5-4.5B-v3_*. Encoded by "
               "the script stored beside the logs (reports/universal/wide/logs/colqwen3.5-4.5B-v3/enc_generic.py), "
               "whose calls the in-package loader repeats; the in-package loader itself has not been run on this "
-              "checkpoint",
+              "checkpoint. " "That script encoded one page or query at a time in float32: pass page_batch_size=1, query_batch_size=1 and dtype='float32' to match its vectors (the defaults batch queries by 8 and pick bfloat16 on Ampere and newer GPUs, which moves vectors slightly)",
               license="apache-2.0", revision="c4ea4b92ff3322d68bfd6c65e492c69d0176f910"),
     ModelInfo("TomoroAI/tomoro-colqwen3-embed-4b", "colqwen3", "image", "remote-code:tomoro", 320,
               MEASURED, "ViDoRe V1 DocVQA + InfoVQA (500 pages each, ~1,100 to 1,200 vectors/page), float32 over two Kaggle "
               "T4s, 2026-10-06; reports/universal/wide/tomoro-colqwen3-embed-4b_*. Encoded by the script stored "
               "beside the logs (reports/universal/wide/logs/tomoro-colqwen3-embed-4b/enc_generic.py), whose calls "
-              "the in-package recipe repeats; the in-package loader itself has not been run on this checkpoint",
+              "the in-package recipe repeats; the in-package loader itself has not been run on this checkpoint. "
+              "That script encoded one page or query at a time in float32: pass page_batch_size=1, query_batch_size=1 and dtype='float32' to match its vectors (the defaults batch queries by 8 and pick bfloat16 on Ampere and newer GPUs, which moves vectors slightly)",
               license="apache-2.0", revision="13517a29e8c5e408f7f2684337ed407df3acb212",
               notes="runs the repository's own modelling code: pass trust_remote_code=True"),
     ModelInfo("nomic-ai/colnomic-embed-multimodal-7b", "colqwen", "image", "colpali-engine:colqwen2.5", 128,
@@ -385,14 +386,15 @@ _MODELS: list[ModelInfo] = [
               license="apache-2.0", revision="baa53d1e1ac95baefb15e4aa9fdcc471ac728c83",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
                     "card pins transformers==4.50"),
-    ModelInfo("5CD-AI/Vintern-Embedding-1B", "colinternvl", "image", "remote-code:processor", 128,
+    ModelInfo("5CD-AI/Vintern-Embedding-1B", "colinternvl", "image", "remote-code:vintern", 128,
               UNVERIFIED, "remote-code recipe written against the model card (process_images / process_queries); cannot"
               " be loaded under transformers 5: its configuration_internvl_chat.py reads "
               "llm_config['architectures'], which is not there (Kaggle 2026-10-15, transformers 5.16.1); "
               "reports/universal/campaign/5CD-AI--Vintern-Embedding-1B",
               license=None, revision="ee3f8a72164d194c0885df3f9be3d4a3f0626cc9",
               notes="runs the repository's own modelling code: pass trust_remote_code=True; the "
-                    "card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand"),
+                    "card pins transformers==4.48.2 and casts its inputs to bfloat16 by hand, which the "
+                    "vintern recipe repeats (cast_inputs)"),
     ModelInfo("jinaai/jina-embeddings-v4", "jina-v4", "image", "remote-code:jina-v4", 128,
               UNVERIFIED, "remote-code recipe written against the model card (encode_image / encode_text with "
               "return_multivector=True); cannot be loaded under transformers 5: its qwen2_5_vl.py asks for "

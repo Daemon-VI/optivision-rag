@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.1 (2026-10-19)
+
+The rest of the 2026-10-14 review of 0.4.0. No compression result, stage, file format or default
+pipeline changes.
+
+- **M2. A `cast_inputs` recipe flag.** It casts floating batch tensors to the model dtype before
+  the forward pass.
+  - The new `remote-code:vintern` recipe sets it, as `5CD-AI/Vintern-Embedding-1B`'s card does by
+    hand. InternVL's `extract_feature` does not cast float32 pixel values to bfloat16 weights,
+    which made the first image batch fail on a bf16 GPU.
+  - The registry entry now uses that recipe. The model stays `unverified`: it does not load under
+    transformers 5.
+- **L1. Batch sizes are recorded.** `info()` of the token encoders includes `page_batch_size` and
+  `query_batch_size`.
+  - `athrael-soju/colqwen3.5-4.5B-v3` and `TomoroAI/tomoro-colqwen3-embed-4b` were measured with
+    a script that encoded one item at a time in float32. Their evidence now says how to get those
+    vectors: `page_batch_size=1`, `query_batch_size=1`, `dtype="float32"`.
+  - The defaults are unchanged.
+- **L3. A mask that does not fit is reported.** When an attention mask's shape differs from the
+  output, it is still not applied. It now gives a `RuntimeWarning` once per encoder, and
+  `info()["mask_applied"]` is False; it is True once a mask was applied.
+- **L6. MODELS.md explains each measured model without rows.** The text is generated from its
+  registry evidence, not hardcoded. One rule, `adapters.measured._measured_via`, now serves both
+  the page and `optivision models`.
+- **L7. The catalogue builder checks label sets.** `scripts/build_measured_catalog.py` refuses a
+  model whose label sets differ across datasets, which `measured_shortlist` would otherwise drop
+  without a word. The 55 models of the current catalogue pass.
+
 ## 0.5.0 (2026-10-19)
 
 **In short.**
@@ -29,12 +57,7 @@
   - L5: an out-of-range `--min-retention` exits with code 2.
   - L8: a PyLate encoder without a registry entry is a text model.
   - The 80-column `optivision models` table.
-- **Still open from that review.**
-  - M2: remote-code recipes do not cast inputs to the model dtype.
-  - L1: parity of batched or bf16 encoding with the measured runs.
-  - L3: a mismatched mask is dropped silently.
-  - L6: hardcoded text in `build_models_doc.py`.
-  - L7: label sets across datasets are not checked.
+- **Still open from that review:** M2, L1, L3, L6 and L7, fixed in 0.5.1.
 - **Unchanged.** `optimize()`, `calibrate()`, `certify()`, the file formats, and every stage name
   registered in 0.4.0.
 

@@ -143,7 +143,22 @@ def build() -> dict:
         if note:
             entry["note"] = note
         models.setdefault(model_id, {})[dataset] = entry
+    check_labels(models)
     return {"schema": 1, "note": NOTE, "sources": sources, "models": models}
+
+
+def check_labels(models: dict[str, dict]) -> None:
+    """Refuse a model whose datasets hold different label sets.
+
+    ``measured_shortlist`` keeps a pipeline only when every dataset of the model has its label,
+    so a label disambiguated in one dataset alone would drop that pipeline without a word.
+    """
+    for model_id, datasets in models.items():
+        sets = {name: frozenset(r["label"] for r in entry["rows"]) for name, entry in datasets.items()}
+        if len(set(sets.values())) > 1:
+            first = min(sets)
+            diff = {name: sorted(s ^ sets[first]) for name, s in sets.items() if s != sets[first]}
+            raise ValueError(f"{model_id}: the label sets differ across datasets (against {first}: {diff})")
 
 
 def render(catalog: dict) -> str:
