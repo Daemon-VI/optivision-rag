@@ -2322,7 +2322,9 @@ def _sync(ctx: _Ctx) -> None:
             store.close()
     n_after = len(stored_before - removed) + len(keep)
     ctx.sync = _sync_report(ctx, len(new_aliases), n_after, bool(keep or removed))
-    ctx.out.block(_sync_block(ctx, n_after, int(m.get("n_pages", 0))))
+    block = _sync_block(ctx, n_after, int(m.get("n_pages", 0)))
+    ctx.sync.message = str(block)  # the printed lines, so a caller sees what the console showed
+    ctx.out.block(block)
     _cleanup(ctx)
 
 
