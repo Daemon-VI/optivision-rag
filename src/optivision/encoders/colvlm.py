@@ -431,6 +431,7 @@ class ColVLMEncoder(BaseEncoder):
         query_batch_size: int = 16,
         multi_gpu: bool = False,
         max_num_visual_tokens: int | None = None,
+        revision: str | None = None,
     ) -> None:
         if backend not in BACKENDS:
             raise ValueError(f"unknown backend {backend!r}; choose from {sorted(BACKENDS)}")
@@ -444,12 +445,16 @@ class ColVLMEncoder(BaseEncoder):
 
         self.name = backend
         self.checkpoint = checkpoint
+        # the commit to load (the registry's pin when easy mode builds the encoder); None loads the
+        # Hub's default branch, as before, and passes nothing on, so the default calls are unchanged
+        self.revision = revision
+        pin: dict[str, Any] = {} if revision is None else {"revision": revision}
         self.query_batch_size = max(1, int(query_batch_size))
         self.device = _resolve_device(device)
         self.torch_dtype = _resolve_dtype(dtype, self.device)
         self._torch = torch
 
-        model = _load_model(model_cls, checkpoint, self.torch_dtype)
+        model = _load_model(model_cls, checkpoint, self.torch_dtype, **pin)
         self.adapter_merge_check = getattr(model, "adapter_merge_check", None)
         self.loading_report = getattr(model, "loading_report", None)
         _retie_output_embeddings(model)
@@ -473,7 +478,8 @@ class ColVLMEncoder(BaseEncoder):
         # preprocessor config decides (Qwen's default allows 16384 visual tokens per page).
         self.max_num_visual_tokens = max_num_visual_tokens
         self.processor = proc_cls.from_pretrained(
-            checkpoint, **({"max_num_visual_tokens": int(max_num_visual_tokens)} if max_num_visual_tokens else {}))
+            checkpoint, **pin,
+            **({"max_num_visual_tokens": int(max_num_visual_tokens)} if max_num_visual_tokens else {}))
         self._dim: int | None = None
         self._image_token_id = self._find_image_token_id()
 
