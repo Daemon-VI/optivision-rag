@@ -9,7 +9,10 @@ the page's words, and such questions are easier than real ones (FINAL_DESIGN 5.4
 2. a second request gets only the summary, no image and no page text, and writes the question. This
    stage cannot copy wording from the page, because it never receives it;
 3. the page text (text layer or OCR text, where there is any) is compared with the question; a question
-   that holds more than 60% of its content words in the page text is dropped as a copy;
+   that holds more than 60% of its content words in the page text is dropped as a copy. The cap needs a
+   question of at least ``min_cap_words`` (4) content words: in a real run of a 500M model, five of six
+   short on-topic questions were dropped by a cap applied to every question, though nothing had been
+   copied. ``min_cap_words=1`` applies the cap to every question, as the design states it;
 4. an answerability request shows the model the page and the question and asks whether the page answers it;
    questions it says no to are dropped.
 
@@ -111,8 +114,8 @@ QUESTION_PROMPT = (
     "Reply with the query only, on one line.\n\nSummary:\n{summary}"
 )
 ANSWERABLE_PROMPT = (
-    "Does this page contain the information needed to answer the following query? "
-    "Reply with yes or no only.\n\nQuery: {question}"
+    "Query: {question}\n\nDoes this page contain the information needed to answer the query? "
+    "Answer with one word: yes or no."
 )
 
 
@@ -258,8 +261,8 @@ def is_yes(reply: str | None) -> bool:
 def generate_vlm_probes(pages: Sequence[Any], *, backend: VlmBackend | None = None, model: str = DEFAULT_MODEL,
                         images: Any = None, texts: Mapping[str, str] | None = None,
                         aliases: Mapping[str, str] | None = None, seed: int = 0, max_pages: int = 300,
-                        per_page: int = 1, max_overlap: float | None = 0.6, max_probes: int | None = None,
-                        check_answerable: bool = True,
+                        per_page: int = 1, max_overlap: float | None = 0.6, min_cap_words: int = 4,
+                        max_probes: int | None = None, check_answerable: bool = True,
                         max_attempts: int = 2, max_side: int = 1280, type_weights: Mapping[str, int] | None = None,
                         device: str = "auto", dtype: str = "auto",
                         out: Callable[[str], None] | None = say,
@@ -314,7 +317,8 @@ def generate_vlm_probes(pages: Sequence[Any], *, backend: VlmBackend | None = No
                 style = styles[n * per_page + j]
                 probe = _one_question(backend, page, image, summary, style, text=text, index=index, aliases=aliases,
                                       seed=seed, slot=n * per_page + j, max_attempts=max_attempts,
-                                      max_overlap=max_overlap, check_answerable=check_answerable, seen=seen,
+                                      max_overlap=max_overlap, min_cap_words=min_cap_words,
+                                      check_answerable=check_answerable, seen=seen,
                                       rejected=rejected, by_id=by_id)
                 if probe is not None:
                     made.append((style.type, probe))
@@ -344,7 +348,8 @@ def generate_vlm_probes(pages: Sequence[Any], *, backend: VlmBackend | None = No
 
 def _one_question(backend: VlmBackend, page: Any, image: Any, summary: str, style: Style, *, text: str,
                   index: WordIndex | None, aliases: Mapping[str, str] | None, seed: int, slot: int,
-                  max_attempts: int, max_overlap: float | None, check_answerable: bool, seen: set[str],
+                  max_attempts: int, max_overlap: float | None, min_cap_words: int, check_answerable: bool,
+                  seen: set[str],
                   rejected: Rejections, by_id: Mapping[str, Any]) -> Any:
     """Stage 2 (blind) and the filters for one question; retries with a sampling seed when a filter drops it."""
     pid = page_id(page)
@@ -356,7 +361,8 @@ def _one_question(backend: VlmBackend, page: Any, image: Any, summary: str, styl
                                  temperature=temperature)
         question = clean_question(reply, style.format)
         trial_seen = set(seen)
-        if not check_question(question, text=text, max_overlap=max_overlap, seen=trial_seen, rejected=rejected):
+        if not check_question(question, text=text, max_overlap=max_overlap, seen=trial_seen, rejected=rejected,
+                              min_cap_words=min_cap_words):
             continue
         assert question is not None
         lexical: list[str] = []

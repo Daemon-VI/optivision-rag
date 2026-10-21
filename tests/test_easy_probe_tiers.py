@@ -178,6 +178,14 @@ def test_word_index_finds_pages_holding_most_of_the_words():
 def test_clean_question_and_self_reference():
     assert _probes_common.clean_question('Question: "what drives the budget rise" ') == "what drives the budget rise?"
     assert _probes_common.clean_question("budget rise 2024?", "keyword") == "budget rise 2024"
+    # replies of a real 500M model (SmolVLM-500M-Instruct, 2026-10-21): quotes with a full stop outside, a label
+    assert _probes_common.clean_question('"quarterly maintenance budget rose by 12 percent compared with 2023".') == \
+        "quarterly maintenance budget rose by 12 percent compared with 2023?"
+    assert _probes_common.clean_question(
+        "Search query: What was the increase in the maintenance budget for 2024 compared to 2023?"
+    ) == "What was the increase in the maintenance budget for 2024 compared to 2023?"
+    assert _probes_common.clean_question("**Query:** budget 2024", "keyword") == "budget 2024"
+    assert _probes_common.clean_question("List the departments?", "instruction") == "List the departments"
     assert _probes_common.clean_question("", "question") is None
     assert _probes_common.clean_question("one", "question") is None
     assert _probes_common.refers_to_source("What does this page say about repairs?")
@@ -410,6 +418,36 @@ def test_vlm_overlap_cap_drops_questions_that_copy_the_page(folder):
     assert len(relaxed.probes) == 6
 
 
+def test_overlap_cap_leaves_short_on_topic_questions_alone(folder):
+    """A real 500M model asked "What is the visitor registration policy?" about a page on exactly that: every
+    content word is on the page, yet nothing was copied, so the cap needs a question long enough to be a copy."""
+    pages, images = folder
+    short = lambda summary, attempt, page: "What is the elevator repairs policy?"  # noqa: E731
+    text = pages[0].text
+    assert _probes_common.overlap("What is the elevator repairs policy?", text) is not None
+    kept = _probes_vlm.generate_vlm_probes(pages[:1], backend=FakeVlm(question=short), images=images, out=None,
+                                           max_attempts=1)
+    assert len(kept.probes) == 1  # three content words: not applied
+    strict = _probes_vlm.generate_vlm_probes(pages[:1], backend=FakeVlm(question=lambda s, a, p: "Which elevator "
+                                             "repairs did the facilities team review during the quarter?"),
+                                             images=images, out=None, max_attempts=1, max_overlap=0.5)
+    assert strict.probes == [] and strict.rejected["copies the page"] == 1  # four or more content words: applied
+    literal = _probes_vlm.generate_vlm_probes(pages[:1], backend=FakeVlm(question=lambda s, a, p: "elevator repairs "
+                                              "facilities team"), images=images, out=None, max_attempts=1,
+                                              max_overlap=0.5, min_cap_words=1)
+    assert literal.probes == []  # min_cap_words=1 applies the cap to every question, as the design states it
+
+
+def test_vlm_answerability_prompt_asks_for_one_word_after_the_query(folder):
+    pages, images = folder
+    backend = FakeVlm()
+    _probes_vlm.generate_vlm_probes(pages[:1], backend=backend, images=images, out=None)
+    prompt = backend.of("answerable")[0]["prompt"]
+    assert prompt.startswith("Query: ") and prompt.rstrip().endswith("Answer with one word: yes or no.")
+    assert _probes_vlm.is_yes("Yes.") and _probes_vlm.is_yes("**yes**")
+    assert not _probes_vlm.is_yes("All visitors must sign in")  # what the 500M model answered in a real run
+
+
 def test_vlm_retry_samples_with_a_seed_and_keeps_the_better_question(folder):
     pages, images = folder
     page_text = {i: p.text for i, p in enumerate(pages)}
@@ -549,7 +587,7 @@ def test_say_survives_a_console_that_cannot_show_a_file_name(monkeypatch):
 
     raw = io.BytesIO()
     monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(raw, encoding="ascii", errors="strict"))
-    _probes_common.say("pages: café/報告.pdf")
+    _probes_common.say("pages: caf" + chr(0xE9) + "/" + chr(0x5831) + chr(0x544A) + ".pdf")
     sys.stdout.flush()
     assert raw.getvalue().decode("ascii").strip() == "pages: caf?/??.pdf"
 

@@ -263,24 +263,33 @@ def relevant_set(pid: str, aliases: Mapping[str, str] | None, extra: Iterable[st
 # ---------------------------------------------------------------------------- question text
 
 
+_QUOTES = "\"'`\u201c\u201d\u2018\u2019* "
+_LABEL = re.compile(
+    r"^(?:\d+[.)]\s*|[-*]\s+|(?:search\s+)?(?:question|query|phrase|instruction)\s*\d*\s*:\s*)", re.IGNORECASE)
+
+
 def clean_question(raw: str | None, fmt: str = "question") -> str | None:
-    """One clean line from a model reply, or None when no question can be read from it."""
+    """One clean line from a model reply, or None when no question can be read from it.
+
+    Small models wrap the line in quotes, put a label in front ("Search query: ...") or add a full stop after
+    the closing quote; all of that is removed, and the ending is made to fit the format.
+    """
     if not raw:
         return None
     text = re.sub(r"<think>.*?</think>", "", str(raw), flags=re.S | re.I).strip()
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if not lines:
         return None
-    line = re.sub(r"^(?:\d+[.)]\s*|[-*]\s+|(?:question|query|search phrase|instruction)\s*\d*\s*:\s*)", "", lines[0],
-                  flags=re.I).strip()
-    line = line.strip("\"'`“”‘’ *")
-    n_words = len(line.split())
-    if not 2 <= n_words <= 40:
+    line = _LABEL.sub("", lines[0].strip(_QUOTES)).strip(_QUOTES)
+    line = line.rstrip(".!:; ").strip(_QUOTES)
+    if not 2 <= len(line.split()) <= 40:
         return None
-    if fmt == "question" and not line.endswith("?"):
-        line = line.rstrip(".!:; ") + "?"
-    elif fmt in ("keyword", "instruction"):
-        line = line.rstrip("?!:; ").rstrip(".") if fmt == "keyword" else line.rstrip("? ")
+    if fmt == "question":
+        line = line.rstrip("?. ") + "?"
+    elif fmt == "keyword":
+        line = line.rstrip("?!:;. ")
+    else:
+        line = line.rstrip("? ")
     return line or None
 
 
@@ -390,11 +399,13 @@ class Rejections:
 
 
 def check_question(question: str | None, *, text: str, max_overlap: float | None, seen: set[str],
-                   rejected: Rejections) -> bool:
+                   rejected: Rejections, min_cap_words: int = 4) -> bool:
     """Apply the shared filters to one cleaned question; record the reason when it fails.
 
     ``text`` is the page text (text layer or OCR); with none, the overlap cap cannot be applied and
-    the question passes it (the caller counts those pages).
+    the question passes it (the caller counts those pages). The cap also does not apply to a question with
+    fewer than ``min_cap_words`` content words: a short on-topic question ("What is the visitor policy?")
+    reuses the page's words without copying anything. Pass 1 to apply the cap to every question.
     """
     if question is None:
         rejected.add("no readable question")
@@ -402,7 +413,7 @@ def check_question(question: str | None, *, text: str, max_overlap: float | None
     if refers_to_source(question):
         rejected.add("refers to its source")
         return False
-    if max_overlap is not None:
+    if max_overlap is not None and len(content_words(question)) >= min_cap_words:
         share = overlap(question, text)
         if share is not None and share > max_overlap:
             rejected.add("copies the page")

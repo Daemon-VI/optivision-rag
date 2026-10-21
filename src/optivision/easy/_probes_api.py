@@ -659,7 +659,7 @@ def generate_api_probes(pages: Sequence[Any], *, generate: Callable[[str, Sequen
                         aliases: Mapping[str, str] | None = None,
                         neighbours: Mapping[str, Sequence[str]] | Callable[[str, int], Sequence[str]] | None = None,
                         n_neighbours: int = 2, seed: int = 0, max_pages: int = 300, max_side: int = 1568,
-                        max_overlap: float | None = 0.6, max_probes: int | None = None,
+                        max_overlap: float | None = 0.6, min_cap_words: int = 4, max_probes: int | None = None,
                         type_weights: Mapping[str, int] | None = None,
                         max_cost: float | None = None, confirm: Callable[[ApiPlan], bool] | None = None,
                         cache_path: str | Path | None = None, out: Callable[[str], None] | None = say,
@@ -759,7 +759,7 @@ def generate_api_probes(pages: Sequence[Any], *, generate: Callable[[str, Sequen
             if max_overlap is not None and not all_texts.get(pid, "").strip():
                 no_text += 1
             if not check_question(question, text=all_texts.get(pid, ""), max_overlap=max_overlap, seen=seen,
-                                  rejected=rejected):
+                                  rejected=rejected, min_cap_words=min_cap_words):
                 continue
             assert question is not None
             lexical: list[str] = []
