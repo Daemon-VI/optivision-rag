@@ -1,0 +1,70 @@
+{
+ "schema": 1,
+ "note": "Status labels and test-gated switches of optivision.easy. Changed only from recorded outcomes of preregistered tests (reports/easy/PREREG_EASY.md); each change is listed under outcomes with its result file.",
+ "status": "These numbers come from our tests. They have not yet been checked on new documents; that check is registered (PREREG_EASY.md).",
+ "features": {
+  "practice_check": {
+   "title": "The practice check",
+   "on": true,
+   "mode": "step-down",
+   "test": "V5a-V5d",
+   "reason": "on as registered; V5b or V5c failing turns it into a warning, V5a failing leaves practice questions as examples only"
+  },
+  "probe_allowance": {
+   "title": "Practice questions raising the layout one step",
+   "on": false,
+   "test": "PREREG_EASY part 3 (probe allowance)",
+   "reason": "practice questions are easier than real ones; raising the layout on them waits for its own preregistered test"
+  },
+  "type_presets": {
+   "title": "Document-type presets",
+   "on": false,
+   "test": "DT campaign (FINAL_DESIGN 5.8 type rule)",
+   "reason": "each type needs 2 or more datasets and 4 or more models measured with low at or above the target; the DT campaign has not run"
+  },
+  "small_memory_layout": {
+   "title": "The small-memory layout",
+   "on": false,
+   "test": "V9",
+   "reason": "waits for the V9 test (identical rankings; resident memory within hot copy + shortlist decode + 128 MB at 20,000 pages)"
+  },
+  "qdrant_export": {
+   "title": "Qdrant export",
+   "on": false,
+   "test": "export top-10 equality 100% (tests/test_easy_qdrant.py)",
+   "reason": "waits for the exact top-10 equality test against the index's own search"
+  },
+  "byaldi_import": {
+   "title": "byaldi import",
+   "on": false,
+   "test": "format round trip (tests/test_easy_byaldi.py)",
+   "reason": "waits for the byaldi index format test"
+  },
+  "unmeasured_rules": {
+   "title": "Rules for models without rows of their own",
+   "on": true,
+   "test": "V1u",
+   "reason": "codecs only, pooled minimum over measured models of the same modality (FINAL_DESIGN 5.1.4)"
+  },
+  "margins": {
+   "title": "Safety margins",
+   "on": true,
+   "test": "V1, V2, arms B/C/D/S",
+   "reason": "as frozen in PREREG_EASY part 1",
+   "extra_compressed": 0.0,
+   "unchecked_merge_penalty": 0.0,
+   "one_bit_margin": 0.025,
+   "size_coefficient_scale": 1.0,
+   "codecs_only_above": 20000,
+   "lowest_target": 0.9
+  },
+  "upgrade": {
+   "title": "upgrade()",
+   "on": true,
+   "test": "V8",
+   "reason": "runs the unchanged certify(); V8 decides how its value is documented",
+   "wording": "default"
+  }
+ },
+ "outcomes": []
+}

@@ -45,6 +45,10 @@ bench = ["reportlab>=4", "datasets>=2.19"]
 app = ["streamlit>=1.34"]
 merge = ["scipy>=1.10"]
 dev = ["pytest>=8", "ruff>=0.5", "scipy>=1.10"]
+# easy mode (optivision.easy): planning and builds from vectors need only scipy; a model needs its loader
+easy = ["scipy>=1.10"]
+easy-st = ["optivision-rag[easy]", "sentence-transformers[image]>=6.1,<7"]
+easy-colpali = ["optivision-rag[easy]", "colpali-engine>=0.3.18,<0.4"]
 
 [project.urls]
 Homepage = "https://github.com/Daemon-VI/optivision-rag"
@@ -58,7 +62,7 @@ optivision = "optivision.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-optivision = ["presets/*.yaml", "presets/*.json"]
+optivision = ["presets/*.yaml", "presets/*.json", "easy/data/*.pdf"]
 
 [tool.setuptools.dynamic]
 version = { attr = "optivision.__version__" }
