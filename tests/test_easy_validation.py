@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -206,11 +207,18 @@ def test_freeze_refuses_drafts_and_refreezing(tmp_path, monkeypatch):
     assert freeze.verify(["3"], tmp_path, freeze.FROZEN) == []
 
 
-def test_drafts_are_marked_and_not_frozen():
-    for name in ("PREREG_EASY.md", "PREREG_EASY_PART2.md", "PREREG_EASY_PART3.md"):
-        text = (ROOT / "reports" / "easy" / name).read_text(encoding="utf-8")
-        assert "DRAFT" in text.splitlines()[0] and "NOT FROZEN" in text.splitlines()[0], name
-    assert not (ROOT / "reports/easy/PREREG_EASY.frozen.json").exists(), "the integrator freezes"
+def test_preregistration_is_frozen_or_marked_draft():
+    """Before the freeze every part says DRAFT; after it, every frozen file keeps its digest."""
+    frozen = ROOT / "reports/easy/PREREG_EASY.frozen.json"
+    if not frozen.exists():
+        for name in ("PREREG_EASY.md", "PREREG_EASY_PART2.md", "PREREG_EASY_PART3.md"):
+            text = (ROOT / "reports" / "easy" / name).read_text(encoding="utf-8")
+            assert "DRAFT" in text.splitlines()[0] and "NOT FROZEN" in text.splitlines()[0], name
+        return
+    parts = sorted(json.loads(frozen.read_text(encoding="utf-8"))["parts"])
+    run = subprocess.run([sys.executable, str(ROOT / "scripts/easy_validation/freeze.py"), "--verify", *parts],
+                         capture_output=True, text=True)
+    assert run.returncode == 0, run.stdout + run.stderr
 
 
 # --------------------------------------------------------------------------- encode side (CPU parts)

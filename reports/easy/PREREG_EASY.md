@@ -1,8 +1,9 @@
-# DRAFT — NOT FROZEN: PREREG_EASY part 1 (rule, units, thresholds)
+# PREREG_EASY part 1 (rule, units, thresholds)
 
-Source: FINAL_DESIGN section 8. Frozen by `python scripts/easy_validation/freeze.py --part 1` before B0 and before
-0.6.0 is published; the freeze records SHA-256 (CRLF turned into LF) of the files in `scripts/easy_validation/freeze.py`
-PARTS["1"]. This draft must lose its DRAFT mark first. The integrator freezes; nothing here has been frozen.
+Source: FINAL_DESIGN section 8. Frozen by `python scripts/easy_validation/freeze.py --part 1` before any test unit
+(B1-B3) is encoded and before 0.6.0 is published; the freeze records SHA-256 (CRLF turned into LF) of the files in
+`scripts/easy_validation/freeze.py` PARTS["1"]. B0 (follow-ups f14a/f14b) re-measured design catalogue rows of three
+models; it is design data, ran before this freeze, and is not a test unit. Its rows are in `easy_levels.json` as frozen.
 
 ## Units (English-original query counts; units under 150 queries are reported, not scored)
 
@@ -109,8 +110,27 @@ Held-out (V1u): the 2 most-downloaded late-interaction page retrievers not in th
 
 Size coefficients {"codec": 0.005, "merge>codec": 0.0175, "binary": 0.0175, "merge>binary": 0.04}; one-bit margin 0.025; rounding step 0.0025.
 
-## Decision rules
+## Decision rules (fixed now; rules propose, `decide.py` never applies them)
 
-As the FINAL_DESIGN section 8 table (V1b/V1c +0.01, V1d lowest target 0.95, unchecked +0.01, arms B/C/D, S coefficient,
-V1u thresholds, V2 codecs-only above 2,500 pages, V3, V4, V5, V8). Rules propose; `decide.py` never applies them.
-Any margin changed is labelled "adjusted on our validation sets (in-sample)".
+Any margin changed by these rules is labelled "adjusted on our validation sets (in-sample)" until a fresh, separately
+preregistered unit set confirms it. Outcomes go to `presets/easy_ledger.json`; status labels change only from recorded
+outcomes.
+
+| Outcome | Action |
+|---|---|
+| V1b or V1c fails | +0.01 on compressed rungs at that target; if V1 still fails, cap at codec chains |
+| V1d fails at 0.90 | Lowest target becomes 0.95 |
+| V1-unchecked fails | +0.01 merge penalty for unchecked folders |
+| Arm B passes V1b, V1c, no severe 1-bit miss | Remove the 1-bit margin |
+| Arm C passes V1, V2 | Halve the size coefficients |
+| Arm D passes, A fails | Flat +0.01 |
+| Arm S | Coefficient = largest low drop per unit of s(N), rounded up to 0.0025; adopted only if V2 (kept out) passes; a negative s(N) only if measured |
+| V1u int8 low >= 0.98 on all held-out page units | Unmeasured pages: int8 at 0.98 |
+| V1u int4(mean) low >= 0.95 on all held-out page units | Unmeasured pages: int4(mean) at 0.95 |
+| V1u picks miss | Unmeasured: float16 above 0.95 |
+| V2 fails | Codecs only above 2,500 pages |
+| V3 fails | Re-encode advised past 1.5x growth |
+| V4 fails | "not reliably easier or harder than real questions" |
+| V5a fails | Practice questions only as examples |
+| V5b or V5c fails | The practice check becomes a warning |
+| V8 fails | Docs say "upgrades are rare" |

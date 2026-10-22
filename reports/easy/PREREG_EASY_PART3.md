@@ -1,10 +1,10 @@
-# DRAFT — NOT FROZEN: PREREG_EASY part 3 (DT campaign and practice-question allowance)
+# PREREG_EASY part 3 (DT campaign and practice-question allowance)
 
-Frozen before the DT and Tier B runs (`freeze.py --part 3`). Not frozen.
+Frozen before the DT and Tier B runs (`freeze.py --part 3`).
 
 ## DT campaign (FINAL_DESIGN 5.8)
 
-A type preset ships only if the type has 2 or more datasets, measured with 4 or more models, and low >= target on every
+A type preset ships only if the type has 2 or more scored datasets (150 queries or more), measured with 4 or more models, and low >= target on every
 unit (T in [0.9, 0.95, 0.97, 0.98]). Datasets under 150 queries are reported only. Mixed folders use the
 most sensitive type covering at least 5% of pages.
 
@@ -32,4 +32,10 @@ stay under the worst-dataset rule. GPU budget 14.0 h (planned 10.14-12.68 h).
 
 Generator Qwen/Qwen2-VL-2B-Instruct (apache-2.0) on v3_hr, v3_computer_science, v3_pharmaceuticals; the question sets are
 encoded by the design and held-out models and scored apart (V4/V5). Practice questions may raise one step only if
-their own preregistered test passes; until then they can only step down.
+this test passes; until then they can only step down.
+
+**Allowance test.** On every scored V3 unit (design and held-out models; T in [0.95, 0.97]), take each case where the
+practice check (Tier A, and separately Tier B) passes on the rung one step more compressed than the catalogue pick.
+The allowance is switched on for that tier only if there are 20 or more such cases, the real point retention is >= T
+in at least 90% of them, and >= T - 0.02 in all of them. Otherwise `probe_allowance` stays off. A pass is labelled
+"adjusted on our validation sets (in-sample)" until a fresh unit set confirms it.

@@ -1,6 +1,6 @@
-# DRAFT — NOT FROZEN: PREREG_EASY part 2 (probes, hard set, statistic, seeds)
+# PREREG_EASY part 2 (probes, hard set, statistic, seeds)
 
-Frozen before B1 (`freeze.py --part 2`). Not frozen. The integrator freezes it once the DRAFT mark is removed.
+Frozen before B1 (`freeze.py --part 2`), with the generator and statistic code hashed.
 
 - Probe generator: `src/optivision/easy/_probes.py` (text layer first, then OCR, then VLM), page sources ['text_layer', 'ocr', 'vlm'].
 - Probes per page 3, at most 600 pages per corpus, hard-set minimum 60, seed 0.
