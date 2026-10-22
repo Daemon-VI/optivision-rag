@@ -18,6 +18,7 @@ The output is deterministic: the same commit always writes the same bytes.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -30,6 +31,7 @@ from easy_validation import units  # noqa: E402
 from optivision.adapters import MODELS  # noqa: E402
 
 OUT = ROOT / "notebooks" / "kaggle_easy"
+OUT_TOPUP = ROOT / "notebooks" / "kaggle_easy_topup"
 BRANCH = "easy-mode"
 REPO_URL = "https://github.com/Daemon-VI/optivision-rag.git"
 
@@ -124,6 +126,25 @@ def packages(b: units.Batch) -> list[str]:
     if needs_st and units.ST not in extra:
         extra.insert(0, units.ST)
     return extra
+
+
+def topups() -> tuple[units.Batch, ...]:
+    """D1 top-ups: the colqwen2-v1.0-hf jobs of the batches first run without sentence-transformers 6.
+
+    The jobs are copied unchanged. ``data.load_unit`` merges a unit's files over every batch
+    folder, so a top-up sits beside its first run. Re-ingesting the original name would replace
+    that folder instead (reports/easy/DEVIATIONS.md, D1)."""
+    by_name = {b.name: b for b in units.all_batches()}
+
+    def take(name: str, title: str, *sources: str) -> units.Batch:
+        jobs = tuple(j for s in sources for j in by_name[s].jobs if j.model == "vidore/colqwen2-v1.0-hf")
+        frozen = tuple(sorted({f for s in sources for f in by_name[s].needs_frozen}))
+        return dataclasses.replace(by_name[sources[0]], name=name, title=title, jobs=jobs, needs_frozen=frozen)
+
+    return (take("e6a_easy_topup_b1", "Top-up (D1): colqwen2-v1.0-hf on ViDoRe V3 hr + computer_science",
+                 "e1a_easy_b1_design"),
+            take("e6b_easy_topup_b2", "Top-up (D1): colqwen2-v1.0-hf on ViDoRe V3 pharmaceuticals and TechSlides",
+                 "e2a_easy_b2_pharma", "e2b_easy_b2_techslides"))
 
 
 def describe(b: units.Batch) -> str:
@@ -225,11 +246,17 @@ def render(b: units.Batch) -> str:
 def main(out: Path = OUT) -> int:
     out.mkdir(parents=True, exist_ok=True)
     batches = units.all_batches()
-    names = [b.name for b in batches]
+    names = [b.name for b in batches + topups()]
     assert len(set(names)) == len(names), "two batches share a name"
     for b in batches:
         assert units.batch_hours(b)[1] <= units.DEADLINE_HOURS, f"{b.name}: estimate above the session limit"
         (out / b.notebook).write_text(render(b), encoding="utf-8", newline="\n")
+    if out == OUT:  # the top-ups live in their own folder, so kaggle_easy/ stays one notebook per unit batch
+        OUT_TOPUP.mkdir(parents=True, exist_ok=True)
+        for b in topups():
+            assert units.batch_hours(b)[1] <= units.DEADLINE_HOURS, f"{b.name}: estimate above the session limit"
+            (OUT_TOPUP / b.notebook).write_text(render(b), encoding="utf-8", newline="\n")
+            print(f"top-up {b.notebook}: {units.batch_hours(b)[0]:.1f}-{units.batch_hours(b)[1]:.1f} GPU hours")
     total = [sum(units.batch_hours(b)[i] for b in batches) for i in (0, 1)]
     print(f"wrote {len(batches)} notebooks to {out}; {total[0]:.1f}-{total[1]:.1f} GPU hours in all")
     return 0

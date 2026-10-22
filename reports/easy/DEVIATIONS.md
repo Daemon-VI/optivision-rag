@@ -21,6 +21,19 @@ own page first, and 10 are needed. That is the frozen rule working as written, a
 expected to happen again when e3a is rerun. The archive is kept outside the repository, and
 only the rerun is ingested.
 
+**Top-ups:** e1a, e2a and e2b had already run from the old notebooks, so each lacks
+colqwen2-v1.0-hf, and all their other jobs completed. Instead of rerunning them, two top-up
+notebooks in `notebooks/kaggle_easy_topup/` run only that model's original jobs, unchanged:
+
+- `e6a_easy_topup_b1` covers the e1a job (v3_hr, v3_computer_science).
+- `e6b_easy_topup_b2` covers the e2a and e2b jobs (v3_pharmaceuticals, rmm_techslides).
+
+`data.load_unit` merges a unit's files across batch folders, so the top-ups sit beside the
+first runs.
+
+**Also recorded:** colSmol-500M failed `check_retriever` on v3_pharmaceuticals (9 of 12) in e2a,
+under the frozen rule.
+
 ## D2 (2026-10-22): the V6 wiring test ran only in part
 
 **What happened:** in e1b (commit 96a8092), `vidore/colqwen2.5-v0.2` ran out of GPU memory in
