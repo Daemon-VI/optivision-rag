@@ -22,6 +22,10 @@ folders, outcomes and catalogue are not touched.
 
 Members are read straight from the archive. Only ``.json``, ``.log`` and ``.txt`` files under
 the batch folder are taken, never a path that leaves it, and nothing is executed.
+
+An easy-mode validation batch (named ``e<n>_...``, from ``notebooks/kaggle_easy``) is handed to
+``scripts/easy_validation/ingest.py``: its records go to ``reports/easy/<batch>/`` and its
+vectors to the git-ignored ``data/easy/<batch>/``; nothing of the campaign is touched.
 """
 
 from __future__ import annotations
@@ -60,6 +64,12 @@ def _ran_selection(record: dict) -> bool:
 
 def is_followup(batch: str) -> bool:
     return re.fullmatch(r"f\d+[a-z]?_[A-Za-z0-9_]+", batch) is not None
+
+
+def is_easy_validation(batch: str) -> bool:
+    """An easy-mode validation batch (``e<n>_...``, notebooks/kaggle_easy): handed to
+    ``scripts/easy_validation/ingest.py``, which writes reports/easy/ and data/easy/ only."""
+    return re.fullmatch(r"e\d+[a-z]?_[A-Za-z0-9_]+", batch) is not None
 
 
 def batch_of(archive: Path) -> str:
@@ -182,8 +192,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("archives", nargs="+", type=Path)
     a = ap.parse_args()
-    followups = [x for x in a.archives if is_followup(batch_of(x))]
-    campaign = [x for x in a.archives if x not in followups]
+    easy = [x for x in a.archives if is_easy_validation(batch_of(x))]
+    if easy:  # easy-mode validation batches (e<n>_...) have their own destination and never reach the campaign
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("easy_ingest", ROOT / "scripts" / "easy_validation" / "ingest.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.main([str(x) for x in easy])
+    followups = [x for x in a.archives if x not in easy and is_followup(batch_of(x))]
+    campaign = [x for x in a.archives if x not in followups and x not in easy]
     if campaign:
         CAMPAIGN.mkdir(parents=True, exist_ok=True)
         outcomes = json.loads(OUTCOMES.read_text(encoding="utf-8")) if OUTCOMES.exists() else {}
