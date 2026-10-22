@@ -99,6 +99,33 @@ optivision explain path/to/your/pdfs -c colsmol --out figures
 path to your own YAML file. `optivision init-config my.yaml` writes one pre-filled
 with every default.
 
+## Easy mode
+
+Give a model and a target; get a compressed, searchable index of a folder of PDFs. `target`
+is the share of the model's full-precision search quality (nDCG@5) to keep.
+
+```bash
+npx optivision-rag options vidore/colqwen2-v1.0-hf --target 0.97 --pages my_pdfs/
+npx optivision-rag build my_pdfs/ --model vidore/colqwen2-v1.0-hf --target 0.97
+npx optivision-rag find my_pdfs.ovx "What drove operating costs in 2023?"
+npx optivision-rag check my_pdfs.ovx
+npx optivision-rag quickstart my_pdfs/        # guided; prints the build line when run without a terminal
+npx optivision-rag doctor --model vidore/colqwen2-v1.0-hf
+```
+
+`options` and `doctor` run in the environment described above. `build`, `find`, `check` and
+`quickstart` load a model, so the launcher keeps a second environment for them with PyTorch and the
+model's loader: the extra `easy-st` (sentence-transformers models) or `easy-colpali` (colpali-engine
+models), chosen from the model's loader. The model is read from `--model`, or for `find` and `check`
+from the index folder. Before the first install the launcher prints the download size (roughly 3 to
+4 GB on Linux, 0.3 to 0.5 GB on Windows and macOS) and pip's output stays visible.
+
+On Windows, pip installs the CPU-only build of PyTorch, so encoding runs on the CPU. For an NVIDIA GPU,
+install the CUDA build from [pytorch.org](https://pytorch.org/get-started/locally/) into that
+environment afterwards; `optivision doctor` reports which build you have. `OPTIVISION_EXTRAS` still
+names the extras of the first environment (default `corpus`); the second one adds its extra to
+whatever is set. If `options` asks for SciPy, set `OPTIVISION_EXTRAS=corpus,easy`.
+
 ## Python API
 
 ```python
