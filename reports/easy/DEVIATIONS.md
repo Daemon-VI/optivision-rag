@@ -20,3 +20,32 @@ already installed it. The installed versions go to each run's `pip_freeze.txt`.
 own page first, and 10 are needed. That is the frozen rule working as written, and it is
 expected to happen again when e3a is rerun. The archive is kept outside the repository, and
 only the rerun is ingested.
+
+## D2 (2026-10-22): the V6 wiring test ran only in part
+
+**What happened:** in e1b (commit 96a8092), `vidore/colqwen2.5-v0.2` ran out of GPU memory in
+float32 on one T4. `wiring_v6.py` (frozen) puts that model on one GPU because it is a fault model.
+After the error the adapter was still referenced, so its memory was not freed. The next six
+loaders then failed to load with out-of-memory errors: colSmol-256M, colSmol-500M, ColNetraEmbed,
+colqwen-omni-v0.1, VultronRetrieverFlash-Qwen3.5-0.8B and colqwen2-v1.0-hf.
+
+**Result as recorded:** "6 of 7 loaded loaders passed; faults 0". Of the 13 representatives:
+
+- 6 loaded and passed the wiring check: colpali-v1.3, colqwen2-v0.1, answerai-colbert-small-v1,
+  tomoro-colqwen3-embed-4b, ColVec1-4b and nemotron-colembed-vl-4b-v2.
+- 1 loaded and then errored: colqwen2.5-v0.2.
+- 6 did not load, as listed above.
+
+Neither of the two planted-fault models ran, so **the planted-fault half of V6 has no result**.
+V6 gates no decision in PREREG_EASY parts 1-3, so no decision changes. It is reported as
+incomplete, and no pass is claimed for the untested loaders.
+
+**Not changed:** `wiring_v6.py` is frozen (part 2) and stays as it is. Any later re-test is a
+new, separately labelled run.
+
+## D3 (2026-10-22): held-out selection
+
+`heldout_selected.json` recorded the frozen rule as written. OpenSearch-AI/Ops-Colqwen3-4B came
+first by downloads and errored on load (`mm_token_type_ids` missing), so the next two were taken:
+tencent/EVIE-Preview-4.5B (check 10/12) and webAI-Official/webAI-ColVec1-9b (check 11/12), both
+complete on v3_hr. This is listed here for completeness and is not a deviation.

@@ -1,0 +1,69 @@
+{
+ "rule": "the 2 most-downloaded Hugging Face late-interaction page retrievers not in the registry at freeze that pass check_retriever and fit on 2xT4",
+ "query": "https://huggingface.co/api/models?pipeline_tag=visual-document-retrieval&sort=downloads&direction=-1&limit=100 and ?filter=colpali&sort=downloads&direction=-1&limit=100, read 2026-10-21; registry = optivision.adapters.MODELS (65 ids) at this commit",
+ "selected": [
+  {
+   "model": "tencent/EVIE-Preview-4.5B",
+   "revision": "15a12c13a321a891d238d0ad441e680ed015546a",
+   "loader": "sentence-transformers",
+   "downloads": 791,
+   "read_on": "2026-10-21",
+   "spec": {
+    "dtype": "float16",
+    "batch_size": 2
+   }
+  },
+  {
+   "model": "webAI-Official/webAI-ColVec1-9b",
+   "revision": "",
+   "loader": "remote-code:colvec",
+   "downloads": 349,
+   "read_on": "2026-10-21",
+   "spec": {
+    "dtype": "float16",
+    "batch_size": 1,
+    "multi_gpu": true,
+    "trust_remote_code": true,
+    "revision": "latest"
+   }
+  }
+ ],
+ "attempts": [
+  {
+   "model": "OpenSearch-AI/Ops-Colqwen3-4B",
+   "outcome": "error: ValueError: Multimodal data was passed (via `image_grid_thw` or `video_grid_thw`) but `mm_token_type_ids` is missing. Please pass `mm_token_type_ids` to the model so that multimodal RoPE (M-RoPE) can be computed correctly. `mm_token_type_ids` is returned by the processor alongside `input_ids`.",
+   "check_ok": null,
+   "own_first": null
+  },
+  {
+   "model": "tencent/EVIE-Preview-4.5B",
+   "outcome": "complete",
+   "check_ok": true,
+   "own_first": null
+  },
+  {
+   "model": "webAI-Official/webAI-ColVec1-9b",
+   "outcome": "complete",
+   "check_ok": true,
+   "own_first": null
+  }
+ ],
+ "excluded_before_ranking": {
+  "jinaai/jina-embeddings-v4-vllm-retrieval": "a vLLM repackaging of the registry's jina-embeddings-v4",
+  "nomic-ai/nomic-embed-multimodal-3b": "single-vector (dense) model",
+  "Sahil-Kabir/colqwen2.5-v0.2-hf": "a format conversion of the registry's vidore/colqwen2.5-v0.2",
+  "MrLight/dse-qwen2-2b-mrl-v1": "single-vector (dense) model",
+  "Tevatron/OmniEmbed-v0.1-multivent": "single-vector video/omni embedding",
+  "nvidia/Nemotron-3.5-Embed-1B-BF16": "single-vector (mean-pooled) model",
+  "nvidia/Nemotron-3.5-Embed-8B-BF16": "single-vector (mean-pooled) model",
+  "tsystems/colqwen2.5-3b-base": "an untrained base checkpoint",
+  "thkim93/colpali-hf-1layer": "a one-layer test checkpoint",
+  "michaelfeil/colpali-v12-random-testing": "random test weights",
+  "Qdrant/colmodernvbert": "an ONNX conversion of the registry's ModernVBERT/colmodernvbert",
+  "Hcompany/NeoMME-260M-Retriever": "the same model as the registry's NeoMME-260M-Retriever-ST-late, other packaging",
+  "Hcompany/NeoMME-800M-Retriever": "the same model as the registry's NeoMME-800M-Retriever-ST-late, other packaging",
+  "DataScience-UIBK/Argus-Colqwen3.5-*": "page vectors depend on the query (query-conditioned routing), so pages cannot be stored as fixed vectors"
+ },
+ "reused": false,
+ "complete": true
+}
