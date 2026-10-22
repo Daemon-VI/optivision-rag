@@ -500,7 +500,7 @@ def _pages_lines(block: Block, model_id: str, sel: Selection, n: int, count: Any
         estimate = _encode.estimate(model_id, n)
     except (ImportError, KeyError, LookupError, ValueError):
         estimate = None
-    if estimate is not None:
+    if estimate is not None and getattr(estimate, "known", True):
         gpu = getattr(estimate, "gpu", None) or "a GPU like ours"
         lo_s, hi_s = float(estimate.lo_s), float(estimate.hi_s)
         block.add("encoding", "{0} on {1}", est((lo_s, hi_s), _claim.duration(lo_s, hi_s), str(estimate.basis)), lit(gpu))

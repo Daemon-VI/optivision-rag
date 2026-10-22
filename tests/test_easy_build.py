@@ -203,7 +203,7 @@ def test_sync_new_changed_missing_and_prune(ov, tmp_path):
     index.close()
     pruned = ov.build(root, model=adapter, prune=True, progress=False)
     assert not any(i.startswith("my_pdfs/b.pdf") for i in _ids(pruned))
-    assert "my_pdfs/b.pdf" not in pruned._manifest["files"]
+    assert "my_pdfs/b.pdf" not in pruned._manifest["docs"]
     assert pruned.n_pages == 4
 
 
@@ -214,7 +214,7 @@ def test_touched_but_unchanged_file_is_not_encoded_again(ov, tmp_path):
     os.utime(root / "report.pdf", ns=(5 * 10**9, 5 * 10**9))  # new mtime, same bytes: sha256 decides
     index = ov.build(root, model=adapter, progress=False)
     assert adapter.calls.pages == 3
-    assert index._manifest["files"]["my_pdfs/report.pdf"]["mtime"] == 5 * 10**9
+    assert index._manifest["docs"]["my_pdfs/report.pdf"]["mtime"] == 5 * 10**9
 
 
 def test_ids_distinct_across_sources_with_the_same_names(ov, tmp_path):

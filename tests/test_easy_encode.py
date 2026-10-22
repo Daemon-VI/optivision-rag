@@ -178,7 +178,8 @@ def test_estimate_names_a_split_run_a_text_unit_and_an_untimed_model():
     assert split.gpu == "2x T4" and split.multi_gpu
     text = _encode.estimate("colbert-ir/colbertv2.0", 5183)
     assert text.unit == "document" and text.basis.endswith("s/document")
-    for model in ("vidore/colpali-v1.3-merged", None, "not/registered"):
+    assert _encode.estimate("vidore/colpali-v1.3-merged", 500).known  # timed by B0 (f14b)
+    for model in (None, "not/registered"):
         est = _encode.estimate(model, 500)
         assert not est.known and est.claim() is None and "not timed" in est.basis
 
@@ -187,7 +188,7 @@ def test_recorded_dtype_comes_from_our_runs():
     assert _encode.recorded_dtype("vidore/colqwen2-v1.0-hf") == "float16"
     assert _encode.recorded_dtype("vidore/colpali-v1.3") == "float32"
     assert _encode.recorded_dtype("colbert-ir/colbertv2.0") is None  # text runs recorded no dtype
-    assert _encode.recorded_dtype("vidore/colpali-v1.3-merged") is None  # no run.json of ours
+    assert _encode.recorded_dtype("vidore/colpali-v1.3-merged") == "float32"  # B0 run.json (f14b)
     assert _encode.recorded_dtype(None) is None
 
 
@@ -263,7 +264,7 @@ def test_an_import_error_during_the_load_becomes_a_missing_extra(monkeypatch, lo
 
 
 def test_an_unknown_id_is_refused_with_close_ids(loader_seen):
-    with pytest.raises(UnknownModel, match="closest ids"):
+    with pytest.raises(UnknownModel, match="(?i)closest ids"):
         _encode.load_encoder("no-such-org/no-such-model")
 
 

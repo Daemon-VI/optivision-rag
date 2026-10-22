@@ -269,7 +269,7 @@ def encode_estimate(index: Any, n_pages: int) -> Claim | None:
         est = _encode.estimate(model, int(n_pages))
     except Exception:  # noqa: BLE001 - no rate recorded for this model, or no estimator
         return None
-    if est is None:
+    if est is None or not getattr(est, "known", True):
         return None
     lo, hi = float(est.lo_s), float(est.hi_s)
     return claim((lo, hi), "estimate", source=str(est.basis), construct="encode time",

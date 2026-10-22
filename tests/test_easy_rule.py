@@ -102,22 +102,16 @@ def test_scale_units_are_not_evidence():
             assert not any("_scale" in s or "plus" in Path(s).stem for s in info["sources"])
 
 
-def test_b0_models_are_pending_and_their_qwen2_grid_legacy_merges_are_excluded():
+def test_b0_models_are_measured_and_their_legacy_rows_are_dropped():
     data = _levels.data()["models"]
-    assert PENDING <= {"vidore/colqwen2.5-v0.2", "vidore/colqwen2-v1.0-merged", "vidore/colpali-v1.3-merged"}
-    assert set(_golden()["pending_b0"]) == PENDING
-    for model in PENDING & {"vidore/colqwen2.5-v0.2", "vidore/colqwen2-v1.0-merged"}:
-        legacy = [d for d, v in data[model]["datasets"].items() if v.get("legacy")]
-        assert legacy
-        for rung in _levels.LADDER["page"]:
-            if rung.merged:
-                assert not set(data[model]["rungs"].get(rung.name, {})) & set(legacy), (model, rung.name)
-    if "vidore/colpali-v1.3-merged" in PENDING:  # its legacy merge matches the campaign's (263.0 vectors)
-        rows = data["vidore/colpali-v1.3-merged"]["rungs"]["hierarchical_merge(0.25) > int8(per_vector)"]
-        assert rows["vidore/docvqa_test_subsampled"]["vectors_per_page"] == 263.0
-    # campaign-format replacements already in place: ColQwen2.5 v0.2 DocVQA (f10), answerai SciFact (f3b)
-    q = data["vidore/colqwen2.5-v0.2"]["datasets"]["vidore/docvqa_test_subsampled"]
-    assert q["sources"][0].startswith("reports/universal/followup/f10_") and "replaces" in q
+    assert PENDING == set() and _golden()["pending_b0"] == []
+    for model in ("vidore/colqwen2.5-v0.2", "vidore/colqwen2-v1.0-merged", "vidore/colpali-v1.3-merged"):
+        entry = data[model]
+        assert entry["pending_b0"] is False and "legacy_datasets" not in entry, model
+        assert not any(v.get("legacy") for v in entry["datasets"].values()), model
+        catalogue = [v for v in entry["datasets"].values() if v["role"] == "catalogue"]
+        assert catalogue and all("/followup/f" in v["sources"][0] for v in catalogue), model
+    # campaign-format replacements: ColQwen2.5 v0.2 DocVQA (f10 before B0, now f14a), answerai SciFact (f3b)
     a = data["answerdotai/answerai-colbert-small-v1"]["datasets"]["BeIR/scifact"]
     assert a["sources"][0].startswith("reports/universal/followup/f3b_") and not a.get("legacy")
 
@@ -144,7 +138,6 @@ def test_b0_reports_replace_the_legacy_rows_when_they_land(tmp_path, monkeypatch
         assert info["sources"][0].startswith("reports/universal/followup/f14a_easy_b0_colqwen/")
         assert not info.get("legacy") and info["replaces"].startswith("reports/universal/frontier/")
     assert "hierarchical_merge(0.25) > int8(per_vector)" in entry["rungs"]
-    assert levels["models"]["vidore/colqwen2.5-v0.2"]["pending_b0"] is True  # its InfoVQA is still legacy
 
 
 # ------------------------------------------------------------------------------ the ladder
@@ -337,7 +330,7 @@ def test_unmeasured_models_use_the_pooled_minimum():
     page, text = pooled["page"]["rungs"], pooled["text"]["rungs"]
     assert (page["float16"]["low"], page["int8(per_vector)"]["low"], page["int4(mean)"]["low"]) == (0.9865, 0.9783, 0.9291)
     assert page["int8(per_vector)"]["worst_model"] == "nvidia/nemotron-colembed-vl-8b-v2"
-    assert (page["int4(mean)"]["worst_model"], page["int4(mean)"]["n_models"]) == ("tencent/EVIE-4.5B", 37)
+    assert (page["int4(mean)"]["worst_model"], page["int4(mean)"]["n_models"]) == ("tencent/EVIE-4.5B", 40)
     assert (text["int8(per_vector)"]["low"], text["int4(mean)"]["low"]) == (0.9655, 0.8965)
     assert text["int8(per_vector)"]["worst_model"] == text["int4(mean)"]["worst_model"] == "lightonai/LateOn"
 
@@ -385,8 +378,15 @@ FD_GOLDEN = {
                                           ("int4(mean)", "4.0x"), ("int4(mean)", "4.0x")],
     "tencent/EVIE-4.5B": [("int8(per_vector)", "2.0x")] * 3,
 }
-#: the B0 models' row in that table reads "int8 2.0x ... recomputed from B0": their picks wait for B0
-FD_B0 = ("vidore/colqwen2.5-v0.2", "vidore/colqwen2-v1.0-merged", "vidore/colpali-v1.3-merged")
+#: the B0 models' row in that table read "int8 2.0x ... recomputed from B0"; these are the recomputed picks
+FD_B0 = {
+    "vidore/colqwen2.5-v0.2": [("hierarchical_merge(0.33) > int4(mean)", "11.4x"), ("int4(mean)", "3.9x"),
+                               ("int4(mean)", "3.9x")],
+    "vidore/colqwen2-v1.0-merged": [("hierarchical_merge(0.25) > int4(mean)", "14.8x"), ("int4(mean)", "3.9x"),
+                                    ("int8(per_vector)", "2.0x")],
+    "vidore/colpali-v1.3-merged": [("hierarchical_merge(0.33) > int8(per_vector)", "5.9x"), ("int4(mean)", "3.9x"),
+                                   ("int8(per_vector)", "2.0x")],
+}
 FD_TEXT = {"colbert-ir/colbertv2.0": ("0.97", "int4(mean)", "3.9x"), "lightonai/LateOn": ("0.97", "float16", "1.0x"),
            "lightonai/LateOn@0.95": ("0.95", "int8(per_vector)", "2.0x")}
 
@@ -396,12 +396,10 @@ def test_fd_golden_picks():
     for model, want in FD_GOLDEN.items():
         got = [(picks[model][f"0.97|{n}|c"][0], _ratio(picks[model][f"0.97|{n}|c"][1])) for n in (500, 2500, 20000)]
         assert got == want, model
-    for model in FD_B0:  # in the fixture, and marked pending while their legacy rows remain
-        assert model in picks
-        assert (model in _golden()["pending_b0"]) == bool(_levels.data()["models"][model].get("legacy_datasets"))
-    # before B0 the two Qwen2-grid models get 8-bit everywhere, as the table says
-    for model in set(FD_B0[:2]) & PENDING:
-        assert {picks[model][f"0.97|{n}|c"][0] for n in (500, 2500, 20000)} == {"int8(per_vector)"}
+    for model, want in FD_B0.items():  # measured by B0: no longer pending
+        got = [(picks[model][f"0.97|{n}|c"][0], _ratio(picks[model][f"0.97|{n}|c"][1])) for n in (500, 2500, 20000)]
+        assert got == want, model
+    assert _golden()["pending_b0"] == []
     assert picks["vidore/colqwen2-v1.0-hf"]["0.97|500|c"][3] is True  # "close call at <= 500"
     assert not any(picks["vidore/colqwen2-v1.0-hf"][f"0.97|{n}|c"][3] for n in (2500, 20000))
     for key, (t, name, ratio) in FD_TEXT.items():
@@ -414,8 +412,8 @@ def test_fd_golden_picks():
 #: the last column is the unchecked path at <= 500 pages
 FD_MEDIANS = {
     "0.98": (["4.0", "3.9", "3.9", "2.9", "2.0"], "4.0"),
-    "0.97": (["11.5", "5.6", "3.9", "3.9", "3.9"], "11.5"),
-    "0.95": (["15.5", "15.2", "11.7", "5.8", "3.9"], "15.2"),
+    "0.97": (["11.6", "5.8", "3.9", "3.9", "3.9"], "11.6"),
+    "0.95": (["15.5", "15.2", "11.8", "5.9", "3.9"], "15.2"),
     "0.90": (["62.7", "32.2", "16.0", "16.0", "15.5"], "15.5"),
 }
 
@@ -433,7 +431,7 @@ def test_fd_median_table():
     assert summary["0.95|500|c"]["one_bit"] == 7  # "1-bit picks at 0.95: 7 of 40"
     # FINAL_DESIGN 1: without the practice check (unchecked) 4.0x 11.5x 15.2x 15.5x
     assert [f"{summary[f'{t}|500|u']['median']:.1f}" for t in ("0.98", "0.97", "0.95", "0.90")] == \
-        ["4.0", "11.5", "15.2", "15.5"]
+        ["4.0", "11.6", "15.2", "15.5"]
 
 
 def test_the_reference_exclusion_reproduces_the_fd_iqr_and_close_calls(monkeypatch):

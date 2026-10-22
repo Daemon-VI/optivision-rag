@@ -276,7 +276,7 @@ class Index:
         return Hit(id=page_id, file=file, page=page, score=float(score), text=text, _index=self)
 
     def _files_cache(self) -> dict[str, Any]:
-        return self._manifest.get("files", {})
+        return self._manifest.get("docs", {})
 
     @property
     def _source_kind(self) -> str:
@@ -525,7 +525,7 @@ class Index:
         self._check_open()
         m = self._manifest
         root = Path(folder).expanduser().resolve()
-        missing = {d: e for d, e in m.get("files", {}).items()
+        missing = {d: e for d, e in m.get("docs", {}).items()
                    if e.get("path") and not Path(e["path"]).exists() and e.get("sha256")}
         found: dict[str, str] = {}
         if missing and root.is_dir():
@@ -539,7 +539,7 @@ class Index:
                         found[doc_id] = str(cand.resolve())
                         break
         if found:
-            files = {d: dict(e) for d, e in m.get("files", {}).items()}
+            files = {d: dict(e) for d, e in m.get("docs", {}).items()}
             for doc_id, p in found.items():
                 st = Path(p).stat()
                 files[doc_id].update(path=p, size=int(st.st_size), mtime=int(st.st_mtime_ns))
@@ -549,7 +549,7 @@ class Index:
                     store = _build._store_open(self.path, "a")
                     try:
                         with _build._store_lock(store):
-                            store.commit(files=files, updated=_build._now())
+                            store.commit(docs=files)
                     finally:
                         store.close()
             finally:

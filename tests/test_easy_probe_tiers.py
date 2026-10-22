@@ -79,8 +79,16 @@ class Page:
     blank: bool = False
     file: str | None = None
     page: int | None = None
+    landscape: bool = False
+    sha256: str = ""  # the real PageRecord carries one; a distinct render per page unless a test sets it
+
+    @property
+    def has_text(self) -> bool:  # PageRecord.has_text
+        return self.n_chars >= 20
 
     def __post_init__(self) -> None:
+        if not self.sha256:
+            object.__setattr__(self, "sha256", "render:" + self.id)
         if self.n_chars < 0:
             object.__setattr__(self, "n_chars", len(self.text))
 

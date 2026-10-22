@@ -114,7 +114,7 @@ MANIFEST_KEYS = {
     "checked": "whether the practice check could run (60 or more hard practice questions)",
     "unchecked_reason": "why not, in words",
     "sources": "{namespace: absolute root folder}",
-    "files": "{doc_id: {path, relpath, ns, kind, size, mtime, sha256, pages, stored, f16_bytes, partial}}",
+    "docs": "{doc_id: {path, relpath, ns, kind, size, mtime, sha256, pages, stored, f16_bytes, partial}}",
     "aliases": "{page id: the identical page id that is stored instead}",
     "blank": "[page ids of blank pages, not stored]",
     "sha_index": "{sha256 of a stored page render, text or vectors: its page id}",
@@ -291,9 +291,10 @@ def _estimate(model_id: str | None, n_pages: int) -> Any:
     if not model_id or n_pages <= 0:
         return None
     try:
-        return _mod("_encode").estimate(model_id, n_pages)
+        est = _mod("_encode").estimate(model_id, n_pages)
     except (KeyError, LookupError, ValueError):
         return None
+    return est if est is not None and getattr(est, "known", True) else None  # an untimed model has no figures
 
 
 def _recorded_dtype(model_id: str | None) -> str | None:
@@ -1983,7 +1984,7 @@ def _query_gate(ctx: _Ctx) -> None:
     if ctx.opts.answers is not None:
         if len(ctx.opts.answers) != n:
             raise ValueError(f"{len(ctx.opts.answers)} answers for {n} queries (one per query, duplicates removed)")
-        files = {**ctx.manifest.get("files", {}), **{u.doc_id: u.entry() for u in ctx.diff.to_encode}}
+        files = {**ctx.manifest.get("docs", {}), **{u.doc_id: u.entry() for u in ctx.diff.to_encode}}
         relevant = dict(zip(qids, answers_relevant(ctx.opts.answers, files, ctx.aliases, ctx.keep_ids)))
         kind = "search quality"
     else:
@@ -2061,7 +2062,7 @@ def build(source: Any, opts: BuildOptions) -> BuildResult:
 
 
 def _list_and_diff(ctx: _Ctx) -> None:
-    known = ctx.manifest.get("files", {})
+    known = ctx.manifest.get("docs", {})
     if ctx.src.kind == "files":
         units, ns = file_units(ctx.src, ctx.manifest.get("sources", {}))
         ctx.ns = ns
@@ -2116,8 +2117,7 @@ def _first_build(ctx: _Ctx) -> None:
     _query_gate(ctx)
     assert ctx.chosen is not None
     pipeline = _fitted(ctx, ctx.chosen)
-    info = {"model": ctx.model_id, "target": ctx.target, "layout": ctx.chosen.name, "record": _record(ctx),
-            "created": _now()}
+    info = {"model": ctx.model_id, "target": ctx.target, "layout": ctx.chosen.name, "record": _record(ctx)}
     store = _store_create(ctx.path, pipeline, info)
     ok = False
     try:
@@ -2241,14 +2241,14 @@ def _manifest(ctx: _Ctx, metas: list[PageMeta], f16_bytes: int) -> dict[str, Any
         "adapter": ctx.adapter is not None, "modality": ctx.modality, "source_kind": ctx.src.kind,
         "target": ctx.target, "layout": row_to_dict(ctx.chosen), "selection": selection_to_dict(ctx.selection),
         "checked": ctx.checked, "unchecked_reason": ctx.unchecked_reason, "sources": sources,
-        "files": _files_entries(ctx, metas, ctx.dim), "aliases": dict(ctx.aliases), "blank": list(ctx.blank),
+        "docs": _files_entries(ctx, metas, ctx.dim), "aliases": dict(ctx.aliases), "blank": list(ctx.blank),
         "sha_index": {m.sha256: m.id for m in ctx.keep if m.sha256}, "skipped": [list(p) for p in _unique(ctx.skipped)],
-        "n_pages": len(ctx.keep), "dim": ctx.dim, "float16_bytes": int(f16_bytes),
+        "float16_bytes": int(f16_bytes),
         "keep_text": bool(ctx.opts.keep_text), "keep_float16": bool(ctx.opts.keep_float16), "record": _record(ctx),
         "trust_remote_code": bool(ctx.opts.trust_remote_code), "practice": _jsonable(ctx.practice),
         "queries_gate": _jsonable(ctx.queries_gate), "examples": list(ctx.examples),
         "upgrade_attempts": int(ctx.manifest.get("upgrade_attempts", 0)),
-        "work_dir": None if ctx.work is None else str(ctx.work), "built": _now(), "updated": _now(),
+        "work_dir": None if ctx.work is None else str(ctx.work), "built": _now(),
     }
 
 
@@ -2286,7 +2286,7 @@ def _sync(ctx: _Ctx) -> None:
     # new pages are stored the way the index stores the others
     ctx.opts.keep_text = bool(m.get("keep_text", ctx.opts.keep_text))
     ctx.opts.keep_float16 = bool(m.get("keep_float16", ctx.opts.keep_float16))
-    known: dict[str, dict[str, Any]] = {k: dict(v) for k, v in m.get("files", {}).items()}
+    known: dict[str, dict[str, Any]] = {k: dict(v) for k, v in m.get("docs", {}).items()}
     old_aliases: dict[str, str] = dict(m.get("aliases", {}))
     removed: set[str] = set()
     for u in ctx.diff.changed:
@@ -2379,17 +2379,16 @@ def _sync_manifest(ctx: _Ctx, known: dict[str, dict[str, Any]], metas: list[Page
     sources = dict(ctx.manifest.get("sources", {}))
     if ctx.src.kind == "files" and ctx.ns is not None and ctx.src.root is not None:
         sources[ctx.ns] = str(ctx.src.root)
-    return {"files": files, "aliases": dict(ctx.aliases), "blank": old_blank + list(blank), "sha_index": sha_index,
-            "n_pages": sum(len(e.get("stored", [])) for e in files.values()),
+    return {"docs": files, "aliases": dict(ctx.aliases), "blank": old_blank + list(blank), "sha_index": sha_index,
             "float16_bytes": sum(int(e.get("f16_bytes", 0)) for e in files.values()), "sources": sources,
             "skipped": [list(p) for p in _unique([*ctx.manifest.get("skipped", []), *ctx.skipped])],
-            "updated": _now(), "dim": ctx.dim or ctx.manifest.get("dim")}
+            }
 
 
 def _sync_report(ctx: _Ctx, n_aliases: int, n_after: int, changed: bool) -> SyncReport:
     shards = ctx.shards
     done = {u.doc_id for u in ctx.diff.to_encode if shards is not None and shards.complete(u.doc_id)}
-    known = ctx.manifest.get("files", {})
+    known = ctx.manifest.get("docs", {})
     added = [(u.path or u.doc_id, "new") for u in ctx.diff.new if u.doc_id in done]
     redone = [(u.path or u.doc_id, "changed" if u.doc_id in known and u.doc_id not in
                {x.doc_id for x in ctx.diff.new} else "re-encoded") for u in ctx.diff.changed if u.doc_id in done]
@@ -2448,6 +2447,8 @@ def _sync_block(ctx: _Ctx, n_after: int, n_before: int) -> Block:
             lines.append(Line("Re-encode", "{0} with index.check().apply()",
                               claim((est.lo_s, est.hi_s), "estimate", source=str(est.basis),
                                     text=_claim.duration(est.lo_s, est.hi_s))))
+        else:  # an untimed model: say how to re-encode, claim no time
+            lines.append(Line("Re-encode", "with index.check().apply()"))
     s.message = s.message or "\n".join(ln.render(11) for ln in lines)
     return Block(lines, next="index.search(...) as before" if s.layout_still_qualifies else "index.check()",
                  title="Sync")
@@ -2502,7 +2503,7 @@ def _seed_from_float16(old: Path, manifest: Mapping[str, Any], work: Path) -> No
         aliases, blank = manifest.get("aliases", {}), set(manifest.get("blank", []))
         sha_of = {p: s for s, p in manifest.get("sha_index", {}).items()}
         row_of = {pid: i for i, pid in enumerate(corpus.ids)}
-        for doc_id, e in manifest.get("files", {}).items():
+        for doc_id, e in manifest.get("docs", {}).items():
             u = Unit(doc_id=doc_id, kind=str(e.get("kind", "pdf")), path=e.get("path"), relpath=e.get("relpath"),
                      ns=str(e.get("ns", "")), size=int(e.get("size", 0)), mtime=int(e.get("mtime", 0)),
                      sha=e.get("sha256"))

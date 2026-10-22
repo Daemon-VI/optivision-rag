@@ -551,8 +551,16 @@ class FakeStore:
 
     def commit(self, **updates: Any) -> None:
         self._need_write()
+        bad = sorted(set(updates) & {"format", "version", "created", "updated", "generation", "dim", "pipeline",
+                                     "segments", "next_segment", "n_pages", "n_vectors", "float16", "files"})
+        if bad:  # the real Store refuses these: it maintains them itself
+            raise ValueError(f"commit() may not set {bad}: the store maintains those manifest keys itself")
         self.manifest.update(updates)
         self.manifest["_segments"] = list(self._segments)
+        self.manifest["n_pages"] = self.n_pages
+        dims = [json.loads((self.path / "segments" / n / "ids.json").read_text(encoding="utf-8"))["dim"]
+                for n in self._segments]
+        self.manifest["dim"] = dims[0] if dims else self.manifest.get("dim")
         tmp = self.path / "manifest.json.tmp"
         tmp.write_text(json.dumps(self.manifest, default=str), encoding="utf-8")
         os.replace(tmp, self.path / "manifest.json")
