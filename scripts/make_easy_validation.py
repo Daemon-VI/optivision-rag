@@ -24,8 +24,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "src"))
 
 from easy_validation import units  # noqa: E402
+from optivision.adapters import MODELS  # noqa: E402
 
 OUT = ROOT / "notebooks" / "kaggle_easy"
 BRANCH = "easy-mode"
@@ -110,6 +112,20 @@ def required_files(b: units.Batch) -> list[str]:
     return sorted(set(files) | set(b.needs_files))
 
 
+def packages(b: units.Batch) -> list[str]:
+    """The batch's extra pip packages, plus sentence-transformers 6 when an encode job loads through it.
+
+    ``units.py`` (frozen) left it out of the batches that run colqwen2-v1.0-hf, which then failed
+    to load (e3a, 2026-10-22). The environment is not part of any analysis, so it is added here
+    (reports/easy/DEVIATIONS.md, D1)."""
+    extra = list(b.packages)
+    needs_st = any(j.role == "encode" and j.model in MODELS and MODELS[j.model].loader == "sentence-transformers"
+                   for j in b.jobs)
+    if needs_st and units.ST not in extra:
+        extra.insert(0, units.ST)
+    return extra
+
+
 def describe(b: units.Batch) -> str:
     lo, hi = units.batch_hours(b)
     lines = []
@@ -151,7 +167,7 @@ import json as _json
 BRANCH = "{BRANCH}"
 NAME = "{b.name}"
 JOBS = _json.loads({json.dumps(json.dumps(jobs, sort_keys=True))})
-EXTRA_PIP = {json.dumps(list(b.packages))}
+EXTRA_PIP = {json.dumps(packages(b))}
 DEADLINE_HOURS = {units.DEADLINE_HOURS}
 REQUIRED_PARTS = {json.dumps([str(p) for p in b.parts])}
 REQUIRED_FILES = {json.dumps(required_files(b), indent=1)}
