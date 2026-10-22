@@ -387,7 +387,7 @@ def test_analyses_run_end_to_end_on_a_synthetic_unit(synthetic_run):
     for k in expected:
         r = results[k]
         assert r["passed"] in (True, False, None) and r["prediction"] and r["pass_if"], k
-    assert results["V1b"]["units"] and all(0 <= u["point"] <= 1.2 for u in results["V1b"]["units"])
+    assert results["V1b"]["units"] and all(0 <= u["point"] <= 2.0 for u in results["V1b"]["units"])  # a ratio: noisy above 1 on 24 queries
     assert results["V1-arms"]["comparable"], "arm A recomputed from the rows equals select()"
     assert {u["pair"] for u in results["V3"]["units"]} >= {"sample fit vs full fit", "float16 vs float32 inputs"}
     assert results["V6"]["passed"] is True

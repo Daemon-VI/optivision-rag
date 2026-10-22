@@ -147,9 +147,10 @@ part(s) {", ".join(str(p) for p in b.parts)}, if any frozen file changed since, 
 notebook's output as input (*Add data -> Notebook output*) and run it again: finished shards are kept.
 """ + remote),
         code(f'''
+import json as _json
 BRANCH = "{BRANCH}"
 NAME = "{b.name}"
-JOBS = {json.dumps(jobs, indent=1, sort_keys=True)}
+JOBS = _json.loads({json.dumps(json.dumps(jobs, sort_keys=True))})
 EXTRA_PIP = {json.dumps(list(b.packages))}
 DEADLINE_HOURS = {units.DEADLINE_HOURS}
 REQUIRED_PARTS = {json.dumps([str(p) for p in b.parts])}
@@ -214,7 +215,7 @@ def main(out: Path = OUT) -> int:
         assert units.batch_hours(b)[1] <= units.DEADLINE_HOURS, f"{b.name}: estimate above the session limit"
         (out / b.notebook).write_text(render(b), encoding="utf-8", newline="\n")
     total = [sum(units.batch_hours(b)[i] for b in batches) for i in (0, 1)]
-    print(f"wrote {len(batches)} notebooks to {out.relative_to(ROOT)}; {total[0]:.1f}-{total[1]:.1f} GPU hours in all")
+    print(f"wrote {len(batches)} notebooks to {out}; {total[0]:.1f}-{total[1]:.1f} GPU hours in all")
     return 0
 
 
