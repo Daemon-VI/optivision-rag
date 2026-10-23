@@ -129,7 +129,8 @@ def packages(b: units.Batch) -> list[str]:
 
 
 def topups() -> tuple[units.Batch, ...]:
-    """D1 top-ups: the colqwen2-v1.0-hf jobs of the batches first run without sentence-transformers 6.
+    """D1 top-ups (the colqwen2-v1.0-hf jobs of the batches first run without sentence-transformers 6) and
+    the D4 Tier B rerun, which runs e5's jobs through ``tierb_entry.py``.
 
     The jobs are copied unchanged. ``data.load_unit`` merges a unit's files over every batch
     folder, so a top-up sits beside its first run. Re-ingesting the original name would replace
@@ -144,7 +145,17 @@ def topups() -> tuple[units.Batch, ...]:
     return (take("e6a_easy_topup_b1", "Top-up (D1): colqwen2-v1.0-hf on ViDoRe V3 hr + computer_science",
                  "e1a_easy_b1_design"),
             take("e6b_easy_topup_b2", "Top-up (D1): colqwen2-v1.0-hf on ViDoRe V3 pharmaceuticals and TechSlides",
-                 "e2a_easy_b2_pharma", "e2b_easy_b2_techslides"))
+                 "e2a_easy_b2_pharma", "e2b_easy_b2_techslides"),
+            take("e6c_easy_topup_dt", "Top-up (D1): colqwen2-v1.0-hf on the DT corpora (ArxivQA, TabFQuAD, "
+                 "TAT-DQA, synthetic government and AI)", "e4a_easy_dt_tables_figures", "e4b_easy_dt_synthetic"),
+            dataclasses.replace(by_name["e5_easy_tierb_vlm"], name="e5b_easy_tierb_vlm",
+                                title="Tier B rerun (D4): practice questions with a local VLM",
+                                needs_files=by_name["e5_easy_tierb_vlm"].needs_files + (f"scripts/easy_validation/"
+                                                                                       f"{RUNNERS['e5b_easy_tierb_vlm']}",)))
+
+
+#: batches run through another entry script than ``encode_unit.py`` (same arguments)
+RUNNERS = {"e5b_easy_tierb_vlm": "tierb_entry.py"}  # D4: the Tier B generator under the name vlm_probes.py looks for
 
 
 def describe(b: units.Batch) -> str:
@@ -220,7 +231,7 @@ json.dump({"batch": NAME, "jobs": JOBS}, open(f"{WORK}/jobs.json", "w"), indent=
 '''),
         code(RESUME),
         code('''
-cmd = [sys.executable, f"{REPO}/scripts/easy_validation/encode_unit.py", f"{WORK}/jobs.json", "--out", RESULTS,
+cmd = [sys.executable, f"{REPO}/scripts/easy_validation/''' + RUNNERS.get(b.name, "encode_unit.py") + '''", f"{WORK}/jobs.json", "--out", RESULTS,
        "--data", "/tmp/optdata", "--deadline-hours", str(DEADLINE_HOURS)]
 subprocess.run(cmd, check=False)
 '''),

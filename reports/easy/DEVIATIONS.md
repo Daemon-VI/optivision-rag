@@ -62,3 +62,32 @@ new, separately labelled run.
 first by downloads and errored on load (`mm_token_type_ids` missing), so the next two were taken:
 tencent/EVIE-Preview-4.5B (check 10/12) and webAI-Official/webAI-ColVec1-9b (check 11/12), both
 complete on v3_hr. This is listed here for completeness and is not a deviation.
+
+**e4a and e4b** ran at commit 31f94d3 but from notebook copies made before the fix. Their
+`pip_freeze.txt` shows sentence-transformers 5.7.0, so colqwen2-v1.0-hf is missing from both,
+and all their other jobs completed. `e6c_easy_topup_dt` runs that model's two DT jobs,
+unchanged. The e6a and e6b top-ups completed, with checks of 10, 10, 11 and 12 of 12.
+
+## D4 (2026-10-23): Tier B rerun through an entry script
+
+**What happened:** the first e5 run (commit 3c8c7e6) made no practice questions. `vlm_probes.py`
+looks for `make_vlm_probes`, `make_probes_vlm` or `make_probes` on
+`optivision.easy._probes_vlm`. That module names its generator `generate_vlm_probes`. Both
+files are frozen (part 2). A CPU dry run of the frozen harness then found two more mismatches:
+
+- the generator returns a `ProbeBatch`, and the harness iterates it and takes its length;
+- the harness passes the page images by position, and the tier looks them up by page id.
+
+**Change:** a new script, `scripts/easy_validation/tierb_entry.py` (not frozen), adds
+`make_vlm_probes` to that module. It is the same generator, with the keywords the harness passes,
+images looked up by page id, and the probes returned as a list. The script then runs
+`encode_unit.main` with the same arguments. The rerun is `e5b_easy_tierb_vlm`, the same jobs
+run through this script. No frozen file, prompt, generation setting, threshold or analysis
+changes. A test runs `vlm_probes.generate` end to end with a fake VLM. The real Qwen2-VL
+backend has not yet run on a GPU, and e5b is its first run.
+
+**Product fix found on the way:** `optivision.easy._build` called `make_probes` on the VLM and
+API tiers, which do not have it. It now calls `generate_vlm_probes` and `generate_api_probes`
+and takes their `.probes`.
+
+**Data:** the first e5 archive is kept outside the repository and is not ingested.

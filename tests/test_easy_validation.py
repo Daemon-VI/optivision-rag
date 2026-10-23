@@ -411,3 +411,88 @@ def test_float16_layout_keeps_everything_and_faults_hurt(synthetic_run):
     assert v5a, "the planted faults were scored"
     random_rows = [r for r in v5a if r["fault"] == "random scores"]
     assert random_rows and max(r["real_point"] for r in random_rows) < 0.8
+
+
+def test_tierb_entry_gives_vlm_probes_a_generator_it_can_call(monkeypatch):
+    """D4: the first e5 run found no generator under the names vlm_probes.py looks for."""
+    import inspect
+    from types import SimpleNamespace
+
+    from optivision.easy import _build, _probes_vlm
+
+    tierb = _mod("easy_validation.tierb_entry")
+    vlm = _mod("easy_validation.vlm_probes")
+    enc = _mod("easy_validation.encode_unit")
+    seen: dict = {}
+
+    def fake(pages, **kwargs):
+        seen.update(kwargs)
+        probe = SimpleNamespace(id="q1", text="What was approved?", page_id="a::p1", relevant=("a::p1",))
+        return SimpleNamespace(probes=[probe])
+
+    monkeypatch.setattr(_probes_vlm, "generate_vlm_probes", fake)
+    for name in vlm.ENTRY_POINTS:
+        monkeypatch.delattr(_probes_vlm, name, raising=False)
+    with pytest.raises(AttributeError):
+        vlm.generator()
+    monkeypatch.setattr(_probes_vlm, "make_vlm_probes", None, raising=False)  # undone after the test
+    tierb.install()
+    fn = vlm.generator()
+    assert fn is tierb.make_vlm_probes
+    assert {"images", "seed", "max_pages", "model", "device"} <= set(inspect.signature(fn).parameters)
+    probes = fn([{"id": "a::p1"}], images={}, seed=3, max_pages=5, model="m", device="cuda")
+    assert seen == {"images": {}, "seed": 3, "max_pages": 5, "model": "m", "device": "cuda"}
+    assert [enc.probe_dict(p)["relevant"] for p in probes] == [["a::p1"]]
+    # the build's opt-in tier calls the same generator
+    assert len(_build._make_probes("vlm", [{"id": "a::p1"}], allow_upload=False)) == 1
+
+
+def test_tierb_generation_runs_through_the_frozen_harness(monkeypatch, tmp_path):
+    """D4: vlm_probes.generate end to end on a CPU (fake source, fake VLM): images by page id, probes saved."""
+    from PIL import Image, ImageDraw
+
+    from optivision.easy import _probes_vlm
+
+    tierb = _mod("easy_validation.tierb_entry")
+    vlm = _mod("easy_validation.vlm_probes")
+    enc = _mod("easy_validation.encode_unit")
+    topics = ["maintenance budget", "hiring freeze", "travel policy", "safety audit"]
+
+    def page():
+        im = Image.new("RGB", (800, 1000), "white")
+        draw = ImageDraw.Draw(im)
+        for k in range(40):
+            draw.rectangle([40, 40 + k * 22, 760 - (k * 37 % 300), 52 + k * 22], fill="black")
+        return im
+
+    ids = [f"doc{i}::p{i + 1}" for i in range(len(topics))]
+    texts = {pid: {"text_layer": f"The committee reviewed the {t} for 2025 and approved changes to the {t} after "
+                                 f"a long discussion of costs, schedules and staff concerns."} for pid, t in zip(ids, topics)}
+    src = enc.Source(key="v3_hr", ids=ids, meta=[{"id": pid, "doc_id": pid.split("::")[0], "page": i + 1, "row": i}
+                                                 for i, pid in enumerate(ids)],
+                     queries=[], qrels={}, _rows=[{"image": page()} for _ in ids], texts=texts)
+
+    class FakeHF:
+        model_id = "Qwen/Qwen2-VL-2B-Instruct"
+
+        def __init__(self, model, device="auto", dtype="auto"):
+            self.n = 0
+
+        def resolve_device(self):
+            return "cpu"
+
+        def generate(self, prompt, image=None, *, max_new_tokens=256, seed=None, temperature=0.0):
+            if prompt.startswith("Summarise"):
+                return "A committee report page about spending decisions, approvals and staff concerns."
+            if prompt.startswith("Below is a summary"):
+                self.n += 1
+                return f"Which spending decision did the committee approve in report number {self.n}?"
+            return "yes"
+
+    monkeypatch.setattr(_probes_vlm, "HFVlmBackend", FakeHF)
+    monkeypatch.setattr(_probes_vlm, "make_vlm_probes", None, raising=False)
+    tierb.install()
+    result = vlm.generate(src, tmp_path)
+    assert result["status"] == "ok" and result["n"] == len(ids) and result["generator"] == "make_vlm_probes"
+    saved = json.loads((tmp_path / "_corpus" / "v3_hr" / "probes_vlm.json").read_text(encoding="utf-8"))
+    assert sorted(p["page_id"] for p in saved) == sorted(ids)
