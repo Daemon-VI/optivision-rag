@@ -91,3 +91,19 @@ API tiers, which do not have it. It now calls `generate_vlm_probes` and `generat
 and takes their `.probes`.
 
 **Data:** the first e5 archive is kept outside the repository and is not ingested.
+
+## D5 (2026-10-31): incremental ZIP64 archiving in `make_easy_validation.py` for `e3b`
+
+**What happened:** `e3b_easy_b3_heldout_text` ran on Kaggle, but the final `zip -q -r -0` shell
+command failed to create `results_e3b_easy_b3_heldout_text.zip` because `webAI-ColVec1-9b` on
+`v3_computer_science` (1,360 pages, ~8.85 GB in float16) plus `tencent/EVIE-Preview-4.5B` and the
+four text models on `beir_fiqa10k` and `beir_arguana` write ~12 GB to `/kaggle/working`, and
+creating a second ~12 GB `.zip` file alongside the source folder exceeds Kaggle's 19.5 GB
+`/kaggle/working` quota.
+
+**Change:** `scripts/make_easy_validation.py` (not frozen) now removes the cloned repo before
+archiving and writes `results_<batch>.zip` (`ZIP_STORED`, `allowZip64=True`) file-by-file in
+Python, unlinking each source file immediately after adding it to the archive so peak usage in
+`/kaggle/working` stays within 1x the output size plus one shard (~208 MB). If a resumed input
+already has all job records marked `complete`, the notebook skips re-running `encode_unit.py` and
+proceeds directly to archiving.

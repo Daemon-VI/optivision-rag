@@ -231,17 +231,35 @@ json.dump({"batch": NAME, "jobs": JOBS}, open(f"{WORK}/jobs.json", "w"), indent=
 '''),
         code(RESUME),
         code('''
-cmd = [sys.executable, f"{REPO}/scripts/easy_validation/''' + RUNNERS.get(b.name, "encode_unit.py") + '''", f"{WORK}/jobs.json", "--out", RESULTS,
-       "--data", "/tmp/optdata", "--deadline-hours", str(DEADLINE_HOURS)]
-subprocess.run(cmd, check=False)
+_summary_file = f"{RESULTS}/batch_summary.json"
+_prev = json.load(open(_summary_file)) if os.path.exists(_summary_file) else []
+_expected = sum(len(j["corpora"]) * (2 if j.get("role") == "heldout" else 1)
+                for j in JOBS if j.get("role", "encode") in ("encode", "heldout"))
+if _expected and len(_prev) == _expected and all(r.get("outcome") == "complete" for r in _prev):
+    print(f"All {len(_prev)} job records already complete in resumed output; skipping encode_unit.py.")
+else:
+    cmd = [sys.executable, f"{REPO}/scripts/easy_validation/''' + RUNNERS.get(b.name, "encode_unit.py") + '''", f"{WORK}/jobs.json", "--out", RESULTS,
+           "--data", "/tmp/optdata", "--deadline-hours", str(DEADLINE_HOURS)]
+    subprocess.run(cmd, check=False)
 '''),
         code('''
 !pip freeze > {RESULTS}/pip_freeze.txt
 !nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv > {RESULTS}/gpu.txt
 !cd {REPO} && git rev-parse HEAD > {RESULTS}/commit.txt
 !cat {RESULTS}/batch_summary.json
-# store, do not deflate: float16 vectors barely compress; the folder goes once the archive tests sound
-!cd {WORK} && rm -f results_{NAME}.zip && zip -q -r -0 results_{NAME}.zip results_{NAME} && zip -T -q results_{NAME}.zip && rm -rf results_{NAME} && ls -la results_{NAME}.zip
+# store, do not deflate: float16 vectors barely compress; move each file into the archive so /kaggle/working never holds two copies
+import pathlib, shutil, zipfile
+shutil.rmtree(REPO, ignore_errors=True)
+pathlib.Path(WORK, "jobs.json").unlink(missing_ok=True)
+_zip = pathlib.Path(WORK) / f"results_{NAME}.zip"
+_zip.unlink(missing_ok=True)
+with zipfile.ZipFile(_zip, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as _zf:
+    for _p in sorted(pathlib.Path(RESULTS).rglob("*")):
+        if _p.is_file() and not _p.name.endswith((".tmp", ".tmp.npz")):
+            _zf.write(_p, _p.relative_to(WORK).as_posix())
+            _p.unlink()
+shutil.rmtree(RESULTS, ignore_errors=True)
+!cd {WORK} && zip -T -q results_{NAME}.zip && ls -lh results_{NAME}.zip
 '''),
     ]
     return {"cells": cells, "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python",
