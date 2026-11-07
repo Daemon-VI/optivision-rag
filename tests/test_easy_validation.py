@@ -390,7 +390,7 @@ def test_analyses_run_end_to_end_on_a_synthetic_unit(synthetic_run):
     info, out = synthetic_run
     results = info["results"]
     expected = {"V1a", "V1b", "V1c", "V1d", "V1-unchecked", "V1-arms", "V1t", "V1u", "S", "arm S", "V2", "V3", "V4",
-                "V5a", "V5b", "V5c", "V5d", "V6"}
+                "V5a", "V5b", "V5c", "V5d", "V6", "DT", "probe_allowance"}
     assert expected <= set(results)
     for k in expected:
         r = results[k]
@@ -403,6 +403,26 @@ def test_analyses_run_end_to_end_on_a_synthetic_unit(synthetic_run):
         assert (out / name).exists()
     proposal = json.loads((out / "ledger_proposal.json").read_text(encoding="utf-8"))
     assert "proposed only" in proposal["note"]
+
+
+def test_joint_hm_transform_is_bit_identical():
+    from optivision.compose import Pipeline
+    from optivision.representation import MultiVectorCorpus
+    from optivision.stages.merge import HierarchicalMerge
+
+    run_all = _mod("easy_validation.run_all")
+    rng = np.random.default_rng(42)
+    vecs = rng.normal(size=(55, 16)).astype(np.float16)
+    offsets = np.array([0, 1, 12, 30, 55], dtype=np.int64)
+    corpus = MultiVectorCorpus(vecs, offsets, ids=["d0", "d1", "d2", "d3"])
+    joint = run_all._joint_hm_transform(corpus)
+    for ratio in (0.33, 0.25):
+        ref = Pipeline([HierarchicalMerge(ratio=ratio, min_vectors=1)]).transform(corpus)
+        got = joint[ratio]
+        assert np.array_equal(got.vectors, ref.vectors)
+        assert np.array_equal(got.offsets, ref.offsets)
+        assert np.array_equal(got.weights, ref.weights)
+        assert got.ids == ref.ids
 
 
 def test_float16_layout_keeps_everything_and_faults_hurt(synthetic_run):
