@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _easy_lint import banned_hits, non_ascii
 from _easy_presentation_fixtures import (
+    ONE_BIT_MARGIN,
     PAGE_SPECS,
     POOLED_SPECS,
     TEXT_SPECS,
@@ -331,9 +332,11 @@ def test_the_rule_script_is_small_and_touches_no_network():
 
 
 def test_data_carries_what_the_rule_needs():
+    from optivision.easy import _ledger
+
     _, _, data = _page(_sel())
     assert set(data["margins"]) >= {"one_bit", "scale", "codecs_above", "lowest_target", "text", "text_max", "close"}
-    assert data["margins"]["one_bit"] == 0.025 and data["margins"]["codecs_above"] == 20000
+    assert data["margins"]["one_bit"] == _ledger.setting("margins", "one_bit_margin") and data["margins"]["codecs_above"] == 20000
     by = {r["name"]: r for r in data["rows"]}
     assert by["hm(0.25) > binary"]["size"] == 0.04 and by["binary"]["size"] == 0.0175
     assert by["hm(0.25) > int8"]["size"] == 0.0175 and by["int8(per_vector)"]["size"] == 0.005
@@ -454,7 +457,8 @@ def _cases(specs, modality, blocked, targets, pages, checks, pooled=False):
 
 
 @needs_node
-def test_js_rule_matches_the_design_on_hand_fixtures(tmp_path):
+def test_js_rule_matches_the_design_on_hand_fixtures(tmp_path, pin_ledger):
+    pin_ledger("margins", one_bit_margin=ONE_BIT_MARGIN)  # the reference rule's (design) margin; the shipped one is 0.0
     items, expected = [], []
     script = None
     for label, specs, modality, blocked, pooled in _fixtures():
@@ -479,7 +483,8 @@ def test_js_rule_matches_the_design_on_hand_fixtures(tmp_path):
 
 
 @needs_node
-def test_js_rule_matches_the_design_on_random_ladders(tmp_path):
+def test_js_rule_matches_the_design_on_random_ladders(tmp_path, pin_ledger):
+    pin_ledger("margins", one_bit_margin=ONE_BIT_MARGIN)  # the reference rule's (design) margin; the shipped one is 0.0
     rng = random.Random(20261021)
     items, expected = [], []
     script = None
@@ -515,8 +520,9 @@ def test_js_always_has_a_pick_and_falls_back_to_float32(tmp_path):
 
 
 @needs_node
-def test_page_script_redraws_with_the_words_python_uses(tmp_path):
+def test_page_script_redraws_with_the_words_python_uses(tmp_path, pin_ledger):
     """Move the controls to the selection's own values: every text the script writes equals the static page."""
+    pin_ledger("margins", one_bit_margin=ONE_BIT_MARGIN)  # the reference rule's (design) margin; the shipped one is 0.0
     cases = [
         ("page 0.97 500", selection_for(PAGE_SPECS, 0.97, 500)),
         ("page 0.97 2500 checked", selection_for(PAGE_SPECS, 0.97, 2500, checked=True)),

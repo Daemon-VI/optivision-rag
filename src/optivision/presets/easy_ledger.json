@@ -6,21 +6,29 @@
   "practice_check": {
    "title": "The practice check",
    "on": true,
-   "mode": "step-down",
+   "mode": "warning",
    "test": "V5a-V5d",
-   "reason": "on as registered; V5b or V5c failing turns it into a warning, V5a failing leaves practice questions as examples only"
+   "reason": "V5b failed on text-layer questions and V5c failed on OCR and VLM questions, so the check only warns; V4 failed on all three kinds, so practice questions are not described as easier than real ones",
+   "wording": "not reliably easier or harder than real questions"
   },
   "probe_allowance": {
    "title": "Practice questions raising the layout one step",
    "on": false,
    "test": "PREREG_EASY part 3 (probe allowance)",
-   "reason": "practice questions are easier than real ones; raising the layout on them waits for its own preregistered test"
+   "reason": "passed on text-layer and OCR questions and failed on VLM questions (15 cases, 20 needed); in-sample; it has no effect while the practice check is in warning mode; switched on when the code exists",
+   "passed_sources": [
+    "text_layer",
+    "ocr"
+   ]
   },
   "type_presets": {
    "title": "Document-type presets",
    "on": false,
    "test": "DT campaign (FINAL_DESIGN 5.8 type rule)",
-   "reason": "each type needs 2 or more datasets and 4 or more models measured with low at or above the target; the DT campaign has not run"
+   "reason": "the DT rule passed for the academic type only (ArxivQA, computer science, synthetic AI; 4 models); slides, reports and tables did not; switched on when the preset code exists",
+   "passed_types": [
+    "academic"
+   ]
   },
   "small_memory_layout": {
    "title": "The small-memory layout",
@@ -50,10 +58,10 @@
    "title": "Safety margins",
    "on": true,
    "test": "V1, V2, arms B/C/D/S",
-   "reason": "as frozen in PREREG_EASY part 1",
+   "reason": "as frozen in PREREG_EASY part 1; the 1-bit margin removed because arm B passed V1b and V1c with no severe 1-bit miss (176 units)",
    "extra_compressed": 0.0,
    "unchecked_merge_penalty": 0.0,
-   "one_bit_margin": 0.025,
+   "one_bit_margin": 0.0,
    "size_coefficient_scale": 1.0,
    "codecs_only_above": 20000,
    "lowest_target": 0.9
@@ -66,5 +74,63 @@
    "wording": "default"
   }
  },
- "outcomes": []
+ "outcomes": [
+  {
+   "recorded_utc": "2026-11-13T06:55:50Z",
+   "source": "reports/easy/results/predictions.json",
+   "predictions": {
+    "V1a": null,
+    "V1b": null,
+    "V1c": null,
+    "V1d": null,
+    "V1-unchecked": null,
+    "V2": null,
+    "V1-arms": null,
+    "V1t": false,
+    "V1u": null,
+    "S": null,
+    "arm S": null,
+    "V3": null,
+    "V4": false,
+    "V5a": true,
+    "V5b": false,
+    "V5c": true,
+    "V5d": true,
+    "V4 (ocr)": false,
+    "V5a (ocr)": true,
+    "V5b (ocr)": true,
+    "V5c (ocr)": false,
+    "V5d (ocr)": true,
+    "V4 (vlm)": false,
+    "V5a (vlm)": true,
+    "V5b (vlm)": true,
+    "V5c (vlm)": false,
+    "V5d (vlm)": true,
+    "V6": false,
+    "DT": true,
+    "probe_allowance": true,
+    "probe_allowance (ocr)": true,
+    "probe_allowance (vlm)": false
+   },
+   "actions": [
+    "Arm B passes V1b, V1c, no severe 1-bit miss",
+    "V4 fails",
+    "V5b or V5c fails",
+    "DT campaign type rule passes",
+    "probe_allowance passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)",
+    "probe_allowance (ocr) passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)"
+   ],
+   "status": "adjusted on our validation sets (in-sample)",
+   "applied": {
+    "features.margins.one_bit_margin": 0.0,
+    "features.practice_check.wording": "not reliably easier or harder than real questions",
+    "features.practice_check.mode": "warning"
+   },
+   "not_applied_yet": [
+    "features.type_presets (no code)",
+    "features.probe_allowance (no code)"
+   ],
+   "not_scored": "ColVec1-9b units (memory); colSmol-500M on pharmaceuticals and industrial (failed check_retriever)"
+  }
+ ]
 }

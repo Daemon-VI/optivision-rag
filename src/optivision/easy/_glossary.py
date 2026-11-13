@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 
+from . import _ledger
 from ._claim import Block, Line, lit
 
 #: term -> meaning shown to users (FINAL_DESIGN 6.5, in the table's order)
@@ -32,7 +33,9 @@ TERMS: dict[str, str] = {
     "merged (1 in 4)": "Similar vectors on a page combined, keeping about a quarter",
     "lowest kept": "Bottom of the 95% range we measured, on our worst dataset",
     "close call": "Cleared the target by under half a point",
-    "practice questions": "Made from your PDFs' text; easier than real ones; only make us pick safer",
+    "practice questions": ("Made from your PDFs' text; " + _ledger.practice_difficulty() + "; "
+                           + ("only make us pick safer" if _ledger.setting("practice_check", "mode", "step-down") == "step-down"
+                              else "only warn; they never change the layout")),
     "practice check": "Testing a layout on practice questions before saving",
     "unchecked": "No practice check possible (scans, images, under 60 text pages, vectors); no 1-bit layouts",
     "drift": "Your model now producing different vectors than at build time",

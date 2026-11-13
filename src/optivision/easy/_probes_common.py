@@ -28,7 +28,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ._claim import Block, claim
+from ._claim import Block, Line, claim
 
 #: pages with fewer text-layer characters than this count as "no text layer" (FINAL_DESIGN 5.2)
 NO_TEXT_CHARS = 20
@@ -483,6 +483,36 @@ def add_counts(block: Block, label: str, counts: Mapping[str, int], lead: str | 
 TIERS = ("ocr", "vlm", "api")
 
 
+# ``_probes_vlm.py`` is frozen (PREREG_EASY part 2), and its report closes with the sentence below, which says the
+# questions are "still easier than real ones" and that they "can only move a layout to a safer one". The validation
+# outcomes changed both claims (the ledger's practice_check wording and mode; reports/easy/DEVIATIONS.md, D7), so the
+# tier is run through these two helpers, which restate that one sentence from the ledger.
+_VLM_NOTE = re.compile(r"(?:, )?but the questions are still\s+easier than real ones\.\s+They can only move a layout to "
+                       r"a safer one and never confirm\s+the target\.")
+
+
+def _vlm_note_text() -> str:
+    from . import _ledger
+
+    return f". The questions are {_ledger.practice_difficulty()}. They {_ledger.practice_role()}."
+
+
+def restate_vlm_note(text: str) -> str:
+    """The VLM tier's closing sentence, restated from the ledger (printed text)."""
+    return _VLM_NOTE.sub(lambda _m: _vlm_note_text(), text)
+
+
+def restate_vlm_batch(batch: ProbeBatch) -> ProbeBatch:
+    """The same restatement on the stored report, line by line."""
+    report = getattr(batch, "report", None)
+    if report is not None:
+        for i, line in enumerate(report.lines):
+            if _VLM_NOTE.search(line.template):
+                report.lines[i] = Line(line.label, _VLM_NOTE.sub(lambda _m: _vlm_note_text(), line.template),
+                                       *line.parts)
+    return batch
+
+
 def make_tier_probes(tier: str, pages: Sequence[Any], **kwargs: Any) -> ProbeBatch:
     """Run one optional tier by name: ``"ocr"``, ``"vlm"`` or ``"api"`` (the last needs ``allow_upload=True``)."""
     if tier == "ocr":
@@ -492,7 +522,10 @@ def make_tier_probes(tier: str, pages: Sequence[Any], **kwargs: Any) -> ProbeBat
     if tier == "vlm":
         from ._probes_vlm import generate_vlm_probes
 
-        return generate_vlm_probes(pages, **kwargs)
+        out = kwargs.get("out", say)
+        if out is not None:
+            kwargs["out"] = lambda text: out(restate_vlm_note(text))
+        return restate_vlm_batch(generate_vlm_probes(pages, **kwargs))
     if tier == "api":
         from ._probes_api import generate_api_probes
 

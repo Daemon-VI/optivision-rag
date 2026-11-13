@@ -1120,3 +1120,25 @@ def test_rendered_blocks_are_ascii_and_end_with_next(folder, api_folder):
             named = re.search(r"\.pdf|claude-|Qwen|SmolVLM|Apache|checked|licence", line)
             if re.search(r"\d", line) and "[" not in line and not named:
                 raise AssertionError(f"a number without a tag: {line!r}")
+
+
+# ---------------------------------------------------------------------------- the frozen VLM note, restated from the ledger
+
+
+def test_vlm_tier_note_follows_the_ledger_not_the_frozen_sentence(folder, pin_ledger, capsys):
+    """_probes_vlm.py is frozen and says "still easier than real ones" and "can only move a layout to a safer one";
+    the validation outcomes changed both (D7), so make_tier_probes restates that sentence, printed and stored."""
+    pages, images = folder
+    batch = _probes_common.make_tier_probes("vlm", pages[:8], backend=FakeVlm(), images=images, max_pages=8)
+    printed, stored = capsys.readouterr().out, str(batch.report)
+    for text in (printed, stored):
+        flat = " ".join(text.split())
+        assert "not reliably easier or harder than real questions" in flat, text
+        assert "only warn: they do not change the layout" in flat, text
+        assert "still easier than real ones" not in flat and "safer one" not in flat, text
+    assert stored.rstrip().splitlines()[-1].startswith("Next:")
+    # in step-down mode the checked sentence says what the check may do, and the old claim stays gone
+    pin_ledger("practice_check", mode="step-down", wording="easier than real questions")
+    again = _probes_common.make_tier_probes("vlm", pages[:8], backend=FakeVlm(), images=images, max_pages=8, out=None)
+    flat = " ".join(str(again.report).split())
+    assert "The questions are easier than real questions. They can only move a layout to a safer one" in flat

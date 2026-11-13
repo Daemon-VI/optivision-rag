@@ -107,3 +107,57 @@ Python, unlinking each source file immediately after adding it to the archive so
 `/kaggle/working` stays within 1x the output size plus one shard (~208 MB). If a resumed input
 already has all job records marked `complete`, the notebook skips re-running `encode_unit.py` and
 proceeds directly to archiving.
+
+## D6 (2026-11-13): how the scoring was run on a 15.8 GB machine
+
+**What happened:** `run_all.py` scores every unit on a CPU. The two `webAI-ColVec1-9b` units are 7.2 GB
+(v3_hr) and 8.7 GB (v3_computer_science) of float16 vectors, 14.4 and 17.4 GB as float32. They did
+not fit this machine's memory, and the first runs were stopped before the machine ran out of memory.
+
+**Changes (all in `scripts/easy_validation/run_all.py`, which is not frozen; no frozen file changed,
+and none changes any number):**
+
+- `--min-free-gb` (default 1) stops the run cleanly when free memory runs low.
+- `EASY_MAX_LIVE_GB` (default 3) caps the vectors held in memory at once; a smaller cap only evicts and reloads from disk.
+- `--skip-models` reports the named models' units as not scored. It was used with `webAI-Official/webAI-ColVec1-9b`.
+
+**What is not scored, and why:**
+
+- `webAI-ColVec1-9b` on v3_hr and v3_computer_science: too large for this machine. V1u was therefore
+  scored on `EVIE-Preview-4.5B` alone: point >= T on 8 of 8 units. V1u is reported as **not scored**,
+  and no pass is claimed for the second held-out encoder. It can be scored on a machine with 32 GB or
+  more of memory, or in a Kaggle session.
+- `colSmol-500M` on v3_pharmaceuticals (9 of 12) and v3_industrial (8 of 12) failed `check_retriever`.
+  They have no usable vectors, by the frozen rule. This is why V1a-V1d, V1-unchecked, V2, arm S and V3
+  read "not scored" although every unit that exists passed or failed on its own numbers.
+
+**`part3.py` was written after the data came back.** It implements the DT campaign and the
+practice-question allowance test of the frozen PREREG_EASY_PART3.md (written before the data) and is
+not itself frozen. The rules, thresholds and datasets come from the frozen text; the code is
+available for review in the repository.
+
+**V3 is reported as missed, not as "not scored".** The check needs |delta point| <= 0.005 on 95% of
+pairs; 82.4% of 102 pairs met it. One unit lacks data, so the formal label is "not scored", but the
+available pairs already fall short.
+
+## D7 (2026-11-13): the ledger was applied in part
+
+The decision table (`reports/easy/results/decisions.json`) was applied as written where the code reads
+the setting:
+
+- the 1-bit margin is removed (0.025 -> 0.0): arm B passed V1b and V1c with no severe 1-bit miss, on
+  176 units (every arm had 0 misses);
+- the practice check is now `warning`, because V5b failed on text-layer questions and V5c failed on
+  OCR and VLM questions; it reports and does not change the layout;
+- practice questions are described as "not reliably easier or harder than real questions" (V4 failed
+  on all three kinds: 33%, 35% and 45% of units).
+
+Two changes passed their tests but are **not switched on**, because no code reads them yet:
+
+- type presets: the DT rule passed for the **academic** type only (3 datasets, 4 models);
+  slides, reports and tables did not;
+- the probe allowance: passed for text-layer (24 cases) and OCR (26 cases) questions, failed for VLM
+  questions (15 cases, 20 needed). It has no effect while the practice check is a warning.
+
+Both are in-sample results on our own validation sets. They are switched on when the code is built and tested.
+V6 (the wiring test) failed, and its planted-fault half did not run (D2); it gates no decision.

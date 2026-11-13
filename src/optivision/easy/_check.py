@@ -50,6 +50,7 @@ from typing import Any
 import numpy as np
 
 from . import _claim
+from . import _ledger
 from ._claim import Block, Claim, claim, lit
 from ._types import EasyError, LayoutRow
 
@@ -968,7 +969,8 @@ def _render(index: Any, record: RecordCheck, drift: DriftCheck, size: SizeCheck,
             saved = "" if practice.runs_saved else " (count not saved: the index is read-only or locked)"
             b.add("Runs", "practice check run {0} on this index; every rerun is another look{1}",
                   claim(practice.runs, "counted"), lit(saved))
-        b.add("", "practice questions are easier than real ones; a pass cannot confirm the target on your searches")
+        b.add("", "practice questions are {0}; a pass cannot confirm the target on your searches",
+              lit(_ledger.practice_difficulty()))
 
     # 5 growth
     if growth is not None and growth > GROWTH_FACTOR:

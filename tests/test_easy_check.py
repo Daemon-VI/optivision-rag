@@ -281,7 +281,8 @@ def test_no_growth_line_below_twice(tmp_path, fakes):
 # ============================================================================ practice rerun
 
 
-def test_practice_rerun_fires_on_collapsed_codes_and_counts_runs(tmp_path, fakes):
+def test_practice_rerun_fires_on_collapsed_codes_and_counts_runs(tmp_path, fakes, pin_ledger):
+    pin_ledger("practice_check", mode="step-down")  # the mechanism under test; the shipped mode is "warning"
     index = F.FakeIndex(tmp_path, code_noise=3.0)
     report = _check.run_check(index, out=None)
     assert report.practice.ran and not report.practice.passed

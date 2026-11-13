@@ -89,7 +89,9 @@ class LazyShardCorpus(MultiVectorCorpus):
     """MultiVectorCorpus backed by .npz shards that materializes .vectors on demand and bounds global RAM."""
 
     _LIVE: list[LazyShardCorpus] = []
-    _MAX_LIVE_BYTES: int = 8 * 1024**3  # cap live raw shard vectors at 8 GiB across the process
+    # cap live raw shard vectors across the process (EASY_MAX_LIVE_GB, default 3): a smaller cap only evicts and
+    # reloads from disk more often, so no score changes
+    _MAX_LIVE_BYTES: int = int(float(os.environ.get("EASY_MAX_LIVE_GB", "3")) * 1024**3)
 
     def __init__(self, shards: list[Path], offsets: np.ndarray, ids: list[str], dim: int, dtype: np.dtype) -> None:
         self._shards = list(shards)
@@ -793,12 +795,47 @@ def run(roots: list[Path], out: Path, backend_name: str = "optivision.easy") -> 
     return {"results": results, "decisions": decisions, "missing": sorted(ctx.missing)}
 
 
+def _ram_watchdog(min_free_gb: float) -> None:
+    """Stop the run (its checkpoint is kept) when the machine is about to run out of memory."""
+    import threading
+
+    import psutil
+
+    def watch() -> None:
+        while True:
+            free = psutil.virtual_memory().available / 1024**3
+            if free < min_free_gb:
+                print(f"STOPPED: only {free:.2f} GB RAM left (limit {min_free_gb} GB); rerun to resume from the "
+                      f"checkpoint on a machine with more memory or with other programs closed", flush=True)
+                os._exit(3)
+            time.sleep(2)
+
+    threading.Thread(target=watch, daemon=True).start()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--data", type=Path, default=HERE.parents[1] / "data" / "easy")
     ap.add_argument("--out", type=Path, default=HERE.parents[1] / "reports" / "easy" / "results")
     ap.add_argument("--synthetic", action="store_true", help="dry run on generated units with the fake backend")
+    ap.add_argument("--min-free-gb", type=float, default=1.0, help="stop cleanly below this much free RAM (0 = off)")
+    ap.add_argument("--skip-models", nargs="*", default=[], metavar="MODEL",
+                    help="do not load these models' units; they are reported as not scored")
     a = ap.parse_args(argv)
+    if a.min_free_gb > 0:
+        _ram_watchdog(a.min_free_gb)
+    if a.skip_models:
+        skipped = set(a.skip_models)
+        _unit = Context.unit
+
+        def unit_unless_skipped(self: Context, model: str, corpus: str) -> Any:
+            if model in skipped:  # recorded like any unit that is absent: "<model> on <corpus>" in ``missing``
+                self.missing.add(f"{model} on {corpus}")
+                return None
+            return _unit(self, model, corpus)
+
+        Context.unit = unit_unless_skipped  # type: ignore[method-assign]
+        print(f"skipping (too large for this machine's RAM, recorded as not scored): {sorted(skipped)}", flush=True)
     if a.synthetic:
         from easy_validation import fakes, synthetic
 

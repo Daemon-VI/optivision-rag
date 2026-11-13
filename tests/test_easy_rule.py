@@ -177,7 +177,8 @@ def test_hand_pick_names():
 # ------------------------------------------------------------------------------ margins
 
 
-def test_size_term_and_needed_values():
+def test_size_term_and_needed_values(pin_ledger):
+    pin_ledger("margins", one_bit_margin=0.025)  # the shipped value is 0.0; pin a non-zero one so the 1-bit term is exercised
     assert _levels.s_of_n(None) == _levels.s_of_n(500) == _levels.s_of_n(100) == 0.0
     assert round(_levels.s_of_n(1000), 2) == 0.43 and _levels.s_of_n(2500) == pytest.approx(1.0)
     assert round(_levels.s_of_n(20000), 2) == 2.29
@@ -190,6 +191,14 @@ def test_size_term_and_needed_values():
     assert _levels.need(t, rung["hierarchical_merge(0.33) > binary"], 2500) == pytest.approx(t + 0.04 + 0.025)
     assert _levels.need(t, rung["binary"], 500) == pytest.approx(t + 0.025)
     assert _levels.need(t, rung["int4(mean)"], 20000, modality="text") == pytest.approx(t + 0.01)
+
+
+def test_the_shipped_one_bit_margin_is_the_one_the_rule_uses():
+    shipped = float(_ledger.setting("margins", "one_bit_margin", None))
+    rung = {r.name: r for r in _levels.LADDER["page"]}
+    t = 0.97
+    assert _levels.need(t, rung["binary"], 500) == pytest.approx(t + shipped)
+    assert _levels.need(t, rung["binary"], 2500) == pytest.approx(t + 0.0175 + shipped)
 
 
 def test_margins_are_read_from_the_ledger(monkeypatch):
@@ -254,7 +263,8 @@ def test_selection_shape_and_close_call():
                               and r.chain != "float" and r.ratio_f16 < sel.pick.ratio_f16}
 
 
-def test_chain_rule_stops_a_family_at_its_first_failure():
+def test_chain_rule_stops_a_family_at_its_first_failure(pin_ledger):
+    pin_ledger("margins", one_bit_margin=0.025)  # the design's margin: the 0.961 / 0.955 rungs were measured against it
     # EVIE-4.5B on TabFQuAD: merge(0.25) > binary kept 0.972, its lighter 1-bit rungs 0.961 and 0.955
     sel = _levels.select("tencent/EVIE-4.5B", 0.93, checked=True)
     rows = _by_name(sel)
@@ -366,6 +376,26 @@ def test_the_golden_fixture_matches_the_rule():
             assert [s.pick.name, s.close_call] == [want[0], want[3]], (modality, key)
 
 
+@pytest.fixture(scope="module")
+def design_golden():
+    """The golden picks recomputed with the design's 1-bit margin 0.025, which is what the FINAL_DESIGN 5.1.3
+    tables below were computed with; the shipped ledger (and the committed golden fixture) use the recorded
+    validation result 0.0. Same generator, same data file, margin pinned for the computation only."""
+    if not BUILDER.exists():
+        pytest.skip("needs the repository's scripts (not in a wheel)")
+    with pytest.MonkeyPatch.context() as mp:
+        real = _ledger.feature
+
+        def feature(name):
+            entry = real(name)
+            if name == "margins":
+                entry["one_bit_margin"] = 0.025
+            return entry
+
+        mp.setattr(_ledger, "feature", feature)
+        return _builder().golden(_levels.data())
+
+
 #: FINAL_DESIGN 5.1.3, golden picks at 0.97 (pages: <= 500 / 2,500 / 20,000), ratios against float16
 FD_GOLDEN = {
     "vidore/colqwen2-v1.0-hf": [("hierarchical_merge(0.25) > int8(per_vector)", "7.9x"), ("int4(mean)", "3.9x"),
@@ -391,15 +421,15 @@ FD_TEXT = {"colbert-ir/colbertv2.0": ("0.97", "int4(mean)", "3.9x"), "lightonai/
            "lightonai/LateOn@0.95": ("0.95", "int8(per_vector)", "2.0x")}
 
 
-def test_fd_golden_picks():
-    picks = _golden()["picks"]
+def test_fd_golden_picks(design_golden):
+    picks = design_golden["picks"]
     for model, want in FD_GOLDEN.items():
         got = [(picks[model][f"0.97|{n}|c"][0], _ratio(picks[model][f"0.97|{n}|c"][1])) for n in (500, 2500, 20000)]
         assert got == want, model
     for model, want in FD_B0.items():  # measured by B0: no longer pending
         got = [(picks[model][f"0.97|{n}|c"][0], _ratio(picks[model][f"0.97|{n}|c"][1])) for n in (500, 2500, 20000)]
         assert got == want, model
-    assert _golden()["pending_b0"] == []
+    assert design_golden["pending_b0"] == []
     assert picks["vidore/colqwen2-v1.0-hf"]["0.97|500|c"][3] is True  # "close call at <= 500"
     assert not any(picks["vidore/colqwen2-v1.0-hf"][f"0.97|{n}|c"][3] for n in (2500, 20000))
     for key, (t, name, ratio) in FD_TEXT.items():
@@ -418,8 +448,8 @@ FD_MEDIANS = {
 }
 
 
-def test_fd_median_table():
-    golden = _golden()
+def test_fd_median_table(design_golden):
+    golden = design_golden
     summary = golden["summary"]
     assert golden["page_models"] == 40
     for t, (checked, unchecked) in FD_MEDIANS.items():

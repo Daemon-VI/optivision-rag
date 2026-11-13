@@ -47,3 +47,15 @@ def require(name: str) -> None:
 def setting(name: str, key: str, default: Any = None) -> Any:
     """A decision-rule value of a feature (a margin, a mode), as the ledger records it."""
     return feature(name).get(key, default)
+
+
+def practice_difficulty() -> str:
+    """How practice questions compare with real ones: the wording V4's outcome records."""
+    return str(setting("practice_check", "wording", "easier than real questions"))
+
+
+def practice_role() -> str:
+    """What the practice check may do, after "They": it moves a layout only in step-down mode."""
+    if str(setting("practice_check", "mode", "step-down")) == "step-down":
+        return "can only move a layout to a safer one and never confirm the target"
+    return "only warn: they do not change the layout and never confirm the target"

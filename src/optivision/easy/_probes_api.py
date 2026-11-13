@@ -43,6 +43,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from . import _ledger
 from ._claim import Block, claim, lit
 from ._probes_common import (
     CONT,
@@ -827,8 +828,8 @@ def _final_block(plan: ApiPlan, batch: ProbeBatch, errors: int) -> Block:
             spent = plan.price.call_cost(int(used["input_tokens"]), int(used.get("output_tokens", 0)))
             block.add("Cost", "about {0} at the recorded prices",
                       claim(spent, "estimate", plan.price.basis, text=_money(spent)))
-    block.add(CONT, "These questions are written from the pages, so they are easier than real ones. They can only "
-                    "move a layout to a safer one and never confirm the target.")
+    block.add(CONT, f"These questions are written from the pages, and they are {_ledger.practice_difficulty()}. "
+                    f"They {_ledger.practice_role()}.")
     block.next = "give them to the practice check with the other questions"
     return block
 

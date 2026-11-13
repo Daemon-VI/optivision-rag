@@ -33,8 +33,14 @@ DESIGN_TABLE = {
 }
 
 
+#: the one entry the validation outcomes reword (reports/easy/DEVIATIONS.md, D7): V4 failed, so practice questions are
+#: not described as easier than real ones, and V5b/V5c failed, so the practice check only warns
+REWORDED = {"practice questions": "Made from your PDFs' text; not reliably easier or harder than real questions; "
+                                  "only warn; they never change the layout"}
+
+
 def test_terms_are_the_design_table_exactly():
-    assert dict(_glossary.TERMS) == DESIGN_TABLE
+    assert dict(_glossary.TERMS) == {**DESIGN_TABLE, **REWORDED}
     assert list(_glossary.TERMS) == list(DESIGN_TABLE), "the order of the table is kept"
     assert len(_glossary.TERMS) == 14
 
@@ -75,7 +81,7 @@ def test_glossary_of_everything_lists_every_term():
     ("merged", "merged (1 in 4)"), ("accuracy", "target"), ("practice question", "practice questions"),
 ])
 def test_spellings_resolve(spelling, key):
-    assert _glossary.meaning(spelling) == DESIGN_TABLE[key]
+    assert _glossary.meaning(spelling) == {**DESIGN_TABLE, **REWORDED}[key]
     assert str(_glossary.glossary(spelling)).startswith(key)
 
 

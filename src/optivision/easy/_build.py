@@ -190,7 +190,7 @@ def _make_probes(kind: str, pages: Sequence[Any], *, allow_upload: bool) -> list
     if kind == "text":
         return list(_mod("_probes").make_probes(pages, seed=0, max_pages=600, per_page=3))
     if kind == "vlm":
-        return list(_mod("_probes_vlm").generate_vlm_probes(pages, seed=0).probes)
+        return list(_mod("_probes_common").make_tier_probes("vlm", pages, seed=0).probes)  # restates the frozen note
     if kind == "api":
         return list(_mod("_probes_api").generate_api_probes(pages, seed=0, allow_upload=allow_upload).probes)
     raise ValueError(f"probes must be 'text', 'vlm', 'api' or None, got {kind!r}")

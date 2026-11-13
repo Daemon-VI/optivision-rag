@@ -528,7 +528,8 @@ def test_practice_check_passes_on_a_checked_collection(ov, tmp_path, fakes):
     assert lines["Strength"].tag == "[estimate: simulation]"
 
 
-def test_gates_only_ever_pick_safer(ov, tmp_path, monkeypatch):
+def test_gates_only_ever_pick_safer(ov, tmp_path, monkeypatch, pin_ledger):
+    pin_ledger("practice_check", mode="step-down")  # the mechanism under test; the shipped mode is "warning"
     veto = F.make_veto(fail=("hierarchical_merge(0.25) > int8(per_vector)", "int4(mean)"))
     mods = F.install(monkeypatch, veto=veto)
     index = ov.build(_texts(90), model=F.stub_adapter(), path=tmp_path / "t.ovx", progress=False)
@@ -540,12 +541,30 @@ def test_gates_only_ever_pick_safer(ov, tmp_path, monkeypatch):
     assert "fell below 97% on" in text and "we used the safer 8-bit" in text
 
 
-def test_practice_check_fired_down_to_float16_says_who_may_be_at_fault(ov, tmp_path, monkeypatch):
+def test_practice_check_fired_down_to_float16_says_who_may_be_at_fault(ov, tmp_path, monkeypatch, pin_ledger):
+    pin_ledger("practice_check", mode="step-down")  # the mechanism under test; the shipped mode is "warning"
     F.install(monkeypatch, veto=F.make_veto(fail=("hierarchical_merge(0.25) > int8(per_vector)", "int4(mean)",
                                                   "int8(per_vector)")))
     index = ov.build(_texts(90), model=F.stub_adapter(), path=tmp_path / "t.ovx", progress=False)
     assert index.layout.name == "float16"
     assert "the model or the questions may be at fault; see report() and ov.doctor()" in str(index.summary)
+
+
+def test_shipped_practice_check_only_reports(ov, tmp_path, monkeypatch):
+    """Ledger mode "warning" (V5b, V5c failed): the check runs and says what it would have done, but the layout
+    the rule picked is kept."""
+    from optivision.easy import _ledger
+
+    assert _ledger.setting("practice_check", "mode") == "warning"
+    F.install(monkeypatch, veto=F.make_veto(fail=("hierarchical_merge(0.25) > int8(per_vector)", "int4(mean)")))
+    index = ov.build(_texts(90), model=F.stub_adapter(), path=tmp_path / "t.ovx", progress=False)
+    p = index._manifest["practice"]
+    assert p["ran"] and p["mode"] == "warning" and p["fired"]  # it would have stepped down to a safer layout
+    assert p["chosen"] == p["tested"] == index.layout.name  # ...but nothing was changed
+    assert index.layout.name == index.selection.pick.name  # not stepped down
+    assert index._manifest["layout"]["name"] == index.layout.name
+    text = str(index.summary)
+    assert "kept, because the practice check only warns for now" in text and "we used the safer" not in text
 
 
 def test_real_query_gate(ov, tmp_path, monkeypatch):

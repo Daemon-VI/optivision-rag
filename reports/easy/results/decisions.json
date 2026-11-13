@@ -1,0 +1,71 @@
+{
+ "actions": [
+  {
+   "rule": "Arm B passes V1b, V1c, no severe 1-bit miss",
+   "outcome": "remove the 1-bit margin",
+   "set": {
+    "features.margins.one_bit_margin": 0.0
+   },
+   "note": ""
+  },
+  {
+   "rule": "V4 fails",
+   "outcome": "practice questions described as \"not reliably easier or harder than real questions\"",
+   "set": {
+    "features.practice_check.wording": "not reliably easier or harder than real questions"
+   },
+   "note": ""
+  },
+  {
+   "rule": "V5b or V5c fails",
+   "outcome": "the practice check becomes a warning",
+   "set": {
+    "features.practice_check.mode": "warning"
+   },
+   "note": ""
+  },
+  {
+   "rule": "DT campaign type rule passes",
+   "outcome": "enable type presets for ['academic']",
+   "set": {
+    "features.type_presets.on": true,
+    "features.type_presets.enabled_types": [
+     "academic"
+    ]
+   },
+   "note": "PREREG_EASY part 3"
+  },
+  {
+   "rule": "probe_allowance passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)",
+   "outcome": "enable 1-step upward probe allowance for text_layer",
+   "set": {
+    "features.probe_allowance.on": true,
+    "features.probe_allowance.text_layer": true
+   },
+   "note": "adjusted on our validation sets (in-sample)"
+  },
+  {
+   "rule": "probe_allowance (ocr) passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)",
+   "outcome": "enable 1-step upward probe allowance for ocr",
+   "set": {
+    "features.probe_allowance.on": true,
+    "features.probe_allowance.ocr": true
+   },
+   "note": "adjusted on our validation sets (in-sample)"
+  }
+ ],
+ "settings": {
+  "features.margins.one_bit_margin": 0.0,
+  "features.practice_check.wording": "not reliably easier or harder than real questions",
+  "features.practice_check.mode": "warning",
+  "features.type_presets.on": true,
+  "features.type_presets.enabled_types": [
+   "academic"
+  ],
+  "features.probe_allowance.on": true,
+  "features.probe_allowance.text_layer": true,
+  "features.probe_allowance.ocr": true
+ },
+ "status": "adjusted on our validation sets (in-sample)",
+ "margin_changed": true
+}
