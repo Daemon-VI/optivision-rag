@@ -385,6 +385,11 @@ class PageMeta:
         return cls(**{k: v for k, v in d.items() if k in names})
 
     @property
+    def has_text(self) -> bool:
+        """As ``_docs.PageRecord.has_text``: ``_docs.profile`` and ``_probes.make_probes`` read it."""
+        return self.n_chars >= _mod("_docs").TEXT_CHARS
+
+    @property
     def stored(self) -> bool:
         return bool(self.n_vectors) and not self.blank and self.alias_of is None
 

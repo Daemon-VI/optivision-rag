@@ -119,13 +119,13 @@ The registry (`optivision.adapters.MODELS`, `supported_models()`) lists 65 late-
 models: 50 that take page images and 15 that take text. Each has a status that describes the
 loading path and the measurements, not how well a pipeline compresses that model's vectors:
 
-- `measured` (10): retrieval quality with and without compression was measured by this
-  repository on the model's real output. These are in-sample development measurements on ViDoRe
-  V1 DocVQA and InfoVQA (500 pages each) or SciFact; they are not a statement about another
-  corpus.
-- `untested` (23): the loading code is the one a measured sibling uses, or the model passed a
-  `check_retriever` run here; compression of this checkpoint's vectors was never measured here.
-- `unverified` (32): the loader is written against the model card and was never run here.
+- `measured` (57): retrieval quality with and without compression was measured by this
+  repository on the model's real output. These are in-sample development measurements, mostly on
+  ViDoRe V1 DocVQA and InfoVQA (500 pages each) or SciFact; they are not a statement about
+  another corpus. 55 of the 57 have rows in the catalogue.
+- `untested` (0): the status exists for a model whose loading code is the one a measured sibling
+  uses, but whose own vectors were never compressed here. No model has it now.
+- `unverified` (8): the model could not be loaded here, or it failed `check_retriever`.
 
 `optivision models` prints the registry and the measured catalogue. `encode_and_certify(model,
 documents, queries, qrels)` encodes with a model and then runs `certify` on the vectors;

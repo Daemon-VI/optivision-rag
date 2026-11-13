@@ -451,6 +451,21 @@ class Index:
                 "unchecked_reason": m.get("unchecked_reason"), "aliases": len(m.get("aliases", {})),
                 "blank": len(m.get("blank", [])), "skipped": m.get("skipped", [])}
 
+    def _report_parts(self) -> tuple[list[tuple[str, Block]], dict[str, Any]]:
+        """What ``_report.Report.from_index`` asks of an index: the sections, and the meta in the form ``Report``
+        accepts (text, or a tagged claim for a number; ``report_meta`` keeps the plain values)."""
+        meta: dict[str, Any] = {}
+        for key, value in self.report_meta().items():
+            if isinstance(value, (list, dict)):  # the skipped files are a section of their own; the meta keeps the count
+                meta[key] = claim(len(value), "counted")
+            elif isinstance(value, bool) or value is None or isinstance(value, str):
+                meta[key] = value
+            elif key == "target":  # a setting, not a measurement
+                meta[key] = lit(_claim.pct(float(value), 0))
+            else:
+                meta[key] = claim(int(value), "counted")
+        return self.report_sections(), meta
+
     def explain(self) -> str:
         """The expert-API code equivalent to this index (``Pipeline.from_dict``, ``CompressedRetriever``,
         and the ``certify`` call that ``upgrade()`` makes); printed, and returned."""

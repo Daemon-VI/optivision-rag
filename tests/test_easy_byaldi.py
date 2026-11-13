@@ -200,8 +200,9 @@ def test_the_summary_tags_its_counts_and_ends_with_next(folder):
     assert "bfloat16" in text and text.splitlines()[-1].startswith("Next: ") and text.isascii()
 
 
-def test_import_is_switched_off_until_the_gate_is_recorded(folder):
-    assert not _ledger.is_on("byaldi_import")
+def test_import_is_on_since_the_gate_was_recorded_and_refuses_when_switched_off(folder, pin_ledger):
+    assert _ledger.is_on("byaldi_import")
+    pin_ledger("byaldi_import", on=False, reason="test")
     with pytest.raises(FeatureOff, match="byaldi import is switched off"):
         B.import_index(folder[0])
     with pytest.raises(FeatureOff):

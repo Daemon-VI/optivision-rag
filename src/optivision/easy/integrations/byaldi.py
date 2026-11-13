@@ -1,4 +1,4 @@
-"""Import a byaldi index folder into an ``optivision.easy`` Index, on CPU (switched off until its test passes).
+"""Import a byaldi index folder into an ``optivision.easy`` Index, on CPU (on: its format test passed).
 
     from optivision.easy.integrations import byaldi
     index = byaldi.import_index(".byaldi/my_index", target=0.97)   # no GPU; byaldi is not imported
@@ -229,7 +229,7 @@ def _read(path: str | Path) -> ByaldiIndex:
 
 
 def read_index(path: str | Path) -> ByaldiIndex:
-    """Read a byaldi index folder into a :class:`ByaldiIndex` (switched off until its test passes)."""
+    """Read a byaldi index folder into a :class:`ByaldiIndex` (on: its format test passed)."""
     _ledger.require("byaldi_import")
     return _read(path)
 

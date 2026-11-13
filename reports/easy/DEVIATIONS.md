@@ -152,12 +152,30 @@ the setting:
 - practice questions are described as "not reliably easier or harder than real questions" (V4 failed
   on all three kinds: 33%, 35% and 45% of units).
 
-Two changes passed their tests but are **not switched on**, because no code reads them yet:
+Two changes passed their tests but are **not switched on**:
 
-- type presets: the DT rule passed for the **academic** type only (3 datasets, 4 models);
-  slides, reports and tables did not;
+- type presets: the DT test checks that the standard rule's picks keep `low >= target` on each document
+  type's datasets. They did for **academic** (32 of 32 units; 3 datasets, 4 models; worst margin +0.010) and
+  did not for slides (28 of 28 but only 3 of 4 models, since colSmol-500M failed its check on pharmaceuticals),
+  reports (13 of 16) or tables (26 of 32). The test produces no type-specific numbers, so there is no preset
+  that changes the rule. The academic result is documented as evidence only;
 - the probe allowance: passed for text-layer (24 cases) and OCR (26 cases) questions, failed for VLM
-  questions (15 cases, 20 needed). It has no effect while the practice check is a warning.
+  questions (15 cases, 20 needed). It has no effect while the practice check is a warning, so it stays off.
 
-Both are in-sample results on our own validation sets. They are switched on when the code is built and tested.
+Both are in-sample results on our own validation sets.
 V6 (the wiring test) failed, and its planted-fault half did not run (D2); it gates no decision.
+
+## D8 (2026-11-13): Qdrant export and byaldi import switched on; the small-memory layout left off
+
+- **Qdrant export: on.** Its gate test (`tests/test_easy_qdrant.py`) passed: top-10 equality 100% between Qdrant's MaxSim over the
+  exported collection and the index's own exact search, on synthetic corpora in qdrant-client's local mode, float32 storage. The
+  float16 option is outside the gate.
+- **byaldi import: on.** Its gate test (`tests/test_easy_byaldi.py`) passed: an index folder written by the test's own writer, which
+  follows byaldi 0.0.x's source, comes back bit for bit in byaldi's order, and a search over it ranks as MaxSim over byaldi's tensors.
+  The test has not run against the byaldi package, which is not installed here.
+- **Small-memory layout: off.** V9 ran at 20,000 pages on synthetic vectors (`reports/easy/v9/`). The layout's two-tier search
+  matched the campaign's in-RAM two-tier path bit for bit (64 of 64 queries), and its private memory (318 MB and 140 MB) stayed within the
+  bound (522 MB and 342 MB). Its working set (1.71 GB and 1.52 GB) was above the bound, because it counts the 8-bit file's pages that the
+  operating system keeps cached. The design's "resident" is read here as the working set, so V9 is reported as not passed. Its top 10 matched
+  plain 8-bit search on 15% to 30% of results (top 1 on all 64 queries); the layout is a shortlist by design, and no equivalence with
+  plain 8-bit search is claimed.

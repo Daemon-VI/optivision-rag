@@ -15,7 +15,7 @@
    "title": "Practice questions raising the layout one step",
    "on": false,
    "test": "PREREG_EASY part 3 (probe allowance)",
-   "reason": "passed on text-layer and OCR questions and failed on VLM questions (15 cases, 20 needed); in-sample; it has no effect while the practice check is in warning mode; switched on when the code exists",
+   "reason": "passed on text-layer (24 cases) and OCR (26 cases) questions and failed on VLM questions (15 cases, 20 needed); in-sample; left off: it has no effect while the practice check only warns",
    "passed_sources": [
     "text_layer",
     "ocr"
@@ -25,28 +25,31 @@
    "title": "Document-type presets",
    "on": false,
    "test": "DT campaign (FINAL_DESIGN 5.8 type rule)",
-   "reason": "the DT rule passed for the academic type only (ArxivQA, computer science, synthetic AI; 4 models); slides, reports and tables did not; switched on when the preset code exists",
+   "reason": "the DT campaign tested whether the standard rule's picks keep low >= target on each document type: it did for academic (32 of 32 units, 3 datasets, 4 models, worst margin +0.010) and did not for slides, reports or tables. It produced no type-specific numbers, so there is no preset that changes the rule; the academic result is reported as evidence only",
    "passed_types": [
     "academic"
-   ]
+   ],
+   "evidence": {
+    "academic": "standard rule held on 32 of 32 units (v3_computer_science, v1_arxivqa; v1_syn_ai reported only)"
+   }
   },
   "small_memory_layout": {
    "title": "The small-memory layout",
    "on": false,
    "test": "V9",
-   "reason": "waits for the V9 test (identical rankings; resident memory within hot copy + shortlist decode + 128 MB at 20,000 pages)"
+   "reason": "V9 ran at 20,000 pages on synthetic vectors (reports/easy/v9/): identical to the campaign's in-RAM two-tier path (64 of 64 queries, bitwise); private memory 318 MB (binary hot copy) and 140 MB (merged hot copy) within the bound of 522 MB and 342 MB; but the working set, which counts the memory-mapped 8-bit file's cached pages, was 1.71 GB and 1.52 GB, above the bound; and its top 10 matches plain 8-bit search on 15-30% of results (top 1: 100%). Left off until the 'resident' reading is decided"
   },
   "qdrant_export": {
    "title": "Qdrant export",
-   "on": false,
+   "on": true,
    "test": "export top-10 equality 100% (tests/test_easy_qdrant.py)",
-   "reason": "waits for the exact top-10 equality test against the index's own search"
+   "reason": "the gate test passed: top-10 equality 100% between Qdrant's MaxSim over the exported collection and the index's own exact search, on synthetic corpora in qdrant-client's local mode (float32 storage; the float16 option is outside the gate)"
   },
   "byaldi_import": {
    "title": "byaldi import",
-   "on": false,
+   "on": true,
    "test": "format round trip (tests/test_easy_byaldi.py)",
-   "reason": "waits for the byaldi index format test"
+   "reason": "the gate test passed: a byaldi 0.0.x index folder written by the test's own writer (it follows byaldi's source) comes back bit for bit, in byaldi's order, and a search over it ranks as MaxSim over byaldi's tensors; not run against the byaldi package"
   },
   "unmeasured_rules": {
    "title": "Rules for models without rows of their own",
@@ -127,10 +130,25 @@
     "features.practice_check.mode": "warning"
    },
    "not_applied_yet": [
-    "features.type_presets (no code)",
-    "features.probe_allowance (no code)"
+    "features.type_presets: nothing to switch on (evidence only)",
+    "features.probe_allowance: left off (inert while the check only warns)"
    ],
    "not_scored": "ColVec1-9b units (memory); colSmol-500M on pharmaceuticals and industrial (failed check_retriever)"
+  },
+  {
+   "recorded_utc": "2026-11-13",
+   "source": "tests/test_easy_qdrant.py, tests/test_easy_byaldi.py (suite run 6,342 passed)",
+   "applied": {
+    "features.qdrant_export.on": true,
+    "features.byaldi_import.on": true
+   },
+   "status": "checked on synthetic data only; the caveats are in each feature's reason"
+  },
+  {
+   "recorded_utc": "2026-11-13",
+   "source": "reports/easy/v9/v9_binary_20000.json, v9_hm25_20000.json",
+   "applied": {},
+   "status": "V9 not passed on the working-set reading; small_memory_layout stays off"
   }
  ]
 }

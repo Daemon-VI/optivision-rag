@@ -49,6 +49,15 @@ dev = ["pytest>=8", "ruff>=0.5", "scipy>=1.10"]
 easy = ["scipy>=1.10"]
 easy-st = ["optivision-rag[easy]", "sentence-transformers[image]>=6.1,<7"]
 easy-colpali = ["optivision-rag[easy]", "colpali-engine>=0.3.18,<0.4"]
+# the extras easy mode's install hints name. Lower bounds only where a version was verified; the rest are unpinned
+# and say which version the tests ran with.
+easy-ocr = ["optivision-rag[easy]", "rapidocr>=3.10,<4", "onnxruntime"]   # rapidocr 3.10.0 on onnxruntime (licence checked)
+easy-gen = ["optivision-rag[easy]", "torch>=2.2", "transformers>=4.46", "anthropic"]   # local VLM questions; API questions
+easy-ui = ["optivision-rag[easy]", "gradio"]                              # index.demo(); the tests ran with gradio 6.24
+langchain = ["optivision-rag[easy]", "langchain-core", "pydantic>=2"]     # OptiVisionRetriever (LangChain)
+llamaindex = ["optivision-rag[easy]", "llama-index-core"]                 # OptiVisionRetriever (LlamaIndex)
+qdrant = ["optivision-rag[easy]", "qdrant-client"]                        # Qdrant export; the tests ran with 1.19.0
+byaldi = ["optivision-rag[easy]", "torch>=2.2"]                           # reading a byaldi index folder (torch.load)
 
 [project.urls]
 Homepage = "https://github.com/Daemon-VI/optivision-rag"

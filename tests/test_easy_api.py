@@ -125,7 +125,7 @@ def test_add_is_a_sync(ov, tmp_path, pdf_index):
     assert index.add(more).added == []  # again: nothing new
 
 
-def test_check_upgrade_report_demo_and_qdrant_delegate(ov, fakes, pdf_index, tmp_path):
+def test_check_upgrade_report_demo_and_qdrant_delegate(ov, fakes, pdf_index, tmp_path, pin_ledger):
     index = ov.load(pdf_index[0])
     assert index.check() == "check report"
     args, kwargs = fakes["_check"].calls[-1]
@@ -145,6 +145,7 @@ def test_check_upgrade_report_demo_and_qdrant_delegate(ov, fakes, pdf_index, tmp
     assert rep.save(tmp_path / "r.md").read_text(encoding="utf-8").startswith("Summary")
     assert index.demo() == "demo"
     assert fakes["integrations.demo"].calls[-1][0] == (index,)
+    pin_ledger("qdrant_export", on=False, reason="test")  # the shipped ledger has it on (the gate test passed)
     with pytest.raises(FeatureOff, match="Qdrant export is switched off"):
         index.export_qdrant(url="http://localhost:6333")
 

@@ -3,9 +3,9 @@
 ``langchain``   ``OptiVisionRetriever``, a langchain-core ``BaseRetriever`` (extra ``langchain``)
 ``llamaindex``  ``OptiVisionRetriever``, a llama-index-core ``BaseRetriever`` (extra ``llamaindex``)
 ``qdrant``      ``export(index, client_or_url, collection)``: the stored layout as Qdrant multivectors
-                (switched off until its equality test passes; ``presets/easy_ledger.json``)
-``byaldi``      ``import_index(path)``: a byaldi index folder into an Index, on CPU (switched off until
-                its format test passes)
+                (on: its equality test passed; ``presets/easy_ledger.json``)
+``byaldi``      ``import_index(path)``: a byaldi index folder into an Index, on CPU (on: its format
+                test passed)
 ``demo``        ``launch(index)``: a local Gradio search box (extra ``easy-ui``) that never logs searches
 
 Importing this package, or any of its modules, imports none of those libraries; each one is imported

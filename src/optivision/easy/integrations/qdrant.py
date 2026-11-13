@@ -1,4 +1,4 @@
-"""Export an ``optivision.easy`` Index to a Qdrant collection (switched off until its test passes).
+"""Export an ``optivision.easy`` Index to a Qdrant collection (on: its gate test passed).
 
     from optivision.easy.integrations import qdrant
     report = qdrant.export(index, "http://localhost:6333", "my_pdfs")
@@ -208,7 +208,7 @@ def export(index: Any, client_or_url: Any = ":memory:", collection: str = "optiv
            datatype: str = "float32", recreate: bool = False, batch_size: int = 64,
            api_key: str | None = None, payload_text: bool = False, on_disk: bool = False,
            hnsw_m: int = 0) -> QdrantExport:
-    """Write the index's stored vectors to ``collection`` (switched off until its test passes).
+    """Write the index's stored vectors to ``collection`` (on: its gate test passed).
 
     ``client_or_url``: a ``QdrantClient``, a server URL, ``":memory:"`` or a local folder. An existing
     collection is an error unless ``recreate=True``. ``payload_text=True`` adds each page's text layer.

@@ -203,9 +203,10 @@ def test_the_summary_tags_every_number_and_ends_with_next(data):
     assert report.bytes_sent == report.n_vectors * DIM * 4 > report.index_vector_bytes
 
 
-def test_export_is_switched_off_until_the_gate_is_recorded(data):
+def test_export_is_on_since_the_gate_was_recorded_and_refuses_when_switched_off(data, pin_ledger):
     corpus, _ = data
-    assert not _ledger.is_on("qdrant_export")
+    assert _ledger.is_on("qdrant_export")
+    pin_ledger("qdrant_export", on=False, reason="test")
     with pytest.raises(FeatureOff, match="Qdrant export is switched off"):
         Q.export(_index(corpus, "binary"), ":memory:", "off")
 
