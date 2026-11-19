@@ -249,6 +249,7 @@ def test_a_missing_loader_package_gives_the_exact_pip_line(monkeypatch):
 
 def test_a_too_old_transformers_for_neomme_is_a_missing_extra(monkeypatch):
     monkeypatch.setattr(_encode, "has_module", lambda name: True)
+    monkeypatch.setattr(_encode, "_cuda_count", lambda: 0)  # no torch on a CPU-only runner
     monkeypatch.setattr(_encode, "installed_version", lambda dist: "5.16.1" if dist == "transformers" else "1.0")
     with pytest.raises(MissingExtra, match=r"transformers>=5\.17 \(installed: 5\.16\.1\)"):
         _encode.load_encoder("Hcompany/NeoMME-800M-Retriever-ST-late")

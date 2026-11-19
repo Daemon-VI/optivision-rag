@@ -8,7 +8,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import tomllib
+import pytest
+
+tomllib = pytest.importorskip("tomllib")  # Python 3.11+; the extras check runs on the newer CI job
 
 ROOT = Path(__file__).resolve().parents[1]
 
