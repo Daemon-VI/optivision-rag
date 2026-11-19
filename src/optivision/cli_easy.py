@@ -235,7 +235,7 @@ def _read_answers(path: str, n_queries: int) -> list[Any]:
         try:
             data = json.loads(text)
             if not isinstance(data, list):
-                raise ValueError("expected a list")
+                raise ValueError("expected a list")  # noqa: TRY004
             answers = [_answer(e) for e in data]
         except ValueError as exc:
             raise _fail(f"{path}: {exc}", 2) from exc
@@ -610,7 +610,7 @@ def _count_pages(folder: str) -> tuple[Any, str]:
         from .easy import _docs
 
         return _docs.count_pages(folder), ""
-    except Exception as exc:  # no PDF reader installed, or a folder it cannot read: the plan still prints
+    except Exception as exc:  # no PDF reader installed, or a folder it cannot read: the plan still prints  # noqa: BLE001
         return None, str(exc) or type(exc).__name__
 
 
@@ -618,7 +618,7 @@ def _start_here_default(plan: Any) -> str | None:
     """The leading model of the Start here block, if the plan's data names one."""
     try:
         data = plan.as_dict()
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
     entries = data.get("start_here") if isinstance(data, dict) else None
     for entry in entries or []:

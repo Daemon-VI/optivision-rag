@@ -56,11 +56,7 @@ DEFAULT_FORMAT_WEIGHTS: dict[str, int] = {"question": 60, "keyword": 25, "instru
 _FORCED_FORMAT = {"boolean": "question"}
 
 STOPWORDS = frozenset(
-    "a about above after again all also am an and any are as at be because been before being below between both but by "
-    "can could did do does doing down during each few for from further had has have having he her here hers him his "
-    "how i if in into is it its itself me more most my no nor not of off on once only or other our out over own same "
-    "she should so some such than that the their them then there these they this those through to too under until up "
-    "very was we were what when where which while who whom why will with would you your yours".split()
+    ["a", "about", "above", "after", "again", "all", "also", "am", "an", "and", "any", "are", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "him", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "me", "more", "most", "my", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "our", "out", "over", "own", "same", "she", "should", "so", "some", "such", "than", "that", "the", "their", "them", "then", "there", "these", "they", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when", "where", "which", "while", "who", "whom", "why", "will", "with", "would", "you", "your", "yours"]
 )
 
 _WORD = re.compile(r"[^\W_]+", re.UNICODE)
@@ -276,7 +272,7 @@ def clean_question(raw: str | None, fmt: str = "question") -> str | None:
     """
     if not raw:
         return None
-    text = re.sub(r"<think>.*?</think>", "", str(raw), flags=re.S | re.I).strip()
+    text = re.sub(r"<think>.*?</think>", "", str(raw), flags=re.DOTALL | re.IGNORECASE).strip()
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if not lines:
         return None
@@ -318,7 +314,7 @@ def allocate(n: int, weights: Mapping[str, int]) -> dict[str, int]:
     if n <= 0 or total <= 0:
         return {k: 0 for k in keys}
     raw = {k: n * weights[k] / total for k in keys}
-    out = {k: int(math.floor(raw[k] + 1e-9)) for k in keys}
+    out = {k: math.floor(raw[k] + 1e-9) for k in keys}
     short = n - sum(out.values())
     for k in sorted(keys, key=lambda k: (-(raw[k] - out[k]), k))[:short]:
         out[k] += 1

@@ -208,7 +208,7 @@ def ocr_pages(pages: Sequence[Any], *, engine: OcrEngine | None = None, images: 
             result = eng.recognise(get_image(page, images))
         except MissingExtra:
             raise
-        except Exception as exc:  # one bad page must not stop the run
+        except Exception as exc:  # one bad page must not stop the run  # noqa: BLE001
             run.skipped[pid] = f"error: {type(exc).__name__}"
             continue
         run.confidence[pid] = result.confidence

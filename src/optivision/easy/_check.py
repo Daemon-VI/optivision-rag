@@ -49,8 +49,7 @@ from typing import Any
 
 import numpy as np
 
-from . import _claim
-from . import _ledger
+from . import _claim, _ledger
 from ._claim import Block, Claim, claim, lit
 from ._types import EasyError, LayoutRow
 
@@ -644,7 +643,6 @@ class PracticeCheck:
 
 
 def _practice(index: Any, target: float) -> PracticeCheck:
-    from . import _ledger
 
     try:
         if not _ledger.is_on("practice_check"):
@@ -905,7 +903,6 @@ def _next_safer(selection: Any, layout: LayoutRow) -> LayoutRow | None:
 def _render(index: Any, record: RecordCheck, drift: DriftCheck, size: SizeCheck, practice: PracticeCheck,
             growth: float | None, questions: QuestionCheck | None, spot: Any, advice: LayoutRow | None,
             reason: str, refit: bool, ok: bool, complete: bool, layout: LayoutRow, target: float) -> Block:
-    from . import _ledger
 
     b = Block([])
     path = index_path(index)

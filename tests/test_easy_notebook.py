@@ -180,16 +180,16 @@ def test_notebook_runs_on_a_cpu_with_a_stand_in_encoder(tmp_path, monkeypatch):
         code = _source(cell)
         if "work-dir" in _tags(cell):
             replacement = f"WORK_DIR = {work.as_posix()!r}"
-            code = re.sub(r"^WORK_DIR = .*$", lambda _m: replacement, code, flags=re.MULTILINE)
+            code = re.sub(r"^WORK_DIR = .*$", lambda _m: replacement, code, flags=re.MULTILINE)  # noqa: B023
         assert not re.search(r"^\s*[%!]", code, re.MULTILINE), "a shell or magic line outside a colab-only cell"
         with contextlib.redirect_stdout(out):
-            exec(compile(code, f"<cell {len(ran)}>", "exec"), namespace)
+            exec(compile(code, f"<cell {len(ran)}>", "exec"), namespace)  # noqa: S102
         ran.append(code)
     assert len(ran) >= 7
     index = namespace["index"]
     assert index.n_pages == 20 and Path("my_pdfs.ovx").is_dir()
     hits = namespace["hits"]
-    assert [h.page for h in hits][0] == 20 and hits[0].id == "my_pdfs/sample.pdf::p20"  # the page about dyes
+    assert next(h.page for h in hits) == 20 and hits[0].id == "my_pdfs/sample.pdf::p20"  # the page about dyes
     assert namespace["page"].size[0] <= 600
     assert Path("my_report.md").is_file() and "Summary" in namespace["report"].sections[0][0]
     from optivision.easy import _ledger
@@ -218,7 +218,7 @@ def test_the_guide_runs_in_order_with_the_stand_in(tmp_path, monkeypatch):
         if "qdrant" in code:
             pytest.importorskip("qdrant_client")
         with contextlib.redirect_stdout(io.StringIO()):
-            exec(compile(code, f"<guide block {number}>", "exec"), namespace)
+            exec(compile(code, f"<guide block {number}>", "exec"), namespace)  # noqa: S102
         ran += 1
     assert ran == len(blocks)
     assert namespace["index"].n_pages == 20
@@ -234,7 +234,7 @@ def test_blocks_that_need_no_model_run_without_a_stand_in(tmp_path, monkeypatch)
     assert blocks
     for number, code in enumerate(blocks):
         with contextlib.redirect_stdout(io.StringIO()):
-            exec(compile(code, f"<python block {number}>", "exec"), namespace)
+            exec(compile(code, f"<python block {number}>", "exec"), namespace)  # noqa: S102
     assert not list(tmp_path.iterdir())
 
 

@@ -158,7 +158,7 @@ def _fake_langchain(monkeypatch) -> None:
 
     class Document(pydantic.BaseModel):
         page_content: str
-        metadata: dict = {}
+        metadata: dict = {}  # noqa: RUF012
 
     class BaseRetriever(pydantic.BaseModel):
         def invoke(self, query: str) -> list:

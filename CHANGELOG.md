@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-11-19)
 
 **In short.**
 - **New: `optivision.easy`, a beginner layer.** You give a folder of PDFs, a model and a target, and

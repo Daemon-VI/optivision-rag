@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from . import _claim, _ledger, _levels
-from ._claim import Block, Line, claim, lit
+from ._claim import Block, claim, lit
 from ._types import LayoutRow, Selection
 
 __all__ = ["Options", "options"]

@@ -21,7 +21,9 @@ import pytest
 from PIL import Image
 
 from optivision.easy import _ocr, _probes_api, _probes_common, _probes_vlm
-from optivision.easy._claim import MixedEvidence  # noqa: F401  (import check: lines never mix kinds)
+from optivision.easy._claim import (
+    MixedEvidence,  # noqa: F401  (import check: lines never mix kinds)
+)
 from optivision.easy._types import EasyError, MissingExtra
 
 # ---------------------------------------------------------------------------- Tier A stand-in
@@ -416,7 +418,7 @@ def test_vlm_question_stage_never_receives_the_image(folder):
 
 def test_vlm_overlap_cap_drops_questions_that_copy_the_page(folder):
     pages, images = folder
-    copy = lambda summary, attempt, page: pages[page].text.split(". ")[1] if pages[page].text else "x"  # noqa: E731
+    copy = lambda summary, attempt, page: pages[page].text.split(". ")[1] if pages[page].text else "x"
     backend = FakeVlm(question=copy)
     batch = _probes_vlm.generate_vlm_probes(pages[:6], backend=backend, images=images, max_pages=6, max_attempts=1,
                                             out=None)
@@ -430,7 +432,7 @@ def test_overlap_cap_leaves_short_on_topic_questions_alone(folder):
     """A real 500M model asked "What is the visitor registration policy?" about a page on exactly that: every
     content word is on the page, yet nothing was copied, so the cap needs a question long enough to be a copy."""
     pages, images = folder
-    short = lambda summary, attempt, page: "What is the elevator repairs policy?"  # noqa: E731
+    short = lambda summary, attempt, page: "What is the elevator repairs policy?"
     text = pages[0].text
     assert _probes_common.overlap("What is the elevator repairs policy?", text) is not None
     kept = _probes_vlm.generate_vlm_probes(pages[:1], backend=FakeVlm(question=short), images=images, out=None,
@@ -521,14 +523,14 @@ def test_vlm_text_layer_pages_in_the_relevant_set(folder):
     pages, images = folder
     twin = Page(id="docs/z.pdf::p1", text=pages[0].text, file="/x", page=1)
     images[twin.id] = Image.new("RGB", (560, 840), (200, 0, 0))
-    q = lambda s, a, p: "Which committee approved the elevator repairs and cooling system costs?"  # noqa: E731
+    q = lambda s, a, p: "Which committee approved the elevator repairs and cooling system costs?"
     batch = _probes_vlm.generate_vlm_probes([pages[0], twin], backend=FakeVlm(question=q), images=images,
                                             max_overlap=None, check_answerable=False, out=None)
     assert batch.probes and {pages[0].id, twin.id} <= batch.probes[0].relevant
 
 
 def test_vlm_seeded_and_repeatable(folder):
-    pages, images = folder
+    _pages, _images = folder
     many = [text_page(i) for i in range(30)]
     imgs = images_for(many)
 
@@ -750,8 +752,8 @@ def test_cost_comes_from_the_images_that_would_be_sent_and_the_dated_price(api_f
     assert price is not None and price.recorded == "2026-10-21"
     per_image = _probes_api.image_tokens(560, 840, price)  # 20 x 30 patches
     assert per_image == 600
-    write = [c for c in plan.calls if c.kind == "write"][0]
-    judge = [c for c in plan.calls if c.kind == "judge"][0]
+    write = next(c for c in plan.calls if c.kind == "write")
+    judge = next(c for c in plan.calls if c.kind == "judge")
     assert len(write.sent) == 3 and len(judge.sent) == 2
     assert 3 * per_image < write.input_tokens < 3 * per_image + 500
     assert 2 * per_image < judge.input_tokens < 2 * per_image + 400
@@ -910,7 +912,7 @@ def test_scanned_pages_use_ocr_text_for_the_overlap_cap(api_folder):
 
 
 def test_seed_makes_the_run_repeatable(api_folder):
-    pages, images = api_folder
+    _pages, _images = api_folder
     many = [text_page(i) for i in range(24)]
     imgs = images_for(many)
 

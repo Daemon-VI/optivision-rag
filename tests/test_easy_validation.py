@@ -94,7 +94,7 @@ def test_dt_plan_meets_the_type_rule(units):
         for j in b.jobs:
             for c in j.corpora:
                 assert units.corpus(c).queries >= units.MIN_QUERIES or c in dt.REPORTED_ONLY, c
-    lo, hi = dt.budget()
+    _lo, hi = dt.budget()
     assert hi <= dt.GPU_BUDGET_HOURS
 
 
@@ -216,7 +216,7 @@ def test_preregistration_is_frozen_or_marked_draft():
             assert "DRAFT" in text.splitlines()[0] and "NOT FROZEN" in text.splitlines()[0], name
         return
     parts = sorted(json.loads(frozen.read_text(encoding="utf-8"))["parts"])
-    run = subprocess.run([sys.executable, str(ROOT / "scripts/easy_validation/freeze.py"), "--verify", *parts],
+    run = subprocess.run([sys.executable, str(ROOT / "scripts/easy_validation/freeze.py"), "--verify", *parts],  # noqa: PLW1510
                          capture_output=True, text=True)
     assert run.returncode == 0, run.stdout + run.stderr
 

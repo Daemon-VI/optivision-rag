@@ -744,7 +744,7 @@ def generate_api_probes(pages: Sequence[Any], *, generate: Callable[[str, Sequen
                     consecutive = 0
                 except MissingExtra:
                     raise
-                except Exception as exc:  # a failed request costs one page, not the run
+                except Exception as exc:  # a failed request costs one page, not the run  # noqa: BLE001
                     errors += 1
                     consecutive += 1
                     last_error = f"{type(exc).__name__}: {exc}"

@@ -146,7 +146,7 @@ def test_b0_reports_replace_the_legacy_rows_when_they_land(tmp_path, monkeypatch
 def test_every_rung_spec_round_trips_and_equals_the_catalogue_rows():
     catalogue = json.loads((SRC / "optivision" / "presets" / "measured.json").read_text(encoding="utf-8"))["models"]
     seen = set()
-    for modality, rungs in _levels.LADDER.items():
+    for rungs in _levels.LADDER.values():
         assert [r.name for r in rungs[:2]] == ["float32", "float16"]
         for rung in rungs:
             assert Pipeline.from_dict(rung.spec).to_dict() == rung.spec, rung.name

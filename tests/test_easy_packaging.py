@@ -6,8 +6,9 @@ extra that does not exist gets a pip warning and still lacks the library."""
 from __future__ import annotations
 
 import re
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 

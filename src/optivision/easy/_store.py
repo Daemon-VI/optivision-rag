@@ -72,6 +72,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from typing_extensions import Self
 
 from ..compose import CompressedCorpus, Pipeline
 from ..core.identity import array_digest
@@ -906,7 +907,7 @@ class Store:
             self._closed = True
             self._release()
 
-    def __enter__(self) -> Store:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
@@ -917,7 +918,7 @@ class Store:
             if not getattr(self, "_closed", True) and getattr(self, "_locked", False):
                 self._locked = False
                 release_lock(self.path)
-        except Exception:  # pragma: no cover - interpreter shutdown
+        except Exception:  # pragma: no cover - interpreter shutdown  # noqa: BLE001, S110
             pass
 
     def reload(self) -> None:
@@ -1325,7 +1326,7 @@ class Store:
         problems: list[str] = []
         try:
             pipeline = self._read_pipeline()
-        except Exception as exc:  # a report, not a control path: every failure is listed
+        except Exception as exc:  # a report, not a control path: every failure is listed  # noqa: BLE001
             return [f"fitted pipeline: {exc}"]
         for entry in self._entries():
             name = entry["name"]
@@ -1344,7 +1345,7 @@ class Store:
                 if entry.get("text"):
                     self._texts.pop(name, None)
                     self._text_dict(entry)
-            except Exception as exc:  # listed, not raised
+            except Exception as exc:  # listed, not raised  # noqa: BLE001
                 problems.append(f"segment {name}: {exc}")
         for rel, meta in self._committed.get("files", {}).items():
             p = self.path / rel

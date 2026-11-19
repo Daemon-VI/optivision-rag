@@ -23,7 +23,7 @@ Estimate = namedtuple("Estimate", "lo_s hi_s basis gpu")
 
 BANNED_PHRASES = ("universal compression", "works with every model", "guaranteed", "state of the art",
                   "state-of-the-art", "novel", "better than", "lossless", "faster", "scales to")
-BANNED_WORDS = re.compile(r"\b(simply|just|universal|first|sota|veto)\b", re.I)
+BANNED_WORDS = re.compile(r"\b(simply|just|universal|first|sota|veto)\b", re.IGNORECASE)
 FD_A = "vidore/colqwen2-v1.0-hf"
 
 
@@ -76,7 +76,7 @@ def chart(monkeypatch):
 
     def svg(selection, *, n_pages=None):
         calls.append(("svg", selection, n_pages))
-        return "<svg data-pick='%s'></svg>" % selection.pick.name
+        return f"<svg data-pick='{selection.pick.name}'></svg>"
 
     def html(selection):
         calls.append(("html", selection))
@@ -111,7 +111,7 @@ def test_journey_a_known_model_and_target():
     pick, safer = sel.pick, sel.safer
     src = "[our benchmarks: ViDoRe V1 DocVQA 500 pages, InfoVQA 500 pages]"
     assert text.splitlines()[0].startswith(f"{FD_A}, target 97%, collections up to 500 pages")
-    assert re.search(r"^pick +merged \(1 in 4 vectors\) \+ 8-bit, layout=\"hm\(0\.25\) > int8\"; close call$", text, re.M)
+    assert re.search(r"^pick +merged \(1 in 4 vectors\) \+ 8-bit, layout=\"hm\(0\.25\) > int8\"; close call$", text, re.MULTILINE)
     assert f"23.9-24.4 MB per thousand pages, {_claim.ratio(pick.ratio_f16)} smaller than float16  {src}" in text
     assert f"97.2% of full-precision search quality (nDCG@5)  {src}" in text
     assert "clears 97% by under half a point. We use it by default." in text
@@ -193,13 +193,13 @@ def test_journey_c_plan_for_a_folder(folder, rates, monkeypatch):
     assert "8,400 pages in 412 files; 2 files skipped  [counted]" in text
     assert "locked.pdf: encrypted" in text
     assert re.search(r"^layout +centred 4-bit, layout=\"int4\(mean\)\" \(larger folders get bigger safety margins\); "
-                     r"close call  \[our benchmarks: ", text, re.M)
+                     r"close call  \[our benchmarks: ", text, re.MULTILINE)
     est = "[estimate: our bytes per page x your pages]"
     assert f"about 414.9 MB of vectors, {_claim.ratio(o.pick.ratio_f16)} smaller than float16  {est}" in text
     assert "about 1.4-1.5 h on one T4  [estimate: our Kaggle run, 0.61-0.65 s/page]" in text
     assert "not in our benchmark runs (their pages were images)" in text
     assert f"1.6 GB for the float16 copy in {work}  {est}" in text
-    assert re.search(r"^free +\d+\.\d [KMG]?B reported by that drive  \[counted\]$", text, re.M)
+    assert re.search(r"^free +\d+\.\d [KMG]?B reported by that drive  \[counted\]$", text, re.MULTILINE)
     assert f"keep_float16=True keeps the 1.6 GB copy so a change needs none  {est}" in text
     assert text.endswith(f'Next: ov.build("{src}", model="{FD_A}", target=0.97, work_dir="{work}")')
     assert o.plan["temporary_bytes"] == pytest.approx(8400 * o.selection.rows[1].bytes_per_page[1])
@@ -231,7 +231,7 @@ def test_a_page_count_without_a_folder(no_rates, monkeypatch):
     text = str(o)
     _honest(text)
     assert f"{FD_A}, target 97%, 2,500 pages (as given)" in text
-    assert not re.search(r"^(folder|rendering) ", text, re.M)
+    assert not re.search(r"^(folder|rendering) ", text, re.MULTILINE)
     assert "not timed: our runs recorded no speed for this model" in text
     assert o.pick.name == "int4(mean)"  # FINAL_DESIGN 5.1.3: centred 4-bit at 2,500 pages
     big = str(ov.options(FD_A, target=0.97, pages=25000))
