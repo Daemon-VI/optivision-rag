@@ -1,0 +1,154 @@
+{
+ "schema": 1,
+ "note": "Status labels and test-gated switches of optivision.easy. Changed only from recorded outcomes of preregistered tests (reports/easy/PREREG_EASY.md); each change is listed under outcomes with its result file.",
+ "status": "These numbers come from our tests. They have not yet been checked on new documents; that check is registered (PREREG_EASY.md).",
+ "features": {
+  "practice_check": {
+   "title": "The practice check",
+   "on": true,
+   "mode": "warning",
+   "test": "V5a-V5d",
+   "reason": "V5b failed on text-layer questions and V5c failed on OCR and VLM questions, so the check only warns; V4 failed on all three kinds, so practice questions are not described as easier than real ones",
+   "wording": "not reliably easier or harder than real questions"
+  },
+  "probe_allowance": {
+   "title": "Practice questions raising the layout one step",
+   "on": false,
+   "test": "PREREG_EASY part 3 (probe allowance)",
+   "reason": "passed on text-layer (24 cases) and OCR (26 cases) questions and failed on VLM questions (15 cases, 20 needed); in-sample; left off: it has no effect while the practice check only warns",
+   "passed_sources": [
+    "text_layer",
+    "ocr"
+   ]
+  },
+  "type_presets": {
+   "title": "Document-type presets",
+   "on": false,
+   "test": "DT campaign (FINAL_DESIGN 5.8 type rule)",
+   "reason": "the DT campaign tested whether the standard rule's picks keep low >= target on each document type: it did for academic (32 of 32 units, 3 datasets, 4 models, worst margin +0.010) and did not for slides, reports or tables. It produced no type-specific numbers, so there is no preset that changes the rule; the academic result is reported as evidence only",
+   "passed_types": [
+    "academic"
+   ],
+   "evidence": {
+    "academic": "standard rule held on 32 of 32 units (v3_computer_science, v1_arxivqa; v1_syn_ai reported only)"
+   }
+  },
+  "small_memory_layout": {
+   "title": "The small-memory layout",
+   "on": false,
+   "test": "V9",
+   "reason": "V9 ran at 20,000 pages on synthetic vectors (reports/easy/v9/): identical to the campaign's in-RAM two-tier path (64 of 64 queries, bitwise); private memory 318 MB (binary hot copy) and 140 MB (merged hot copy) within the bound of 522 MB and 342 MB; but the working set, which counts the memory-mapped 8-bit file's cached pages, was 1.71 GB and 1.52 GB, above the bound; and its top 10 matches plain 8-bit search on 15-30% of results (top 1: 100%). Left off until the 'resident' reading is decided"
+  },
+  "qdrant_export": {
+   "title": "Qdrant export",
+   "on": true,
+   "test": "export top-10 equality 100% (tests/test_easy_qdrant.py)",
+   "reason": "the gate test passed: top-10 equality 100% between Qdrant's MaxSim over the exported collection and the index's own exact search, on synthetic corpora in qdrant-client's local mode (float32 storage; the float16 option is outside the gate)"
+  },
+  "byaldi_import": {
+   "title": "byaldi import",
+   "on": true,
+   "test": "format round trip (tests/test_easy_byaldi.py)",
+   "reason": "the gate test passed: a byaldi 0.0.x index folder written by the test's own writer (it follows byaldi's source) comes back bit for bit, in byaldi's order, and a search over it ranks as MaxSim over byaldi's tensors; not run against the byaldi package"
+  },
+  "unmeasured_rules": {
+   "title": "Rules for models without rows of their own",
+   "on": true,
+   "test": "V1u",
+   "reason": "codecs only, pooled minimum over measured models of the same modality (FINAL_DESIGN 5.1.4)"
+  },
+  "margins": {
+   "title": "Safety margins",
+   "on": true,
+   "test": "V1, V2, arms B/C/D/S",
+   "reason": "as frozen in PREREG_EASY part 1; the 1-bit margin removed because arm B passed V1b and V1c with no severe 1-bit miss (176 units)",
+   "extra_compressed": 0.0,
+   "unchecked_merge_penalty": 0.0,
+   "one_bit_margin": 0.0,
+   "size_coefficient_scale": 1.0,
+   "codecs_only_above": 20000,
+   "lowest_target": 0.9
+  },
+  "upgrade": {
+   "title": "upgrade()",
+   "on": true,
+   "test": "V8",
+   "reason": "runs the unchanged certify(); V8 decides how its value is documented",
+   "wording": "default"
+  }
+ },
+ "outcomes": [
+  {
+   "recorded_utc": "2026-11-13T06:55:50Z",
+   "source": "reports/easy/results/predictions.json",
+   "predictions": {
+    "V1a": null,
+    "V1b": null,
+    "V1c": null,
+    "V1d": null,
+    "V1-unchecked": null,
+    "V2": null,
+    "V1-arms": null,
+    "V1t": false,
+    "V1u": null,
+    "S": null,
+    "arm S": null,
+    "V3": null,
+    "V4": false,
+    "V5a": true,
+    "V5b": false,
+    "V5c": true,
+    "V5d": true,
+    "V4 (ocr)": false,
+    "V5a (ocr)": true,
+    "V5b (ocr)": true,
+    "V5c (ocr)": false,
+    "V5d (ocr)": true,
+    "V4 (vlm)": false,
+    "V5a (vlm)": true,
+    "V5b (vlm)": true,
+    "V5c (vlm)": false,
+    "V5d (vlm)": true,
+    "V6": false,
+    "DT": true,
+    "probe_allowance": true,
+    "probe_allowance (ocr)": true,
+    "probe_allowance (vlm)": false
+   },
+   "actions": [
+    "Arm B passes V1b, V1c, no severe 1-bit miss",
+    "V4 fails",
+    "V5b or V5c fails",
+    "DT campaign type rule passes",
+    "probe_allowance passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)",
+    "probe_allowance (ocr) passes (>= 20 cases, >= 90% >= T, all >= T - 0.02)"
+   ],
+   "status": "adjusted on our validation sets (in-sample)",
+   "applied": {
+    "features.margins.one_bit_margin": 0.0,
+    "features.practice_check.wording": "not reliably easier or harder than real questions",
+    "features.practice_check.mode": "warning"
+   },
+   "not_applied_yet": [
+    "features.type_presets: nothing to switch on (evidence only)",
+    "features.probe_allowance: left off (inert while the check only warns)"
+   ],
+   "not_scored": "ColVec1-9b units (memory); colSmol-500M on pharmaceuticals and industrial (failed check_retriever)"
+  },
+  {
+   "recorded_utc": "2026-11-13",
+   "source": "tests/test_easy_qdrant.py, tests/test_easy_byaldi.py (suite run 6,342 passed)",
+   "applied": {
+    "features.qdrant_export.on": true,
+    "features.byaldi_import.on": true
+   },
+   "status": "checked on synthetic data only; the caveats are in each feature's reason"
+  },
+  {
+   "recorded_utc": "2026-11-13",
+   "source": "reports/easy/v9/v9_binary_20000.json, v9_hm25_20000.json",
+   "applied": {},
+   "status": "V9 not passed on the working-set reading; small_memory_layout stays off"
+  }
+ ]
+}

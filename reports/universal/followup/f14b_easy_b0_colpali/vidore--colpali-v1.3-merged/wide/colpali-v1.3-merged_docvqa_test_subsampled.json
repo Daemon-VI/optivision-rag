@@ -1,0 +1,2806 @@
+{
+ "dataset": "colpali-v1.3-merged_docvqa_test_subsampled",
+ "n_docs": 500,
+ "n_queries": 451,
+ "baseline": {
+  "dim": 128,
+  "vectors_per_doc": 1031.0,
+  "float32_bytes_per_doc": 527872.0,
+  "float16_bytes_per_doc": 263936.0,
+  "scan_ms_per_query": 48.39383503325888,
+  "ndcg@5": 0.5756694130255186,
+  "ndcg@10": 0.5929583970624338,
+  "recall@1": 0.49002217294900224,
+  "recall@5": 0.6496674057649667,
+  "encode_seconds": 1115.3484683036804,
+  "encoder": {
+   "model": "vidore/colpali-v1.3-merged",
+   "revision": null,
+   "dtype": "torch.float32",
+   "device": "cuda:0",
+   "placement": {
+    "devices": [
+     "0",
+     "1"
+    ],
+    "decoder_layers_per_device": {
+     "0": 11,
+     "1": 7
+    },
+    "budget_bytes": [
+     10945226342,
+     13290631987
+    ]
+   },
+   "loading_report": {
+    "missing_allowed": [],
+    "unexpected": []
+   },
+   "attn_implementation": null
+  }
+ },
+ "rows": [
+  {
+   "group": "codec",
+   "label": "float32",
+   "pipeline": {
+    "stages": []
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 527872.0,
+   "compression_vs_float32": 1.0,
+   "compress_seconds": 0.15322130200001993,
+   "scan_ms_per_query": 43.37263988026645,
+   "ndcg@5": 0.5756694130255186,
+   "retention:ndcg@5": 1.0,
+   "retention_ci:ndcg@5": [
+    1.0,
+    1.0
+   ],
+   "ndcg@10": 0.5929583970624338,
+   "retention:ndcg@10": 1.0,
+   "retention_ci:ndcg@10": [
+    1.0,
+    1.0
+   ],
+   "recall@1": 0.49002217294900224,
+   "retention:recall@1": 1.0,
+   "retention_ci:recall@1": [
+    1.0,
+    1.0
+   ],
+   "recall@5": 0.6496674057649667,
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0
+   ],
+   "pareto": false
+  },
+  {
+   "group": "codec",
+   "label": "float16",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "float16"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 16.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "compress_seconds": 0.3448316649996741,
+   "scan_ms_per_query": 43.63774288691867,
+   "ndcg@5": 0.5756694130255186,
+   "retention:ndcg@5": 1.0,
+   "retention_ci:ndcg@5": [
+    1.0,
+    1.0
+   ],
+   "ndcg@10": 0.5929904034507304,
+   "retention:ndcg@10": 1.000053977460232,
+   "retention_ci:ndcg@10": [
+    1.0,
+    1.0001701057333412
+   ],
+   "recall@1": 0.49002217294900224,
+   "retention:recall@1": 1.0,
+   "retention_ci:recall@1": [
+    1.0,
+    1.0
+   ],
+   "recall@5": 0.6496674057649667,
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0
+   ],
+   "pareto": false
+  },
+  {
+   "group": "codec",
+   "label": "int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 8.125,
+   "bytes_per_doc": 134030.0,
+   "compression_vs_float32": 3.9384615384615387,
+   "compress_seconds": 0.5865886080000564,
+   "scan_ms_per_query": 43.4337103237251,
+   "ndcg@5": 0.5771655405297543,
+   "retention:ndcg@5": 1.00259893520549,
+   "retention_ci:ndcg@5": [
+    0.9994742985048899,
+    1.0079967935397733
+   ],
+   "ndcg@10": 0.5931306784600157,
+   "retention:ndcg@10": 1.0002905455061186,
+   "retention_ci:ndcg@10": [
+    0.9969979048995837,
+    1.0034241448222239
+   ],
+   "recall@1": 0.49002217294900224,
+   "retention:recall@1": 1.0,
+   "retention_ci:recall@1": [
+    1.0,
+    1.0
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    1.0,
+    1.0106771098118963
+   ],
+   "pareto": true
+  },
+  {
+   "group": "codec",
+   "label": "int4",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "int4"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 68046.0,
+   "compression_vs_float32": 7.757575757575758,
+   "compress_seconds": 0.7140979109999535,
+   "scan_ms_per_query": 43.483753674058335,
+   "ndcg@5": 0.5747144760896574,
+   "retention:ndcg@5": 0.9983411713142056,
+   "retention_ci:ndcg@5": [
+    0.9814544375259973,
+    1.0143365585566022
+   ],
+   "ndcg@10": 0.5907334656399472,
+   "retention:ndcg@10": 0.99624774447329,
+   "retention_ci:ndcg@10": [
+    0.9807814875911153,
+    1.0103312438998346
+   ],
+   "recall@1": 0.48558758314855877,
+   "retention:recall@1": 0.9909502262443438,
+   "retention_ci:recall@1": [
+    0.9653679653679653,
+    1.0138921339563862
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9798623707600218,
+    1.0286790109079618
+   ],
+   "pareto": false
+  },
+  {
+   "group": "codec",
+   "label": "int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 68047.024,
+   "compression_vs_float32": 7.757459018340024,
+   "compress_seconds": 0.8967368300000089,
+   "scan_ms_per_query": 44.47871511308248,
+   "ndcg@5": 0.5744070550611581,
+   "retention:ndcg@5": 0.9978071477556434,
+   "retention_ci:ndcg@5": [
+    0.9802055446263703,
+    1.0192861941921643
+   ],
+   "ndcg@10": 0.5916045014963968,
+   "retention:ndcg@10": 0.9977167106954816,
+   "retention_ci:ndcg@10": [
+    0.9807267477789915,
+    1.0159836483646383
+   ],
+   "recall@1": 0.48337028824833705,
+   "retention:recall@1": 0.9864253393665159,
+   "retention_ci:recall@1": [
+    0.9567052512704687,
+    1.01844183379849
+   ],
+   "recall@5": 0.6541019955654102,
+   "retention:recall@5": 1.0068259385665528,
+   "retention_ci:recall@5": [
+    0.9859154929577464,
+    1.0322609654212114
+   ],
+   "pareto": false
+  },
+  {
+   "group": "codec",
+   "label": "lloyd2(7)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "lloyd2",
+      "seed": 7
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 2.0,
+   "bytes_per_doc": 32993.032,
+   "compression_vs_float32": 15.999499530688784,
+   "compress_seconds": 1.649427342999843,
+   "scan_ms_per_query": 47.74789165188539,
+   "ndcg@5": 0.5574277454768652,
+   "retention:ndcg@5": 0.9683122515528809,
+   "retention_ci:ndcg@5": [
+    0.9459509872866592,
+    0.9928638690163076
+   ],
+   "ndcg@10": 0.5708282642530884,
+   "retention:ndcg@10": 0.9626784392986423,
+   "retention_ci:ndcg@10": [
+    0.9416863527930338,
+    0.9841581130212869
+   ],
+   "recall@1": 0.4634146341463415,
+   "retention:recall@1": 0.9457013574660633,
+   "retention_ci:recall@1": [
+    0.9049719887955182,
+    0.9865485866431775
+   ],
+   "recall@5": 0.6385809312638581,
+   "retention:recall@5": 0.9829351535836177,
+   "retention_ci:recall@5": [
+    0.9503270005060395,
+    1.019882806319644
+   ],
+   "pareto": false
+  },
+  {
+   "group": "codec",
+   "label": "binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 128,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 16496.0,
+   "compression_vs_float32": 32.0,
+   "compress_seconds": 0.07335539100040478,
+   "scan_ms_per_query": 43.506695840354176,
+   "ndcg@5": 0.5561064473487799,
+   "retention:ndcg@5": 0.9660170138727321,
+   "retention_ci:ndcg@5": [
+    0.9408362891209235,
+    0.9892298558434113
+   ],
+   "ndcg@10": 0.5752396066997546,
+   "retention:ndcg@10": 0.9701179872813007,
+   "retention_ci:ndcg@10": [
+    0.9472168994624586,
+    0.9915330413247594
+   ],
+   "recall@1": 0.4678492239467849,
+   "retention:recall@1": 0.9547511312217194,
+   "retention_ci:recall@1": [
+    0.9132320598215409,
+    1.0
+   ],
+   "recall@5": 0.6274944567627494,
+   "retention:recall@5": 0.9658703071672354,
+   "retention_ci:recall@5": [
+    0.9321937596302003,
+    0.9969242902208202
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token",
+   "label": "hierarchical_merge(0.5)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.5,
+      "max_distance": null,
+      "min_vectors": 1
+     }
+    ]
+   },
+   "vectors_per_doc": 519.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 265728.0,
+   "compression_vs_float32": 1.9865125240847785,
+   "compress_seconds": 48.531712049999896,
+   "scan_ms_per_query": 22.272358419069533,
+   "ndcg@5": 0.5772626512863073,
+   "retention:ndcg@5": 1.0027676270872465,
+   "retention_ci:ndcg@5": [
+    0.9868426135967632,
+    1.0198298441118598
+   ],
+   "ndcg@10": 0.5949037897319019,
+   "retention:ndcg@10": 1.0032808248927847,
+   "retention_ci:ndcg@10": [
+    0.9886213029467935,
+    1.0169091233322225
+   ],
+   "recall@1": 0.49445676274944567,
+   "retention:recall@1": 1.009049773755656,
+   "retention_ci:recall@1": [
+    0.9743362831858408,
+    1.0441258169934642
+   ],
+   "recall@5": 0.6541019955654102,
+   "retention:recall@5": 1.0068259385665528,
+   "retention_ci:recall@5": [
+    0.9897575492754822,
+    1.0266756756756759
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token",
+   "label": "hierarchical_merge(0.33)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 176640.0,
+   "compression_vs_float32": 2.9884057971014495,
+   "compress_seconds": 48.21286259599992,
+   "scan_ms_per_query": 14.91529896674024,
+   "ndcg@5": 0.5744739512187573,
+   "retention:ndcg@5": 0.9979233536128344,
+   "retention_ci:ndcg@5": [
+    0.9811904005559781,
+    1.0173896819919077
+   ],
+   "ndcg@10": 0.5920359966722912,
+   "retention:ndcg@10": 0.9984444095998771,
+   "retention_ci:ndcg@10": [
+    0.982338956152279,
+    1.015748013455145
+   ],
+   "recall@1": 0.4878048780487805,
+   "retention:recall@1": 0.9954751131221719,
+   "retention_ci:recall@1": [
+    0.9559422634595143,
+    1.044447194719472
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9830494062031594,
+    1.0276840638216074
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token",
+   "label": "hierarchical_merge(0.25)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 134656.0,
+   "compression_vs_float32": 3.920152091254753,
+   "compress_seconds": 48.17955268300011,
+   "scan_ms_per_query": 11.321871110864318,
+   "ndcg@5": 0.5692799655037892,
+   "retention:ndcg@5": 0.9889008389586853,
+   "retention_ci:ndcg@5": [
+    0.9696624863683838,
+    1.0096504347275548
+   ],
+   "ndcg@10": 0.5872188527777218,
+   "retention:ndcg@10": 0.990320494130539,
+   "retention_ci:ndcg@10": [
+    0.9748191296476544,
+    1.0074412172426122
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9436476583075689,
+    1.0229464974706335
+   ],
+   "recall@5": 0.647450110864745,
+   "retention:recall@5": 0.9965870307167236,
+   "retention_ci:recall@5": [
+    0.973410703061866,
+    1.0240570565232847
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token",
+   "label": "hierarchical_merge(0.1)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.1,
+      "max_distance": null,
+      "min_vectors": 1
+     }
+    ]
+   },
+   "vectors_per_doc": 110.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 56320.0,
+   "compression_vs_float32": 9.372727272727273,
+   "compress_seconds": 47.688914403000126,
+   "scan_ms_per_query": 5.198184835919523,
+   "ndcg@5": 0.5556349005607469,
+   "retention:ndcg@5": 0.9651978861279477,
+   "retention_ci:ndcg@5": [
+    0.9413619249569273,
+    0.9906387267060481
+   ],
+   "ndcg@10": 0.5754116930072194,
+   "retention:ndcg@10": 0.9704082037759441,
+   "retention_ci:ndcg@10": [
+    0.9480569711434061,
+    0.9921605932808901
+   ],
+   "recall@1": 0.4722838137472284,
+   "retention:recall@1": 0.9638009049773755,
+   "retention_ci:recall@1": [
+    0.9134415938864628,
+    1.0180305305305306
+   ],
+   "recall@5": 0.6274944567627494,
+   "retention:recall@5": 0.9658703071672354,
+   "retention_ci:recall@5": [
+    0.936610265620569,
+    0.9964188711537747
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token",
+   "label": "adaptive_merge(0.6)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "adaptive_merge",
+      "radius": 0.6,
+      "ratio": null,
+      "max_vectors": null,
+      "min_vectors": 1,
+      "refine": 0,
+      "representative": "mean",
+      "seeding": "farthest",
+      "n_importance_seeds": 0,
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 130.428,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 66779.136,
+   "compression_vs_float32": 7.9047443800410955,
+   "compress_seconds": 6.851627610999913,
+   "scan_ms_per_query": 5.870097314855512,
+   "ndcg@5": 0.5579493062175217,
+   "retention:ndcg@5": 0.9692182589398556,
+   "retention_ci:ndcg@5": [
+    0.943077705779385,
+    0.9960028485342582
+   ],
+   "ndcg@10": 0.57571492593827,
+   "retention:ndcg@10": 0.9709195936686462,
+   "retention_ci:ndcg@10": [
+    0.9481533941292427,
+    0.9944941894555428
+   ],
+   "recall@1": 0.48558758314855877,
+   "retention:recall@1": 0.9909502262443438,
+   "retention_ci:recall@1": [
+    0.9451991956767626,
+    1.041865355357531
+   ],
+   "recall@5": 0.6252771618625277,
+   "retention:recall@5": 0.962457337883959,
+   "retention_ci:recall@5": [
+    0.930906803887936,
+    1.0
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > float16",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "float16"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 16.0,
+   "bytes_per_doc": 88320.0,
+   "compression_vs_float32": 5.976811594202899,
+   "compress_seconds": 0.12215941400017982,
+   "scan_ms_per_query": 15.01091887361399,
+   "ndcg@5": 0.5745711213980009,
+   "retention:ndcg@5": 0.998092148718228,
+   "retention_ci:ndcg@5": [
+    0.9812627403392707,
+    1.0177044228607919
+   ],
+   "ndcg@10": 0.5928006391257343,
+   "retention:ndcg@10": 0.9997339477145766,
+   "retention_ci:ndcg@10": [
+    0.9841085003867751,
+    1.016835274861338
+   ],
+   "recall@1": 0.4878048780487805,
+   "retention:recall@1": 0.9954751131221719,
+   "retention_ci:recall@1": [
+    0.9559422634595143,
+    1.044447194719472
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9830494062031594,
+    1.0276840638216074
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 8.125,
+   "bytes_per_doc": 44850.0,
+   "compression_vs_float32": 11.769721293199554,
+   "compress_seconds": 0.1861897570001929,
+   "scan_ms_per_query": 14.96867468736097,
+   "ndcg@5": 0.5735019031292781,
+   "retention:ndcg@5": 0.9962348010034981,
+   "retention_ci:ndcg@5": [
+    0.9790560680396043,
+    1.0161376713547252
+   ],
+   "ndcg@10": 0.5918615835801538,
+   "retention:ndcg@10": 0.9981502690783811,
+   "retention_ci:ndcg@10": [
+    0.9820692416482323,
+    1.0152551098254565
+   ],
+   "recall@1": 0.48558758314855877,
+   "retention:recall@1": 0.9909502262443438,
+   "retention_ci:recall@1": [
+    0.9523809523809523,
+    1.0391325660699062
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9831052353373781,
+    1.0276840638216074
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > int4",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int4"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 22770.0,
+   "compression_vs_float32": 23.18278436539306,
+   "compress_seconds": 0.1850005409996811,
+   "scan_ms_per_query": 15.205017669623398,
+   "ndcg@5": 0.5705976631403065,
+   "retention:ndcg@5": 0.991189822195769,
+   "retention_ci:ndcg@5": [
+    0.9718675693548422,
+    1.0113535985923583
+   ],
+   "ndcg@10": 0.5871219558533569,
+   "retention:ndcg@10": 0.9901570814445143,
+   "retention_ci:ndcg@10": [
+    0.9714077370062453,
+    1.0094063975551746
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9436553281955886,
+    1.0242748046412502
+   ],
+   "recall@5": 0.6496674057649667,
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    0.9767441860465117,
+    1.0263223465640845
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 22771.024,
+   "compression_vs_float32": 23.181741848763586,
+   "compress_seconds": 0.25653543399994305,
+   "scan_ms_per_query": 15.260974148559338,
+   "ndcg@5": 0.563180032913826,
+   "retention:ndcg@5": 0.9783045966502673,
+   "retention_ci:ndcg@5": [
+    0.9560511515831621,
+    1.0033138966190978
+   ],
+   "ndcg@10": 0.5820529259040848,
+   "retention:ndcg@10": 0.9816083704820174,
+   "retention_ci:ndcg@10": [
+    0.9612066224986621,
+    1.0016151994026357
+   ],
+   "recall@1": 0.4700665188470067,
+   "retention:recall@1": 0.9592760180995475,
+   "retention_ci:recall@1": [
+    0.914279250161603,
+    1.0050232199822051
+   ],
+   "recall@5": 0.6430155210643016,
+   "retention:recall@5": 0.9897610921501707,
+   "retention_ci:recall@5": [
+    0.9633271812080536,
+    1.0190361216730037
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > lloyd2(7)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "lloyd2",
+      "seed": 7
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 2.0,
+   "bytes_per_doc": 11041.032,
+   "compression_vs_float32": 47.810023555769064,
+   "compress_seconds": 0.5522098880001067,
+   "scan_ms_per_query": 16.425194995565082,
+   "ndcg@5": 0.5484155589783455,
+   "retention:ndcg@5": 0.952657109392114,
+   "retention_ci:ndcg@5": [
+    0.9249192811629147,
+    0.9832701746604187
+   ],
+   "ndcg@10": 0.5671473961723803,
+   "retention:ndcg@10": 0.9564708063534922,
+   "retention_ci:ndcg@10": [
+    0.9306195831650728,
+    0.9833542631572958
+   ],
+   "recall@1": 0.4611973392461197,
+   "retention:recall@1": 0.9411764705882352,
+   "retention_ci:recall@1": [
+    0.890540966055797,
+    0.9952158806106174
+   ],
+   "recall@5": 0.623059866962306,
+   "retention:recall@5": 0.9590443686006825,
+   "retention_ci:recall@5": [
+    0.9268980766452961,
+    0.9927568466656352
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.33) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 5520.0,
+   "compression_vs_float32": 95.62898550724638,
+   "compress_seconds": 0.02466056999992361,
+   "scan_ms_per_query": 15.05839254988997,
+   "ndcg@5": 0.5463834477798871,
+   "retention:ndcg@5": 0.949127112570191,
+   "retention_ci:ndcg@5": [
+    0.9224154563773859,
+    0.9757051571197979
+   ],
+   "ndcg@10": 0.5679524085241568,
+   "retention:ndcg@10": 0.9578284266448392,
+   "retention_ci:ndcg@10": [
+    0.9320321111866444,
+    0.9823821630025906
+   ],
+   "recall@1": 0.4611973392461197,
+   "retention:recall@1": 0.9411764705882352,
+   "retention_ci:recall@1": [
+    0.8883601001147148,
+    0.9909920009695794
+   ],
+   "recall@5": 0.6208425720620843,
+   "retention:recall@5": 0.9556313993174061,
+   "retention_ci:recall@5": [
+    0.9228184975862475,
+    0.9895860180412371
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > float16",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "float16"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 16.0,
+   "bytes_per_doc": 67328.0,
+   "compression_vs_float32": 7.840304182509506,
+   "compress_seconds": 0.08684533799987548,
+   "scan_ms_per_query": 11.518260412416558,
+   "ndcg@5": 0.5692799655037892,
+   "retention:ndcg@5": 0.9889008389586853,
+   "retention_ci:ndcg@5": [
+    0.9696624863683838,
+    1.0096504347275548
+   ],
+   "ndcg@10": 0.587245383086693,
+   "retention:ndcg@10": 0.9903652364077421,
+   "retention_ci:ndcg@10": [
+    0.9749087538516255,
+    1.0074842702667097
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9436476583075689,
+    1.0229464974706335
+   ],
+   "recall@5": 0.647450110864745,
+   "retention:recall@5": 0.9965870307167236,
+   "retention_ci:recall@5": [
+    0.973410703061866,
+    1.0240570565232847
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 8.125,
+   "bytes_per_doc": 34190.0,
+   "compression_vs_float32": 15.43936823632641,
+   "compress_seconds": 0.12356023999973331,
+   "scan_ms_per_query": 11.251610286030992,
+   "ndcg@5": 0.5674895798390804,
+   "retention:ndcg@5": 0.9857907455192942,
+   "retention_ci:ndcg@5": [
+    0.9671910430324531,
+    1.0063997011293981
+   ],
+   "ndcg@10": 0.5855266234478587,
+   "retention:ndcg@10": 0.9874666188194774,
+   "retention_ci:ndcg@10": [
+    0.9720929385188709,
+    1.0035284846770676
+   ],
+   "recall@1": 0.47671840354767187,
+   "retention:recall@1": 0.9728506787330317,
+   "retention_ci:recall@1": [
+    0.9356038526799083,
+    1.0136363636363637
+   ],
+   "recall@5": 0.647450110864745,
+   "retention:recall@5": 0.9965870307167236,
+   "retention_ci:recall@5": [
+    0.973410703061866,
+    1.0240570565232847
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > int4",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int4"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 17358.0,
+   "compression_vs_float32": 30.41087682912778,
+   "compress_seconds": 0.1433678480002527,
+   "scan_ms_per_query": 11.31870603991095,
+   "ndcg@5": 0.569923880919583,
+   "retention:ndcg@5": 0.9900193896428524,
+   "retention_ci:ndcg@5": [
+    0.9665293430007916,
+    1.0161317069182463
+   ],
+   "ndcg@10": 0.589740293003633,
+   "retention:ndcg@10": 0.9945727995846865,
+   "retention_ci:ndcg@10": [
+    0.9711011850702411,
+    1.0201119085312222
+   ],
+   "recall@1": 0.47671840354767187,
+   "retention:recall@1": 0.9728506787330317,
+   "retention_ci:recall@1": [
+    0.927601809954751,
+    1.0216521417179312
+   ],
+   "recall@5": 0.6496674057649667,
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    0.9759387528636884,
+    1.026407026084668
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 17359.024,
+   "compression_vs_float32": 30.409082906965278,
+   "compress_seconds": 0.2012778119997165,
+   "scan_ms_per_query": 11.343229609756316,
+   "ndcg@5": 0.569173640164802,
+   "retention:ndcg@5": 0.9887161403511487,
+   "retention_ci:ndcg@5": [
+    0.967042377335041,
+    1.0123711365452257
+   ],
+   "ndcg@10": 0.5884155246844056,
+   "retention:ndcg@10": 0.9923386321864502,
+   "retention_ci:ndcg@10": [
+    0.9714380409106304,
+    1.0155033774227331
+   ],
+   "recall@1": 0.48558758314855877,
+   "retention:recall@1": 0.9909502262443438,
+   "retention_ci:recall@1": [
+    0.9478203911144863,
+    1.036371976647206
+   ],
+   "recall@5": 0.6407982261640798,
+   "retention:recall@5": 0.9863481228668941,
+   "retention_ci:recall@5": [
+    0.9606964285714285,
+    1.0139909735654415
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > lloyd2(7)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "lloyd2",
+      "seed": 7
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 2.0,
+   "bytes_per_doc": 8417.032,
+   "compression_vs_float32": 62.714743154118935,
+   "compress_seconds": 0.43851588500001526,
+   "scan_ms_per_query": 12.267480461196907,
+   "ndcg@5": 0.55165869318333,
+   "retention:ndcg@5": 0.9582907840873524,
+   "retention_ci:ndcg@5": [
+    0.9334807466710444,
+    0.9845290581894396
+   ],
+   "ndcg@10": 0.5654494947603166,
+   "retention:ndcg@10": 0.9536073653085972,
+   "retention_ci:ndcg@10": [
+    0.9287159659262567,
+    0.97802282814143
+   ],
+   "recall@1": 0.4611973392461197,
+   "retention:recall@1": 0.9411764705882352,
+   "retention_ci:recall@1": [
+    0.8974248927038627,
+    0.9828326180257512
+   ],
+   "recall@5": 0.6319290465631929,
+   "retention:recall@5": 0.9726962457337884,
+   "retention_ci:recall@5": [
+    0.9427609427609427,
+    1.0035848763634951
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+codec",
+   "label": "hierarchical_merge(0.25) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 4208.0,
+   "compression_vs_float32": 125.4448669201521,
+   "compress_seconds": 0.02134543100009978,
+   "scan_ms_per_query": 11.46367967627427,
+   "ndcg@5": 0.5427002399743833,
+   "retention:ndcg@5": 0.9427289824591154,
+   "retention_ci:ndcg@5": [
+    0.9116999095835407,
+    0.9721941218491762
+   ],
+   "ndcg@10": 0.5633590311209199,
+   "retention:ndcg@10": 0.9500818841791403,
+   "retention_ci:ndcg@10": [
+    0.9196143747803786,
+    0.9772849360497887
+   ],
+   "recall@1": 0.458980044345898,
+   "retention:recall@1": 0.9366515837104072,
+   "retention_ci:recall@1": [
+    0.8846064814814816,
+    0.9858507175126229
+   ],
+   "recall@5": 0.6208425720620843,
+   "retention:recall@5": 0.9556313993174061,
+   "retention_ci:recall@5": [
+    0.9183603816953403,
+    0.9894808694090172
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim",
+   "label": "project(64)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 64,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 263936.0,
+   "compression_vs_float32": 2.0,
+   "compress_seconds": 0.5824693479999041,
+   "scan_ms_per_query": 42.33912705764998,
+   "ndcg@5": 0.5618794464309269,
+   "retention:ndcg@5": 0.9760453373367253,
+   "retention_ci:ndcg@5": [
+    0.9515980444222178,
+    0.9991832479392536
+   ],
+   "ndcg@10": 0.5813096196336135,
+   "retention:ndcg@10": 0.9803548149642043,
+   "retention_ci:ndcg@10": [
+    0.9616924318124259,
+    0.9999388830368464
+   ],
+   "recall@1": 0.47671840354767187,
+   "retention:recall@1": 0.9728506787330317,
+   "retention_ci:recall@1": [
+    0.9321245002855512,
+    1.0140203369751217
+   ],
+   "recall@5": 0.6341463414634146,
+   "retention:recall@5": 0.9761092150170648,
+   "retention_ci:recall@5": [
+    0.9437086092715231,
+    1.0065190156112123
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim",
+   "label": "project(32, random)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "random"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "compress_seconds": 0.17373470100028499,
+   "scan_ms_per_query": 42.067119997782136,
+   "ndcg@5": 0.3753824900271425,
+   "retention:ndcg@5": 0.6520799638359497,
+   "retention_ci:ndcg@5": [
+    0.5991367679021337,
+    0.700002429119589
+   ],
+   "ndcg@10": 0.39605059409722665,
+   "retention:ndcg@10": 0.6679230719377529,
+   "retention_ci:ndcg@10": [
+    0.6189689147585412,
+    0.7120193378004797
+   ],
+   "recall@1": 0.30155210643015523,
+   "retention:recall@1": 0.6153846153846154,
+   "retention_ci:recall@1": [
+    0.5450251136091844,
+    0.6824760143336029
+   ],
+   "recall@5": 0.44124168514412415,
+   "retention:recall@5": 0.6791808873720137,
+   "retention_ci:recall@5": [
+    0.6200716845878136,
+    0.7310684798445848
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim+codec",
+   "label": "project(64) > float16",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 64,
+      "method": "pca"
+     },
+     {
+      "stage": "float16"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 16.0,
+   "bytes_per_doc": 131968.0,
+   "compression_vs_float32": 4.0,
+   "compress_seconds": 0.18139500799998132,
+   "scan_ms_per_query": 42.1713377073167,
+   "ndcg@5": 0.5615891365560456,
+   "retention:ndcg@5": 0.9755410377017046,
+   "retention_ci:ndcg@5": [
+    0.95127346451425,
+    0.9983263677407092
+   ],
+   "ndcg@10": 0.5816602517239603,
+   "retention:ndcg@10": 0.9809461415936674,
+   "retention_ci:ndcg@10": [
+    0.9616514298963894,
+    1.0005991679892452
+   ],
+   "recall@1": 0.47671840354767187,
+   "retention:recall@1": 0.9728506787330317,
+   "retention_ci:recall@1": [
+    0.9321245002855512,
+    1.0140203369751217
+   ],
+   "recall@5": 0.6341463414634146,
+   "retention:recall@5": 0.9761092150170648,
+   "retention_ci:recall@5": [
+    0.9437086092715231,
+    1.0065190156112123
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim+codec",
+   "label": "project(64) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 64,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 8.25,
+   "bytes_per_doc": 68046.0,
+   "compression_vs_float32": 7.757575757575758,
+   "compress_seconds": 0.21152262200030236,
+   "scan_ms_per_query": 42.74525963636332,
+   "ndcg@5": 0.5666871527546196,
+   "retention:ndcg@5": 0.9843968429316206,
+   "retention_ci:ndcg@5": [
+    0.9620163197435392,
+    1.007323877515292
+   ],
+   "ndcg@10": 0.5852217399937821,
+   "retention:ndcg@10": 0.9869524453874341,
+   "retention_ci:ndcg@10": [
+    0.9668323317352938,
+    1.0067858618295857
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9441805332798716,
+    1.0233727908933872
+   ],
+   "recall@5": 0.6407982261640798,
+   "retention:recall@5": 0.9863481228668941,
+   "retention_ci:recall@5": [
+    0.9569355252302272,
+    1.0176678445229683
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim+codec",
+   "label": "project(64) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 64,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 4.25,
+   "bytes_per_doc": 35054.512,
+   "compression_vs_float32": 15.058603582899686,
+   "compress_seconds": 0.3536650760001976,
+   "scan_ms_per_query": 42.49788179157463,
+   "ndcg@5": 0.5492350972164246,
+   "retention:ndcg@5": 0.9540807359033298,
+   "retention_ci:ndcg@5": [
+    0.926939440586845,
+    0.9844984561682572
+   ],
+   "ndcg@10": 0.570510994209596,
+   "retention:ndcg@10": 0.9621433763919287,
+   "retention_ci:ndcg@10": [
+    0.9385228089065082,
+    0.9907042541487804
+   ],
+   "recall@1": 0.4745011086474501,
+   "retention:recall@1": 0.9683257918552035,
+   "retention_ci:recall@1": [
+    0.9264655055570615,
+    1.0137614678899083
+   ],
+   "recall@5": 0.6119733924611973,
+   "retention:recall@5": 0.9419795221843003,
+   "retention_ci:recall@5": [
+    0.9054054054054054,
+    0.9776241965355703
+   ],
+   "pareto": false
+  },
+  {
+   "group": "dim+codec",
+   "label": "project(64) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "project",
+      "dim": 64,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 1031.0,
+   "dim": 64,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 8248.0,
+   "compression_vs_float32": 64.0,
+   "compress_seconds": 0.03617872399991029,
+   "scan_ms_per_query": 42.405641212860274,
+   "ndcg@5": 0.5409676547302207,
+   "retention:ndcg@5": 0.9397192945984094,
+   "retention_ci:ndcg@5": [
+    0.9080431699723686,
+    0.971933691787428
+   ],
+   "ndcg@10": 0.5552317530816712,
+   "retention:ndcg@10": 0.9363755633318229,
+   "retention_ci:ndcg@10": [
+    0.9071541871131025,
+    0.9636214416291993
+   ],
+   "recall@1": 0.4434589800443459,
+   "retention:recall@1": 0.9049773755656109,
+   "retention_ci:recall@1": [
+    0.8506724484665661,
+    0.9619137466307277
+   ],
+   "recall@5": 0.6252771618625277,
+   "retention:recall@5": 0.962457337883959,
+   "retention_ci:recall@5": [
+    0.9256693770041228,
+    1.0
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.33) > project(32)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 44160.0,
+   "compression_vs_float32": 11.953623188405798,
+   "compress_seconds": 49.60688151100021,
+   "scan_ms_per_query": 15.391621736141401,
+   "ndcg@5": 0.457989858217083,
+   "retention:ndcg@5": 0.7955778921969249,
+   "retention_ci:ndcg@5": [
+    0.749739185561244,
+    0.8386635420789845
+   ],
+   "ndcg@10": 0.48770910625879466,
+   "retention:ndcg@10": 0.8225013907804442,
+   "retention_ci:ndcg@10": [
+    0.7833732100386559,
+    0.8586580223207171
+   ],
+   "recall@1": 0.38137472283813745,
+   "retention:recall@1": 0.7782805429864252,
+   "retention_ci:recall@1": [
+    0.7148664779036199,
+    0.8373366338826864
+   ],
+   "recall@5": 0.5277161862527716,
+   "retention:recall@5": 0.8122866894197952,
+   "retention_ci:recall@5": [
+    0.764505119453925,
+    0.8581676449009539
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.33) > project(16)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 16,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 22080.0,
+   "compression_vs_float32": 23.907246376811596,
+   "compress_seconds": 51.63442230600003,
+   "scan_ms_per_query": 15.952614348114814,
+   "ndcg@5": 0.22136850948123227,
+   "retention:ndcg@5": 0.38454103079369156,
+   "retention_ci:ndcg@5": [
+    0.3338399655399592,
+    0.4398432704748544
+   ],
+   "ndcg@10": 0.24181825028122925,
+   "retention:ndcg@10": 0.4078165542122641,
+   "retention_ci:ndcg@10": [
+    0.35611773049695267,
+    0.4610457700949762
+   ],
+   "recall@1": 0.15077605321507762,
+   "retention:recall@1": 0.3076923076923077,
+   "retention_ci:recall@1": [
+    0.24774774774774774,
+    0.37145889487870615
+   ],
+   "recall@5": 0.28159645232815966,
+   "retention:recall@5": 0.4334470989761092,
+   "retention_ci:recall@5": [
+    0.3758620689655172,
+    0.4944352106778995
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.33) > project(128)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 176640.0,
+   "compression_vs_float32": 2.9884057971014495,
+   "compress_seconds": 52.567007858000125,
+   "scan_ms_per_query": 15.989815623059968,
+   "ndcg@5": 0.5744739512187573,
+   "retention:ndcg@5": 0.9979233536128344,
+   "retention_ci:ndcg@5": [
+    0.9811904005559781,
+    1.0173896819919077
+   ],
+   "ndcg@10": 0.5920359966722912,
+   "retention:ndcg@10": 0.9984444095998771,
+   "retention_ci:ndcg@10": [
+    0.982338956152279,
+    1.015748013455145
+   ],
+   "recall@1": 0.4878048780487805,
+   "retention:recall@1": 0.9954751131221719,
+   "retention_ci:recall@1": [
+    0.9559422634595143,
+    1.044447194719472
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9830494062031594,
+    1.0276840638216074
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.25) > project(32)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 32,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 33664.0,
+   "compression_vs_float32": 15.680608365019012,
+   "compress_seconds": 50.33711154100001,
+   "scan_ms_per_query": 11.575735709534566,
+   "ndcg@5": 0.4518095188074705,
+   "retention:ndcg@5": 0.784841974550839,
+   "retention_ci:ndcg@5": [
+    0.7426267597814797,
+    0.8287931944492734
+   ],
+   "ndcg@10": 0.4772795966453488,
+   "retention:ndcg@10": 0.8049124508731682,
+   "retention_ci:ndcg@10": [
+    0.7648800516365762,
+    0.8436545360183164
+   ],
+   "recall@1": 0.36585365853658536,
+   "retention:recall@1": 0.7466063348416289,
+   "retention_ci:recall@1": [
+    0.6837150629400469,
+    0.8087055335968379
+   ],
+   "recall@5": 0.5299334811529933,
+   "retention:recall@5": 0.8156996587030716,
+   "retention_ci:recall@5": [
+    0.7700147413562048,
+    0.8597351039029403
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.25) > project(16)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 16,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 16832.0,
+   "compression_vs_float32": 31.361216730038024,
+   "compress_seconds": 50.31147825800008,
+   "scan_ms_per_query": 11.614318044345769,
+   "ndcg@5": 0.21900025168950327,
+   "retention:ndcg@5": 0.3804271110019794,
+   "retention_ci:ndcg@5": [
+    0.329458894635264,
+    0.43524671319040026
+   ],
+   "ndcg@10": 0.24051088110516855,
+   "retention:ndcg@10": 0.4056117297548696,
+   "retention_ci:ndcg@10": [
+    0.35472891023002995,
+    0.45620174879432496
+   ],
+   "recall@1": 0.15077605321507762,
+   "retention:recall@1": 0.3076923076923077,
+   "retention_ci:recall@1": [
+    0.24997222222222223,
+    0.3708482142857143
+   ],
+   "recall@5": 0.2793791574279379,
+   "retention:recall@5": 0.4300341296928327,
+   "retention_ci:recall@5": [
+    0.37451400996264017,
+    0.49183337154648626
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim",
+   "label": "hierarchical_merge(0.25) > project(128)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 32.0,
+   "bytes_per_doc": 134656.0,
+   "compression_vs_float32": 3.920152091254753,
+   "compress_seconds": 50.31237817400006,
+   "scan_ms_per_query": 12.168554246119571,
+   "ndcg@5": 0.5692799655037892,
+   "retention:ndcg@5": 0.9889008389586853,
+   "retention_ci:ndcg@5": [
+    0.9696624863683838,
+    1.0096504347275548
+   ],
+   "ndcg@10": 0.5872188527777218,
+   "retention:ndcg@10": 0.990320494130539,
+   "retention_ci:ndcg@10": [
+    0.9748191296476544,
+    1.0074412172426122
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9436476583075689,
+    1.0229464974706335
+   ],
+   "recall@5": 0.647450110864745,
+   "retention:recall@5": 0.9965870307167236,
+   "retention_ci:recall@5": [
+    0.973410703061866,
+    1.0240570565232847
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(32) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 32,
+   "bits_per_dim": 8.5,
+   "bytes_per_doc": 11730.0,
+   "compression_vs_float32": 45.00187553282183,
+   "compress_seconds": 0.046120840000185126,
+   "scan_ms_per_query": 15.033588472284109,
+   "ndcg@5": 0.4583602271175897,
+   "retention:ndcg@5": 0.7962212630137974,
+   "retention_ci:ndcg@5": [
+    0.7526578949224194,
+    0.838495670758157
+   ],
+   "ndcg@10": 0.48372866342815835,
+   "retention:ndcg@10": 0.8157885373149131,
+   "retention_ci:ndcg@10": [
+    0.777918771384685,
+    0.852138208306929
+   ],
+   "recall@1": 0.376940133037694,
+   "retention:recall@1": 0.7692307692307692,
+   "retention_ci:recall@1": [
+    0.7045426556202419,
+    0.8303516819571863
+   ],
+   "recall@5": 0.532150776053215,
+   "retention:recall@5": 0.8191126279863481,
+   "retention_ci:recall@5": [
+    0.7736454115265091,
+    0.863344684385382
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(32) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 32,
+   "bits_per_dim": 4.5,
+   "bytes_per_doc": 6210.256,
+   "compression_vs_float32": 85.00003864574987,
+   "compress_seconds": 0.06640402299990456,
+   "scan_ms_per_query": 15.574529694013693,
+   "ndcg@5": 0.436021606892926,
+   "retention:ndcg@5": 0.7574166648899198,
+   "retention_ci:ndcg@5": [
+    0.7082725905894887,
+    0.8071635809282405
+   ],
+   "ndcg@10": 0.4576007287937603,
+   "retention:ndcg@10": 0.7717248479164021,
+   "retention_ci:ndcg@10": [
+    0.726702033046878,
+    0.8159368905104188
+   ],
+   "recall@1": 0.37028824833702884,
+   "retention:recall@1": 0.755656108597285,
+   "retention_ci:recall@1": [
+    0.6910889386813381,
+    0.8213074514138342
+   ],
+   "recall@5": 0.49223946784922396,
+   "retention:recall@5": 0.7576791808873721,
+   "retention_ci:recall@5": [
+    0.7105167810831426,
+    0.8096776984038396
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(32) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 32,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 1380.0,
+   "compression_vs_float32": 382.51594202898553,
+   "compress_seconds": 0.008536851999906503,
+   "scan_ms_per_query": 14.873167651885302,
+   "ndcg@5": 0.36733960399535964,
+   "retention:ndcg@5": 0.6381086013667987,
+   "retention_ci:ndcg@5": [
+    0.585791023433824,
+    0.6928674956181233
+   ],
+   "ndcg@10": 0.39755654195055073,
+   "retention:ndcg@10": 0.6704627911841363,
+   "retention_ci:ndcg@10": [
+    0.6230040751774678,
+    0.719394667662028
+   ],
+   "recall@1": 0.2926829268292683,
+   "retention:recall@1": 0.597285067873303,
+   "retention_ci:recall@1": [
+    0.5299126162942354,
+    0.6666666666666666
+   ],
+   "recall@5": 0.43237250554323725,
+   "retention:recall@5": 0.6655290102389079,
+   "retention_ci:recall@5": [
+    0.6103417979508649,
+    0.7237788331071913
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(16) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 16,
+   "bits_per_dim": 9.0,
+   "bytes_per_doc": 6210.0,
+   "compression_vs_float32": 85.00354267310789,
+   "compress_seconds": 0.030484114000046247,
+   "scan_ms_per_query": 14.99350211529952,
+   "ndcg@5": 0.2224732086457513,
+   "retention:ndcg@5": 0.38646001265988644,
+   "retention_ci:ndcg@5": [
+    0.33551604017375747,
+    0.4410166719731621
+   ],
+   "ndcg@10": 0.23796867821699869,
+   "retention:ndcg@10": 0.4013244089229796,
+   "retention_ci:ndcg@10": [
+    0.34996030775425285,
+    0.4528809223375148
+   ],
+   "recall@1": 0.14634146341463414,
+   "retention:recall@1": 0.2986425339366515,
+   "retention_ci:recall@1": [
+    0.24037047511312218,
+    0.3611141703377386
+   ],
+   "recall@5": 0.2860310421286031,
+   "retention:recall@5": 0.4402730375426621,
+   "retention_ci:recall@5": [
+    0.38244019138755986,
+    0.5000415282392027
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(16) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 16,
+   "bits_per_dim": 5.0,
+   "bytes_per_doc": 3450.128,
+   "compression_vs_float32": 153.00070026387428,
+   "compress_seconds": 0.04198344199994608,
+   "scan_ms_per_query": 14.91005598891287,
+   "ndcg@5": 0.21112783953156442,
+   "retention:ndcg@5": 0.3667518800798357,
+   "retention_ci:ndcg@5": [
+    0.31703732192992007,
+    0.41987180310944083
+   ],
+   "ndcg@10": 0.231023549976339,
+   "retention:ndcg@10": 0.3896117351922989,
+   "retention_ci:ndcg@10": [
+    0.33925821313732524,
+    0.4407291613391644
+   ],
+   "recall@1": 0.1419068736141907,
+   "retention:recall@1": 0.28959276018099545,
+   "retention_ci:recall@1": [
+    0.23210015527950312,
+    0.3517883535323677
+   ],
+   "recall@5": 0.2727272727272727,
+   "retention:recall@5": 0.4197952218430034,
+   "retention_ci:recall@5": [
+    0.361010410553998,
+    0.4802937041680915
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(16) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 16,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 690.0,
+   "compression_vs_float32": 765.0318840579711,
+   "compress_seconds": 0.009435716000098182,
+   "scan_ms_per_query": 15.192012523281207,
+   "ndcg@5": 0.1399246632711346,
+   "retention:ndcg@5": 0.2430642658878455,
+   "retention_ci:ndcg@5": [
+    0.19678957669583863,
+    0.28705296348575715
+   ],
+   "ndcg@10": 0.1657687979803558,
+   "retention:ndcg@10": 0.27956227418582563,
+   "retention_ci:ndcg@10": [
+    0.23422878805710934,
+    0.3243955893604611
+   ],
+   "recall@1": 0.08425720620842572,
+   "retention:recall@1": 0.17194570135746606,
+   "retention_ci:recall@1": [
+    0.12498559907834103,
+    0.22535211267605634
+   ],
+   "recall@5": 0.1951219512195122,
+   "retention:recall@5": 0.3003412969283277,
+   "retention_ci:recall@5": [
+    0.24280182011811408,
+    0.35356793743890513
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(128) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 8.125,
+   "bytes_per_doc": 44850.0,
+   "compression_vs_float32": 11.769721293199554,
+   "compress_seconds": 0.19227003600008175,
+   "scan_ms_per_query": 14.972903407981917,
+   "ndcg@5": 0.5751991263230259,
+   "retention:ndcg@5": 0.9991830611600138,
+   "retention_ci:ndcg@5": [
+    0.9818489734279574,
+    1.018641037166571
+   ],
+   "ndcg@10": 0.5935475029634929,
+   "retention:ndcg@10": 1.0009935029236074,
+   "retention_ci:ndcg@10": [
+    0.985112716341796,
+    1.0172711573916502
+   ],
+   "recall@1": 0.48558758314855877,
+   "retention:recall@1": 0.9909502262443438,
+   "retention_ci:recall@1": [
+    0.9499894957983194,
+    1.0401876206563707
+   ],
+   "recall@5": 0.6518847006651884,
+   "retention:recall@5": 1.0034129692832765,
+   "retention_ci:recall@5": [
+    0.9830494062031594,
+    1.0276840638216074
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(128) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 22771.024,
+   "compression_vs_float32": 23.181741848763586,
+   "compress_seconds": 0.2520770440000888,
+   "scan_ms_per_query": 14.881196926829794,
+   "ndcg@5": 0.559369440330125,
+   "retention:ndcg@5": 0.9716851854092325,
+   "retention_ci:ndcg@5": [
+    0.9453740772615901,
+    0.9994712961399305
+   ],
+   "ndcg@10": 0.5765651012471661,
+   "retention:ndcg@10": 0.9723533794335631,
+   "retention_ci:ndcg@10": [
+    0.9478454514124041,
+    0.9983303165738106
+   ],
+   "recall@1": 0.4745011086474501,
+   "retention:recall@1": 0.9683257918552035,
+   "retention_ci:recall@1": [
+    0.9177409746217086,
+    1.0213888888888891
+   ],
+   "recall@5": 0.6319290465631929,
+   "retention:recall@5": 0.9726962457337884,
+   "retention_ci:recall@5": [
+    0.9455735877968936,
+    1.003334175084175
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.33) > project(128) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.33,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 345.0,
+   "dim": 128,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 5520.0,
+   "compression_vs_float32": 95.62898550724638,
+   "compress_seconds": 0.024395137999817962,
+   "scan_ms_per_query": 15.154591150776529,
+   "ndcg@5": 0.5676368813193488,
+   "retention:ndcg@5": 0.9860466241137363,
+   "retention_ci:ndcg@5": [
+    0.9554975013807964,
+    1.0188184129520694
+   ],
+   "ndcg@10": 0.5841901059655591,
+   "retention:ndcg@10": 0.9852126369399378,
+   "retention_ci:ndcg@10": [
+    0.9591983473068098,
+    1.0126863542936333
+   ],
+   "recall@1": 0.48337028824833705,
+   "retention:recall@1": 0.9864253393665159,
+   "retention_ci:recall@1": [
+    0.9301310043668122,
+    1.041865355357531
+   ],
+   "recall@5": 0.6452328159645233,
+   "retention:recall@5": 0.9931740614334471,
+   "retention_ci:recall@5": [
+    0.9562289562289562,
+    1.0320313294356889
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(32) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 32,
+   "bits_per_dim": 8.5,
+   "bytes_per_doc": 8942.0,
+   "compression_vs_float32": 59.03287855065981,
+   "compress_seconds": 0.03385237199972835,
+   "scan_ms_per_query": 11.02824690909068,
+   "ndcg@5": 0.4552222755144535,
+   "retention:ndcg@5": 0.790770301868156,
+   "retention_ci:ndcg@5": [
+    0.7492647681751824,
+    0.8342679776408636
+   ],
+   "ndcg@10": 0.47753850482850047,
+   "retention:ndcg@10": 0.8053490888977485,
+   "retention_ci:ndcg@10": [
+    0.7656110235578829,
+    0.8457915969952244
+   ],
+   "recall@1": 0.36585365853658536,
+   "retention:recall@1": 0.7466063348416289,
+   "retention_ci:recall@1": [
+    0.6826902173913044,
+    0.8088992248062016
+   ],
+   "recall@5": 0.5343680709534369,
+   "retention:recall@5": 0.8225255972696247,
+   "retention_ci:recall@5": [
+    0.7784927303319887,
+    0.8697107447235733
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(32) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 32,
+   "bits_per_dim": 4.5,
+   "bytes_per_doc": 4734.256,
+   "compression_vs_float32": 111.50051877211541,
+   "compress_seconds": 0.04926399699979811,
+   "scan_ms_per_query": 11.537133955654298,
+   "ndcg@5": 0.435074622956979,
+   "retention:ndcg@5": 0.7557716514246916,
+   "retention_ci:ndcg@5": [
+    0.7059216037879129,
+    0.8057209682975529
+   ],
+   "ndcg@10": 0.45699808370865663,
+   "retention:ndcg@10": 0.7707085117145889,
+   "retention_ci:ndcg@10": [
+    0.724396812461833,
+    0.8157548981278052
+   ],
+   "recall@1": 0.35920177383592017,
+   "retention:recall@1": 0.7330316742081447,
+   "retention_ci:recall@1": [
+    0.6696048424828447,
+    0.8000226244343892
+   ],
+   "recall@5": 0.5077605321507761,
+   "retention:recall@5": 0.7815699658703072,
+   "retention_ci:recall@5": [
+    0.7278756957328386,
+    0.832284946236559
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(32) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 32,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 32,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 1052.0,
+   "compression_vs_float32": 501.7794676806084,
+   "compress_seconds": 0.006047931000011886,
+   "scan_ms_per_query": 11.201241842572038,
+   "ndcg@5": 0.37266308744289084,
+   "retention:ndcg@5": 0.6473560675810498,
+   "retention_ci:ndcg@5": [
+    0.5970587287770094,
+    0.701280825456271
+   ],
+   "ndcg@10": 0.39987780456436633,
+   "retention:ndcg@10": 0.6743775053113252,
+   "retention_ci:ndcg@10": [
+    0.6268103405801438,
+    0.7218530319644806
+   ],
+   "recall@1": 0.29046563192904656,
+   "retention:recall@1": 0.5927601809954751,
+   "retention_ci:recall@1": [
+    0.5231428389398572,
+    0.6623958333333334
+   ],
+   "recall@5": 0.44567627494456763,
+   "retention:recall@5": 0.6860068259385665,
+   "retention_ci:recall@5": [
+    0.6312252040125149,
+    0.7401528796376187
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(16) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 16,
+   "bits_per_dim": 9.0,
+   "bytes_per_doc": 4734.0,
+   "compression_vs_float32": 111.50654837346852,
+   "compress_seconds": 0.022734083000159444,
+   "scan_ms_per_query": 11.291916560975109,
+   "ndcg@5": 0.2153131550210983,
+   "retention:ndcg@5": 0.37402222551566033,
+   "retention_ci:ndcg@5": [
+    0.32320474787714626,
+    0.429669949948821
+   ],
+   "ndcg@10": 0.23670179198332464,
+   "retention:ndcg@10": 0.3991878572863887,
+   "retention_ci:ndcg@10": [
+    0.34953933341220983,
+    0.45173116640784416
+   ],
+   "recall@1": 0.14412416851441243,
+   "retention:recall@1": 0.29411764705882354,
+   "retention_ci:recall@1": [
+    0.2347290952924756,
+    0.35652940049798887
+   ],
+   "recall@5": 0.2749445676274945,
+   "retention:recall@5": 0.4232081911262799,
+   "retention_ci:recall@5": [
+    0.3669978330012932,
+    0.4858205624163071
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(16) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 16,
+   "bits_per_dim": 5.0,
+   "bytes_per_doc": 2630.128,
+   "compression_vs_float32": 200.7020190652318,
+   "compress_seconds": 0.03158308999991277,
+   "scan_ms_per_query": 11.049039964523207,
+   "ndcg@5": 0.21286849811800265,
+   "retention:ndcg@5": 0.3697755922087987,
+   "retention_ci:ndcg@5": [
+    0.31522763839034174,
+    0.4264797439719278
+   ],
+   "ndcg@10": 0.22806821280788234,
+   "retention:ndcg@10": 0.38462768035287404,
+   "retention_ci:ndcg@10": [
+    0.33371902443973933,
+    0.43833769226284236
+   ],
+   "recall@1": 0.13968957871396895,
+   "retention:recall@1": 0.2850678733031674,
+   "retention_ci:recall@1": [
+    0.22748276604911677,
+    0.3463540980004395
+   ],
+   "recall@5": 0.2749445676274945,
+   "retention:recall@5": 0.4232081911262799,
+   "retention_ci:recall@5": [
+    0.3606964285714286,
+    0.484641638225256
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(16) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 16,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 16,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 526.0,
+   "compression_vs_float32": 1003.5589353612168,
+   "compress_seconds": 0.008236547000251448,
+   "scan_ms_per_query": 11.809975050997277,
+   "ndcg@5": 0.12044090375119555,
+   "retention:ndcg@5": 0.20921886941708434,
+   "retention_ci:ndcg@5": [
+    0.16758809441014308,
+    0.2558097641790937
+   ],
+   "ndcg@10": 0.15194192189236783,
+   "retention:ndcg@10": 0.2562438151565118,
+   "retention_ci:ndcg@10": [
+    0.21469925575343027,
+    0.3006244061849021
+   ],
+   "recall@1": 0.06430155210643015,
+   "retention:recall@1": 0.13122171945701355,
+   "retention_ci:recall@1": [
+    0.0883618647717485,
+    0.17872391818275257
+   ],
+   "recall@5": 0.16851441241685144,
+   "retention:recall@5": 0.25938566552901027,
+   "retention_ci:recall@5": [
+    0.2072694805194805,
+    0.31408216655283444
+   ],
+   "pareto": true
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(128) > int8(per_vector)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "int8",
+      "scale": "per_vector"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 8.125,
+   "bytes_per_doc": 34190.0,
+   "compression_vs_float32": 15.43936823632641,
+   "compress_seconds": 0.1620854100001452,
+   "scan_ms_per_query": 11.862360252770811,
+   "ndcg@5": 0.570194272595413,
+   "retention:ndcg@5": 0.9904890892129736,
+   "retention_ci:ndcg@5": [
+    0.9716585760031966,
+    1.0102750254834014
+   ],
+   "ndcg@10": 0.5874656875951458,
+   "retention:ndcg@10": 0.9907367709193439,
+   "retention_ci:ndcg@10": [
+    0.974384793602768,
+    1.008571140111498
+   ],
+   "recall@1": 0.4811529933481153,
+   "retention:recall@1": 0.9819004524886877,
+   "retention_ci:recall@1": [
+    0.9436476583075689,
+    1.0229464974706335
+   ],
+   "recall@5": 0.6496674057649667,
+   "retention:recall@5": 1.0,
+   "retention_ci:recall@5": [
+    0.9784640762463344,
+    1.0268456375838926
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(128) > int4(mean)",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "int4",
+      "center": "mean"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 4.125,
+   "bytes_per_doc": 17359.024,
+   "compression_vs_float32": 30.409082906965278,
+   "compress_seconds": 0.23137816499956898,
+   "scan_ms_per_query": 11.851349301552965,
+   "ndcg@5": 0.5493167032019429,
+   "retention:ndcg@5": 0.9542224943217411,
+   "retention_ci:ndcg@5": [
+    0.9262104314130525,
+    0.9803104867731428
+   ],
+   "ndcg@10": 0.5700870916636902,
+   "retention:ndcg@10": 0.9614284821463867,
+   "retention_ci:ndcg@10": [
+    0.9352661727904319,
+    0.9831090311741906
+   ],
+   "recall@1": 0.4722838137472284,
+   "retention:recall@1": 0.9638009049773755,
+   "retention_ci:recall@1": [
+    0.922365527208747,
+    1.0
+   ],
+   "recall@5": 0.6164079822616408,
+   "retention:recall@5": 0.9488054607508534,
+   "retention_ci:recall@5": [
+    0.9146757679180888,
+    0.9829351535836177
+   ],
+   "pareto": false
+  },
+  {
+   "group": "token+dim+codec",
+   "label": "hierarchical_merge(0.25) > project(128) > binary",
+   "pipeline": {
+    "stages": [
+     {
+      "stage": "hierarchical_merge",
+      "ratio": 0.25,
+      "max_distance": null,
+      "min_vectors": 1
+     },
+     {
+      "stage": "project",
+      "dim": 128,
+      "method": "pca"
+     },
+     {
+      "stage": "binary"
+     }
+    ]
+   },
+   "vectors_per_doc": 263.0,
+   "dim": 128,
+   "bits_per_dim": 1.0,
+   "bytes_per_doc": 4208.0,
+   "compression_vs_float32": 125.4448669201521,
+   "compress_seconds": 0.018278362000273773,
+   "scan_ms_per_query": 11.84639041019952,
+   "ndcg@5": 0.5594100107516717,
+   "retention:ndcg@5": 0.9717556606171013,
+   "retention_ci:ndcg@5": [
+    0.9376303611845402,
+    1.0061535425862072
+   ],
+   "ndcg@10": 0.5782421414505083,
+   "retention:ndcg@10": 0.9751816389061508,
+   "retention_ci:ndcg@10": [
+    0.9481928870126584,
+    1.002808816606251
+   ],
+   "recall@1": 0.4745011086474501,
+   "retention:recall@1": 0.9683257918552035,
+   "retention_ci:recall@1": [
+    0.9174216801251427,
+    1.0238750786658277
+   ],
+   "recall@5": 0.6385809312638581,
+   "retention:recall@5": 0.9829351535836177,
+   "retention_ci:recall@5": [
+    0.9427314380922628,
+    1.0280776409107875
+   ],
+   "pareto": true
+  }
+ ],
+ "tiered": [
+  {
+   "hot": "binary",
+   "cold": "int8/vec (all vectors)",
+   "candidates": 50,
+   "ram_bytes_per_doc": 16496.0,
+   "disk_bytes_per_doc": 150526.0,
+   "ram_compression_vs_float32": 32.0,
+   "disk_compression_vs_float32": 3.506849315068493,
+   "retention:ndcg@5": 1.0050747027312708,
+   "retention_ci:ndcg@5": [
+    0.9971323719976528,
+    1.0153505439829675
+   ],
+   "hot_ms_per_query": 44.72358687583169,
+   "rescore_ms_per_query": 2.5470656297115934
+  },
+  {
+   "hot": "ward 1/4 > binary",
+   "cold": "int8/vec (all vectors)",
+   "candidates": 50,
+   "ram_bytes_per_doc": 4208.0,
+   "disk_bytes_per_doc": 138238.0,
+   "ram_compression_vs_float32": 125.4448669201521,
+   "disk_compression_vs_float32": 3.818573764088022,
+   "retention:ndcg@5": 1.0016588286857946,
+   "retention_ci:ndcg@5": [
+    0.990062361643706,
+    1.0119401111875996
+   ],
+   "hot_ms_per_query": 11.741475957871783,
+   "rescore_ms_per_query": 2.458177647449682
+  }
+ ],
+ "pareto_front": [
+  "hierarchical_merge(0.25) > project(16) > binary",
+  "hierarchical_merge(0.33) > project(16) > binary",
+  "hierarchical_merge(0.25) > project(32) > binary",
+  "hierarchical_merge(0.25) > project(128) > binary",
+  "hierarchical_merge(0.33) > project(128) > binary",
+  "hierarchical_merge(0.25) > int4",
+  "hierarchical_merge(0.33) > int4",
+  "hierarchical_merge(0.33) > project(128) > int8(per_vector)",
+  "int8(per_vector)",
+  "hierarchical_merge(0.5)"
+ ],
+ "environment": {
+  "python": "3.13.15",
+  "platform": "Linux-6.18.48+-x86_64-with-glibc2.39",
+  "cpus": 4,
+  "score_device": "cuda",
+  "torch": "2.11.0+cu128",
+  "gpus": [
+   "Tesla T4",
+   "Tesla T4"
+  ]
+ },
+ "seconds": 1090.2648322582245
+}

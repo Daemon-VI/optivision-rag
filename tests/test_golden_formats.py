@@ -148,7 +148,7 @@ def check_index(directory: Path, expected: dict, queries: MultiVectorCorpus) -> 
     stats = index.stats()
     assert sorted(stats) == sorted(entry["stats"])
     for key, value in entry["stats"].items():
-        assert stats[key] == pytest.approx(value, rel=1e-9), key
+        assert stats[key] == (value if isinstance(value, str) else pytest.approx(value, rel=1e-9)), key
     want = floats(entry["scores"])
     for j, query in enumerate(queries):
         vectors = np.asarray(query.vectors, dtype=np.float32)

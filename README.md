@@ -198,13 +198,16 @@ The registry (`optivision.adapters.MODELS`, `supported_models()`) lists 65 late-
 models: 50 that take page images and 15 that take text. Each has a status that describes the
 loading path and the measurements, not how well a pipeline compresses that model's vectors:
 
-- `measured` (10): retrieval quality with and without compression was measured by this
+- `measured` (57): retrieval quality with and without compression was measured by this
   repository on the model's real output. These are in-sample development measurements on ViDoRe
   V1 DocVQA and InfoVQA (500 pages each) or SciFact; they are not a statement about another
-  corpus.
-- `untested` (23): the loading code is the one a measured sibling uses, or the model passed a
+  corpus. Of the 57, 55 have rows in the measured catalogue; the other two were measured earlier
+  (`vidore/colSmol-256M` on the generated corpus only, and `vidore/colqwen2-v1.0`, whose rows are
+  those of `vidore/colqwen2-v1.0-merged`).
+- `untested` (0): the loading code is the one a measured sibling uses, or the model passed a
   `check_retriever` run here; compression of this checkpoint's vectors was never measured here.
-- `unverified` (32): the loader is written against the model card and was never run here.
+  No registry entry has this status now.
+- `unverified` (8): the loader is written against the model card and was never run here.
 
 `optivision models` prints the registry and the measured catalogue. `encode_and_certify(model,
 documents, queries, qrels)` encodes with a model and then runs `certify` on the vectors;
@@ -486,6 +489,32 @@ pip install -e ".[vlm,bench,app,dev]"
 
 `torch` is CPU-only by default. For a GPU box install the CUDA build first
 (`pip install torch --index-url https://download.pytorch.org/whl/cu121`).
+
+## Easy mode
+
+If you have a folder of PDFs and a model, and you do not want to pick a pipeline yourself, use
+`optivision.easy`. You give it a model and a target (default 0.97: the share of the model's
+full-precision nDCG@5 to keep). It picks the storage layout from the measured catalogue, builds a
+searchable index and prints what it did, with every number tagged by where it comes from.
+
+```python
+import optivision.easy as ov
+
+ov.options("vidore/colqwen2-v1.0-hf", target=0.97, pages="my_pdfs/")   # the plan: no GPU, no download
+index = ov.build("my_pdfs/", model="vidore/colqwen2-v1.0-hf", target=0.97)
+hits = index.search("What drove operating costs in 2023?", k=5)
+hits[0].image()                                                         # the page, for your VLM
+```
+
+The same steps are on the command line (`optivision options | build | find | check | doctor`) and in
+a Colab notebook, [docs/notebooks/easy_quickstart.ipynb](docs/notebooks/easy_quickstart.ipynb).
+Install the loader of your model with `pip install "optivision-rag[easy-st]"` (or `easy-colpali`).
+
+What to know before you rely on it: ratios are quoted against float16 (8-bit reads about 1.9x here,
+3.9x against float32 elsewhere in this README); the "lowest kept" it prints is a catalogue number from
+our own benchmarks, not a promise for your documents; and `check()` is a spot check, not a retest of
+search quality. The numbers have not been checked on new documents, and several of our validation
+tests did not pass. The guide lists them: [docs/package/guide/EASY.md](docs/package/guide/EASY.md).
 
 ## Quick start
 

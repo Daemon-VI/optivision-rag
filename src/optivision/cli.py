@@ -358,6 +358,11 @@ from .cli_models import register as _register_models
 
 _register_models(app)
 
+# ``options``, ``build``, ``find``, ``check``, ``doctor`` and ``quickstart`` (easy mode), same arrangement.
+from .cli_easy import register as _register_easy
+
+_register_easy(app)
+
 
 if __name__ == "__main__":  # pragma: no cover
     app()

@@ -62,3 +62,26 @@ def blank_image() -> Image.Image:
 @pytest.fixture
 def page_ref() -> PageRef:
     return PageRef(doc_id="doc", page_no=1)
+
+
+@pytest.fixture
+def pin_ledger(monkeypatch):
+    """``pin_ledger("margins", one_bit_margin=0.025)``: for this test only, the named feature of the shipped
+    ledger reads with those keys overridden (everything else as shipped; the ledger file is unchanged).
+    ``_ledger.setting`` reads through ``_ledger.feature``, so it sees the override too."""
+    from optivision.easy import _ledger
+
+    real = _ledger.feature
+    pinned: dict[str, dict] = {}
+
+    def feature(name):
+        entry = real(name)
+        entry.update(pinned.get(name, {}))
+        return entry
+
+    monkeypatch.setattr(_ledger, "feature", feature)
+
+    def pin(name: str, **values):
+        pinned.setdefault(name, {}).update(values)
+
+    return pin

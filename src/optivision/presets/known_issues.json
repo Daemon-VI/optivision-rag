@@ -1,0 +1,52 @@
+{
+ "schema": 1,
+ "note": "Library and hardware combinations that broke a model load in this repository's own runs, as ov.doctor() checks them. Each entry names the files where the failure and its fix are recorded. upstream is null where no upstream issue has been linked yet; nothing here is copied from an issue tracker. 'when' lists the conditions that must all hold: installed (distributions present), below / at_least (installed version), models / model_prefix / loaders (the model asked about), gpu_capability_below (no visible GPU at or above that CUDA compute capability).",
+ "issues": [
+  {
+   "id": "torchao-with-peft",
+   "title": "peft refuses to apply LoRA adapters while an incompatible torchao is installed",
+   "when": {"installed": ["peft", "torchao"], "loaders": ["colpali-engine:"]},
+   "seen": "Kaggle image with torchao 0.10 preinstalled, peft 0.19; every notebook since uninstalls torchao",
+   "recorded": "2026-10-02",
+   "sources": ["docs/GPU_RUN.md", "scripts/make_kaggle_batches.py"],
+   "upstream": null,
+   "fix": "pip uninstall -y torchao",
+   "requirement": null
+  },
+  {
+   "id": "neomme-needs-transformers-5.17",
+   "title": "the Hcompany NeoMME models need transformers 5.17 or newer",
+   "when": {"model_prefix": "Hcompany/NeoMME-", "below": {"transformers": "5.17"}},
+   "seen": "Kaggle batch 05_st_small with transformers 5.16.1 failed to encode them; batches 13_retry and 14b_neomme_retry with transformers>=5.17 measured both",
+   "recorded": "2026-10-15",
+   "sources": ["CHANGELOG.md", "scripts/make_kaggle_batches.py", "reports/universal/campaign/batches/05_st_small/batch_summary.json"],
+   "upstream": null,
+   "fix": "pip install -U \"transformers>=5.17\"",
+   "requirement": "transformers>=5.17"
+  },
+  {
+   "id": "remote-code-fails-on-transformers-5",
+   "title": "this model's own modelling code fails under transformers 5",
+   "when": {"models": ["jinaai/jina-embeddings-v4", "ibm-granite/granite-vision-3.3-2b-embedding", "5CD-AI/Vintern-Embedding-1B"], "at_least": {"transformers": "5"}},
+   "seen": "Kaggle batches 08_remote_code and 10_pinned_transformers, transformers 5.16.1",
+   "recorded": "2026-10-15",
+   "sources": ["CHANGELOG.md", "src/optivision/adapters/__init__.py (registry evidence)"],
+   "upstream": null,
+   "fix": null,
+   "advice": "no fix is recorded here: its model card pins a transformers 4 release, which the other models of this package were not run with; choose another model",
+   "requirement": null
+  },
+  {
+   "id": "flash-attn-needs-ampere",
+   "title": "this model's code imports flash_attn, which needs an Ampere or newer NVIDIA GPU",
+   "when": {"models": ["nvidia/llama-nemoretriever-colembed-1b-v1", "nvidia/llama-nemoretriever-colembed-3b-v1"], "gpu_capability_below": 8},
+   "seen": "Kaggle T4 (compute capability 7.5), batch 10_pinned_transformers: ImportError for flash_attn",
+   "recorded": "2026-10-15",
+   "sources": ["CHANGELOG.md", "reports/universal/campaign/nvidia--llama-nemoretriever-colembed-1b-v1/logs/encode_docvqa.log"],
+   "upstream": null,
+   "fix": null,
+   "advice": "it needs an Ampere or newer GPU with flash-attn installed; on this machine choose another model",
+   "requirement": null
+  }
+ ]
+}

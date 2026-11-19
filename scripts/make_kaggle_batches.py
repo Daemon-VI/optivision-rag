@@ -226,6 +226,22 @@ FOLLOWUP_INT4NORM: list[tuple[str, str, list[str], list[dict]]] = [
 ]
 OUT_FOLLOWUP_INT4NORM = ROOT / "notebooks" / "kaggle_followup_int4norm"
 
+#: Easy mode, batch B0 (reports/easy/PREREG_EASY.md): the campaign's fixed-pipeline study for the
+#: three page models whose catalogue rows predate the campaign, so the easy-mode rule ships no
+#: legacy rows. ColQwen2.5 v0.2 already has a campaign-format DocVQA row (f10) and answerai its
+#: SciFact row (f3b), so B0 measures only what is missing. They clone the easy-mode branch and are
+#: ingested as follow-ups: the campaign's record and catalogue are not touched.
+EASY_BRANCH = "easy-mode"
+EASY_B0: list[tuple[str, str, list[str], list[dict]]] = [
+    ("f14a_easy_b0_colqwen", "easy mode B0: ColQwen2.5 v0.2 on InfoVQA, ColQwen2 v1.0 merged on DocVQA and InfoVQA",
+     [], [
+        {"model": "vidore/colqwen2.5-v0.2", **F32, "datasets": ["vidore/infovqa_test_subsampled"]},
+        {"model": "vidore/colqwen2-v1.0-merged", **F32}]),
+    ("f14b_easy_b0_colpali", "easy mode B0: ColPali v1.3 merged on DocVQA and InfoVQA", [], [
+        {"model": "vidore/colpali-v1.3-merged", **F32}]),
+]
+OUT_EASY = ROOT / "notebooks" / "kaggle_easy"
+
 #: in a batch that ran, but no batch can measure them (the reason is in the registry evidence):
 #: a missing base model, remote code that fails under transformers 5, or flash_attn on a T4
 UNLOADABLE = {"Metric-AI/ColQwen2.5-7b-multilingual-v1.0", "jinaai/jina-embeddings-v4",
@@ -242,7 +258,8 @@ def code(text: str) -> dict:
             "source": text.strip("\n").splitlines(keepends=True)}
 
 
-def notebook(name: str, title: str, packages: list[str], models: list[dict], selection: bool = True) -> dict:
+def notebook(name: str, title: str, packages: list[str], models: list[dict], selection: bool = True,
+             branch: str = BRANCH) -> dict:
     listing = "\n".join(f"- `{m['model']}`" for m in models)
     remote = any(m.get("trust_remote_code") for m in models)
     # f9 to f13 once cloned a branch without s17 and ran s13 instead; stop before any GPU work if so
@@ -268,7 +285,7 @@ Download `results_{name}.zip` from the version's *Output* tab and give it to Cla
 """ + ("\n**Remote code:** some models here run Python from their own repositories inside this "
        "session (`trust_remote_code`).\n" if remote else "")),
         code(f'''
-BRANCH = "{BRANCH}"
+BRANCH = "{branch}"
 BATCH = {pprint.pformat(models, width=100, sort_dicts=False)}
 EXTRA_PIP = {packages!r}
 DEADLINE_HOURS = 11.0
@@ -343,7 +360,9 @@ def main() -> int:
     print(f"wrote {len(BATCHES)} notebooks covering {len(set(seen))} models to {OUT.relative_to(ROOT)}; "
           f"{len(unmeasured)} of the registry still unmeasured")
 
-    for out, batches, selection in ((OUT_FOLLOWUP, FOLLOWUP, True), (OUT_FOLLOWUP_INT4NORM, FOLLOWUP_INT4NORM, False)):
+    for out, batches, selection, branch in ((OUT_FOLLOWUP, FOLLOWUP, True, BRANCH),
+                                            (OUT_FOLLOWUP_INT4NORM, FOLLOWUP_INT4NORM, False, BRANCH),
+                                            (OUT_EASY, EASY_B0, False, EASY_BRANCH)):
         out.mkdir(parents=True, exist_ok=True)
         for name, title, packages, models in batches:
             shorts = [m["model"].split("/")[-1] for m in models]
@@ -351,7 +370,8 @@ def main() -> int:
             assert {m["model"] for m in models} <= set(MODELS), f"batch {name}: a model is not in the registry"
             assert name[0] == "f" and name.split("_")[0][1:].rstrip("abc").isdigit(), name  # ingest_campaign.is_followup
             (out / f"batch_{name}.ipynb").write_text(json.dumps(
-                notebook(name, title, packages, models, selection), indent=1) + "\n", encoding="utf-8", newline="\n")
+                notebook(name, title, packages, models, selection, branch), indent=1) + "\n",
+                encoding="utf-8", newline="\n")
         print(f"wrote {len(batches)} follow-up notebooks to {out.relative_to(ROOT)}")
     return 0
 

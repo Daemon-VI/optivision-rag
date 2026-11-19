@@ -45,6 +45,19 @@ bench = ["reportlab>=4", "datasets>=2.19"]
 app = ["streamlit>=1.34"]
 merge = ["scipy>=1.10"]
 dev = ["pytest>=8", "ruff>=0.5", "scipy>=1.10"]
+# easy mode (optivision.easy): planning and builds from vectors need only scipy; a model needs its loader
+easy = ["scipy>=1.10"]
+easy-st = ["optivision-rag[easy]", "sentence-transformers[image]>=6.1,<7"]
+easy-colpali = ["optivision-rag[easy]", "colpali-engine>=0.3.18,<0.4"]
+# the extras easy mode's install hints name. Lower bounds only where a version was verified; the rest are unpinned
+# and say which version the tests ran with.
+easy-ocr = ["optivision-rag[easy]", "rapidocr>=3.10,<4", "onnxruntime"]   # rapidocr 3.10.0 on onnxruntime (licence checked)
+easy-gen = ["optivision-rag[easy]", "torch>=2.2", "transformers>=4.46", "anthropic"]   # local VLM questions; API questions
+easy-ui = ["optivision-rag[easy]", "gradio"]                              # index.demo(); the tests ran with gradio 6.24
+langchain = ["optivision-rag[easy]", "langchain-core", "pydantic>=2"]     # OptiVisionRetriever (LangChain)
+llamaindex = ["optivision-rag[easy]", "llama-index-core"]                 # OptiVisionRetriever (LlamaIndex)
+qdrant = ["optivision-rag[easy]", "qdrant-client"]                        # Qdrant export; the tests ran with 1.19.0
+byaldi = ["optivision-rag[easy]", "torch>=2.2"]                           # reading a byaldi index folder (torch.load)
 
 [project.urls]
 Homepage = "https://github.com/Daemon-VI/optivision-rag"
@@ -58,7 +71,7 @@ optivision = "optivision.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-optivision = ["presets/*.yaml", "presets/*.json"]
+optivision = ["presets/*.yaml", "presets/*.json", "easy/data/*.pdf"]
 
 [tool.setuptools.dynamic]
 version = { attr = "optivision.__version__" }
@@ -70,3 +83,11 @@ filterwarnings = ["ignore::DeprecationWarning"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+# Lint exemptions for optivision.easy, kept narrow: percent formats are table layout in _options.py, and the
+# frozen preregistration files (_encode, _levels, _resolve) cannot be edited to satisfy a style rule.
+[tool.ruff.lint.per-file-ignores]
+"src/optivision/easy/_options.py" = ["UP031"]
+"src/optivision/easy/_encode.py" = ["SIM102"]
+"src/optivision/easy/_levels.py" = ["C408"]
+"src/optivision/easy/_resolve.py" = ["RUF022"]

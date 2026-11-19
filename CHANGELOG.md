@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.6.0 (2026-11-19)
+
+**In short.**
+- **New: `optivision.easy`, a beginner layer.** You give a folder of PDFs, a model and a target, and
+  it picks the storage layout from the measured catalogue, builds the index and shows what it did.
+  The expert API (`optivision.core`, `certify()`, the pipelines and every stage) is unchanged. Two
+  existing files changed: `cli.py` registers the new commands, and `ColVLMEncoder` takes an optional
+  `revision` (the default makes the same calls as before). The eleven files that held the research
+  results are byte-identical.
+- **The numbers come from our own validation sets.** They have not been checked on new documents,
+  and the package says so in its status sentence. 12 of the 32 validation predictions passed, 9
+  failed and 11 could not be fully scored; the table is in
+  [`reports/easy/results/SUMMARY.md`](reports/easy/results/SUMMARY.md) and every departure from the
+  plan is in [`reports/easy/DEVIATIONS.md`](reports/easy/DEVIATIONS.md).
+
+**What it does.**
+- **Functions:** `options()`, `build()`, `load()`, `doctor()` and `glossary()`. An `Index` has
+  `search`, `add`, `check`, `report`, `explain`, `upgrade`, `demo` and `export_qdrant`.
+- **Command line:** `optivision options`, `build`, `find`, `check`, `doctor` and `quickstart`.
+- **The rule.** The layout is the most compressed one whose "lowest kept" (the interval low on the
+  model's worst measured dataset) reaches the target plus a margin that grows with the folder's
+  size. Ratios are quoted against float16 (int8 is 2.0x). Models without rows of their own get the
+  pooled minimum and codecs only. Folders of more than 20,000 pages use codecs only.
+- **The index** is a folder (`.ovx`) with one stored copy, memory-mapped segments, a writer lock
+  and a manifest that is written last, so a stopped build leaves the earlier state.
+- **Practice questions.** Questions are made from your PDFs' text (and, optionally, by OCR, a local
+  VLM or an API model). The practice check reruns the stored layout on them and **only warns**.
+- **`upgrade()`** runs the unchanged `certify()` on queries you supply, with error 0.05 x 2^-k.
+- **Integrations that are on:** LangChain and LlamaIndex retrievers, a Gradio demo, Qdrant export
+  and byaldi import. Qdrant export passed its gate test (top-10 equality with the index's own search,
+  on synthetic data in qdrant-client's local mode, float32 storage). byaldi import passed its format
+  test against a writer that follows byaldi 0.0.x; it has not run against the byaldi package.
+
+**What the validation changed.**
+- **The extra 1-bit margin was removed** (0.025 to 0): with no margin, arm B kept the target on
+  all 176 units.
+- **Practice questions are not described as easier than real ones.** The test of that claim failed
+  on all three kinds of question (33%, 35% and 45% of units). The practice check was set to warn,
+  because V5b failed on text-layer questions and V5c on OCR and VLM questions.
+- **Document-type presets are not shipped.** The standard rule held on every unit of the academic
+  type (32 of 32; 3 datasets, 4 models), and did not on slides, reports or tables. The test gave no
+  type-specific numbers, so this is reported as evidence only.
+- **The practice-question allowance** (letting practice questions raise the layout one step) passed
+  for text-layer and OCR questions and failed for VLM questions. It is off, because it has no effect
+  while the practice check only warns.
+- **The small-memory layout is off.** At 20,000 pages it matched the campaign's in-RAM two-tier
+  search exactly and its private memory stayed within the bound, but its working set did not, and
+  its top 10 matched plain 8-bit search on 15% to 30% of results.
+
+**Not done.**
+- The two ColVec1-9b held-out units did not fit the scoring machine's memory, and `colSmol-500M`
+  failed its own startup check on two datasets, so V1u, V2, V3 and arm S are reported as not fully
+  scored. V3 missed its target on the units that were scored (82.4% of 102 pairs against 95%).
+- The wiring test (V6) failed and its planted-fault half did not run.
+
 ## 0.5.1 (2026-10-19)
 
 The rest of the 2026-10-14 review of 0.4.0. No compression result, stage, file format or default

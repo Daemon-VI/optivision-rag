@@ -1,0 +1,222 @@
+{
+ "test": "V9 (small-memory layout), CPU, synthetic corpus",
+ "hot": "hm(0.25) > binary",
+ "cold": "int8(per_vector), memory-mapped",
+ "pages": 20000,
+ "candidates": 400,
+ "k": 10,
+ "queries": 64,
+ "batch": 16,
+ "corpus": {
+  "pages": 20000,
+  "segments": 200,
+  "segment_pages": 100,
+  "dim": 128,
+  "vectors_per_page_range": [
+   700,
+   800
+  ],
+  "vectors": 15000239,
+  "queries": 64,
+  "query_tokens": [
+   12,
+   24
+  ],
+  "noise": 0.5,
+  "seed": 0,
+  "hots": [
+   "binary",
+   "hm25"
+  ],
+  "generate_seconds": 1138.2662966999924
+ },
+ "bytes": {
+  "hot": 60119328,
+  "cold": 1950031070,
+  "hot_per_page": 3005.9664,
+  "cold_per_page": 97501.5535
+ },
+ "bound": {
+  "hot_bytes": 60119328,
+  "shortlist_decode_bytes": 153602448,
+  "allowance_bytes": 128000000,
+  "total": 341721776
+ },
+ "memory": {
+  "process_start": {
+   "rss": 33755136,
+   "vms": 258748416,
+   "num_page_faults": 8367,
+   "peak_wset": 33755136,
+   "wset": 33755136,
+   "peak_paged_pool": 201144,
+   "paged_pool": 200920,
+   "peak_nonpaged_pool": 17672,
+   "nonpaged_pool": 17672,
+   "pagefile": 258748416,
+   "peak_pagefile": 258748416,
+   "private": 258748416,
+   "uss": 21426176
+  },
+  "after_imports": {
+   "rss": 40722432,
+   "vms": 264724480,
+   "num_page_faults": 10311,
+   "peak_wset": 40722432,
+   "wset": 40722432,
+   "peak_paged_pool": 217024,
+   "paged_pool": 217024,
+   "peak_nonpaged_pool": 19368,
+   "nonpaged_pool": 19032,
+   "pagefile": 264724480,
+   "peak_pagefile": 264724480,
+   "private": 264724480,
+   "uss": 26812416
+  },
+  "after_open": {
+   "rss": 108576768,
+   "vms": 335781888,
+   "num_page_faults": 26911,
+   "peak_wset": 108576768,
+   "wset": 108576768,
+   "peak_paged_pool": 4039032,
+   "paged_pool": 4039032,
+   "peak_nonpaged_pool": 48336,
+   "nonpaged_pool": 47728,
+   "pagefile": 335781888,
+   "peak_pagefile": 335781888,
+   "private": 335781888,
+   "uss": 94433280
+  },
+  "after_search": {
+   "rss": 1520701440,
+   "vms": 373055488,
+   "num_page_faults": 10267956,
+   "peak_wset": 1524912128,
+   "wset": 1520701440,
+   "peak_paged_pool": 4039032,
+   "paged_pool": 4039032,
+   "peak_nonpaged_pool": 48816,
+   "nonpaged_pool": 47456,
+   "pagefile": 373055488,
+   "peak_pagefile": 412385280,
+   "private": 373055488,
+   "uss": 105017344
+  },
+  "per_batch": [
+   {
+    "rss": 666574848,
+    "vms": 372629504,
+    "num_page_faults": 2279991,
+    "peak_wset": 667643904,
+    "wset": 666574848,
+    "peak_paged_pool": 4039032,
+    "paged_pool": 4039032,
+    "peak_nonpaged_pool": 48408,
+    "nonpaged_pool": 47864,
+    "pagefile": 372629504,
+    "peak_pagefile": 405467136,
+    "private": 372629504,
+    "uss": 102289408
+   },
+   {
+    "rss": 1052422144,
+    "vms": 372695040,
+    "num_page_faults": 4795121,
+    "peak_wset": 1052610560,
+    "wset": 1052422144,
+    "peak_paged_pool": 4039032,
+    "paged_pool": 4039032,
+    "peak_nonpaged_pool": 48816,
+    "nonpaged_pool": 48136,
+    "pagefile": 372695040,
+    "peak_pagefile": 409694208,
+    "private": 372695040,
+    "uss": 102391808
+   },
+   {
+    "rss": 1324285952,
+    "vms": 373223424,
+    "num_page_faults": 7474538,
+    "peak_wset": 1327198208,
+    "wset": 1324285952,
+    "peak_paged_pool": 4039032,
+    "paged_pool": 4039032,
+    "peak_nonpaged_pool": 48816,
+    "nonpaged_pool": 48136,
+    "pagefile": 373223424,
+    "peak_pagefile": 411848704,
+    "private": 373223424,
+    "uss": 105091072
+   },
+   {
+    "rss": 1520713728,
+    "vms": 373108736,
+    "num_page_faults": 10262556,
+    "peak_wset": 1524805632,
+    "wset": 1520713728,
+    "peak_paged_pool": 4039032,
+    "paged_pool": 4039032,
+    "peak_nonpaged_pool": 48816,
+    "nonpaged_pool": 47728,
+    "pagefile": 373108736,
+    "peak_pagefile": 412385280,
+    "private": 373108736,
+    "uss": 105041920
+   }
+  ],
+  "peak_private_bytes": 139816960,
+  "peak_private_samples": 2191,
+  "sample_interval_s": 0.01,
+  "peak_working_set_bytes": 1524912128,
+  "peak_commit_bytes": 412385280,
+  "metric_note": "peak_private_bytes is the largest sampled private working set (USS) from opening the copies to the end of the two-tier searches: pages only this process holds (hot copy, Python, NumPy, scan blocks). Pages read through the memory map of the 8-bit file are file-backed and not in it. peak_working_set_bytes (the OS peak) also counts those file pages, which the OS keeps after a read and may drop at any time. peak_commit_bytes includes buffers OpenBLAS commits and never touches, so it is not a resident figure."
+ },
+ "identity_vs_tieredindex": {
+  "queries_identical_top_k": 64,
+  "share": 1.0,
+  "max_abs_score_difference": 0.0,
+  "scores_bitwise_equal": true
+ },
+ "agreement_vs_plain_int8": {
+  "top1": {
+   "queries_identical": 64,
+   "share_identical": 1.0,
+   "mean_set_overlap": 1.0
+  },
+  "top5": {
+   "queries_identical": 0,
+   "share_identical": 0.0,
+   "mean_set_overlap": 0.24999999999999997
+  },
+  "top10": {
+   "queries_identical": 0,
+   "share_identical": 0.0,
+   "mean_set_overlap": 0.1484375
+  },
+  "plain_top10_in_shortlist_mean": 0.1484375,
+  "plain_top1_is_target": 1.0,
+  "tiered_top1_is_target": 1.0
+ },
+ "seconds": {
+  "open": 8.659084300044924,
+  "two_tier_search": 63.029888300050516,
+  "two_tier_per_query": 0.9848420046882893,
+  "tieredindex_reference": 36.601566899975296,
+  "plain_int8_search": 64.52851119998377,
+  "note": "wall time on a laptop CPU shared with other jobs; not a speed claim"
+ },
+ "machine": {
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.9",
+  "numpy": "2.4.6",
+  "cpus": 8
+ },
+ "pass": {
+  "identical_rankings_vs_tieredindex": true,
+  "identical_rankings_vs_plain_int8_top10": false,
+  "resident_within_bound_private": true,
+  "resident_within_bound_working_set": false
+ },
+ "estimate_at_20000_pages": null
+}
