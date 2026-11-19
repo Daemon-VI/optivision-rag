@@ -84,9 +84,10 @@ filterwarnings = ["ignore::DeprecationWarning"]
 line-length = 100
 target-version = "py310"
 
-# Lint exemptions for optivision.easy, kept narrow: percent formats are table layout in _options.py, and the two
-# frozen preregistration files cannot be edited to satisfy a style rule.
+# Lint exemptions for optivision.easy, kept narrow: percent formats are table layout in _options.py, and the
+# frozen preregistration files (_encode, _levels, _resolve) cannot be edited to satisfy a style rule.
 [tool.ruff.lint.per-file-ignores]
 "src/optivision/easy/_options.py" = ["UP031"]
+"src/optivision/easy/_encode.py" = ["SIM102"]
 "src/optivision/easy/_levels.py" = ["C408"]
 "src/optivision/easy/_resolve.py" = ["RUF022"]
