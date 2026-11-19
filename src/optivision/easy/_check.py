@@ -356,8 +356,15 @@ def compare_record(built: Mapping[str, Any], now: Mapping[str, Any] | None) -> R
     built_versions = dict(_first(built, VERSION_KEYS) or {})
     now_versions = dict(_first(now, VERSION_KEYS) or {}) if now is not None else {}
     for package in sorted(built_versions):
-        b = str(built_versions[package])
-        n = str(now_versions[package]) if package in now_versions else installed_version(package)
+        # a version saved as None means "not installed" (a library the model's loader does not use): it
+        # matches "not installed" now, and only a library that appeared or vanished is a difference
+        b = "not installed" if built_versions[package] is None else str(built_versions[package])
+        if package in now_versions and now_versions[package] is not None:
+            n = str(now_versions[package])
+        elif package in now_versions:
+            n = "not installed"
+        else:
+            n = installed_version(package)
         compared.append(package)
         if b != n:
             diffs.append((package, b, n))

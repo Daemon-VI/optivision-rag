@@ -580,7 +580,7 @@ class Index:
         return _build.launch_demo(self)
 
     def export_qdrant(self, **kwargs: Any) -> Any:
-        """Export to Qdrant (switched off until its top-10 equality test passes)."""
+        """Export to Qdrant (on: it passed its top-10 equality test on float32 storage)."""
         self._check_open()
         _ledger.require("qdrant_export")
         return _build.export_qdrant(self, **kwargs)
