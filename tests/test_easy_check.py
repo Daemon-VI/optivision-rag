@@ -146,6 +146,19 @@ def test_record_comparison_reads_installed_versions():
     assert not any(d[0] == "numpy" for d in rc.differences)
 
 
+def test_a_library_missing_at_build_and_now_is_not_a_difference():
+    # found on a real Colab T4: colpali-engine was not installed at build (saved as None) and still was not,
+    # and the check reported "None at build, not installed now" and "needs attention" for a fresh index
+    built = {"versions": {"no-such-package-xyz": None, "numpy": np.__version__}}
+    rc = _check.compare_record(built, None)
+    assert rc.matches and "no-such-package-xyz" in rc.compared
+    now = {"versions": {"no-such-package-xyz": None, "numpy": np.__version__}}
+    assert _check.compare_record(built, now).matches
+    # one that was missing and is installed now (or the reverse) is still a difference
+    gained = _check.compare_record({"versions": {"numpy": None}}, None)
+    assert [d[0] for d in gained.differences] == ["numpy"] and gained.differences[0][1] == "not installed"
+
+
 # ============================================================================ drift
 
 

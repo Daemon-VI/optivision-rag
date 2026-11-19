@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.1 (2026-11-19)
+
+**Fixed.**
+- **`index.check()` no longer calls a fresh index "needs attention" for a library that was never installed.**
+  Found on the first run with a real model (the quickstart on a Colab T4, `vidore/colqwen2-v1.0-hf`): a
+  library the loader does not use (`colpali-engine`) was saved in the build record as "not installed", was
+  still not installed, and `check()` reported "None at build, not installed now" as a difference. A library
+  that was installed at build and is gone now (or the reverse) is still reported.
+- A stale docstring said Qdrant export was switched off; it is on.
+
+**Checked on real hardware in this release.** The 0.6.0 quickstart ran end to end on a Colab T4 with the
+released package: `doctor`, `options`, `build` (wiring check 12 of 12), `search` (the right page first),
+`report`, `check`, and the LangChain and LlamaIndex retrievers (real `langchain-core` and `llama-index-core`),
+on the 20-page sample. Not run: byaldi import against the byaldi package, Qdrant export against a server,
+and any folder other than the sample.
+
 ## 0.6.0 (2026-11-19)
 
 **In short.**

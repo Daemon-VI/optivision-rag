@@ -299,10 +299,10 @@ def test_optimize_is_still_the_function_not_the_module():
 
 @pytest.mark.skipif(not (SRC / "optivision" / "__init__.py").is_file(),
                     reason="the repository layout (src/) is absent")
-def test_version_is_0_6_0_and_a_literal():
-    assert optivision.__version__ == "0.6.0"
+def test_version_is_0_6_1_and_a_literal():
+    assert optivision.__version__ == "0.6.1"
     text = (SRC / "optivision" / "__init__.py").read_text(encoding="utf-8")
-    assert re.search(r'^__version__ = "0\.6\.0"$', text, re.MULTILINE)
+    assert re.search(r'^__version__ = "0\.6\.1"$', text, re.MULTILINE)
 
 
 def test_the_core_package_exports_what_its_all_lists():
