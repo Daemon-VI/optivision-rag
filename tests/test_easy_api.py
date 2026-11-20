@@ -81,6 +81,32 @@ def test_load_names_differences_from_the_build_record(ov, fakes, pdf_index, caps
     assert "The model now differs from the build record" in out and "Next: index.check()" in out
 
 
+def test_how_the_dtype_was_asked_for_is_not_a_record_difference():
+    # a reload passes the recorded dtype by name ("as given"); the build asked for "recorded" ("as in our run")
+    from optivision.easy import _build
+
+    built = {"dtype": "float16", "dtype_requested": "recorded", "dtype_source": "as in our run",
+             "dtype_matches_ours": None}
+    now = {"dtype": "float16", "dtype_requested": "float16", "dtype_source": "as given", "dtype_matches_ours": None}
+    assert _build.record_differences(built, now) == []
+    assert _build.record_differences(built, {**now, "dtype": "float32"}) == ["dtype: 'float16' at build, 'float32' now"]
+
+
+def test_export_qdrant_takes_the_client_and_collection_positionally(ov, fakes, pdf_index):
+    index = ov.load(pdf_index[0])
+    calls = []
+    import importlib
+
+    real = importlib.import_module("optivision.easy.integrations.qdrant")
+    orig = real.export
+    real.export = lambda idx, *a, **k: calls.append((idx, a, k)) or "done"
+    try:
+        assert index.export_qdrant("http://localhost:6333", "pages", recreate=True) == "done"
+    finally:
+        real.export = orig
+    assert calls == [(index, ("http://localhost:6333", "pages"), {"recreate": True})]
+
+
 def test_search_takes_a_string_or_a_list(ov, pdf_index):
     index = ov.load(pdf_index[0])
     one = index.search("freight prices doubled", k=3)
@@ -147,7 +173,7 @@ def test_check_upgrade_report_demo_and_qdrant_delegate(ov, fakes, pdf_index, tmp
     assert fakes["integrations.demo"].calls[-1][0] == (index,)
     pin_ledger("qdrant_export", on=False, reason="test")  # the shipped ledger has it on (the gate test passed)
     with pytest.raises(FeatureOff, match="Qdrant export is switched off"):
-        index.export_qdrant(url="http://localhost:6333")
+        index.export_qdrant("http://localhost:6333")
 
 
 def test_report_uses_from_index_when_the_report_module_has_it(ov, fakes, pdf_index):

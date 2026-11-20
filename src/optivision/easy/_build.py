@@ -343,9 +343,9 @@ def launch_demo(index: Any) -> Any:
     return importlib.import_module("optivision.easy.integrations.demo").launch(index)
 
 
-def export_qdrant(index: Any, **kwargs: Any) -> Any:
+def export_qdrant(index: Any, *args: Any, **kwargs: Any) -> Any:
     """``integrations.qdrant.export(index, ...)``; gated by ``qdrant_export``."""
-    return importlib.import_module("optivision.easy.integrations.qdrant").export(index, **kwargs)
+    return importlib.import_module("optivision.easy.integrations.qdrant").export(index, *args, **kwargs)
 
 
 # ============================================================================ values
@@ -2360,7 +2360,9 @@ def _reencode_orphans(ctx: _Ctx, known: Mapping[str, Mapping[str, Any]], aliases
 def record_differences(old: Mapping[str, Any], new: Mapping[str, Any]) -> list[str]:
     """``"dtype: 'float16' at build, 'float32' now"`` for each key both records hold that differ
     (FINAL_DESIGN 4.3: versions, resolved commit, dtype, attention, dpi/max_side, batch size)."""
-    skip = {"device", "time", "created", "batch_size_final"}
+    # dtype_requested / dtype_source say how the dtype was asked for ("recorded" at build, the recorded name
+    # on reload), not what was loaded; the loaded dtype is the "dtype" key and is still compared
+    skip = {"device", "time", "created", "batch_size_final", "dtype_requested", "dtype_source", "dtype_matches_ours"}
     return [f"{k}: {old[k]!r} at build, {new[k]!r} now" for k in sorted(set(old) & set(new))
             if k not in skip and old[k] != new[k]]
 

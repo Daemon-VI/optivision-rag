@@ -579,11 +579,15 @@ class Index:
         self._check_open()
         return _build.launch_demo(self)
 
-    def export_qdrant(self, **kwargs: Any) -> Any:
-        """Export to Qdrant (on: it passed its top-10 equality test on float32 storage)."""
+    def export_qdrant(self, client_or_url: Any = ":memory:", collection: str = "optivision", **kwargs: Any) -> Any:
+        """Export to Qdrant (on: it passed its top-10 equality test on float32 storage).
+
+        ``index.export_qdrant(client, "pages")``: a ``QdrantClient``, a server URL, ``":memory:"`` or a local
+        folder, then the collection name. Other keywords (``recreate=True``, ``payload_text=True``, ...) go to
+        ``integrations.qdrant.export``."""
         self._check_open()
         _ledger.require("qdrant_export")
-        return _build.export_qdrant(self, **kwargs)
+        return _build.export_qdrant(self, client_or_url, collection, **kwargs)
 
     def close(self) -> None:
         """Close the memory maps (on Windows files are deleted only after this)."""

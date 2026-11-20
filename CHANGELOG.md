@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.2 (2026-11-20)
+
+**Fixed.**
+- **No false "The model now differs from the build record" after you reload an index.** A reload passes the
+  recorded dtype by name, so the "how the dtype was asked for" fields (`dtype_requested`: "recorded" at build,
+  "float16" now; `dtype_source`: "as in our run" vs "as given") always differed even though the loaded dtype was
+  the same. Those fields are no longer compared; the loaded `dtype` still is, so a real change is still named.
+- **`index.export_qdrant(client, "collection")` works.** It took keywords only, so the natural call raised
+  "takes 1 positional argument but 3 were given". It now takes the client (or URL, or `":memory:"`, or a folder)
+  and the collection name positionally; other options are still keywords.
+
+**Checked on real hardware (Kaggle T4, `vidore/colqwen2-v1.0-hf`, 0.6.1 from PyPI).**
+- The quickstart rerun: `check()` reports a matching build record and "nothing wrong found" (the 0.6.1 fix holds).
+- A folder that is not the sample (two text PDFs and one scanned page with no text layer): the right file came
+  first for all three questions, including the scanned page; the report saved as HTML and JSON; `add` found a new
+  file; reloading gave the same hits.
+- Qdrant export, in local mode and against a real Qdrant server (the official release binary): 7 pages written,
+  7 points read back, each.
+- byaldi import against the real byaldi package: a real byaldi index of the sample built into an index with no
+  re-encoding (20 pages, 15.4x smaller than float16); the text search put page 20 first.
+- Not part of the package: on Kaggle, byaldi needs the preinstalled `torchao` removed and a GPU with no other
+  model loaded; `notebooks/colab_easy/real_checks_0_6_1.ipynb` does both.
+
 ## 0.6.1 (2026-11-19)
 
 **Fixed.**
