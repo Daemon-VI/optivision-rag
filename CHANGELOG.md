@@ -6,10 +6,25 @@
 - **No false "The model now differs from the build record" after you reload an index.** A reload passes the
   recorded dtype by name, so the "how the dtype was asked for" fields (`dtype_requested`: "recorded" at build,
   "float16" now; `dtype_source`: "as in our run" vs "as given") always differed even though the loaded dtype was
-  the same. Those fields are no longer compared; the loaded `dtype` still is, so a real change is still named.
+  the same. Those fields, and the loader's own `notes` (a model our run recorded no dtype for says so at build and not
+  on reload), are no longer compared; the loaded `dtype` still is, so a real change is still named.
 - **`index.export_qdrant(client, "collection")` works.** It took keywords only, so the natural call raised
   "takes 1 positional argument but 3 were given". It now takes the client (or URL, or `":memory:"`, or a folder)
   and the collection name positionally; other options are still keywords.
+
+**Known problem, not fixed in this release.** Text-only ColBERT models (`colbert-ir/colbertv2.0`,
+`answerdotai/answerai-colbert-small-v1`, `lightonai/GTE-ModernColBERT-v1`) built through `ov.build` on a Kaggle T4
+(sentence-transformers 6.3.0, transformers 5.20.2) gave near-random rankings: the ColBERT projection
+(`linear.weight`) was reported UNEXPECTED and not loaded, so the token vectors were 768-wide where the registry says
+128, and the build did not notice. Pinning sentence-transformers 6.1.0 (the version the registry measured on) did not
+change it. Image models on the same machine all passed.
+
+**Checked on real hardware, 0.6.2 (Kaggle T4 x2, from the `fix-0.6.2` branch).** Six model families, each in its own
+process on a 6-page folder (text PDFs and a scanned page): build, three questions, `check()`, positional
+`export_qdrant`, `add`, reload and search again, with no false record warning on reload. Passed:
+`vidore/colqwen2-v1.0-hf` (also exported to a real Qdrant server), `vidore/colpali-v1.3-hf`,
+`Hcompany/NeoMME-260M-Retriever-ST-late`, `vidore/colSmol-500M`, and `vidore/colqwen2.5-v0.2` (spread over both
+GPUs, 211 s). The three text models failed, see above.
 
 **Checked on real hardware (Kaggle T4, `vidore/colqwen2-v1.0-hf`, 0.6.1 from PyPI).**
 - The quickstart rerun: `check()` reports a matching build record and "nothing wrong found" (the 0.6.1 fix holds).

@@ -2361,8 +2361,11 @@ def record_differences(old: Mapping[str, Any], new: Mapping[str, Any]) -> list[s
     """``"dtype: 'float16' at build, 'float32' now"`` for each key both records hold that differ
     (FINAL_DESIGN 4.3: versions, resolved commit, dtype, attention, dpi/max_side, batch size)."""
     # dtype_requested / dtype_source say how the dtype was asked for ("recorded" at build, the recorded name
-    # on reload), not what was loaded; the loaded dtype is the "dtype" key and is still compared
-    skip = {"device", "time", "created", "batch_size_final", "dtype_requested", "dtype_source", "dtype_matches_ours"}
+    # on reload), not what was loaded; the loaded dtype is the "dtype" key and is still compared. "notes" are the
+    # messages the loader printed (for example "our run recorded no dtype; loaded at the loader's default"), which
+    # a reload with the dtype given does not repeat
+    skip = {"device", "time", "created", "batch_size_final", "dtype_requested", "dtype_source", "dtype_matches_ours",
+            "notes"}
     return [f"{k}: {old[k]!r} at build, {new[k]!r} now" for k in sorted(set(old) & set(new))
             if k not in skip and old[k] != new[k]]
 

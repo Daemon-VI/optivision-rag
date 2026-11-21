@@ -89,6 +89,9 @@ def test_how_the_dtype_was_asked_for_is_not_a_record_difference():
              "dtype_matches_ours": None}
     now = {"dtype": "float16", "dtype_requested": "float16", "dtype_source": "as given", "dtype_matches_ours": None}
     assert _build.record_differences(built, now) == []
+    # the loader's own messages are not a difference either: a model our run recorded no dtype for says so at build
+    assert _build.record_differences({**built, "notes": ["our run of m recorded no dtype; loaded at the loader's default"]},
+                                     {**now, "notes": []}) == []
     assert _build.record_differences(built, {**now, "dtype": "float32"}) == ["dtype: 'float16' at build, 'float32' now"]
 
 
